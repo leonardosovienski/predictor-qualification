@@ -6,8 +6,10 @@ set -uo pipefail
 OUT="$1"; COMMIT="$2"; WHEEL_URL="$3"; WHEEL_SHA="$4"; SOAK="${5:-0}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"
-WORK="$(mktemp -d)"
 EXE=""; [ "${OS:-}" = "Windows_NT" ] && EXE=".exe"
+# Windows: raiz curta (o contrato limita a raiz de estado a 120 caracteres por causa do MAX_PATH)
+if [ -n "$EXE" ]; then mkdir -p /c/q; export TMPDIR=/c/q; fi
+WORK="$(mktemp -d)"
 BIN=bin; [ -n "$EXE" ] && BIN=Scripts
 fail() { echo "SETUP FAIL: $*" >> "$OUT/env.log"; exit 3; }
 {
@@ -19,8 +21,12 @@ fail() { echo "SETUP FAIL: $*" >> "$OUT/env.log"; exit 3; }
 git clone -q https://github.com/leonardosovienski/cripto-predictor.git "$WORK/src" >> "$OUT/env.log" 2>&1 || fail clone
 git -C "$WORK/src" checkout -q "$COMMIT" >> "$OUT/env.log" 2>&1 || fail checkout
 ( cd "$WORK/src" && uv export --locked --all-extras --no-emit-project --format requirements-txt -o "$WORK/req.txt" ) >> "$OUT/env.log" 2>&1 || fail export
+# árvore de testes = o final_commit inteiro MENOS o pacote-fonte GarimpoInvestimentos/:
+# o código do pacote só pode vir da wheel instalada; scripts/, charters/, docs/ etc. são do repo
 mkdir -p "$WORK/tree"
-cp -r "$WORK/src/tests" "$WORK/src/pyproject.toml" "$WORK/tree/"
+git -C "$WORK/src" archive --format=tar "$COMMIT" | tar -x -C "$WORK/tree"
+rm -rf "$WORK/tree/GarimpoInvestimentos"
+[ -e "$WORK/tree/GarimpoInvestimentos" ] && fail "package source still in test tree"
 
 # 2) venv limpo: dependências do lock com --require-hashes; wheel do Cripto pela URL da release
 uv venv "$WORK/venv" --python 3.13 >> "$OUT/env.log" 2>&1 || fail venv

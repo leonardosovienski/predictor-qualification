@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 CUTOFF = "2026-08-31T00:00:00Z"
-TOKEN = "FUTURE_CANARY_CRYPTO_001"
+CANARY_MARKER = "FUTURE_CANARY_CRYPTO_001"
 POST_CUTOFF_DATES = ("2026-09-07", "2026-09-14", "2026-09-21")
 
 
@@ -94,15 +94,15 @@ def main() -> int:
             path = work / artifact
             if path.exists():
                 text = path.read_text(encoding="utf-8")
-                if TOKEN in text or any(d in text for d in POST_CUTOFF_DATES):
+                if CANARY_MARKER in text or any(d in text for d in POST_CUTOFF_DATES):
                     leak.append(str(path))
     for outcome in (args.state / "outcomes").glob("*.json"):
         data = json.loads(outcome.read_text(encoding="utf-8"))
         if data.get("status") in {"RESULT", "DUPLICATE"}:
             text = json.dumps(data)
-            if TOKEN in text or any(d in text for d in POST_CUTOFF_DATES):
+            if CANARY_MARKER in text or any(d in text for d in POST_CUTOFF_DATES):
                 leak.append(str(outcome))
-    canary = {"token": TOKEN, "post_cutoff_dates": POST_CUTOFF_DATES, "leaks": leak, "pass": not leak}
+    canary = {"token": CANARY_MARKER, "post_cutoff_dates": POST_CUTOFF_DATES, "leaks": leak, "pass": not leak}
     report = {"economic_metrics": economic, "negative_controls": controls, "future_canary": canary,
               "vectors": [{k: v for k, v in r.items() if k != "result"} for r in rows]}
     (args.out / "SCIENCE_REAL.json").write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")

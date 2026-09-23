@@ -1,0 +1,2438 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="41" skipped="0" tests="48" time="17.271" timestamp="2026-09-23T15:43:54.221607+00:00" hostname="runnervmvmocb"><testcase classname="tests.conformance.test_contract_conformance" name="test_e2e_result_is_reread_identically_after_restart" time="0.358"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_e2e_result_is_reread_iden0'), ...}
+
+    def test_e2e_result_is_reread_identically_after_restart(env):
+        path = write_request(env, "e2e", request("crypto:REQ-E2E-001", client_ref={"ticket": 7}))
+&gt;       code, lines = cli(env, "process", str(path))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_e2e_result_is_reread_iden0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_e2e_result_is_reread_iden0\\requests\\e2e.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_e2e_result_is_reread_iden0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_idempotency_duplicate_retry_and_conflict" time="0.364"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_idempotency_duplicate_ret0'), ...}
+
+    def test_idempotency_duplicate_retry_and_conflict(env):
+        first = write_request(env, "a", request("crypto:REQ-IDEM-001", client_ref="first"))
+&gt;       code, lines = cli(env, "process", str(first))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_idempotency_duplicate_ret0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_idempotency_duplicate_ret0\\requests\\a.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_idempotency_duplicate_ret0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_future_canary_fails_closed_and_never_leaks" time="0.360"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_future_canary_fails_close0'), ...}
+
+    def test_future_canary_fails_closed_and_never_leaks(env):
+        path = write_request(env, "canary", request("crypto:REQ-CANARY-001", dataset="future_canary"))
+&gt;       code, lines = cli(env, "process", str(path))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_future_canary_fails_close0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_future_canary_fails_close0\\requests\\canary.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_future_canary_fails_close0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_temporal_integrity_cutoff_mismatch_and_order" time="0.354"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_temporal_integrity_cutoff0'), ...}
+
+    def test_temporal_integrity_cutoff_mismatch_and_order(env):
+        mismatch = request("crypto:REQ-CUTOFF-001", data_cutoff="2026-09-30T00:00:00Z")
+&gt;       code, lines = cli(env, "process", str(write_request(env, "m", mismatch)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_temporal_integrity_cutoff0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_temporal_integrity_cutoff0\\requests\\m.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_temporal_integrity_cutoff0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_authority_states_stay_separate[case_a-INCONCLUSIVE-INCONCLUSIVE-NO_EDGE]" time="0.354"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_authority_states_stay_sep0'), ...}
+dataset = 'case_a', result_state = 'INCONCLUSIVE', scientific = 'INCONCLUSIVE'
+economic = 'NO_EDGE'
+
+    @pytest.mark.parametrize(
+        ("dataset", "result_state", "scientific", "economic"),
+        [
+            ("case_a", "INCONCLUSIVE", "INCONCLUSIVE", "NO_EDGE"),
+            ("case_b", "NO_EDGE", "SUPPORTED", "NO_EDGE"),
+            ("insufficient", "CLOSED_INSUFFICIENT_SAMPLE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"),
+        ],
+    )
+    def test_authority_states_stay_separate(env, dataset, result_state, scientific, economic):
+        path = write_request(
+            env, dataset, request(f"crypto:REQ-{dataset.upper().replace('_', '-')}", dataset=dataset)
+        )
+&gt;       code, lines = cli(env, "process", str(path))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_authority_states_stay_sep0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_authority_states_stay_sep0\\requests\\case_a.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_authority_states_stay_sep0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_authority_states_stay_separate[case_b-NO_EDGE-SUPPORTED-NO_EDGE]" time="0.354"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_authority_states_stay_sep1'), ...}
+dataset = 'case_b', result_state = 'NO_EDGE', scientific = 'SUPPORTED'
+economic = 'NO_EDGE'
+
+    @pytest.mark.parametrize(
+        ("dataset", "result_state", "scientific", "economic"),
+        [
+            ("case_a", "INCONCLUSIVE", "INCONCLUSIVE", "NO_EDGE"),
+            ("case_b", "NO_EDGE", "SUPPORTED", "NO_EDGE"),
+            ("insufficient", "CLOSED_INSUFFICIENT_SAMPLE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"),
+        ],
+    )
+    def test_authority_states_stay_separate(env, dataset, result_state, scientific, economic):
+        path = write_request(
+            env, dataset, request(f"crypto:REQ-{dataset.upper().replace('_', '-')}", dataset=dataset)
+        )
+&gt;       code, lines = cli(env, "process", str(path))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_authority_states_stay_sep1'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_authority_states_stay_sep1\\requests\\case_b.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_authority_states_stay_sep1\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_authority_states_stay_separate[insufficient-CLOSED_INSUFFICIENT_SAMPLE-INSUFFICIENT_SAMPLE-NOT_EVALUATED]" time="0.340"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_authority_states_stay_sep2'), ...}
+dataset = 'insufficient', result_state = 'CLOSED_INSUFFICIENT_SAMPLE'
+scientific = 'INSUFFICIENT_SAMPLE', economic = 'NOT_EVALUATED'
+
+    @pytest.mark.parametrize(
+        ("dataset", "result_state", "scientific", "economic"),
+        [
+            ("case_a", "INCONCLUSIVE", "INCONCLUSIVE", "NO_EDGE"),
+            ("case_b", "NO_EDGE", "SUPPORTED", "NO_EDGE"),
+            ("insufficient", "CLOSED_INSUFFICIENT_SAMPLE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"),
+        ],
+    )
+    def test_authority_states_stay_separate(env, dataset, result_state, scientific, economic):
+        path = write_request(
+            env, dataset, request(f"crypto:REQ-{dataset.upper().replace('_', '-')}", dataset=dataset)
+        )
+&gt;       code, lines = cli(env, "process", str(path))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_authority_states_stay_sep2'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_authority_states_stay_sep2\\requests\\insufficient.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_authority_states_stay_sep2\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-SCHEMA_INVALID0]" time="0.357"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_0'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF53A0&gt;, status = 'REJECTED'
+reason = 'SCHEMA_INVALID'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_0\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-SCHEMA_INVALID1]" time="0.349"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_1'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF5440&gt;, status = 'REJECTED'
+reason = 'SCHEMA_INVALID'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_1'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_1\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_1\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-SCHEMA_INVALID2]" time="0.356"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_2'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF54E0&gt;, status = 'REJECTED'
+reason = 'SCHEMA_INVALID'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_2'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_2\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_2\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-REQUEST_TYPE_NOT_ALLOWED]" time="0.375"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_3'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF5580&gt;, status = 'REJECTED'
+reason = 'REQUEST_TYPE_NOT_ALLOWED'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_3'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_3\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_3\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-SCHEMA_INVALID3]" time="0.350"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_4'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF5620&gt;, status = 'REJECTED'
+reason = 'SCHEMA_INVALID'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_4'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_4\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_4\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-HYPOTHESIS_CLOSED]" time="0.349"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_5'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF56C0&gt;, status = 'REJECTED'
+reason = 'HYPOTHESIS_CLOSED'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_5'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_5\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_5\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-HYPOTHESIS_NOT_ACTIVE]" time="0.358"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_6'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF5760&gt;, status = 'REJECTED'
+reason = 'HYPOTHESIS_NOT_ACTIVE'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_6'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_6\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_6\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-HYPOTHESIS_NOT_ADMITTED]" time="0.355"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_7'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF5800&gt;, status = 'REJECTED'
+reason = 'HYPOTHESIS_NOT_ADMITTED'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_7'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_7\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_7\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-REFERENCE_UNAUTHORIZED_OR_UNKNOWN]" time="0.374"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_8'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF58A0&gt;, status = 'REJECTED'
+reason = 'REFERENCE_UNAUTHORIZED_OR_UNKNOWN'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_8'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_8\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_8\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-SYMBOL_NOT_ALLOWED]" time="0.371"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_9'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF5940&gt;, status = 'REJECTED'
+reason = 'SYMBOL_NOT_ALLOWED'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_9'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_9\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_9\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-PARAMETER_OUT_OF_BOUNDS]" time="0.411"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 127 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...radmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_10'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF59E0&gt;, status = 'REJECTED'
+reason = 'PARAMETER_OUT_OF_BOUNDS'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...radmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_10'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_10\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...l\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_10\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 127 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_admission_rejects_before_any_execution[&lt;lambda&gt;-REJECTED-REFUSED]" time="0.366"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 127 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...radmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_11'), ...}
+mutate = &lt;function &lt;lambda&gt; at 0x0000027FFCDF5A80&gt;, status = 'REJECTED'
+reason = 'REFUSED'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...radmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_admission_rejects_before_11'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_11\\requests\\bad.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...l\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_admission_rejects_before_11\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 127 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_invalid_json_and_duplicate_keys_are_rejected" time="0.353"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_invalid_json_and_duplicat0'), ...}
+
+    def test_invalid_json_and_duplicate_keys_are_rejected(env):
+        for text in ("{not json", '{"request_id": "crypto:A", "request_id": "crypto:B"}', "[]"):
+&gt;           code, lines = cli(env, "process", str(write_request(env, "raw", text)))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_invalid_json_and_duplicat0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_invalid_json_and_duplicat0\\requests\\raw.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_invalid_json_and_duplicat0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_contract_conformance" name="test_cutoff_constant_is_frozen" time="0.000" /><testcase classname="tests.conformance.test_contract_conformance" name="test_duplicate_after_policy_change_returns_the_stored_result" time="0.370"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_duplicate_after_policy_ch0'), ...}
+
+    def test_duplicate_after_policy_change_returns_the_stored_result(env):
+        """A finished request's authoritative result does not depend on the current policy."""
+        path = write_request(env, "p", request("crypto:REQ-POLICY-001", client_ref="before"))
+&gt;       code, lines = cli(env, "process", str(path))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:253: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_duplicate_after_policy_ch0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_duplicate_after_policy_ch0\\requests\\p.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_duplicate_after_policy_ch0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[before_admission_commit]" time="0.352"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi0')
+point = 'before_admission_commit'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi0'), ...}
+fault = 'before_admission_commit', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[after_admission]" time="0.361"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi1')
+point = 'after_admission'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi1'), ...}
+fault = 'after_admission', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi1\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi1\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[during_materialization]" time="0.346"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi2')
+point = 'during_materialization'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi2'), ...}
+fault = 'during_materialization', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi2\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi2\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[before_ops]" time="0.344"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi3')
+point = 'before_ops'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi3'), ...}
+fault = 'before_ops', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi3\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi3\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[after_ops]" time="0.353"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi4')
+point = 'after_ops'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi4'), ...}
+fault = 'after_ops', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi4\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi4\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[after_domain_effect]" time="0.373"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi5')
+point = 'after_domain_effect'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi5'), ...}
+fault = 'after_domain_effect', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi5\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi5\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[during_result_write]" time="0.362"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi6')
+point = 'during_result_write'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi6'), ...}
+fault = 'during_result_write', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi6\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi6\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[after_result_write]" time="0.353"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi7')
+point = 'after_result_write'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi7'), ...}
+fault = 'after_result_write', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi7\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi7\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_process_death_at_each_point_recovers_exactly_once[after_result_store]" time="0.350"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi8')
+point = 'after_result_store'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+&gt;       code, _ = cli(env, "process", str(path), fault=point)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_process_death_at_each_poi8'), ...}
+fault = 'after_result_store', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi8\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_process_death_at_each_poi8\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_ops_worker_crash_is_not_a_result_and_retry_succeeds" time="0.356"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_ops_worker_crash_is_not_a0')
+
+    def test_ops_worker_crash_is_not_a_result_and_retry_succeeds(tmp_path):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-CRASH-001"))
+&gt;       code, lines = cli(env, "process", str(path), fault="ops_worker_crash")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_ops_worker_crash_is_not_a0'), ...}
+fault = 'ops_worker_crash', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_ops_worker_crash_is_not_a0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_ops_worker_crash_is_not_a0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_ops_timeout_kills_worker_and_is_not_a_result" time="0.348"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_ops_timeout_kills_worker_0')
+
+    def test_ops_timeout_kills_worker_and_is_not_a_result(tmp_path):
+        env = build(tmp_path, timeout_seconds=5)
+        path = write_request(env, "r", request("crypto:REQ-TIMEOUT-001"))
+&gt;       code, lines = cli(env, "process", str(path), fault="ops_worker_hang")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_ops_timeout_kills_worker_0'), ...}
+fault = 'ops_worker_hang', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_ops_timeout_kills_worker_0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_ops_timeout_kills_worker_0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_retry_budget_exhaustion_is_a_terminal_operational_failure" time="0.371"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_retry_budget_exhaustion_i0')
+
+    def test_retry_budget_exhaustion_is_a_terminal_operational_failure(tmp_path):
+        env = build(tmp_path, max_retries=1)
+        path = write_request(env, "r", request("crypto:REQ-BUDGET-001"))
+        for _ in range(2):
+&gt;           code, lines = cli(env, "process", str(path), fault="ops_worker_crash")
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_retry_budget_exhaustion_i0'), ...}
+fault = 'ops_worker_crash', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_retry_budget_exhaustion_i0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_retry_budget_exhaustion_i0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_db_says_result_exists_but_file_is_gone" time="0.362"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_db_says_result_exists_but0')
+
+    def test_db_says_result_exists_but_file_is_gone(tmp_path):
+&gt;       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:145: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\test_failure_recovery.py:136: in _completed
+    assert cli(env, "process", str(path))[0] == 0
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_db_says_result_exists_but0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_db_says_result_exists_but0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_db_says_result_exists_but0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_file_exists_but_index_lost_the_result" time="0.350"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_file_exists_but_index_los0')
+
+    def test_file_exists_but_index_lost_the_result(tmp_path):
+&gt;       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:155: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\test_failure_recovery.py:136: in _completed
+    assert cli(env, "process", str(path))[0] == 0
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_file_exists_but_index_los0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_file_exists_but_index_los0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_file_exists_but_index_los0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_modified_result_and_modified_effect_fail_closed" time="0.358"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_modified_result_and_modif0')
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=&lt;pluggy._tracing.TagTracerSub object at 0x0000027FFC8CD940&gt;, _basetemp=Wi...AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    def test_modified_result_and_modified_effect_fail_closed(tmp_path, tmp_path_factory):
+&gt;       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:165: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\test_failure_recovery.py:136: in _completed
+    assert cli(env, "process", str(path))[0] == 0
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_modified_result_and_modif0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_modified_result_and_modif0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_modified_result_and_modif0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_wrong_hash_of_referenced_object_fails_before_ops" time="0.357"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_wrong_hash_of_referenced_0')
+
+    def test_wrong_hash_of_referenced_object_fails_before_ops(tmp_path):
+        env = build(tmp_path)
+        policy = json.loads(env["policy"].read_text(encoding="utf-8"))
+        dataset = next(
+            e for e in policy["registry"] if (e["kind"], e["name"]) == ("dataset", "positive")
+        )
+        target = env["objects"] / dataset["content_hash"][:2] / dataset["content_hash"]
+        _writable(target)
+        target.write_bytes(target.read_bytes().replace(b"0.022", b"0.122"))
+&gt;       code, lines = cli(env, "process", str(write_request(env, "r", request("crypto:REQ-HASH-002"))))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_wrong_hash_of_referenced_0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_wrong_hash_of_referenced_0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_wrong_hash_of_referenced_0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_reference_changed_after_materialization_fails_closed" time="0.341"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_reference_changed_after_m0')
+
+    def test_reference_changed_after_materialization_fails_closed(tmp_path):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-MAT-001"))
+&gt;       assert cli(env, "process", str(path), fault="before_ops")[0] == FAULT_EXIT
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:201: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_reference_changed_after_m0'), ...}
+fault = 'before_ops', timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_reference_changed_after_m0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_reference_changed_after_m0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_reference_receipt_from_another_request_fails_closed" time="0.379"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_reference_receipt_from_an0')
+
+    def test_reference_receipt_from_another_request_fails_closed(tmp_path):
+        env = build(tmp_path)
+        first = write_request(env, "a", request("crypto:REQ-A-001"))
+&gt;       assert cli(env, "process", str(first))[0] == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_reference_receipt_from_an0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_reference_receipt_from_an0\\requests\\a.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_reference_receipt_from_an0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_result_metadata_inconsistent_with_index_fails_closed" time="0.352"><failure message="AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_result_metadata_inconsist0')
+
+    def test_result_metadata_inconsistent_with_index_fails_closed(tmp_path):
+&gt;       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:234: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\test_failure_recovery.py:136: in _completed
+    assert cli(env, "process", str(path))[0] == 0
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/...eradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_result_metadata_inconsist0'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_result_metadata_inconsist0\\requests\\r.json')
+command = ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp.04T1u7Bs7N\\venv\\Scripts\\cripto-research.exe', '--state', 'C:\\User...al\\Temp\\tmp.04T1u7Bs7N\\cr\\tmp\\pytest-of-runneradmin\\pytest-0\\test_result_metadata_inconsist0\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -&gt; tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+&gt;           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 126 &gt; 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError</failure></testcase><testcase classname="tests.conformance.test_failure_recovery" name="test_fault_points_are_the_frozen_matrix" time="0.000" /><testcase classname="tests.conformance.test_failure_recovery" name="test_host_process_killed_during_ops_job_recovers_exactly_once" time="0.351"><failure message="AssertionError: job never started&#10;assert (1 is None)&#10; +  where 1 = poll()&#10; +    where poll = &lt;Popen: returncode: 1 args: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp...&gt;.poll">tmp_path = WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmp.04T1u7Bs7N/cr/tmp/pytest-of-runneradmin/pytest-0/test_host_process_killed_durin0')
+
+    def test_host_process_killed_during_ops_job_recovers_exactly_once(tmp_path):
+        """Crash of the process hosting predictor_ops while the worker runs (killed from outside).
+    
+        Windows: the Ops job object kills the worker with its host. Linux: the worker survives
+        as an orphan in its own session and may finish later; either way there must be one
+        logical effect, one result and no second success reported by Ops for another effect.
+        """
+        import subprocess
+        import sys
+        import time
+    
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-HOSTKILL-001"))
+        environment = child_environment(CRIPTO_RESEARCH_FAULT="ops_worker_slow")
+        host = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "GarimpoInvestimentos.research_runner",
+                "--state",
+                str(env["state"]),
+                "process",
+                "--policy",
+                str(env["policy"]),
+                "--objects",
+                str(env["objects"]),
+                str(path),
+            ],
+            env=environment,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        ops_root = ops_runtime(env)
+        deadline = time.monotonic() + 60
+        while not list(ops_root.glob("crypto-research-*/heartbeat.json")):
+&gt;           assert host.poll() is None and time.monotonic() &lt; deadline, "job never started"
+E           AssertionError: job never started
+E           assert (1 is None)
+E            +  where 1 = poll()
+E            +    where poll = &lt;Popen: returncode: 1 args: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmp...&gt;.poll
+
+tests\conformance\test_failure_recovery.py:299: AssertionError</failure></testcase><testcase classname="tests.conformance.test_import_closure" name="test_entrypoints_include_the_research_circuit" time="0.001" /><testcase classname="tests.conformance.test_import_closure" name="test_no_entrypoint_reaches_envelope_cain_or_adapter_paths" time="0.381" /><testcase classname="tests.conformance.test_import_closure" name="test_research_circuit_components_are_reachable_from_the_entrypoint" time="0.365" /><testcase classname="tests.conformance.test_import_closure" name="test_nothing_outside_adapter_paths_imports_them" time="0.384" /><testcase classname="tests.conformance.test_import_closure" name="test_runtime_import_of_the_circuit_loads_no_forbidden_module" time="0.291" /></testsuite></testsuites>
