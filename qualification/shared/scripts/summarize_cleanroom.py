@@ -3,12 +3,13 @@
 Lê <run_dir>/cleanroom-<repo>/cleanroom_facts.json (artefatos do run, sem edição)
 e imprime as tabelas usadas no CLEANROOM_REPORT.md. Nenhum número do relatório
 vem de outro lugar.
-Uso: python summarize_cleanroom.py <run_dir>
+Uso: python summarize_cleanroom.py <run_dir>   (formato do plano V2)
 """
 
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -61,11 +62,12 @@ def main(run_dir: str) -> None:
             pl_ok = f"{sum(1 for p in pl if p['load'] == 'OK')}/{len(pl)}" if pl else "nenhum"
             pre = [v[k] for k in v if k.startswith("pre_test_")]
             pre_s = ",".join(ok(p) for p in pre) or "—"
-            g = v.get("guard") or {}
-            guard = len(g.get("outside_site_packages", [])) if g else "sem guard"
-            print(f"| {r} | {ok(v.get('install_lock'))} | {ok(v.get('install_own'))} | {ok(v.get('pip_check'))} | "
-                  f"{','.join(bad_mods) or '0'} | {cs_ok} | {pl_ok} | {pre_s} | {v['pytest']['exit']} | "
-                  f"{counts(v.get('pytest_counts'))} | {guard} |")
+            for s in v["suites"]:
+                g = s.get("guard") or {}
+                guard = len(g.get("outside_site_packages", [])) if g else "sem guard"
+                print(f"| {r} `{' '.join(s['paths'])}` | {ok(v.get('install_lock'))} | {ok(v.get('install_own'))} | "
+                      f"{ok(v.get('pip_check'))} | {','.join(bad_mods) or '0'} | {cs_ok} | {pl_ok} | {pre_s} | "
+                      f"{s['pytest']['exit']} | {counts(s.get('counts'))} | {guard} |")
     print("\n## Detalhes")
     for r, f in facts.items():
         print(f"\n### {r}")
@@ -96,12 +98,24 @@ def main(run_dir: str) -> None:
                 print(f"[{variant}] script {c['name']} --help -> {c['exit']}")
             for p in intro.get("plugins", []):
                 print(f"[{variant}] plugin {p['name']} -> {p['load']}")
-            print(f"[{variant}] pytest: {v.get('pytest_summary_line')}")
-            failed = (v.get("pytest_counts") or {}).get("failed_ids", [])
-            print(f"[{variant}] falhas ({len(failed)}):", failed[:25])
-            g = v.get("guard") or {}
-            print(f"[{variant}] guard: importados={g.get('stack_modules_imported')} "
-                  f"top={g.get('top_levels_imported')} fora={g.get('outside_site_packages', [])[:5]}")
+            for s in v["suites"]:
+                tag = f"[{variant} {' '.join(s['paths'])}]"
+                print(f"{tag} pytest: {s.get('summary_line')}")
+                failed = (s.get("counts") or {}).get("failed_ids", [])
+                print(f"{tag} falhas ({len(failed)}):", failed[:40])
+                g = s.get("guard") or {}
+                print(f"{tag} guard: importados={g.get('stack_modules_imported')} "
+                      f"top={g.get('top_levels_imported')} fora={g.get('outside_site_packages', [])[:5]}")
+                # Assinaturas de erro (linhas 'E   ' do log bruto, caminhos do runner normalizados)
+                raw = (run / f"cleanroom-{r}" / s["pytest"]["log"]).read_text(encoding="utf-8", errors="replace")
+                sigs: dict[str, int] = {}
+                for line in raw.splitlines():
+                    if line.startswith("E   ") and ("Error" in line or "Failed:" in line or "assert" in line):
+                        norm = re.sub(r"/home/runner/work/_temp/cleanroom/[^/]+/(tree|venv-[a-z_]+)/", r"<\1>/", line)
+                        norm = re.sub(r"[0-9a-f]{12,}", "<hex>", norm).strip()[:160]
+                        sigs[norm] = sigs.get(norm, 0) + 1
+                for sig, n in sorted(sigs.items(), key=lambda x: -x[1])[:12]:
+                    print(f"{tag}   {n:4d}  {sig}")
 
 
 if __name__ == "__main__":
