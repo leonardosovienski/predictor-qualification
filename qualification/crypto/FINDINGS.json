@@ -133,6 +133,39 @@
       "evidence": [
         "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
       ]
+    },
+    {
+      "id": "CR-F012",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "contract-wiring",
+      "title": "GarimpoInvestimentos.__version__ divergente da distribuição",
+      "description": "__init__.__version__ = '1.1.1rc2' enquanto pyproject/metadata = '1.1.1rc4' em 5fd4e1b. Ninguém usa internamente, mas expõe versão errada.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/truth-map/core_identity_checkout_baseline.json"
+      ]
+    },
+    {
+      "id": "CR-F013",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "contract-wiring",
+      "title": "Circuito de pesquisa quebra no Windows com raiz de estado profunda (MAX_PATH)",
+      "description": "Achado na suíte Windows: caminhos internos (experiments/EXP-<32hex>/.reference-materialization.json.<uuid>.tmp; ops-runtime/idempotency/.economic-<sha256>.json.<uuid>.tmp do predictor_ops) passam de 260 caracteres sob raízes longas; o job falha (fecha como OPS_FAILED_RETRYABLE/exit 3), nunca produz resultado. Defeito de operação no Windows.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/contract-wiring/windows_pytest_9844976.log"
+      ]
+    },
+    {
+      "id": "CR-F014",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "contract-wiring",
+      "title": "Coverage: subprocessos da conformidade herdavam o pytest-cov",
+      "description": "Os subprocessos cripto-research rodavam fora do repo com as variáveis COV_CORE_* e gravavam dados sem branch; o combine do pytest-cov falhava (exit 3) com todos os testes passando. Encanamento de teste, sem efeito no produto.",
+      "evidence": [
+        "https://github.com/leonardosovienski/cripto-predictor/actions/runs/35876787921 (job quality: 1661 passed, INTERNALERROR Can't combine statement coverage data with branch data)"
+      ]
     }
   ]
 }

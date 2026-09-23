@@ -1,0 +1,640 @@
+# 2026-09-23T14:47:41Z commit 98449760dcfd8ad9b29593037d5164da3cade5d6 dirty_entries=0 CRIPTO_ROOT=C:/Cripto/qualificacao/winroot/20260923T144741Z
+uv 0.12.18 (01cb90c1a 2026-09-22 x86_64-pc-windows-msvc)
+Resolved 79 packages in 1.03s
+Checked 78 packages in 40ms
+uv sync exit=0
+Building wheel from source distribution...
+Successfully built dist\cripto_predictor-1.1.1rc4.tar.gz
+Successfully built dist\cripto_predictor-1.1.1rc4-py3-none-any.whl
+uv build exit=0
+3.13.14 (main, Aug  5 2026, 16:10:10) [MSC v.1944 64 bit (AMD64)] Windows-11-10.0.26200-SP0
+FFFFFFF...........F..FFFFFFFFFFF.FFF..FF.F.............................. [  4%]
+........................................................................ [  8%]
+........................................................................ [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 21%]
+........................................................................ [ 26%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 39%]
+........................................................................ [ 43%]
+........................................................................ [ 47%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+........................................................................ [ 60%]
+........................................................................ [ 65%]
+........................................................................ [ 69%]
+........................................................................ [ 73%]
+........................................................................ [ 78%]
+........................................................................ [ 82%]
+........................................................................ [ 86%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+........................................................................ [ 99%]
+.....                                                                    [100%]
+================================== FAILURES ===================================
+_____________ test_e2e_result_is_reread_identically_after_restart _____________
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_e2e_result_is_reread_iden0'), ...}
+
+    def test_e2e_result_is_reread_identically_after_restart(env):
+        path = write_request(env, "e2e", request("crypto:REQ-E2E-001", client_ref={"ticket": 7}))
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["status"] == "RESULT"
+E       assert (3 == 0)
+
+tests\conformance\test_contract_conformance.py:44: AssertionError
+________________ test_idempotency_duplicate_retry_and_conflict ________________
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_idempotency_duplicate_ret0'), ...}
+
+    def test_idempotency_duplicate_retry_and_conflict(env):
+        first = write_request(env, "a", request("crypto:REQ-IDEM-001", client_ref="first"))
+        code, lines = cli(env, "process", str(first))
+        original = _only(lines)
+>       assert code == 0 and original["status"] == "RESULT"
+E       assert (3 == 0)
+
+tests\conformance\test_contract_conformance.py:83: AssertionError
+_______________ test_future_canary_fails_closed_and_never_leaks _______________
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_future_canary_fails_close0'), ...}
+
+    def test_future_canary_fails_closed_and_never_leaks(env):
+        path = write_request(env, "canary", request("crypto:REQ-CANARY-001", dataset="future_canary"))
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 4 and outcome["status"] == "TEMPORAL_INTEGRITY_VIOLATION"
+E       assert (3 == 4)
+
+tests\conformance\test_contract_conformance.py:116: AssertionError
+______________ test_temporal_integrity_cutoff_mismatch_and_order ______________
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_temporal_integrity_cutoff0'), ...}
+
+    def test_temporal_integrity_cutoff_mismatch_and_order(env):
+        mismatch = request("crypto:REQ-CUTOFF-001", data_cutoff="2026-09-30T00:00:00Z")
+        code, lines = cli(env, "process", str(write_request(env, "m", mismatch)))
+        outcome = _only(lines)
+>       assert code == 4 and outcome["status"] == "TEMPORAL_INTEGRITY_VIOLATION"
+E       assert (3 == 4)
+
+tests\conformance\test_contract_conformance.py:145: AssertionError
+_ test_authority_states_stay_separate[case_a-INCONCLUSIVE-INCONCLUSIVE-NO_EDGE] _
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_authority_states_stay_sep0'), ...}
+dataset = 'case_a', result_state = 'INCONCLUSIVE', scientific = 'INCONCLUSIVE'
+economic = 'NO_EDGE'
+
+    @pytest.mark.parametrize(
+        ("dataset", "result_state", "scientific", "economic"),
+        [
+            ("case_a", "INCONCLUSIVE", "INCONCLUSIVE", "NO_EDGE"),
+            ("case_b", "NO_EDGE", "SUPPORTED", "NO_EDGE"),
+            ("insufficient", "CLOSED_INSUFFICIENT_SAMPLE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"),
+        ],
+    )
+    def test_authority_states_stay_separate(env, dataset, result_state, scientific, economic):
+        path = write_request(
+            env, dataset, request(f"crypto:REQ-{dataset.upper().replace('_', '-')}", dataset=dataset)
+        )
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["operational_state"] == "SUCCEEDED"
+E       assert (3 == 0)
+
+tests\conformance\test_contract_conformance.py:163: AssertionError
+____ test_authority_states_stay_separate[case_b-NO_EDGE-SUPPORTED-NO_EDGE] ____
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_authority_states_stay_sep1'), ...}
+dataset = 'case_b', result_state = 'NO_EDGE', scientific = 'SUPPORTED'
+economic = 'NO_EDGE'
+
+    @pytest.mark.parametrize(
+        ("dataset", "result_state", "scientific", "economic"),
+        [
+            ("case_a", "INCONCLUSIVE", "INCONCLUSIVE", "NO_EDGE"),
+            ("case_b", "NO_EDGE", "SUPPORTED", "NO_EDGE"),
+            ("insufficient", "CLOSED_INSUFFICIENT_SAMPLE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"),
+        ],
+    )
+    def test_authority_states_stay_separate(env, dataset, result_state, scientific, economic):
+        path = write_request(
+            env, dataset, request(f"crypto:REQ-{dataset.upper().replace('_', '-')}", dataset=dataset)
+        )
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["operational_state"] == "SUCCEEDED"
+E       assert (3 == 0)
+
+tests\conformance\test_contract_conformance.py:163: AssertionError
+_ test_authority_states_stay_separate[insufficient-CLOSED_INSUFFICIENT_SAMPLE-INSUFFICIENT_SAMPLE-NOT_EVALUATED] _
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_authority_states_stay_sep2'), ...}
+dataset = 'insufficient', result_state = 'CLOSED_INSUFFICIENT_SAMPLE'
+scientific = 'INSUFFICIENT_SAMPLE', economic = 'NOT_EVALUATED'
+
+    @pytest.mark.parametrize(
+        ("dataset", "result_state", "scientific", "economic"),
+        [
+            ("case_a", "INCONCLUSIVE", "INCONCLUSIVE", "NO_EDGE"),
+            ("case_b", "NO_EDGE", "SUPPORTED", "NO_EDGE"),
+            ("insufficient", "CLOSED_INSUFFICIENT_SAMPLE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"),
+        ],
+    )
+    def test_authority_states_stay_separate(env, dataset, result_state, scientific, economic):
+        path = write_request(
+            env, dataset, request(f"crypto:REQ-{dataset.upper().replace('_', '-')}", dataset=dataset)
+        )
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["operational_state"] == "SUCCEEDED"
+E       assert (3 == 0)
+
+tests\conformance\test_contract_conformance.py:163: AssertionError
+___ test_admission_rejects_before_any_execution[<lambda>-REJECTED-REFUSED] ____
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ficacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_admission_rejects_before_11'), ...}
+mutate = <function <lambda> at 0x000001C3DC5F4860>, status = 'REJECTED'
+reason = 'REFUSED'
+
+    @pytest.mark.parametrize(
+        ("mutate", "status", "reason"),
+        [
+            (lambda r: r | {"command": "powershell.exe -c calc"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"handler": "os.system"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"capital_permission": True}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"request_type": "RUN_SHELL"}, "REJECTED", "REQUEST_TYPE_NOT_ALLOWED"),
+            (lambda r: r | {"request_id": "REQ-NO-DOMAIN"}, "REJECTED", "SCHEMA_INVALID"),
+            (lambda r: r | {"hypothesis_id": "crypto:H1"}, "REJECTED", "HYPOTHESIS_CLOSED"),
+            (lambda r: r | {"hypothesis_id": "crypto:H7"}, "REJECTED", "HYPOTHESIS_NOT_ACTIVE"),
+            (
+                lambda r: r | {"hypothesis_id": "crypto:NOT-IN-POLICY"},
+                "REJECTED",
+                "HYPOTHESIS_NOT_ADMITTED",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"dataset": {"name": "unknown", "version": "v1"}}
+                    }
+                ),
+                "REJECTED",
+                "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"symbol": "ETHUSDT"}},
+                "REJECTED",
+                "SYMBOL_NOT_ALLOWED",
+            ),
+            (
+                lambda r: r | {"parameters": r["parameters"] | {"fee_bps": 10_000}},
+                "REJECTED",
+                "PARAMETER_OUT_OF_BOUNDS",
+            ),
+            (
+                lambda r: (
+                    r
+                    | {
+                        "references": r["references"]
+                        | {"protocol": {"name": "frozen-family", "version": "v1"}},
+                        "hypothesis_id": "crypto:QUAL-FROZEN-PROBE",
+                    }
+                ),
+                "REJECTED",
+                "REFUSED",
+            ),
+        ],
+    )
+    def test_admission_rejects_before_any_execution(env, mutate, status, reason):
+        value = mutate(request("crypto:REQ-BAD-001"))
+>       code, lines = cli(env, "process", str(write_request(env, "bad", value)))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_contract_conformance.py:227: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0...ficacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_admission_rejects_before_11'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\CRIPTO\\qualificacao\\winroot\\20260923T144741Z\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_admission_rejects_before_11\\requests\\bad.json')
+command = ['C:\\Cripto\\qualificacao\\cripto-predictor\\.venv\\Scripts\\cripto-research.exe', '--state', 'C:\\CRIPTO\\qualificac...0260923T144741Z\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_admission_rejects_before_11\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -> tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = dict(os.environ)
+        environment.pop("CRIPTO_RESEARCH_FAULT", None)
+        if fault:
+            environment["CRIPTO_RESEARCH_FAULT"] = fault
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+>           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: Traceback (most recent call last):
+E             File "<frozen runpy>", line 203, in _run_module_as_main
+E             File "<frozen runpy>", line 88, in _run_code
+E             File "C:\Cripto\qualificacao\cripto-predictor\.venv\Scripts\cripto-research.exe\__main__.py", line 10, in <module>
+E               sys.exit(main())
+E                        ~~~~^^
+E             File "C:\CRIPTO\qualificacao\cripto-predictor\GarimpoInvestimentos\research_runner.py", line 300, in main
+E               outcome = circuit.submit_file(path)
+E             File "C:\CRIPTO\qualificacao\cripto-predictor\GarimpoInvestimentos\research_runner.py", line 88, in submit_file
+E               return self.submit_request(Path(path).read_bytes(), source=str(path))
+E                      ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E             File "C:\CRIPTO\qualificacao\cripto-predictor\GarimpoInvestimentos\research_runner.py", line 137, in submit_request
+E               executed = executor.execute(request["request_id"])
+E             File "C:\CRIPTO\qualificacao\cripto-predictor\GarimpoInvestimentos\research_execution.py", line 536, in execute
+E               atomic_write(receipt_path, canonical(materialization))
+E               ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E             File "C:\CRIPTO\qualificacao\cripto-predictor\GarimpoInvestimentos\durable_io.py", line 58, in atomic_write
+E               with temporary.open("xb") as handle:
+E                    ~~~~~~~~~~~~~~^^^^^^
+E             File "C:\QUALIFICACAO\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\pathlib\_local.py", line 537, in open
+E               return io.open(self, mode, buffering, encoding, errors, newline)
+E                      ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           FileNotFoundError: [Errno 2] No such file or directory: 'C:\\CRIPTO\\qualificacao\\winroot\\20260923T144741Z\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_admission_rejects_before_11\\state\\execution\\experiments\\EXP-9e672dc464d3eba76ae172a52ebd3570\\.reference-materialization.json.6b2549577dc84a60ada59f8b0115ba88.tmp'
+
+tests\conformance\fixtures.py:273: AssertionError
+_ test_process_death_at_each_point_recovers_exactly_once[before_admission_commit] _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi0')
+point = 'before_admission_commit'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+        assert code == FAULT_EXIT
+        if point == "before_admission_commit":
+            with sqlite3.connect(env["state"] / "admission.sqlite") as db:
+                assert db.execute("SELECT count(*) FROM request_inbox").fetchone()[0] == 0
+                assert db.execute("SELECT count(*) FROM admissions").fetchone()[0] == 0
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["status"] in {"RESULT", "DUPLICATE"}
+E       assert (3 == 0)
+
+tests\conformance\test_failure_recovery.py:61: AssertionError
+___ test_process_death_at_each_point_recovers_exactly_once[after_admission] ___
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi1')
+point = 'after_admission'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+        assert code == FAULT_EXIT
+        if point == "before_admission_commit":
+            with sqlite3.connect(env["state"] / "admission.sqlite") as db:
+                assert db.execute("SELECT count(*) FROM request_inbox").fetchone()[0] == 0
+                assert db.execute("SELECT count(*) FROM admissions").fetchone()[0] == 0
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["status"] in {"RESULT", "DUPLICATE"}
+E       assert (3 == 0)
+
+tests\conformance\test_failure_recovery.py:61: AssertionError
+_ test_process_death_at_each_point_recovers_exactly_once[during_materialization] _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi2')
+point = 'during_materialization'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+        assert code == FAULT_EXIT
+        if point == "before_admission_commit":
+            with sqlite3.connect(env["state"] / "admission.sqlite") as db:
+                assert db.execute("SELECT count(*) FROM request_inbox").fetchone()[0] == 0
+                assert db.execute("SELECT count(*) FROM admissions").fetchone()[0] == 0
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["status"] in {"RESULT", "DUPLICATE"}
+E       assert (3 == 0)
+
+tests\conformance\test_failure_recovery.py:61: AssertionError
+_____ test_process_death_at_each_point_recovers_exactly_once[before_ops] ______
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi3')
+point = 'before_ops'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+        assert code == FAULT_EXIT
+        if point == "before_admission_commit":
+            with sqlite3.connect(env["state"] / "admission.sqlite") as db:
+                assert db.execute("SELECT count(*) FROM request_inbox").fetchone()[0] == 0
+                assert db.execute("SELECT count(*) FROM admissions").fetchone()[0] == 0
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+>       assert code == 0 and outcome["status"] in {"RESULT", "DUPLICATE"}
+E       assert (3 == 0)
+
+tests\conformance\test_failure_recovery.py:61: AssertionError
+______ test_process_death_at_each_point_recovers_exactly_once[after_ops] ______
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi4')
+point = 'after_ops'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+>       assert code == FAULT_EXIT
+E       assert 3 == 86
+
+tests\conformance\test_failure_recovery.py:54: AssertionError
+_ test_process_death_at_each_point_recovers_exactly_once[after_domain_effect] _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi5')
+point = 'after_domain_effect'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+>       assert code == FAULT_EXIT
+E       assert 3 == 86
+
+tests\conformance\test_failure_recovery.py:54: AssertionError
+_ test_process_death_at_each_point_recovers_exactly_once[during_result_write] _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi6')
+point = 'during_result_write'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+>       assert code == FAULT_EXIT
+E       assert 3 == 86
+
+tests\conformance\test_failure_recovery.py:54: AssertionError
+_ test_process_death_at_each_point_recovers_exactly_once[after_result_write] __
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi7')
+point = 'after_result_write'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+>       assert code == FAULT_EXIT
+E       assert 3 == 86
+
+tests\conformance\test_failure_recovery.py:54: AssertionError
+_ test_process_death_at_each_point_recovers_exactly_once[after_result_store] __
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi8')
+point = 'after_result_store'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+>       assert code == FAULT_EXIT
+E       assert 3 == 86
+
+tests\conformance\test_failure_recovery.py:54: AssertionError
+__________ test_ops_worker_crash_is_not_a_result_and_retry_succeeds ___________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_ops_worker_crash_is_not_a0')
+
+    def test_ops_worker_crash_is_not_a_result_and_retry_succeeds(tmp_path):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-CRASH-001"))
+        code, lines = cli(env, "process", str(path), fault="ops_worker_crash")
+        failed = _only(lines)
+        assert code == 3 and failed["status"] == "OPS_FAILED_RETRYABLE"
+        assert (failed["operational_state"], failed["scientific_state"], failed["economic_state"]) == (
+            "FAILED",
+            "NOT_EVALUATED",
+            "NOT_EVALUATED",
+        )
+        assert _results(env) == 0
+        assert cli(env, "show", "crypto:REQ-CRASH-001")[0] == 3
+        code, lines = cli(env, "process", str(path))
+>       assert code == 0 and _only(lines)["status"] == "RESULT"
+E       assert (3 == 0)
+
+tests\conformance\test_failure_recovery.py:88: AssertionError
+______________ test_ops_timeout_kills_worker_and_is_not_a_result ______________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_ops_timeout_kills_worker_0')
+
+    def test_ops_timeout_kills_worker_and_is_not_a_result(tmp_path):
+        env = build(tmp_path, timeout_seconds=5)
+        path = write_request(env, "r", request("crypto:REQ-TIMEOUT-001"))
+        code, lines = cli(env, "process", str(path), fault="ops_worker_hang")
+        failed = _only(lines)
+        assert code == 3 and failed["status"] == "OPS_FAILED_RETRYABLE"
+>       assert failed["operational_state"] == "TIMEOUT" and failed["reason"] == "OPS_TIMEOUT"
+E       AssertionError: assert ('FAILED' == 'TIMEOUT'
+E         
+E         - TIMEOUT
+E         + FAILED)
+
+tests\conformance\test_failure_recovery.py:98: AssertionError
+_________________ test_db_says_result_exists_but_file_is_gone _________________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_db_says_result_exists_but0')
+
+    def test_db_says_result_exists_but_file_is_gone(tmp_path):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_db_says_result_exists_but0')
+request_id = 'crypto:REQ-CORRUPT-001'
+
+    def _completed(tmp_path, request_id="crypto:REQ-CORRUPT-001"):
+        env = build(tmp_path)
+        path = write_request(env, "r", request(request_id))
+>       assert cli(env, "process", str(path))[0] == 0
+E       assert 3 == 0
+
+tests\conformance\test_failure_recovery.py:129: AssertionError
+_________________ test_file_exists_but_index_lost_the_result __________________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_file_exists_but_index_los0')
+
+    def test_file_exists_but_index_lost_the_result(tmp_path):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_file_exists_but_index_los0')
+request_id = 'crypto:REQ-CORRUPT-001'
+
+    def _completed(tmp_path, request_id="crypto:REQ-CORRUPT-001"):
+        env = build(tmp_path)
+        path = write_request(env, "r", request(request_id))
+>       assert cli(env, "process", str(path))[0] == 0
+E       assert 3 == 0
+
+tests\conformance\test_failure_recovery.py:129: AssertionError
+____________ test_modified_result_and_modified_effect_fail_closed _____________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_modified_result_and_modif0')
+
+    def test_modified_result_and_modified_effect_fail_closed(tmp_path):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:158: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_modified_result_and_modif0')
+request_id = 'crypto:REQ-CORRUPT-001'
+
+    def _completed(tmp_path, request_id="crypto:REQ-CORRUPT-001"):
+        env = build(tmp_path)
+        path = write_request(env, "r", request(request_id))
+>       assert cli(env, "process", str(path))[0] == 0
+E       assert 3 == 0
+
+tests\conformance\test_failure_recovery.py:129: AssertionError
+__________ test_reference_receipt_from_another_request_fails_closed ___________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_reference_receipt_from_an0')
+
+    def test_reference_receipt_from_another_request_fails_closed(tmp_path):
+        env = build(tmp_path)
+        first = write_request(env, "a", request("crypto:REQ-A-001"))
+>       assert cli(env, "process", str(first))[0] == 0
+E       assert 3 == 0
+
+tests\conformance\test_failure_recovery.py:206: AssertionError
+__________ test_result_metadata_inconsistent_with_index_fails_closed __________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_result_metadata_inconsist0')
+
+    def test_result_metadata_inconsistent_with_index_fails_closed(tmp_path):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:227: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_result_metadata_inconsist0')
+request_id = 'crypto:REQ-CORRUPT-001'
+
+    def _completed(tmp_path, request_id="crypto:REQ-CORRUPT-001"):
+        env = build(tmp_path)
+        path = write_request(env, "r", request(request_id))
+>       assert cli(env, "process", str(path))[0] == 0
+E       assert 3 == 0
+
+tests\conformance\test_failure_recovery.py:129: AssertionError
+________ test_host_process_killed_during_ops_job_recovers_exactly_once ________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/winroot/20260923T144741Z/operacao/temporarios/pytest-of-leona/pytest-0/test_host_process_killed_durin0')
+
+    def test_host_process_killed_during_ops_job_recovers_exactly_once(tmp_path):
+        """Crash of the process hosting predictor_ops while the worker runs (killed from outside).
+    
+        Windows: the Ops job object kills the worker with its host. Linux: the worker survives
+        as an orphan in its own session and may finish later; either way there must be one
+        logical effect, one result and no second success reported by Ops for another effect.
+        """
+        import subprocess
+        import sys
+        import time
+    
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-HOSTKILL-001"))
+        environment = dict(os.environ, CRIPTO_RESEARCH_FAULT="ops_worker_slow")
+        host = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "GarimpoInvestimentos.research_runner",
+                "--state",
+                str(env["state"]),
+                "process",
+                "--policy",
+                str(env["policy"]),
+                "--objects",
+                str(env["objects"]),
+                str(path),
+            ],
+            env=environment,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        ops_root = env["state"] / "execution" / "ops-runtime"
+        deadline = time.monotonic() + 60
+        while not list(ops_root.glob("crypto-research-*/heartbeat.json")):
+>           assert host.poll() is None and time.monotonic() < deadline, "job never started"
+E           AssertionError: job never started
+E           assert (3 is None)
+E            +  where 3 = poll()
+E            +    where poll = <Popen: returncode: 3 args: ['C:\\Cripto\\qualificacao\\cripto-predictor\\.v...>.poll
+
+tests\conformance\test_failure_recovery.py:292: AssertionError
+- generated xml file: C:\QUALIFICACAO\predictor-qualification\qualification\crypto\RAW_LOGS\contract-wiring\windows_pytest_9844976.junit.xml -
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_contract_conformance.py::test_e2e_result_is_reread_identically_after_restart
+FAILED tests/conformance/test_contract_conformance.py::test_idempotency_duplicate_retry_and_conflict
+FAILED tests/conformance/test_contract_conformance.py::test_future_canary_fails_closed_and_never_leaks
+FAILED tests/conformance/test_contract_conformance.py::test_temporal_integrity_cutoff_mismatch_and_order
+FAILED tests/conformance/test_contract_conformance.py::test_authority_states_stay_separate[case_a-INCONCLUSIVE-INCONCLUSIVE-NO_EDGE]
+FAILED tests/conformance/test_contract_conformance.py::test_authority_states_stay_separate[case_b-NO_EDGE-SUPPORTED-NO_EDGE]
+FAILED tests/conformance/test_contract_conformance.py::test_authority_states_stay_separate[insufficient-CLOSED_INSUFFICIENT_SAMPLE-INSUFFICIENT_SAMPLE-NOT_EVALUATED]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-REJECTED-REFUSED]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_admission_commit]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_admission]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_materialization]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_ops]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_ops]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_domain_effect]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_result_write]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_write]
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_store]
+FAILED tests/conformance/test_failure_recovery.py::test_ops_worker_crash_is_not_a_result_and_retry_succeeds
+FAILED tests/conformance/test_failure_recovery.py::test_ops_timeout_kills_worker_and_is_not_a_result
+FAILED tests/conformance/test_failure_recovery.py::test_db_says_result_exists_but_file_is_gone
+FAILED tests/conformance/test_failure_recovery.py::test_file_exists_but_index_lost_the_result
+FAILED tests/conformance/test_failure_recovery.py::test_modified_result_and_modified_effect_fail_closed
+FAILED tests/conformance/test_failure_recovery.py::test_reference_receipt_from_another_request_fails_closed
+FAILED tests/conformance/test_failure_recovery.py::test_result_metadata_inconsistent_with_index_fails_closed
+FAILED tests/conformance/test_failure_recovery.py::test_host_process_killed_during_ops_job_recovers_exactly_once
+25 failed, 1636 passed in 612.67s (0:10:12)
+pytest exit=1
