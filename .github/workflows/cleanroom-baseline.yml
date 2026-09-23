@@ -1,0 +1,64 @@
+# SHARED-002: cleanroom-baseline (C5) dos 7 repos do stack, Linux × Python 3.13 (D-9).
+# Diagnóstico: registra o que quebra, não conserta. Sem segredos; só repos e releases públicos.
+name: Cleanroom baseline (SHARED-002)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/shared/SHARED-002/CLEANROOM_PLAN_V2.json
+      - qualification/shared/scripts/cleanroom_baseline.py
+      - qualification/shared/scripts/cleanroom_guard/**
+      - .github/workflows/cleanroom-baseline.yml
+
+permissions:
+  contents: read
+
+jobs:
+  cleanroom:
+    name: ${{ matrix.repo }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - cain
+          - ecosystem-predictor
+          - core-predictor
+          - predictor-ops
+          - brasileirao-predictor
+          - cripto-predictor
+          - stocks-predictor
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: uv e Python fixados pelo plano
+        run: |
+          plan=qualification/shared/SHARED-002/CLEANROOM_PLAN_V2.json
+          uv_version=$(jq -r .environment.uv_version "$plan")
+          uv_asset=$(jq -r .environment.uv_asset "$plan")
+          uv_sha=$(jq -r .environment.uv_sha256 "$plan")
+          py=$(jq -r .environment.python "$plan")
+          tools="$RUNNER_TEMP/tools"
+          mkdir -p "$tools/uv"
+          curl -sSfL -o "$tools/$uv_asset" "https://github.com/astral-sh/uv/releases/download/$uv_version/$uv_asset"
+          echo "$uv_sha  $tools/$uv_asset" | sha256sum -c -
+          tar -xzf "$tools/$uv_asset" -C "$tools/uv" --strip-components=1
+          export UV_PYTHON_INSTALL_DIR="$tools/python" UV_PYTHON_PREFERENCE=only-managed UV_NO_CONFIG=1
+          "$tools/uv/uv" python install "$py"
+          echo "CLEANROOM_UV=$tools/uv/uv" >> "$GITHUB_ENV"
+          echo "UV_PYTHON_INSTALL_DIR=$tools/python" >> "$GITHUB_ENV"
+          echo "UV_CACHE_DIR=$tools/uv-cache" >> "$GITHUB_ENV"
+          echo "CLEANROOM_PYTHON=$("$tools/uv/uv" python find "$py")" >> "$GITHUB_ENV"
+      - name: Cleanroom
+        run: |
+          "$CLEANROOM_PYTHON" -I qualification/shared/scripts/cleanroom_baseline.py \
+            qualification/shared/SHARED-002/CLEANROOM_PLAN_V2.json "${{ matrix.repo }}" "$RUNNER_TEMP/out/${{ matrix.repo }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cleanroom-${{ matrix.repo }}
+          path: ${{ runner.temp }}/out/${{ matrix.repo }}
+          if-no-files-found: error

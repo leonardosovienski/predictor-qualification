@@ -34,10 +34,79 @@
             "install": "source (uv sync --locked)",
             "suite": "87 passed, 0 failed; windows_integration 2 passed; teste isolado 3/3 PASSED",
             "raw_log": "qualification/shared/HYGIENE/RAW_LOGS/HYG-008/ops_local_windows_py313.log, qualification/shared/HYGIENE/RAW_LOGS/HYG-008/ops_local_windows_timeout_test.log"
+          },
+          {
+            "environment": "GitHub Actions ubuntu-24.04 × CPython 3.13.15 (SHARED-002 cleanroom-baseline)",
+            "install": "wheel publicada v4.2.1 (sha256 da4fa540…), venv limpo, lock exportado --require-hashes",
+            "run_url": "https://github.com/leonardosovienski/predictor-qualification/actions/runs/35826713033",
+            "suite": "test_timeout_and_truncation passou (1 execução); suíte tests_v2+posix_integration com 3–4 falhas de SHARED-004/método, nenhuma neste teste",
+            "raw_log": "qualification/shared/RAW_LOGS/SHARED-002/run35826713033/cleanroom-predictor-ops/junit-published.xml"
+          },
+          {
+            "environment": "GitHub Actions ubuntu-24.04 × CPython 3.13.15 (SHARED-002 cleanroom-baseline)",
+            "install": "DIAGNÓSTICO: wheel construída do commit 7bd99eb, venv limpo",
+            "run_url": "https://github.com/leonardosovienski/predictor-qualification/actions/runs/35826713033",
+            "suite": "test_timeout_and_truncation passou (1 execução); suíte tests_v2+posix_integration com 3–4 falhas de SHARED-004/método, nenhuma neste teste",
+            "raw_log": "qualification/shared/RAW_LOGS/SHARED-002/run35826713033/cleanroom-predictor-ops/junit-head_build.xml"
+          },
+          {
+            "environment": "GitHub Actions ubuntu-24.04 × CPython 3.13.15 (SHARED-002 cleanroom-baseline)",
+            "install": "wheel publicada v4.2.1 (sha256 da4fa540…), venv limpo, lock exportado --require-hashes",
+            "run_url": "https://github.com/leonardosovienski/predictor-qualification/actions/runs/35827048915",
+            "suite": "test_timeout_and_truncation passou (1 execução); suíte tests_v2+posix_integration com 3–4 falhas de SHARED-004/método, nenhuma neste teste",
+            "raw_log": "qualification/shared/RAW_LOGS/SHARED-002/run35827048915/cleanroom-predictor-ops/junit-published_pytest_s0.xml"
+          },
+          {
+            "environment": "GitHub Actions ubuntu-24.04 × CPython 3.13.15 (SHARED-002 cleanroom-baseline)",
+            "install": "DIAGNÓSTICO: wheel construída do commit 7bd99eb, venv limpo",
+            "run_url": "https://github.com/leonardosovienski/predictor-qualification/actions/runs/35827048915",
+            "suite": "test_timeout_and_truncation passou (1 execução); suíte tests_v2+posix_integration com 3–4 falhas de SHARED-004/método, nenhuma neste teste",
+            "raw_log": "qualification/shared/RAW_LOGS/SHARED-002/run35827048915/cleanroom-predictor-ops/junit-head_build_pytest_s0.xml"
           }
         ],
-        "not_covered": "execução a partir da wheel publicada (só source nesta triagem); repetições em volume; Linux × 3.13 fora do GitHub Actions",
+        "not_covered": "repetições em volume; Linux × 3.13 fora do GitHub Actions (execução a partir da wheel publicada coberta pelo SHARED-002)",
         "note": "Triagem da Fase 0. Não é veredito: classificação, causa raiz e 'blocking' são da missão crypto (C13)."
+      }
+    },
+    {
+      "issue_id": "SHARED-004",
+      "dependency": "predictor-ops",
+      "wheel_version": "4.2.1",
+      "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
+      "test": "tests_v2/test_provenance.py::test_source_clean_dirty_detached_and_missing_commit, tests_v2/test_provenance.py::test_strict_editable_fails_closed_and_permissive_is_safe, tests_v2/test_runner_extended.py::test_strict_setup_failure_is_terminal_and_child_never_runs",
+      "owner_mission": "crypto",
+      "owner_mission_note": "Proposta do agente (mesma wheel e mesmo dono da SHARED-003); vale com o merge do dono.",
+      "status": "OPEN_AWAITING_VERDICT",
+      "observed_state": "REPRODUCED_IN_CLEANROOM",
+      "triage": {
+        "phase": "SHARED-002 cleanroom-baseline",
+        "runs": [
+          {
+            "environment": "GitHub Actions ubuntu-24.04 × CPython 3.13.15",
+            "install": "wheel publicada v4.2.1, venv limpo",
+            "run_url": "https://github.com/leonardosovienski/predictor-qualification/actions/runs/35827048915",
+            "suite": "85 passed, 3 failed (os 3 testes acima)",
+            "raw_log": "qualification/shared/RAW_LOGS/SHARED-002/run35827048915/cleanroom-predictor-ops/logs/published_pytest_s0.log"
+          },
+          {
+            "environment": "GitHub Actions ubuntu-24.04 × CPython 3.13.15",
+            "install": "DIAGNÓSTICO: wheel construída do commit 7bd99eb, venv limpo",
+            "run_url": "https://github.com/leonardosovienski/predictor-qualification/actions/runs/35827048915",
+            "suite": "85 passed, 3 failed (os mesmos 3)",
+            "raw_log": "qualification/shared/RAW_LOGS/SHARED-002/run35827048915/cleanroom-predictor-ops/logs/head_build_pytest_s0.log"
+          },
+          {
+            "environment": "GitHub Actions ubuntu-24.04 × CPython 3.13.15 (plano V1)",
+            "install": "wheel publicada e wheel do commit",
+            "run_url": "https://github.com/leonardosovienski/predictor-qualification/actions/runs/35826713033",
+            "suite": "84 passed, 4 failed: os mesmos 3 + test_wheel_record_tampering_fails_in_isolated_environment, este um artefato do método V1 (árvore sparse sem src/)",
+            "raw_log": "qualification/shared/RAW_LOGS/SHARED-002/run35826713033/cleanroom-predictor-ops/logs/published_pytest.log"
+          }
+        ],
+        "ci_contrast": "No CI do Ops (uv sync, instalação editable) os 3 passam: lá _verify_wheel falha por 'editable', e a proveniência strict falha fechada como os testes esperam.",
+        "candidate_root_cause": "src/predictor_ops/provenance.py collect_provenance(): com strict=True, o ProvenanceError do candidato de fonte ('not validated', fonte suja) é acumulado e a função tenta _verify_wheel; numa instalação por wheel ela devolve VALIDATED (identidade da wheel do Ops) em vez de falhar fechada. Os 3 testes pressupõem instalação editable. Alcance em produção: runner.py:237 chama sem source_root (não afetado); cli.py:47 (comando de proveniência com --source-root) é afetado: fonte suja reporta VALIDATED com kind=wheel.",
+        "not_covered": "Windows; decisão entre defeito de código (fall-through em strict) e defeito só de teste (pressuposto editable)",
+        "note": "Triagem do SHARED-002. Não é veredito: classificação, causa raiz confirmada e 'blocking' são da missão dona (C13)."
       }
     }
   ]

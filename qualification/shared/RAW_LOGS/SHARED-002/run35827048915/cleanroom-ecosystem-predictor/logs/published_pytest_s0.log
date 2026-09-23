@@ -1,0 +1,86 @@
+$ (cwd=/home/runner/work/_temp/cleanroom/ecosystem-predictor/tree) /home/runner/work/_temp/cleanroom/ecosystem-predictor/venv-published/bin/python -m pytest tests packages/research-protocol/tests packages/research-snapshot/tests packages/research-bundle/tests -p cleanroom_guard -p no:cacheprovider -o pythonpath= --continue-on-collection-errors -rfE --junitxml=/home/runner/work/_temp/out/ecosystem-predictor/junit-published_pytest_s0.xml
+============================= test session starts ==============================
+platform linux -- Python 3.13.15, pytest-8.4.2, pluggy-1.6.0
+rootdir: /home/runner/work/_temp/cleanroom/ecosystem-predictor/tree
+configfile: pyproject.toml
+plugins: cov-7.1.0
+collected 186 items
+
+tests/contract/test_plugin_protocol.py ......                            [  3%]
+tests/test_architecture_inventory.py .....                               [  5%]
+tests/test_canonical_registries.py ..........                            [ 11%]
+tests/test_current_representation.py .                                   [ 11%]
+tests/test_ecosystem_drift.py .......                                    [ 15%]
+tests/test_ecosystem_facts.py ..................                         [ 25%]
+tests/test_fidelity_regressions.py .......F                              [ 29%]
+tests/test_recorded_harness_evidence.py ........                         [ 33%]
+tests/unit/test_architecture_registry.py ......                          [ 37%]
+tests/unit/test_candidate_artifact_identity.py ........                  [ 41%]
+tests/unit/test_contracts.py ....                                        [ 43%]
+tests/unit/test_registry.py ...F...                                      [ 47%]
+packages/research-protocol/tests/test_key_store.py ...                   [ 48%]
+packages/research-protocol/tests/test_result_contract.py ..........      [ 54%]
+packages/research-protocol/tests/test_task_contract.py .............     [ 61%]
+packages/research-snapshot/tests/test_publication.py ..........          [ 66%]
+packages/research-bundle/tests/test_contract.py ........................ [ 79%]
+..........................                                               [ 93%]
+packages/research-bundle/tests/test_files_export.py ............         [100%]
+
+=================================== FAILURES ===================================
+_________________ test_plugin_exception_messages_never_escape __________________
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7f689c434ad0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f689c6c72f0>
+
+    def test_plugin_exception_messages_never_escape(caplog, monkeypatch):
+        marker = "SYNTHETIC_PRIVATE_VALUE"
+    
+        def broken(*args):
+            raise RuntimeError(marker)
+    
+        ep = EntryPoint(name="synthetic", value="synthetic:plugin", group="predictor.plugins")
+        monkeypatch.setattr(EntryPoint, "load", broken)
+        registry = Registry()
+        registry._load_one(ep)
+>       assert marker not in caplog.text
+E       AssertionError: assert 'SYNTHETIC_PRIVATE_VALUE' not in 'ERROR    ec...VATE_VALUE\n'
+E         
+E         'SYNTHETIC_PRIVATE_VALUE' is contained here:
+E            to load: SYNTHETIC_PRIVATE_VALUE
+
+tests/test_fidelity_regressions.py:41: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    ecosystem.registry:__init__.py:136 plugin 'synthetic' failed to load: SYNTHETIC_PRIVATE_VALUE
+_______________ test_constructor_error_does_not_crash_discovery ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f689c453490>
+
+    def test_constructor_error_does_not_crash_discovery(monkeypatch):
+        monkeypatch.setattr("ecosystem.registry.entry_points", lambda group: [CONSTRUCTOR_BROKEN_EP])
+        registry = Registry.discover()
+    
+        record = registry.get("constructor-broken")
+        assert record is not None
+        assert not record.loaded
+>       assert record.error == "RuntimeError"
+E       AssertionError: assert 'constructor unavailable' == 'RuntimeError'
+E         
+E         - RuntimeError
+E         + constructor unavailable
+
+tests/unit/test_registry.py:65: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    ecosystem.registry:__init__.py:136 plugin 'constructor-broken' failed to load: constructor unavailable
+- generated xml file: /home/runner/work/_temp/out/ecosystem-predictor/junit-published_pytest_s0.xml -
+=========================== short test summary info ============================
+FAILED tests/test_fidelity_regressions.py::test_plugin_exception_messages_never_escape - AssertionError: assert 'SYNTHETIC_PRIVATE_VALUE' not in 'ERROR    ec...VATE_VALUE\n'
+  
+  'SYNTHETIC_PRIVATE_VALUE' is contained here:
+     to load: SYNTHETIC_PRIVATE_VALUE
+FAILED tests/unit/test_registry.py::test_constructor_error_does_not_crash_discovery - AssertionError: assert 'constructor unavailable' == 'RuntimeError'
+  
+  - RuntimeError
+  + constructor unavailable
+======================== 2 failed, 184 passed in 0.82s =========================
+
+[exit 1]

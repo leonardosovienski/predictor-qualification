@@ -1,0 +1,22 @@
+$ curl -sSfL https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.1.0/cripto_predictor-1.1.0-py3-none-any.whl; sha256; zip namelist
+41e48e0dd74cb28d5367257495a3fd51048a5c66e594d1d50cf5e854c74a82fe
+entries 185
+GarimpoInvestimentos/output/ -> []
+GarimpoInvestimentos/main.py present: True
+$ curl -sSfL https://github.com/leonardosovienski/brasileirao-predictor/releases/download/v0.2.0/brasileirao_predictor-0.2.0-py3-none-any.whl; sha256; zip namelist
+2a862b4cb955e7e5fc32162248bb306ddcc5519d5fb715c520665082d98e0e4d
+entries 241
+config.yaml -> []
+brasileirao_predictor/ingest.py present: True
+
+$ git -C cripto-predictor@5fd4e1b show HEAD:.gitignore | grep -n output
+12:output/
+20:# Local research runtimes and regenerated outputs; maintained sources live in scripts/.
+$ git -C cripto-predictor@5fd4e1b grep -n output.reporter -- GarimpoInvestimentos
+HEAD:GarimpoInvestimentos/main.py:58:from GarimpoInvestimentos.output.reporter import export_results
+HEAD:GarimpoInvestimentos/services/reporting.py:1:from GarimpoInvestimentos.output.reporter import export_results
+$ git -C brasileirao-predictor@e14f339 show HEAD:brasileirao_predictor/ingest.py | sed -n 1,30p | grep -n ROOT\|config
+21:ROOT = project_root()
+24:def load_config() -> dict:
+25:    config_path = Path(os.environ.get("BRASILEIRAO_CONFIG_PATH", ROOT / "config.yaml"))
+26:    with config_path.open() as f:
