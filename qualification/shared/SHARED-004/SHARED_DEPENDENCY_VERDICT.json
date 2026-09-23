@@ -1,0 +1,45 @@
+{
+  "issue_id": "SHARED-004",
+  "dependency": "predictor-ops",
+  "wheel_version": "4.2.1",
+  "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
+  "owner_mission": "crypto",
+  "tests": [
+    "tests_v2/test_provenance.py::test_source_clean_dirty_detached_and_missing_commit",
+    "tests_v2/test_provenance.py::test_strict_editable_fails_closed_and_permissive_is_safe",
+    "tests_v2/test_runner_extended.py::test_strict_setup_failure_is_terminal_and_child_never_runs"
+  ],
+  "classification": "test_only",
+  "blocking": false,
+  "reproductions": [
+    {"environment": "Linux ubuntu-latest × py3.13.14 (GitHub Actions)", "install": "wheel publicada 4.2.1, venv limpo", "runs": "run 35831881258 e 35833205145", "result": "3 falhas em 3/3 execuções por run (os 3 testes)"},
+    {"environment": "Linux ubuntu-latest × py3.13.14 (GitHub Actions)", "install": "source editable (uv sync --locked)", "runs": "run 35831881258 e 35833205145", "result": "3 passed em 3/3 execuções por run"},
+    {"environment": "Windows 11 local × CPython 3.13.14", "install": "wheel publicada 4.2.1", "result": "3 falhas em 3/3"},
+    {"environment": "Windows 11 local × CPython 3.13.14", "install": "source editable", "result": "3 passed em 3/3"},
+    {"environment": "windows-latest × py3.13.14", "install": "wheel publicada 4.2.1", "result": "3 falhas em 1/1"}
+  ],
+  "root_cause": "Os três testes pressupõem instalação editable: esperam que predictor_ops.provenance._verify_wheel levante 'editable installation is not a verifiable release artifact' e que, por isso, collect_provenance(strict=True) falhe fechado. Com a wheel publicada instalada, _verify_wheel confere o RECORD (21 arquivos) e devolve VALIDATED, que é o comportamento correto para uma wheel íntegra; o modo strict passa e o filho roda. A/B: mesmo código, editable → os 3 passam; wheel → os 3 falham (Linux e Windows).",
+  "trace": {
+    "file": "qualification/crypto/RAW_LOGS/ops-failure/shared004-trace/trace.log",
+    "runner_path": "runner.py:237 collect_provenance(strict=True) sem source_root: wheel → VALIDATED kind=wheel (correto); editable → ProvenanceError editable (falha fechada)",
+    "cli_path": "cli.py:47 `predictor-ops provenance --source-root <fonte suja>`: wheel → exit 0, {identity_status: VALIDATED, kind: wheel}; editable → exit 3 CONFIGURATION_ERROR"
+  },
+  "affected_code_paths": [
+    "predictor_ops/provenance.py collect_provenance: com strict=True e source_root explícito cuja fonte está suja, o erro do candidato de fonte é acumulado e a função cai para _verify_wheel, devolvendo a identidade da wheel do Ops no lugar da identidade pedida. Só é alcançado por predictor_ops/cli.py:47 (comando `provenance --source-root`)."
+  ],
+  "production_reachability": "Nenhuma missão usa esse caminho: runner.py:237 nunca passa source_root; busca em cripto-predictor, brasileirao-predictor e stocks-predictor não encontra chamada a collect_provenance nem ao CLI `predictor-ops provenance` (os acertos de 'source_root' são variáveis homônimas sem relação).",
+  "secondary_observation": {
+    "severity_suggested": "P2",
+    "text": "`predictor-ops provenance --source-root X` responde VALIDATED com a identidade da wheel quando X está suja: resposta enganosa num comando de produção. Proposta ao dono do Ops: com source_root explícito e strict=True, falhar fechado sem fallback para _verify_wheel; reescrever os testes para não depender de editable (instalar a wheel no teste ou simular direct_url editable)."
+  },
+  "affected_missions": ["crypto", "brasileirao", "stocks"],
+  "blocking_rationale": "test_only com causa demonstrada por A/B (C13). O caminho de runtime das missões (run_job → collect_provenance sem source_root) valida a wheel corretamente; o único caminho de código com comportamento questionável (CLI --source-root) não é usado por nenhuma missão.",
+  "evidence": [
+    "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json",
+    "qualification/crypto/RAW_LOGS/ops-failure/shared004-trace/trace.log",
+    "qualification/crypto/RAW_LOGS/ops-failure/run35833205145/",
+    "qualification/crypto/RAW_LOGS/ops-failure/windows-local/"
+  ],
+  "decided_at": "2026-09-23",
+  "report": "qualification/crypto/OPS_FAILURE_REPORT.md"
+}

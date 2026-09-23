@@ -1,0 +1,138 @@
+{
+  "schema": "crypto/FINDINGS/1",
+  "severity_scale": "C6 (P0/P1/P2)",
+  "status_values": [
+    "OPEN",
+    "OPEN_BLOCKED",
+    "FIXED",
+    "CLOSED_NOT_A_DEFECT",
+    "ACCEPTED_BY_OWNER"
+  ],
+  "findings": [
+    {
+      "id": "CR-F001",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "freeze-parameters",
+      "title": "Branches antigas ainda existem e tags archive/* não existem",
+      "description": "O contexto do dono diz que as branches antigas dos 8 repos foram arquivadas como tags archive/<nome> e apagadas. git ls-remote em 2026-09-23 mostra 0 tags archive/* e as branches antigas presentes: cripto-predictor 7 (claude/bold-keller-0bybfk, docs/corrigir-continuidade-20260917, fix/audit-remediation-20260917, fix/opportunity-detection, hygiene/HYG-003-protocol-source-lock, hygiene/HYG-015-retire-v1-workflows, profit-recovery-20260919), predictor-qualification 6, core-predictor 2, predictor-ops 1. O agente não apaga branch não arquivada.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/freeze-parameters/ls_remote.log"
+      ],
+      "owner_action": "arquivar e apagar (ou autorizar) as branches antigas"
+    },
+    {
+      "id": "CR-F002",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "baseline",
+      "title": "Suíte do Cripto no Windows depende de CRIPTO_ROOT ancestral do TEMP",
+      "description": "tests/conftest.py cria CRIPTO_ROOT = tempdir próprio quando CRIPTO_ROOT não está definido; tests/test_output_dir_bootstrap.py e tests/test_mode_composition.py passam tmp_path (fora desse tempdir) como diretório operacional, e local_runtime.within_root recusa. Com TEMP em C:\\Cripto\\qualificacao\\tmp e sem CRIPTO_ROOT: 2 falhas; com CRIPTO_ROOT ancestral do TEMP: passam (A/B). Defeito só de teste/ambiente, sem efeito no código de produção. Também: 2 testes de distribuição exigem `uv build` antes da suíte (como o ci.yml faz).",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b.log",
+        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log"
+      ],
+      "resolution_plan": "método documentado em qualification/crypto/scripts/win_suite.sh"
+    },
+    {
+      "id": "CR-F003",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "AdmissionStore: max_pending_tasks nunca libera",
+      "description": "AdmissionStore conta todo ACCEPTED como pendente para sempre (não existe API de conclusão). Reproduzido em 5fd4e1b com max_pending_tasks=2: o 3º pedido é REJECTED GLOBAL_PENDING_QUOTA. No soak (≥20 ciclos) o domínio pararia de admitir.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
+      ]
+    },
+    {
+      "id": "CR-F004",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Handler reporta custo líquido errado (1 perna, sem funding) e sem IC do líquido",
+      "description": "research_worker.evaluate reporta net_return_bps = gross_bps − (fee+slippage) = 1 perna e sem funding. O CostModel congelado cobra 2 pernas (30 bps) + funding. Reproduzido em 5fd4e1b: bruto +15 bps, líquido reportado 0 bps, líquido pelo CostModel −36 bps. Nenhum IC do líquido. Esconde prejuízo: resultado econômico errado.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
+      ]
+    },
+    {
+      "id": "CR-F005",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "cleanroom-baseline",
+      "title": "GarimpoInvestimentos/output fora da wheel",
+      "description": ".gitignore com `output/` sem âncora exclui GarimpoInvestimentos/output (reporter.py) da wheel; o caminho padrão de análise quebra no runtime instalado (SHARED-002).",
+      "evidence": [
+        "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
+      ]
+    },
+    {
+      "id": "CR-F006",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Circuito de pesquisa não alcançável de entrypoint",
+      "description": "AdmissionStore, ReferenceStore, ResearchExecutor, ResultOutbox, research_worker e research_recovery não são alcançados por nenhum [project.scripts] nem entry-point (grafo AST + trace em runtime). Não existe entrypoint que leia pedidos em arquivo (C24.1).",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/truth-map/import_graph_baseline.json",
+        "qualification/crypto/RAW_LOGS/truth-map/runtime_trace_checkout.log"
+      ]
+    },
+    {
+      "id": "CR-F007",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Admission/execução/resultado acoplados ao envelope V1",
+      "description": "research_admission, research_execution e research_results importam research_protocol (verify_task, validate_result, sign_result) e usam ResearchTaskV1/ResearchResultV1 com autenticação HMAC do CAIN. O prompt §8 exige domínio sem envelope.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/truth-map/envelope_coupling_grep.log"
+      ]
+    },
+    {
+      "id": "CR-F008",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Estado científico e validação temporal decididos no domínio, não no Core",
+      "description": "O worker decide SUPPORTED/REFUTED/INCONCLUSIVE e valida o tempo com código próprio; o Core só fornece bootstrap e o registro de trial. CORE_PARTICIPATION exige estado científico e validação temporal do Core real.",
+      "evidence": [
+        "qualification/crypto/ARCHITECTURE_TRUTH_MAP.json"
+      ]
+    },
+    {
+      "id": "CR-F009",
+      "severity": "P1",
+      "status": "OPEN_BLOCKED",
+      "phase": "ops-failure",
+      "title": "SHARED-005: lock local do Ops falha no Windows sob concorrência (bloqueante)",
+      "description": "predictor-ops 4.2.1 _mutation_guard: corrida na inicialização da guarda; o processo perdedor morre com PermissionError dentro de run_job. Veredito flaky/bloqueante (C13). Correção exige mudança no Ops congelado: decisão do dono.",
+      "evidence": [
+        "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json"
+      ]
+    },
+    {
+      "id": "CR-F010",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "ops-failure",
+      "title": "Ops CLI `provenance --source-root` com fonte suja responde VALIDATED (identidade da wheel)",
+      "description": "Observação da SHARED-004; nenhuma missão usa o caminho. Proposta ao dono do Ops.",
+      "evidence": [
+        "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT.json"
+      ]
+    },
+    {
+      "id": "CR-F011",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "cleanroom-baseline",
+      "title": "crypto-research-export exige predictor-research-snapshot fora do lock",
+      "description": "Pacote separado (packages/research-export), fora da wheel cripto-predictor e do circuito da Etapa A; exportação para CAIN é assunto da Etapa B.",
+      "evidence": [
+        "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
+      ]
+    }
+  ]
+}

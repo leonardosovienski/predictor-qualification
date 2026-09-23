@@ -1,0 +1,66 @@
+{
+  "schema": "crypto/ARCHITECTURE_TRUTH_MAP/1",
+  "phase": "truth-map",
+  "repo": "cripto-predictor",
+  "commit": "5fd4e1b06c79231fd3d9485a1483f3b65e854bea",
+  "maturity_scale": "C2: NOT_PRESENT < DECLARED < IMPLEMENTED < INSTANTIATED < REACHABLE < EXERCISED < PROVEN",
+  "method": {
+    "static": "qualification/crypto/scripts/truth_map.py imports (AST de todo GarimpoInvestimentos/ no commit; closure transitiva a partir de [project.scripts] e entry-points) → RAW_LOGS/truth-map/import_graph_baseline.json",
+    "runtime": "qualification/crypto/scripts/runtime_modules.py (sys.modules depois de executar o console script) → RAW_LOGS/truth-map/runtime_trace_checkout.log (diagnóstico de checkout: não existe wheel publicada de 1.1.1rc4)",
+    "grep": "RAW_LOGS/truth-map/envelope_coupling_grep.log"
+  },
+  "entrypoints": {
+    "[project.scripts] cripto-predictor": {"module": "GarimpoInvestimentos.cli:main", "closure_size": 81, "research_components_reached": [], "research_protocol_reached": false},
+    "[project.scripts] cripto-predictor-job": {"module": "GarimpoInvestimentos.jobs:main", "closure_size": 127, "research_components_reached": [], "research_protocol_reached": false, "note": "jobs usam predictor_ops.run_job (Ops real) para phase1/backtest/etc.; nenhum job de pesquisa admitida"},
+    "[entry-points.predictor.plugins] cripto": {"module": "GarimpoInvestimentos.plugin:PLUGIN", "closure_size": 85, "research_components_reached": []},
+    "file_request_entrypoint": {"status": "NOT_PRESENT", "note": "não existe script que leia pedidos em arquivo (C24.1 entrypoint)"}
+  },
+  "components": [
+    {"component": "AdmissionStore", "file": "GarimpoInvestimentos/research_admission.py", "level": "EXERCISED",
+     "instantiated_in_production": false, "reachable_from_entrypoint": false,
+     "who_calls": ["tests/test_research_admission.py", "legacy/v1_integration/test_research_execution.py (fora da coleta)"],
+     "envelope_coupling": ["import research_protocol (canonical, digest, verify_task) linha 15", "verify_task linha 252", "admission autenticada por HMAC do CAIN (producer CAIN/consumer CRIPTO, publishers, key_id)"],
+     "defects_seen": ["max_pending_tasks conta todo ACCEPTED para sempre (nunca decrementa ao concluir): depois de N pedidos tudo é REJECTED GLOBAL_PENDING_QUOTA"]},
+    {"component": "ReferenceStore", "file": "GarimpoInvestimentos/research_execution.py", "level": "IMPLEMENTED",
+     "instantiated_in_production": false, "reachable_from_entrypoint": false,
+     "who_calls": ["legacy/v1_integration/test_research_execution.py (fora da coleta desde HYG-003)"],
+     "envelope_coupling": []},
+    {"component": "ResearchExecutor / ExperimentJournal", "file": "GarimpoInvestimentos/research_execution.py", "level": "IMPLEMENTED",
+     "instantiated_in_production": false, "reachable_from_entrypoint": false,
+     "who_calls": ["legacy/v1_integration/test_research_execution.py (fora da coleta)"],
+     "envelope_coupling": ["import research_protocol (canonical, digest, validate_result) linha 20", "schema_version ResearchResultV1", "validate_result linha 398"],
+     "uses_ops": "predictor_ops.run_job real (JobType.SHADOW_DECISION, capital_permission False), sem economic_key (sem idempotência do Ops)",
+     "defects_seen": ["cwd do job = Path(__file__).parents[1] (no runtime instalado vira site-packages)", "provenance crypto_source_sha vem do chamador, sem fonte no runtime"]},
+    {"component": "ResultOutbox", "file": "GarimpoInvestimentos/research_results.py", "level": "EXERCISED",
+     "instantiated_in_production": false, "reachable_from_entrypoint": false,
+     "who_calls": ["tests/test_research_results.py", "legacy/v1_integration"],
+     "envelope_coupling": ["import research_protocol (canonical, digest, loads, payload_hash, sign_result, validate_result) linha 14", "assina resultado para consumer CAIN"]},
+    {"component": "research_worker (handler crypto.handlers.backtest_existing_hypothesis.v1)", "file": "GarimpoInvestimentos/research_worker.py", "level": "IMPLEMENTED",
+     "instantiated_in_production": false, "reachable_from_entrypoint": false,
+     "who_calls": ["ResearchExecutor via predictor_ops.run_job (python -m GarimpoInvestimentos.research_worker)"],
+     "uses_core": ["predictor_core.contracts.trial_v2 (TrialRegistryV2, dataset_fingerprint)", "predictor_core.measurement.bootstrap.bootstrap_ci", "predictor_core.measurement.stats.max_drawdown"],
+     "defects_seen": [
+       "estado científico (SUPPORTED/REFUTED/INCONCLUSIVE) decidido no domínio, não relido do Core",
+       "net_return_bps = gross_bps − (fee+slippage) = 1 perna e sem funding; o CostModel congelado cobra 2 pernas (30 bps) + funding: custo subestimado",
+       "IC só do bruto; nenhum IC do líquido",
+       "validação temporal própria do domínio; não usa predictor_core.measurement.replay"
+     ]},
+    {"component": "research_recovery (bundle/restore)", "file": "GarimpoInvestimentos/research_recovery.py", "level": "IMPLEMENTED",
+     "instantiated_in_production": false, "reachable_from_entrypoint": false,
+     "who_calls": ["legacy/v1_integration/test_research_recovery.py (fora da coleta)"]}
+  ],
+  "dependencies": {
+    "predictor-core": {"spec": ">=3.2.1,<4", "source": "release v3.2.1", "lock_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"},
+    "predictor-ops": {"spec": ">=4.2.0,<5", "source": "release v4.2.1", "lock_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e"},
+    "predictor-research-protocol": {"spec": "==1.0.3rc1", "source": "release ecosystem-predictor", "used_by": ["research_admission", "research_execution", "research_results"], "note": "só envelope V1 (CAIN); fora do escopo da Etapa A"}
+  },
+  "wheel_packaging": [
+    "GarimpoInvestimentos/output/ fora da wheel (.gitignore `output/` sem âncora; SHARED-002)",
+    "crypto-research-export (packages/research-export) exige predictor-research-snapshot fora do lock (SHARED-002; pacote separado, fora da wheel do cripto-predictor)"
+  ],
+  "divergences_from_prompt": [
+    {"prompt": "§3 handler research_worker.main linha 178", "real": "main está na linha 203 de research_worker.py em 5fd4e1b", "impact": "nenhum"},
+    {"prompt": "§3 entrypoints cripto-predictor, cripto-predictor-job", "real": "confirmados; nenhum alcança pesquisa admitida"}
+  ],
+  "suite_counts_resolution": "Em 5fd4e1b: 1618 passed no Windows local com o método do CI (RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log) e 1618 passed no CI Linux quality (run 35822807920). As contagens antigas (1614/1 skip × 1580/7 skip) são de outros commits/métodos."
+}

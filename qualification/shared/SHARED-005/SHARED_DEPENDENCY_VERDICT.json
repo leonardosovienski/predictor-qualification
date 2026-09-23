@@ -1,0 +1,35 @@
+{
+  "issue_id": "SHARED-005",
+  "dependency": "predictor-ops",
+  "wheel_version": "4.2.1",
+  "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
+  "owner_mission": "crypto",
+  "found_in": "fase ops-failure da missão crypto (tests_v2 completa na wheel, Windows local)",
+  "test": "tests_v2/test_runtime.py::test_local_lock_has_one_winner_across_processes",
+  "classification": "flaky",
+  "blocking": true,
+  "reproductions": [
+    {"environment": "Windows 11 local × CPython 3.13.14", "install": "wheel publicada 4.2.1", "result": "1 falha em 1 execução da tests_v2 completa; 0/20 falhas em execuções isoladas"},
+    {"environment": "Windows 11 local × CPython 3.13.14", "install": "source editable", "result": "1/20 falhas em execuções isoladas; 0 falha na tests_v2 completa"},
+    {"environment": "Linux ubuntu-latest (GitHub Actions)", "install": "source e wheel", "result": "0 falhas (4 tests_v2 completas); o caminho Linux usa fcntl.flock, cujo lock é consultivo e não impede a escrita"},
+    {"environment": "Windows 11 local × CPython 3.13.14", "install": "wheel publicada 4.2.1", "result": "A/B determinístico 3/3: guarda vazia + byte 0 travado por outro processo → PermissionError em 1–2 ms; guarda já inicializada → entra depois que o outro processo solta (~0,5 s)"}
+  ],
+  "root_cause": "predictor_ops/runtime.py _mutation_guard: dois processos abrem o arquivo .mutation.guard ainda vazio; o primeiro escreve o byte inicial e trava o byte 0 com msvcrt.locking; o segundo, que também viu tamanho 0, escreve e faz flush no byte travado. No Windows o lock de msvcrt é obrigatório e a escrita levanta PermissionError (errno 13). A escrita inicial (linhas 25–27) fica fora do laço de retry (linhas 29–44), então a exceção escapa de LocalBackend.acquire e de predictor_ops.run_job (que chama backend.acquire antes do try).",
+  "affected_code_paths": [
+    "predictor_ops/runtime.py:_mutation_guard (linhas 23–27)",
+    "predictor_ops/runtime.py:LocalBackend.acquire → predictor_ops/runner.py:run_job (lock de todo job)",
+    "LocalLock.refresh/release usam a mesma guarda (só depois de criada)"
+  ],
+  "effect": "Na primeira disputa concorrente por um job_id novo no Windows, o processo perdedor morre com PermissionError em vez de receber SKIPPED lock_not_acquired. Não há dois vencedores (exclusão preservada) nem efeito duplicado; é uma queda não tratada do concorrente, com ruído operacional e retry do chamador.",
+  "affected_missions": ["crypto", "brasileirao", "stocks"],
+  "blocking_rationale": "C13: flaky bloqueia quando o comportamento instável está em caminho usado em runtime pelas missões; run_job → LocalBackend.acquire é o lock de todo job no Windows. Correção exige mudança no predictor-ops (congelado na Etapa A): decisão do dono → release nova + STACK_BASELINE_V1.<n> + C14.",
+  "proposed_fix": "qualification/shared/SHARED-005/PROPOSED_FIX.md",
+  "evidence": [
+    "qualification/crypto/RAW_LOGS/ops-failure/windows-local/windows-local-wheel/full_tests_v2_run01.log",
+    "qualification/crypto/RAW_LOGS/ops-failure/windows-local-lockrace/",
+    "qualification/crypto/RAW_LOGS/ops-failure/windows-local-lockrace/guard_ab_wheel.jsonl",
+    "qualification/crypto/scripts/ops_lock_guard_ab.py"
+  ],
+  "decided_at": "2026-09-23",
+  "report": "qualification/crypto/OPS_FAILURE_REPORT.md"
+}

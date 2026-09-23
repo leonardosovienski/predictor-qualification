@@ -1,0 +1,69 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+_______________ test_local_lock_has_one_winner_across_processes _______________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/runtime/ops-failure/20260923T073454Z/tmp/pytest-of-leona/pytest-36/test_local_lock_has_one_winner0')
+
+    def test_local_lock_has_one_winner_across_processes(tmp_path):
+        context = multiprocessing.get_context("spawn")
+        barrier, queue = context.Barrier(2), context.Queue()
+        processes = [context.Process(target=_local_racer, args=(tmp_path, barrier, queue, token)) for token in ("a", "b")]
+        for process in processes:
+            process.start()
+>       assert sum(queue.get(timeout=5) for _ in processes) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests_v2\test_runtime.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests_v2\test_runtime.py:41: in <genexpr>
+    assert sum(queue.get(timeout=5) for _ in processes) == 1
+               ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <multiprocessing.queues.Queue object at 0x0000019B440552B0>, block = True
+timeout = 4.999995299964212
+
+    def get(self, block=True, timeout=None):
+        if self._closed:
+            raise ValueError(f"Queue {self!r} is closed")
+        if block and timeout is None:
+            with self._rlock:
+                res = self._recv_bytes()
+            self._sem.release()
+        else:
+            if block:
+                deadline = time.monotonic() + timeout
+            if not self._rlock.acquire(block, timeout):
+                raise Empty
+            try:
+                if block:
+                    timeout = deadline - time.monotonic()
+                    if not self._poll(timeout):
+>                       raise Empty
+E                       _queue.Empty
+
+C:\QUALIFICACAO\tools\python\cpython-3.13-windows-x86_64-none\Lib\multiprocessing\queues.py:112: Empty
+---------------------------- Captured stderr call -----------------------------
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "C:\QUALIFICACAO\tools\python\cpython-3.13-windows-x86_64-none\Lib\multiprocessing\process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "C:\QUALIFICACAO\tools\python\cpython-3.13-windows-x86_64-none\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Cripto\qualificacao\runtime\ops-failure\20260923T073454Z\tmp\tmp.0eOExS4CsK\ops\tests_v2\test_runtime.py", line 12, in _local_racer
+    lock = LocalBackend(root).acquire("race", token, 60)
+  File "C:\CRIPTO\qualificacao\runtime\ops-failure\20260923T073454Z\tmp\tmp.0eOExS4CsK\ops\src\predictor_ops\runtime.py", line 162, in acquire
+    with _mutation_guard(self.root / job_id / ".mutation.guard"):
+         ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\QUALIFICACAO\tools\python\cpython-3.13-windows-x86_64-none\Lib\contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "C:\CRIPTO\qualificacao\runtime\ops-failure\20260923T073454Z\tmp\tmp.0eOExS4CsK\ops\src\predictor_ops\runtime.py", line 27, in _mutation_guard
+    handle.flush()
+    ~~~~~~~~~~~~^^
+PermissionError: [Errno 13] Permission denied
+=========================== short test summary info ===========================
+FAILED tests_v2/test_runtime.py::test_local_lock_has_one_winner_across_processes
+1 failed in 6.21s
+[exit 1]
