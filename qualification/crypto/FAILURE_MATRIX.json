@@ -1,0 +1,42 @@
+{
+  "schema": "crypto/FAILURE_MATRIX/1",
+  "frozen_before": "fases e2e, idempotency-failure e soak (nenhuma execução de gate antes deste arquivo)",
+  "injection": "na borda: morte real do processo cripto-research (os._exit, sem cleanup) em pontos do circuito; falhas do worker executado pelo predictor_ops real (crash, hang, slow); morte do host do Ops por kill externo; corrupção por alteração de arquivos/banco entre execuções. Sem mocks de Core ou Ops.",
+  "switch": "variável CRIPTO_RESEARCH_FAULT=<ponto> no processo cripto-research (GarimpoInvestimentos/research_faults.py)",
+  "recovery_check_after_every_fault": [
+    "falha detectada (exit code e outcome do contrato)",
+    "reexecução do MESMO pedido em processo novo recupera ou falha fechada",
+    "nada perdido: resultado autoritativo relido por `show`",
+    "nada duplicado: 1 domain-effect.json, 1 registro SUCCEEDED do Ops por experimento, 1 linha no ResultStore",
+    "`reconcile` sem achados depois da recuperação (exceto casos de corrupção, que devem acusar)"
+  ],
+  "points": [
+    {"prompt": "antes do commit da admission", "fault": "before_admission_commit", "kind": "process_death", "expected": "exit 86; admission sem linhas (rollback); reexecução ACEITA e produz 1 resultado"},
+    {"prompt": "depois do commit da admission", "fault": "after_admission", "kind": "process_death", "expected": "exit 86; reexecução DUPLICATE na admission e produz 1 resultado"},
+    {"prompt": "durante a materialização", "fault": "during_materialization", "kind": "process_death", "expected": "exit 86 com referência parcial materializada; reexecução verifica hash de cada referência e produz 1 resultado"},
+    {"prompt": "antes do Ops", "fault": "before_ops", "kind": "process_death", "expected": "exit 86; reexecução produz 1 resultado"},
+    {"prompt": "durante o Ops (crash do worker)", "fault": "ops_worker_crash", "kind": "worker", "expected": "exit 3 OPS_FAILED_RETRYABLE, operational FAILED, científico/econômico NOT_EVALUATED, nenhum resultado; retry produz 1 resultado"},
+    {"prompt": "timeout do Ops", "fault": "ops_worker_hang", "kind": "worker", "policy_timeout_seconds": 5, "expected": "exit 3 OPS_FAILED_RETRYABLE, operational TIMEOUT, worker morto pelo Ops, nenhum efeito; retry produz 1 resultado"},
+    {"prompt": "crash do Ops (host morto durante o job)", "fault": "ops_worker_slow + kill externo do processo host após heartbeat.json", "kind": "external_kill", "expected": "reexecução produz 1 resultado; 1 efeito; órfão do Linux (se terminar) não cria segundo efeito"},
+    {"prompt": "depois do Ops", "fault": "after_ops", "kind": "process_death", "expected": "exit 86 com efeito gravado; reexecução NÃO roda o worker de novo (efeito existe; Ops com economic_key) e produz 1 resultado"},
+    {"prompt": "depois do efeito de domínio", "fault": "after_domain_effect", "kind": "process_death", "expected": "exit 86; reexecução produz 1 resultado sem novo efeito"},
+    {"prompt": "durante a gravação do resultado", "fault": "during_result_write", "kind": "process_death", "expected": "exit 86 com arquivo temporário parcial; hash do resultado já no journal; reexecução regenera os mesmos bytes e produz 1 resultado"},
+    {"prompt": "depois da gravação do resultado", "fault": "after_result_write", "kind": "process_death", "expected": "exit 86; reexecução confere hash do arquivo contra o journal e indexa 1 resultado"},
+    {"prompt": "depois de indexar o resultado", "fault": "after_result_store", "kind": "process_death", "expected": "exit 86; reexecução devolve DUPLICATE, libera a cota e fecha o journal"},
+    {"prompt": "retry esgotado", "fault": "ops_worker_crash × (max_retries+1)", "kind": "worker", "expected": "resultado terminal FAILED_OPERATIONAL com científico/econômico NOT_EVALUATED, relido por show"}
+  ],
+  "corruption_cases": [
+    {"case": "DB diz que existe / FS não", "how": "apagar research-result.json depois de concluído", "expected": "show e process: exit 5 RECONCILIATION_REQUIRED; arquivo não é recriado"},
+    {"case": "FS tem / DB não", "how": "apagar a linha do ResultStore depois de concluído", "expected": "process: exit 5; índice não é recriado"},
+    {"case": "artefato modificado", "how": "alterar research-result.json; alterar domain-effect.json", "expected": "exit 5; reconcile acusa RESULT_STORE_INTEGRITY / EFFECT_HASH_MISMATCH"},
+    {"case": "hash errado", "how": "alterar o objeto do dataset no object store", "expected": "exit 5 REFERENCE antes de qualquer job do Ops"},
+    {"case": "conteúdo alterado depois de materializado", "how": "alterar references/dataset.json entre before_ops e a reexecução", "expected": "exit 5 'changed after materialization', nenhum resultado"},
+    {"case": "referência de outra pesquisa", "how": "plantar o recibo de materialização de outro pedido no diretório do experimento", "expected": "exit 5 REFERENCE_FROM_ANOTHER_REQUEST"},
+    {"case": "resultado com metadata inconsistente", "how": "resultado com request_id trocado, blob e arquivo coerentes entre si", "expected": "show: exit 5 'inconsistent'"}
+  ],
+  "runs": {
+    "conformance_suite_per_environment": "1 execução completa por ambiente (Linux primário e Windows secundário) com as final_wheels",
+    "soak_per_relevant_failure_class": 3
+  },
+  "tests": "tests/conformance/test_failure_recovery.py (cripto-predictor)"
+}

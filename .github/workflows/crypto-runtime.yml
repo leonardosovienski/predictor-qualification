@@ -1,0 +1,51 @@
+# Missão crypto: runtime suportado (C3.1) com as final_wheels publicadas.
+# Fases cleanroom-final, e2e, idempotency-failure e soak (Linux primário, D-9);
+# windows-latest como informação adicional (o secundário do crypto é o Windows local, D-3).
+# O alvo (commit, wheel, sha256) vem de qualification/crypto/runtime_target.json.
+# Sem segredos; só repos e releases públicos.
+name: Crypto runtime (cleanroom-final, e2e, conformance, soak)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/crypto/runtime_target.json
+      - qualification/crypto/scripts/runtime_cleanroom.sh
+      - qualification/crypto/scripts/e2e_runtime.py
+      - qualification/crypto/scripts/soak.py
+      - .github/workflows/crypto-runtime.yml
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: linux-primary, os: ubuntu-latest, soak: 1}
+          - {label: windows-latest, os: windows-latest, soak: 0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Runtime suportado
+        shell: bash
+        run: |
+          t=qualification/crypto/runtime_target.json
+          bash qualification/crypto/scripts/runtime_cleanroom.sh "$RUNNER_TEMP/out/${{ matrix.label }}" \
+            "$(jq -r .commit $t)" "$(jq -r .wheel_url $t)" "$(jq -r .wheel_sha256 $t)" "${{ matrix.soak }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crypto-runtime-${{ matrix.label }}
+          path: ${{ runner.temp }}/out/${{ matrix.label }}
+          if-no-files-found: error

@@ -1,0 +1,102 @@
+# 2026-09-23T15:02:10Z commit 6f7305166b8977b0acb87a3e0edc99e766e218b6 dirty_entries=0 CRIPTO_ROOT=C:/Cripto/qualificacao/w/0923T150210
+uv 0.12.18 (01cb90c1a 2026-09-22 x86_64-pc-windows-msvc)
+Resolved 79 packages in 1.21s
+   Building cripto-predictor @ file:///C:/Cripto/qualificacao/cripto-predictor
+      Built cripto-predictor @ file:///C:/Cripto/qualificacao/cripto-predictor
+Prepared 1 package in 2.90s
+Uninstalled 1 package in 26ms
+Installed 1 package in 59ms
+ - cripto-predictor==1.1.1rc4 (from file:///C:/Cripto/qualificacao/cripto-predictor)
+ + cripto-predictor==1.2.0rc1 (from file:///C:/Cripto/qualificacao/cripto-predictor)
+uv sync exit=0
+Building wheel from source distribution...
+Successfully built dist\cripto_predictor-1.2.0rc1.tar.gz
+Successfully built dist\cripto_predictor-1.2.0rc1-py3-none-any.whl
+uv build exit=0
+3.13.14 (main, Aug  5 2026, 16:10:10) [MSC v.1944 64 bit (AMD64)] Windows-11-10.0.26200-SP0
+...................................F.................................... [  4%]
+........................................................................ [  8%]
+........................................................................ [ 12%]
+........................................................................ [ 17%]
+........................................................................ [ 21%]
+........................................................................ [ 25%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 38%]
+........................................................................ [ 43%]
+........................................................................ [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 56%]
+........................................................................ [ 60%]
+........................................................................ [ 64%]
+........................................................................ [ 69%]
+........................................................................ [ 73%]
+........................................................................ [ 77%]
+........................................................................ [ 82%]
+........................................................................ [ 86%]
+........................................................................ [ 90%]
+........................................................................ [ 95%]
+........................................................................ [ 99%]
+.......                                                                  [100%]
+================================== FAILURES ===================================
+____________ test_modified_result_and_modified_effect_fail_closed _____________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/w/0923T150210/operacao/temporarios/pytest-of-leona/pytest-0/test_modified_result_and_modif0')
+
+    def test_modified_result_and_modified_effect_fail_closed(tmp_path):
+        env, path, work = _completed(tmp_path)
+        result = work / "research-result.json"
+        result.write_bytes(
+            result.read_bytes()
+            .replace(b'"NO_EDGE"', b'"WATCH"')
+            .replace(b'"WATCH_NO_CAPITAL"', b'"NO_EDGE"')
+        )
+        assert cli(env, "show", "crypto:REQ-CORRUPT-001")[0] == 5
+>       env2, path2, work2 = _completed(tmp_path / "effect", "crypto:REQ-CORRUPT-002")
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:173: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\test_failure_recovery.py:136: in _completed
+    assert cli(env, "process", str(path))[0] == 0
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+env = {'objects': WindowsPath('C:/CRIPTO/qualificacao/w/0923T150210/operacao/temporarios/pytest-of-leona/pytest-0/test_modif...qualificacao/w/0923T150210/operacao/temporarios/pytest-of-leona/pytest-0/test_modified_result_and_modif0/effect'), ...}
+fault = None, timeout = 600
+args = ('process', 'C:\\CRIPTO\\qualificacao\\w\\0923T150210\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_modified_result_and_modif0\\effect\\requests\\r.json')
+command = ['C:\\Cripto\\qualificacao\\cripto-predictor\\.venv\\Scripts\\cripto-research.exe', '--state', 'C:\\CRIPTO\\qualificac...3T150210\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_modified_result_and_modif0\\effect\\policy.json', ...]
+
+    def cli(
+        env: dict, *args: str, fault: str | None = None, timeout: float = 600
+    ) -> tuple[int, list[dict]]:
+        """Run the installed entrypoint in a NEW process; returns (exit code, JSON lines)."""
+        command = [console_script(), "--state", str(env["state"]), *args]
+        if args and args[0] in {"process", "run"}:
+            command[4:4] = ["--policy", str(env["policy"]), "--objects", str(env["objects"])]
+        environment = child_environment(**({"CRIPTO_RESEARCH_FAULT": fault} if fault else {}))
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            cwd=env["root"],
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = []
+        for line in completed.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                lines.append(json.loads(line))
+        if completed.returncode not in (0, 2, 3, 4, 5, 86):
+>           raise AssertionError(f"unexpected exit {completed.returncode}: {completed.stderr[-2000:]}")
+E           AssertionError: unexpected exit 1: STATE_ROOT_TOO_LONG: 123 > 120 characters (Windows MAX_PATH with the predictor_ops runtime layout)
+
+tests\conformance\fixtures.py:301: AssertionError
+- generated xml file: C:\QUALIFICACAO\predictor-qualification\qualification\crypto\RAW_LOGS\contract-wiring\windows_pytest_6f73051.junit.xml -
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_failure_recovery.py::test_modified_result_and_modified_effect_fail_closed
+1 failed, 1662 passed in 579.30s (0:09:39)
+pytest exit=1

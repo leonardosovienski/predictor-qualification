@@ -1,0 +1,19 @@
+# repro no código de 2bafad9 (teste novo, código sem correção) 2026-09-23T15:23:59Z
+        policy["policy_version"] += 1
+        env["policy"].write_text(json.dumps(policy, indent=1), encoding="utf-8")
+        code, lines = cli(
+            env,
+            "process",
+            str(write_request(env, "p2", request("crypto:REQ-POLICY-001", client_ref="after"))),
+        )
+        duplicate = _only(lines)
+>       assert code == 0 and duplicate["status"] == "DUPLICATE"
+E       assert (2 == 0)
+
+tests\conformance\test_contract_conformance.py:265: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_contract_conformance.py::test_duplicate_after_policy_change_returns_the_stored_result
+1 failed, 21 deselected in 5.88s
+# mesma prova depois da correção 2026-09-23T15:24:40Z
+......................                                                   [100%]
+22 passed in 75.39s (0:01:15)

@@ -3,16 +3,82 @@
   "common_baseline_id": "STACK_BASELINE_V1",
   "supersedes_sha256": null,
   "domain_contract_sha256": null,
-  "final_commits": [],
-  "final_wheels": [],
+  "final_commits": [
+    {
+      "repo": "cripto-predictor",
+      "commit_sha": "2bc63ebdc47f93661a4f37cb988b06939de060fe"
+    },
+    {
+      "repo": "core-predictor",
+      "commit_sha": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d"
+    },
+    {
+      "repo": "predictor-ops",
+      "commit_sha": "7bd99ebaea09c74a2ac4243d8991a81c44625a6c"
+    }
+  ],
+  "final_wheels": [
+    {
+      "name": "cripto-predictor",
+      "version": "1.2.0rc1",
+      "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc1/cripto_predictor-1.2.0rc1-py3-none-any.whl",
+      "sha256": "1f76b8c4dbcb2ca145c053a7dc84d98d30c49859d95c1e1a78ad4d5916b3df49"
+    },
+    {
+      "name": "predictor-core",
+      "version": "3.2.1",
+      "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+      "sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"
+    },
+    {
+      "name": "predictor-ops",
+      "version": "4.2.1",
+      "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.1/predictor_ops-4.2.1-py3-none-any.whl",
+      "sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e"
+    }
+  ],
   "phases_completed": [
     "freeze-parameters",
     "baseline",
     "truth-map",
     "cleanroom-baseline",
-    "ops-failure"
+    "ops-failure",
+    "contract-wiring",
+    "publish-candidates",
+    "cleanroom-final",
+    "e2e",
+    "idempotency-failure",
+    "science",
+    "windows-smoke",
+    "hosted-ci",
+    "soak"
   ],
-  "environments": [],
+  "environments": [
+    {
+      "os": "linux",
+      "python": "3.13",
+      "role": "primary",
+      "where": "github_actions",
+      "result": "NOT_RUN",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/env.log",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/soak.jsonl"
+      ]
+    },
+    {
+      "os": "windows",
+      "python": "3.13.14",
+      "role": "secondary",
+      "where": "local_windows",
+      "result": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/env.log",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml"
+      ]
+    }
+  ],
   "shared_dependency_verdicts": [
     {
       "issue_id": "SHARED-003",
@@ -41,9 +107,11 @@
   ],
   "gates": {
     "BLOCKERS_ZERO": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "FAIL",
+      "evidence": [
+        "qualification/crypto/FINDINGS.json"
+      ],
+      "note": "P0=0, P1=1 aberto: CR-F009 (SHARED-005, lock local do Ops no Windows), que exige correção no predictor-ops congelado (decisão do dono). Os outros 8 P1 foram corrigidos com teste."
     },
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
@@ -55,74 +123,133 @@
       "note": "Baseline coletado antes de qualquer mudança: HEADs cripto 5fd4e1b, core 5a08415, ops 7bd99eb, iguais ao STACK_BASELINE_V1; clones limpos; wheels do lock = assets das releases. Windows local 1618 passed (método do CI); o run 1 (4 falhas) é erro de método preservado (sem uv build e CRIPTO_ROOT fora do TEMP, CR-F002)."
     },
     "LOCK_INTEGRITY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/CORE_IDENTITY_REPORT.md",
+        "qualification/crypto/RAW_LOGS/final/uv_lock_check_2bc63eb.log",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/core_identity.json"
+      ],
+      "note": "uv lock --check exit 0 no final_commit; instalação só pelo lock (--require-hashes)."
     },
     "CORE_IDENTITY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/CORE_IDENTITY_REPORT.md",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/core_identity.json",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-windows-latest/core_identity.json",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/core_identity.json"
+      ],
+      "note": "pyproject ↔ tool.uv.sources ↔ uv.lock ↔ instalação ↔ hash ↔ metadata ↔ módulo em site-packages, nos 3 runtimes."
     },
     "CLEANROOM_FINAL": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/CLEANROOM_REPORT.md",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/full_suite.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-windows-latest/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/publish-candidates/build_rc_2bc63eb.log"
+      ],
+      "note": "Só wheels publicadas, fora do checkout: conformidade 48/48 em Linux, windows-latest e Windows local; suíte completa 1647 passed + 17 testes que leem o checkout (CR-F016, P2)."
     },
     "HOSTED_CI": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/HOSTED_CI_REPORT.md",
+        "qualification/crypto/RAW_LOGS/hosted-ci/jobs_cripto-predictor_35822807920.json",
+        "qualification/crypto/RAW_LOGS/hosted-ci/jobs_cripto-predictor_35881545740.json",
+        "qualification/crypto/RAW_LOGS/hosted-ci/jobs_core-predictor_35823003554.json",
+        "qualification/crypto/RAW_LOGS/hosted-ci/jobs_predictor-ops_35823068759.json"
+      ],
+      "note": "Baseline e final_commits verdes (cripto 5fd4e1b/2bc63eb; core 5a08415 e ops 7bd99eb inalterados); nenhum job pulado."
     },
     "E2E": {
       "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "evidence": [
+        "qualification/crypto/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
+        "qualification/crypto/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json"
+      ],
+      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico: E2E pela wheel no Linux com vetores sintéticos 20/20 checagens; E2E real no Windows 10/10."
     },
     "IDEMPOTENCY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/contract-wiring/repro_duplicate_after_policy_change.log"
+      ],
+      "note": "Pela wheel: mesma key+conteúdo → 1 experimento, 1 efeito (1 SUCCEEDED do Ops por job), 1 resultado; conteúdo diferente → CONFLICT; duplicata após mudança de policy → mesmo resultado (CR-F015)."
     },
     "RESTART_RECOVERY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-windows-latest/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml"
+      ],
+      "note": "Morte real do processo nos 9 pontos da FAILURE_MATRIX + host do Ops morto durante o job: reexecução produz exatamente 1 resultado; releitura por processo novo."
     },
     "FAILURE_INJECTION": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/FAILURE_MATRIX.json",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml"
+      ],
+      "note": "Matriz congelada injetada na borda (sem mock de Core/Ops) no Linux primário e no Windows."
     },
     "PROVENANCE": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
+        "qualification/crypto/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json"
+      ],
+      "note": "Cadeia pedido → admission (recibo SQLite) → experimento (journal) → trial (TrialRegistryV2) → ops_run (eventos do Ops) → efeito (sha256) → resultado, conferida contra as fontes primárias."
     },
     "AUTHORITY_SEPARATION": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/AUTHORITY_STATE_MATRIX.json",
+        "qualification/crypto/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml"
+      ],
+      "note": "Invariantes no contrato (validate_result) e casos A/B/C 3× cada pela wheel: Ops ok ⇏ ciência ⇏ edge ⇏ capital."
     },
     "FUTURE_CANARY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/science/SCIENCE_REAL.json",
+        "qualification/crypto/SCIENTIFIC_INTEGRITY_REPORT.md"
+      ],
+      "note": "Canário só depois do cutoff; falha fechada por LookaheadError do Core; 0 ocorrências em dataset/refs/efeito/trial/resultado de pedidos legítimos (sintético no Linux, real no Windows)."
     },
     "PROTECTED_ARTIFACTS_UNCHANGED": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/PROTECTED_ARTIFACT_REPORT.md",
+        "qualification/crypto/RAW_LOGS/final/protected_set_check_2bc63eb.json",
+        "qualification/crypto/PROTECTED_SET.json"
+      ],
+      "note": "1382/1382 blobs iguais entre truth-map (5fd4e1b) e final_commit (2bc63eb)."
     },
     "SOAK": {
       "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "evidence": [
+        "qualification/crypto/SOAK_REPORT.md",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/soak.jsonl"
+      ],
+      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico sintético no Linux: 65 chamadas, 40 resultados, 0 perdidos/duplicados/violações."
     },
     "WINDOWS_SMOKE": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/env.log"
+      ],
+      "note": "C:\\Cripto\\qualificacao\\runtime\\ com as final_wheels: E2E + restart + releitura com dado real (10/10), conformidade 48/48."
     },
     "SHARED_DEPENDENCY_CLEAR": {
       "status": "FAIL",
@@ -134,49 +261,80 @@
       "note": "SHARED-003 e SHARED-004 não bloqueiam; SHARED-005 (lock local do Ops no Windows) é flaky em caminho de runtime → bloqueante até correção do Ops (decisão do dono, V1.<n>)."
     },
     "EVIDENCE_CONSISTENCY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/EVIDENCE_NUMBERS.json",
+        "qualification/crypto/scripts/evidence_numbers.py",
+        "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json"
+      ],
+      "note": "Números dos relatórios tirados dos logs brutos por scripts versionados (evidence_numbers.py, analyze_ops_failure.py)."
     },
     "SECRETS_CLEAN": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/secrets/scan_evidence_and_cripto_diff.log",
+        "qualification/crypto/RAW_LOGS/secrets/scan_evidence_rerun.log",
+        "qualification/crypto/RAW_LOGS/hosted-ci/jobs_cripto-predictor_35881545740.json"
+      ],
+      "note": "scan_secrets.py (repo de evidência) + busca por padrões de chave no diff do cripto: nenhum segredo. Único alerta = o marcador público do canário no FROZEN_PARAMETERS, revisado: falso positivo. scan_secrets verde no CI do cripto em 2bc63eb."
     },
     "CAPITAL_FORBIDDEN": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/DOMAIN_RESEARCH_CONTRACT.json"
+      ],
+      "note": "capital_permission=false no contrato (validate_result recusa true), no JobConfig (SHADOW_DECISION) e em todo resultado; nenhum caminho concede capital."
     },
     "DOMAIN_CONTRACT": {
       "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "evidence": [
+        "qualification/crypto/DOMAIN_RESEARCH_CONTRACT.json",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml"
+      ],
+      "note": "BLOCKED: aguarda merge do dono (contract-sign-off). Contrato completo; regras de adapter_paths testadas; suíte de conformidade verde no runtime suportado."
     },
     "ADMISSION": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml"
+      ],
+      "note": "Pelo entrypoint: pedidos válidos e inválidos; comando/handler/capital/tipo/ID sem domínio/hipótese encerrada/referência desconhecida/símbolo/limites → REJECTED antes de qualquer execução; só handler da allowlist."
     },
     "OPS_RUNTIME": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml"
+      ],
+      "note": "Job real pela wheel do Ops: run_id, economic_lock_id, heartbeat, attempt/retry_count, timeout (kill da árvore), eventos terminais e idempotência produzidos pelo predictor_ops e usados na reconciliação."
     },
     "CORE_PARTICIPATION": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
+        "qualification/crypto/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json"
+      ],
+      "note": "Trial registrada no TrialRegistryV2 e estado científico relido dele; validação temporal pelo replay; bootstrap_ci; correlação request → experiment → trial → core facts → result."
     },
     "TEMPORAL_INTEGRITY": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/temporal_suites.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/full_suite.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml"
+      ],
+      "note": "Suítes DPL/WFA/permutação/PBO/poder pela wheel (120/120 no Windows; no Linux dentro das 1647 da suíte completa); PIT/cutoff impostos pelo Core no circuito."
     },
     "CRYPTO_RUNTIME_WIRING": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/runtime_trace.log",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/ARCHITECTURE_TRUTH_MAP.json"
+      ],
+      "note": "AdmissionStore, ReferenceStore, ResearchExecutor, worker, ResultStore e recuperação instanciados pela composition root cripto-research, alcançáveis de [project.scripts], exercitados e PROVEN pela wheel instalada."
     },
     "CRYPTO_OPS_FAILURE_VERDICT": {
       "status": "PASS",
@@ -189,23 +347,36 @@
     },
     "CRYPTO_UNCOMFORTABLE_CASES": {
       "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "evidence": [
+        "qualification/crypto/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
+        "qualification/crypto/AUTHORITY_STATE_MATRIX.json"
+      ],
+      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico pela wheel no Linux: casos A, B e C 3× cada, todos conforme a matriz; caso A também com dado real no Windows."
     },
     "CRYPTO_ECONOMIC_METRICS": {
       "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "evidence": [
+        "qualification/crypto/SCIENTIFIC_INTEGRITY_REPORT.md",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/science/SCIENCE_REAL.json"
+      ],
+      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Windows real: bruto −45 bps (IC [−214,112]) e líquido −83 bps (IC [−253,76]) separados, custos congelados."
     },
     "CRYPTO_NEGATIVE_CONTROLS": {
       "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "evidence": [
+        "qualification/crypto/SCIENTIFIC_INTEGRITY_REPORT.md",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/science/SCIENCE_REAL.json"
+      ],
+      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Windows real: injeção de futuro 0 aceitos, ablação 0 aceitos, placebo SUPPORTED 3/100 (≤10)."
     },
     "CRYPTO_SPLIT_BRAIN_CORRUPTION": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "fase ainda não executada"
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-windows-latest/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/windows-smoke/local/conformance.junit.xml"
+      ],
+      "note": "DB sem FS, FS sem DB, artefato alterado, hash errado, conteúdo alterado após materializar, referência de outra pesquisa e metadata inconsistente: falha fechada (exit 5), sem reparo silencioso."
     }
   }
 }

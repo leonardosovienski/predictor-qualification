@@ -10,8 +10,8 @@ set -u
 CLONE="$1"; LOG="$2"; JUNIT="$3"
 . /c/QUALIFICACAO/tools/uvenv.sh
 export UV_CACHE_DIR="C:/Cripto/qualificacao/.uv-cache"
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-RUNROOT="C:/Cripto/qualificacao/winroot/$STAMP"
+STAMP="$(date -u +%m%dT%H%M%S)"
+RUNROOT="C:/Cripto/qualificacao/w/$STAMP"  # curto: MAX_PATH do Windows (layout do Ops)
 mkdir -p "$RUNROOT/tmp"
 export CRIPTO_ROOT="$RUNROOT" TMP="$RUNROOT/tmp" TEMP="$RUNROOT/tmp" TMPDIR="$RUNROOT/tmp"
 export PYRIGHT_PYTHON_CACHE_DIR="C:/Cripto/qualificacao/.pyright-cache"

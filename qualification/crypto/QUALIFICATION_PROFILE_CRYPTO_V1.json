@@ -1,0 +1,39 @@
+{
+  "schema": "crypto/QUALIFICATION_PROFILE/1",
+  "profile_id": "QUALIFICATION_PROFILE_CRYPTO_V1",
+  "frozen_before": "fase soak",
+  "environment": "Linux primário (D-9), runtime suportado: venv limpo só com as final_wheels, entrypoint cripto-research",
+  "d16": "PENDENTE: o soak com dados reais no Linux fica NOT_RUN (BLOCKED: D-16 pendente). O mesmo perfil roda com os vetores sintéticos como diagnóstico, sem valor de PASS.",
+  "minimums": {
+    "normal_cycles": 20,
+    "restarts": 5,
+    "duplicate_requests": 5,
+    "runs_per_relevant_failure_class": 3,
+    "cycles_per_authority_case": 3
+  },
+  "plan": {
+    "normal_cycles": "20 pedidos distintos (dataset positive), cada um num processo novo; depois `show` de cada um em processo novo",
+    "restarts": "5 × (morte do processo em pontos de PROCESS_DEATH_POINTS em rodízio → reexecução)",
+    "duplicate_requests": "5 × reenvio de um pedido já concluído (mesmo conteúdo, client_ref diferente)",
+    "failure_classes": {
+      "ops_worker_crash": 3,
+      "ops_worker_hang (timeout)": 3,
+      "host do Ops morto durante o job": 3,
+      "morte antes do commit da admission": 3,
+      "morte durante a gravação do resultado": 3,
+      "corrupção (arquivo de resultado alterado)": 3
+    },
+    "authority_cases": {"CASO_A": 3, "CASO_B": 3, "CASO_C": 3},
+    "interleaving": "ciclos normais intercalados com duplicatas e falhas no mesmo --state"
+  },
+  "zero_tolerance": ["efeito duplicado", "resultado perdido", "provenance quebrada", "ação não autorizada", "contaminação entre domínios", "corrupção silenciosa", "vazamento de futuro"],
+  "checks_at_end": [
+    "linhas no ResultStore == pedidos distintos com resultado",
+    "1 domain-effect.json por experimento",
+    "1 registro SUCCEEDED do Ops por experimento",
+    "todo resultado relido por show é byte-idêntico ao gravado",
+    "reconcile: só os achados das corrupções injetadas",
+    "nenhum capital_permission true; nenhum ID sem crypto:"
+  ],
+  "harness": "qualification/crypto/scripts/soak.py"
+}
