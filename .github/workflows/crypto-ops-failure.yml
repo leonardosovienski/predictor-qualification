@@ -1,0 +1,45 @@
+# Missão crypto, fase ops-failure: SHARED-003 e SHARED-004 (predictor-ops 4.2.1).
+# Matriz congelada em qualification/crypto/FROZEN_PARAMETERS.json. Um log por execução.
+# Sem segredos; só repos e releases públicos.
+name: Crypto ops-failure (SHARED-003/004)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/crypto/scripts/ops_failure_matrix.sh
+      - qualification/crypto/scripts/ops_timeout_probe.py
+      - .github/workflows/crypto-ops-failure.yml
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: linux-source, os: ubuntu-latest, mode: source, runs3: 10, runs4: 3, full: 1}
+          - {label: linux-wheel, os: ubuntu-latest, mode: wheel, runs3: 10, runs4: 3, full: 1}
+          - {label: windows-latest-wheel, os: windows-latest, mode: wheel, runs3: 1, runs4: 1, full: 0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Matriz
+        shell: bash
+        run: bash qualification/crypto/scripts/ops_failure_matrix.sh "${{ matrix.mode }}" "$RUNNER_TEMP/out/${{ matrix.label }}" "${{ matrix.runs3 }}" "${{ matrix.runs4 }}" "${{ matrix.full }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-failure-${{ matrix.label }}
+          path: ${{ runner.temp }}/out/${{ matrix.label }}
+          if-no-files-found: error
