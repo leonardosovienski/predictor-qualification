@@ -1,0 +1,199 @@
+{
+  "schema": "crypto/FROZEN_PARAMETERS/1",
+  "phase": "freeze-parameters",
+  "stage": "A",
+  "branch": "crypto",
+  "code": "CRYPTO",
+  "envelope_version": "NONE",
+  "common_baseline": "STACK_BASELINE_V1",
+  "identity": {
+    "common_core_sha256": "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1",
+    "attestation_schema_sha256": "3594e35044626264a18270ee4e079e653e3b940f1e7a72d36f2b70972f5bf970",
+    "mission_prompt": "prompts/prompt_etapa_a_cripto_rev8.md",
+    "mission_prompt_sha256": "6a2d21e600024e6acaa4158574d221a5b6fd2dd342dc90d3ff8fa86050052563",
+    "auditor_principles_sha256": "4f3bea0e709bb525da57de9ec29a886e8c08d30206970093e040ee6c361369f9",
+    "evidence_main_at_c0": "612838855eb59423e389442db8e28303c4ad1dfa",
+    "decisions_json_sha256": "53fc482ade8ee3db939c816d658d079f02cfe48a544c05b15b6cf71fbdbc1aa3",
+    "hygiene_json_sha256": "d6e3eeed8baa978cd828bebf0ef8539bb2af258104748600cd1d162cbd098701"
+  },
+  "repos": {
+    "cripto-predictor": {"role": "muda nesta missão", "clone": "C:\\Cripto\\qualificacao\\cripto-predictor", "baseline_head": "5fd4e1b06c79231fd3d9485a1483f3b65e854bea"},
+    "core-predictor": {"role": "congelado (só wheel publicada v3.2.1)", "baseline_head": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d", "wheel_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"},
+    "predictor-ops": {"role": "congelado (só wheel publicada v4.2.1)", "baseline_head": "7bd99ebaea09c74a2ac4243d8991a81c44625a6c", "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e"}
+  },
+  "decisions_cited": {
+    "D-3": "runtime Windows do crypto em C:\\Cripto\\qualificacao\\runtime\\",
+    "D-5": "um agente por missão, sem subagentes",
+    "D-6": "conta do dono via gh; sem merge nem push em main",
+    "D-9": "Linux primário = GitHub Actions ubuntu-latest × py3.13; VM na nuvem sob demanda para o soak; só cópias hash-verificadas dos dados",
+    "D-11": "repositório de evidência público; nada de segredo nem dado sem direito de redistribuição",
+    "D-12": "contrato aprovado por merge; Etapa B só nos adapter_paths",
+    "D-13": "integração V1 extinta; cain-research fora das dependências do domínio",
+    "D-15": "jobs de CI fora de lock saem do push/PR",
+    "D-16": {
+      "status": "PENDENTE",
+      "evidence": "ausente de qualification/DECISIONS.json em 612838855eb59423e389442db8e28303c4ad1dfa",
+      "owner_instruction": "o que depender de dados reais no Linux/Actions fica NOT_RUN com note 'BLOCKED: D-16 pendente'; fixture sintética não vale como PASS"
+    }
+  },
+  "d16_dependency_rule": {
+    "note": "Interpretação congelada antes de qualquer execução. Vale até D-16 ser decidida no main; decisão nova = C14 (refazer as fases afetadas).",
+    "real_data_required_for_pass": [
+      "CRYPTO_ECONOMIC_METRICS",
+      "CRYPTO_NEGATIVE_CONTROLS",
+      "SOAK",
+      "E2E (parte Linux primária)",
+      "CRYPTO_UNCOMFORTABLE_CASES (ciclos no Linux primário)"
+    ],
+    "linux_with_synthetic_fixture": "roda como DIAGNÓSTICO (para achar defeitos); nunca fecha gate",
+    "windows_local_real_data": "cópia local de dados públicos (Binance data.vision) com sha256 origem→cópia em C:\\Cripto\\qualificacao\\data; não versionada no repo público (C0/D-11)"
+  },
+  "environments": {
+    "primary": {"os": "Linux", "python": "3.13", "host": "GitHub Actions ubuntu-latest (D-9); VM na nuvem para o soak"},
+    "secondary": {"os": "Windows 11 local", "python": "3.13 (C:\\QUALIFICACAO\\tools\\python\\cpython-3.13.14)", "runtime_root": "C:\\Cripto\\qualificacao\\runtime\\"}
+  },
+  "phases": [
+    "freeze-parameters", "baseline", "truth-map", "cleanroom-baseline", "ops-failure",
+    "contract-wiring", "publish-candidates", "cleanroom-final", "e2e",
+    "idempotency-failure", "science", "windows-smoke", "hosted-ci", "soak",
+    "contract-sign-off", "attestation"
+  ],
+  "shared_003": {
+    "issue_id": "SHARED-003",
+    "test": "tests_v2/test_runner.py::test_timeout_and_truncation",
+    "ops_wheel": {"version": "4.2.1", "sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e"},
+    "ops_source_commit": "7bd99ebaea09c74a2ac4243d8991a81c44625a6c",
+    "matrix": [
+      {"env": "Linux × py3.13 × source", "host": "GitHub Actions ubuntu-latest", "runs": 10},
+      {"env": "Linux × py3.13 × wheel 4.2.1", "host": "GitHub Actions ubuntu-latest", "runs": 10},
+      {"env": "Windows × py3.13 × source", "host": "local", "runs": 10},
+      {"env": "Windows × py3.13 × wheel 4.2.1", "host": "local", "runs": 10},
+      {"env": "windows-latest × py3.13", "host": "workflow do repo de evidência", "runs": 1},
+      {"env": "suíte tests_v2 completa", "host": "1× por combinação local (Windows source, Windows wheel)", "runs": 1}
+    ],
+    "one_raw_log_per_execution": true,
+    "hypotheses": [
+      "H1 término do filho × árvore de processos no Windows",
+      "H2 antivírus atrasando o spawn além de 0,2 s",
+      "H3 exit_code 124 dependente de plataforma",
+      "H4 leitura bloqueante de stdout/stderr depois do timeout",
+      "H5 contagem de bytes com \\r\\n"
+    ],
+    "required_answer": "o job real do Ops (run_job pela wheel 4.2.1, não só o teste) mata o processo (e a árvore) e trunca a saída no Windows?",
+    "classification_enum": ["environmental", "test_only", "flaky", "regression", "bad_install", "unresolved"],
+    "cause_requires": "intervenção A/B ou trace; 'no CI passa' não é causa",
+    "forbidden": ["aumentar timeout", "skip", "xfail", "afrouxar assert"]
+  },
+  "shared_004": {
+    "issue_id": "SHARED-004",
+    "tests": [
+      "tests_v2/test_provenance.py::test_source_clean_dirty_detached_and_missing_commit",
+      "tests_v2/test_provenance.py::test_strict_editable_fails_closed_and_permissive_is_safe",
+      "tests_v2/test_runner_extended.py::test_strict_setup_failure_is_terminal_and_child_never_runs"
+    ],
+    "ownership": "missão crypto (instrução do dono nesta sessão)",
+    "matrix": [
+      {"env": "Linux × py3.13 × wheel 4.2.1 (venv limpo)", "host": "GitHub Actions ubuntu-latest", "runs": 3},
+      {"env": "Linux × py3.13 × source editable (uv sync --locked)", "host": "GitHub Actions ubuntu-latest", "runs": 3},
+      {"env": "Windows × py3.13 × wheel 4.2.1 (venv limpo)", "host": "local", "runs": 3},
+      {"env": "Windows × py3.13 × source editable", "host": "local", "runs": 3}
+    ],
+    "question": "defeito de código (collect_provenance strict cai para _verify_wheel e devolve VALIDATED com fonte suja) ou defeito só de teste (pressuposto editable)? Qual caminho de produção é alcançado e com que efeito?",
+    "cause_requires": "trace do caminho + intervenção A/B (mesmo teste, instalação editable × wheel) e chamada direta do caminho de produção afetado (cli de proveniência com --source-root)"
+  },
+  "protected_set_initial": {
+    "identity": "hash do blob git no commit baseline 5fd4e1b06c79231fd3d9485a1483f3b65e854bea",
+    "globs": [
+      "charters/**", "observation_plans/**", "observation_reports/**",
+      "CR_RESEARCH_FREEZE.md", "CR_FREEZE_INDEX.md", "docs/EVIDENCE_REGISTRY.md",
+      "docs/HYPOTHESES.md", "docs/case_studies/**", "docs/evidence/**/*freeze*.json"
+    ],
+    "plus": "tudo que esses documentos declarem congelado (resolvido em truth-map → PROTECTED_SET.json)",
+    "reopen_gate": "scripts/check_reopen_dossier.py"
+  },
+  "expected_scientific_state": {
+    "source": "charters/scientific_state.json",
+    "CLOSED_NO_GO": ["crypto:H1", "crypto:H2", "crypto:H3", "crypto:H5"],
+    "CLOSED_INSUFFICIENT_SAMPLE": ["crypto:H4", "crypto:H6", "crypto:H9"],
+    "REGISTERED_NOT_ACTIVATED": ["crypto:H7", "crypto:H8"],
+    "frozen_families": ["crypto:funding_oi_hmm_v3"],
+    "capital_authorized": false
+  },
+  "authority_cases": {
+    "min_cycles_each_final_runtime": 3,
+    "CASO_A": "Ops SUCCEEDED / Core INCONCLUSIVE / Cripto NO_EDGE",
+    "CASO_B": "retorno bruto > 0 / retorno líquido < 0",
+    "CASO_C": "Ops FAILED ou TIMEOUT → nenhum estado científico nem econômico favorável",
+    "never": "Ops ok ⇒ ciência ok ⇒ edge ⇒ capital",
+    "matrix_file": "AUTHORITY_STATE_MATRIX.json (congelado antes dos testes)"
+  },
+  "soak_profile": {
+    "file": "QUALIFICATION_PROFILE_CRYPTO_V1.json (congelado antes do soak)",
+    "environment": "Linux primário, runtime suportado",
+    "normal_cycles": 20,
+    "restarts": 5,
+    "duplicate_requests": 5,
+    "runs_per_relevant_failure_class": 3,
+    "cycles_per_authority_case": 3,
+    "zero_tolerance": ["efeito duplicado", "resultado perdido", "provenance quebrada", "ação não autorizada", "contaminação entre domínios", "corrupção silenciosa", "vazamento de futuro"]
+  },
+  "failure_injection_points": [
+    "antes do commit da admission", "depois do commit da admission",
+    "durante a materialização das referências",
+    "antes do Ops", "durante o Ops", "depois do Ops",
+    "timeout do Ops", "crash do Ops",
+    "durante a gravação do resultado", "depois da gravação do resultado"
+  ],
+  "corruption_cases": [
+    "DB diz que existe / FS não", "FS tem / DB não",
+    "artefato modificado", "hash errado", "referência de outra pesquisa",
+    "resultado com metadata inconsistente"
+  ],
+  "temporal_tests": [
+    "tests/test_dpl*.py", "tests/test_v3_wfa_purge_contract.py",
+    "tests/test_permutation_placebo_control.py", "tests/test_pbo.py", "tests/test_gate_power.py"
+  ],
+  "future_canary": {
+    "token": "FUTURE_CANARY_CRYPTO_001",
+    "placement": "só em linhas com observed_at/available_at posteriores ao data_cutoff",
+    "search_before_cutoff_in": ["dataset", "referências", "features", "estado do modelo", "entradas do Core", "resultado"],
+    "found": "P0"
+  },
+  "costs_methodology": {
+    "source": "GarimpoInvestimentos/v3/costs.py CostModel (freeze V3; ASSUMED/UNCALIBRATED, docs/HYPOTHESES.md)",
+    "taker_fee_bps_per_leg": 10,
+    "slippage_bps_per_leg": 5,
+    "legs_per_round_trip": 2,
+    "round_trip_friction_bps": 30,
+    "funding": "taxa vigente na abertura repetida por janela de 8 h do horizonte (signed; long paga funding positivo)",
+    "turnover": "1 round-trip por observação não sobreposta (posição 1.0 do capital)",
+    "confidence_interval": {"method": "bootstrap iid predictor_core.measurement.bootstrap.bootstrap_ci", "n_boot": 500, "seed": 17, "confidence": 0.95, "applies_to": ["bruto", "líquido"]},
+    "gross_net_separation": "bruto e líquido reportados separados, cada um com IC"
+  },
+  "real_dataset_windows": {
+    "source": "Binance USDⓈ-M futures públicos, data.vision: klines 1d BTCUSDT e fundingRate BTCUSDT (arquivos mensais .zip + .CHECKSUM)",
+    "copy_root": "C:\\Cripto\\qualificacao\\data\\binance-um-btcusdt",
+    "symbol": "BTCUSDT",
+    "observation": "retorno bruto de 7 dias não sobreposto, abertura de segunda 00:00 UTC → abertura da segunda seguinte; funding = taxa vigente na abertura",
+    "window_in_sample": "2025-09-01T00:00:00Z .. 2026-08-31T00:00:00Z",
+    "data_cutoff": "2026-08-31T00:00:00Z",
+    "post_cutoff_canary_window": "2026-08-31T00:00:00Z .. 2026-09-21T00:00:00Z",
+    "horizon_days": 7,
+    "max_observations": 100,
+    "minimum_sample": 20
+  },
+  "negative_controls": {
+    "future_injection": {"how": "linha com available_at > data_cutoff (FUTURE_CANARY_CRYPTO_001) no dataset referenciado", "expected": "falha fechada; nenhum experimento/resultado", "threshold": "0 resultados aceitos"},
+    "temporal_ablation": {"how": "deslocar available_at para antes de observed_at, e trocar a ordem de observed_at", "expected": "falha fechada (temporal integrity failure)", "threshold": "0 resultados aceitos"},
+    "shuffled_labels": {"how": "direção (±1) sorteada por observação, seeds 0..99, sobre o dataset real", "expected": "scientific_state SUPPORTED em no máximo 10 de 100", "threshold": 10, "if_exceeded": "investigar (P1 até causa demonstrada), nunca comemorar"},
+    "repo_suites": "tests/test_permutation_placebo_control.py e tests/test_pbo.py no runtime suportado"
+  },
+  "idempotency": {
+    "same_key_same_content": "1 experimento e 1 resultado (attempts podem variar)",
+    "same_key_different_content": "CONFLICT, nunca sobrescreve",
+    "crash_between_effect_and_dedupe": "efeito lógico único por transação ou journal + reconciliação"
+  },
+  "suites_before_after_each_change": ["Windows local (C:\\Cripto\\qualificacao)", "Linux GitHub Actions (ci.yml do cripto-predictor)"],
+  "capital_permission": false,
+  "training_started": false
+}
