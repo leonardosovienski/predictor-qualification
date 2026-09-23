@@ -1,0 +1,35 @@
+{
+  "schema": "crypto/AUTHORITY_STATE_MATRIX/1",
+  "frozen_before": "testes dos gates AUTHORITY_SEPARATION e CRYPTO_UNCOMFORTABLE_CASES",
+  "principle": "Ops ok ⇏ ciência ok ⇏ edge ⇏ capital. Cada autoridade decide só o próprio estado.",
+  "authorities": {
+    "operational_state": "predictor_ops (run_status do job; TIMEOUT quando termination.reason = timeout)",
+    "scientific_state": "predictor_core (status da trial no TrialRegistryV2, calculado com bootstrap_ci sobre dados validados pelo replay)",
+    "economic_state": "domínio (CostModel congelado + gate econômico; WATCH só com ciência SUPPORTED e IC do líquido > 0)",
+    "capital_permission": "ninguém nesta missão: sempre false"
+  },
+  "allowed": [
+    {"operational": "SUCCEEDED", "scientific": "SUPPORTED", "economic": "WATCH", "result_state": "WATCH_NO_CAPITAL", "capital_permission": false},
+    {"operational": "SUCCEEDED", "scientific": "SUPPORTED", "economic": "NO_EDGE", "result_state": "NO_EDGE", "capital_permission": false, "case": "B (bruto > 0, líquido < 0)"},
+    {"operational": "SUCCEEDED", "scientific": "INCONCLUSIVE", "economic": "NO_EDGE", "result_state": "INCONCLUSIVE", "capital_permission": false, "case": "A"},
+    {"operational": "SUCCEEDED", "scientific": "REFUTED", "economic": "NO_EDGE", "result_state": "REFUTED", "capital_permission": false},
+    {"operational": "SUCCEEDED", "scientific": "INSUFFICIENT_SAMPLE", "economic": "NOT_EVALUATED", "result_state": "CLOSED_INSUFFICIENT_SAMPLE", "capital_permission": false},
+    {"operational": "SUCCEEDED", "scientific": "NOT_EVALUATED", "economic": "NOT_EVALUATED", "result_state": "INCONCLUSIVE_DATA_QUALITY", "capital_permission": false},
+    {"operational": "FAILED", "scientific": "NOT_EVALUATED", "economic": "NOT_EVALUATED", "result_state": "FAILED_OPERATIONAL", "capital_permission": false, "case": "C (terminal)"},
+    {"operational": "FAILED|TIMEOUT", "scientific": "NOT_EVALUATED", "economic": "NOT_EVALUATED", "outcome": "OPS_FAILED_RETRYABLE (sem resultado)", "capital_permission": false, "case": "C (retry)"}
+  ],
+  "forbidden": [
+    {"rule": "Ops FAILED/TIMEOUT com científico ≠ NOT_EVALUATED", "enforced_by": "research_contract.validate_result"},
+    {"rule": "Ops FAILED/TIMEOUT com econômico ≠ NOT_EVALUATED", "enforced_by": "research_contract.validate_result"},
+    {"rule": "econômico WATCH sem científico SUPPORTED", "enforced_by": "research_contract.validate_result"},
+    {"rule": "WATCH_NO_CAPITAL sem econômico WATCH", "enforced_by": "research_contract.validate_result"},
+    {"rule": "capital_permission true", "enforced_by": "research_contract.validate_result; JobConfig capital_permission=False; job_type SHADOW_DECISION"},
+    {"rule": "estado científico do resultado diferente do registrado no Core", "enforced_by": "research_execution._result (CORE_STATE_DISAGREES_WITH_EFFECT)"}
+  ],
+  "uncomfortable_cases": {
+    "CASO_A": {"vector": "dataset case_a (sintético) / dataset real in-sample no Windows", "expect": "Ops SUCCEEDED / Core INCONCLUSIVE / Cripto NO_EDGE"},
+    "CASO_B": {"vector": "dataset case_b", "expect": "bruto > 0 com IC > 0 e líquido < 0 com IC < 0 → NO_EDGE"},
+    "CASO_C": {"vector": "ops_worker_crash e ops_worker_hang", "expect": "nenhum estado científico nem econômico favorável"},
+    "min_cycles_each_final_runtime": 3
+  }
+}
