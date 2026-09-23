@@ -14,7 +14,7 @@ nenhum capital movido, nenhuma instalação operacional tocada.
 | Plano congelado | `CLEANROOM_PLAN_V2.json` (sha256 `a85fcabd…c627b`); substitui `CLEANROOM_PLAN.json` (V1, `7ed2c84f…7a80`), ver abaixo |
 | Run de referência | [35827048915](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35827048915) no commit `e8dae41` (plano V2), 7/7 jobs `success` (harness completo) |
 | Run anterior | [35826713033](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35826713033) no commit `ab7aeb8` (plano V1), preservado |
-| Números | `SUMMARY_run35827048915.txt` (sha256 `a37e99b2…c92f`) e `SUMMARY_run35826713033.txt` (`a9198bda…51d8`), gerados por `scripts/summarize_cleanroom.py` a partir de `RAW_LOGS/SHARED-002/run*/` |
+| Números | `SUMMARY_run35827048915.txt` (sha256 `b77ac31b…fc46`, conteúdo versionado em LF) e `SUMMARY_run35826713033.txt` (`a9198bda…51d8`), gerados por `scripts/summarize_cleanroom.py` a partir de `RAW_LOGS/SHARED-002/run*/` |
 
 Para cada repo, num venv novo fora do checkout:
 
