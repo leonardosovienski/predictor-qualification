@@ -1,0 +1,28 @@
+# D-9 / HYG-012: testa o provisionamento do host Linux de qualificação num Ubuntu
+# limpo e descartável. Sem segredos; só repositórios públicos.
+name: Provision Linux qualification host
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/shared/HYGIENE/scripts/provision_linux_vm.sh
+      - .github/workflows/provision-linux.yml
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provision
+        run: bash qualification/shared/HYGIENE/scripts/provision_linux_vm.sh "$RUNNER_TEMP/qualificacao" main
+      - name: Idempotent re-run
+        run: bash qualification/shared/HYGIENE/scripts/provision_linux_vm.sh "$RUNNER_TEMP/qualificacao" main
+      - uses: actions/upload-artifact@v4
+        with:
+          name: provision-receipt
+          path: ${{ runner.temp }}/qualificacao/PROVISION_RECEIPT.json
+          if-no-files-found: error
