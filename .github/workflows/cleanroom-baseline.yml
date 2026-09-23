@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - qualification/shared/SHARED-002/CLEANROOM_PLAN.json
+      - qualification/shared/SHARED-002/CLEANROOM_PLAN_V2.json
       - qualification/shared/scripts/cleanroom_baseline.py
       - qualification/shared/scripts/cleanroom_guard/**
       - .github/workflows/cleanroom-baseline.yml
@@ -36,7 +36,7 @@ jobs:
           persist-credentials: false
       - name: uv e Python fixados pelo plano
         run: |
-          plan=qualification/shared/SHARED-002/CLEANROOM_PLAN.json
+          plan=qualification/shared/SHARED-002/CLEANROOM_PLAN_V2.json
           uv_version=$(jq -r .environment.uv_version "$plan")
           uv_asset=$(jq -r .environment.uv_asset "$plan")
           uv_sha=$(jq -r .environment.uv_sha256 "$plan")
@@ -55,7 +55,7 @@ jobs:
       - name: Cleanroom
         run: |
           "$CLEANROOM_PYTHON" -I qualification/shared/scripts/cleanroom_baseline.py \
-            qualification/shared/SHARED-002/CLEANROOM_PLAN.json "${{ matrix.repo }}" "$RUNNER_TEMP/out/${{ matrix.repo }}"
+            qualification/shared/SHARED-002/CLEANROOM_PLAN_V2.json "${{ matrix.repo }}" "$RUNNER_TEMP/out/${{ matrix.repo }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

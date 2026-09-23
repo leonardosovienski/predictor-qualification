@@ -1,7 +1,7 @@
 """SHARED-002: cleanroom-baseline (C5) de um repo do stack, no Linux do GitHub Actions.
 
 Diagnóstico: registra o que quebra, não conserta. Lê o plano congelado
-(qualification/shared/SHARED-002/CLEANROOM_PLAN.json) e, para o repo pedido:
+(qualification/shared/SHARED-002/CLEANROOM_PLAN_V2.json) e, para o repo pedido:
 
   1. clona o repo no SHA do baseline (clone completo) e confere HEAD/limpeza;
   2. `uv lock --check`; exporta o lock (terceiros + wheels do stack por URL, com hash);
@@ -16,7 +16,7 @@ Diagnóstico: registra o que quebra, não conserta. Lê o plano congelado
   7. compara, arquivo a arquivo, a wheel publicada com a construída do commit.
 
 Sem segredos: nenhum token é lido; clones e downloads são públicos e anônimos.
-Uso: python cleanroom_baseline.py <plan.json> <repo> <out_dir>
+Uso: python cleanroom_baseline.py <plan.json> <repo> <out_dir>  (plano V2: pytest_suites + pytest_common_args)
 """
 
 from __future__ import annotations
@@ -309,25 +309,29 @@ def main() -> None:
             argv = [str(vpy) if cmd[0] == "python" else cmd[0], *cmd[1:]]
             v[f"pre_test_{i}"] = log.run(f"{variant}_pre_test_{i}", argv, cwd=tree, env=venv_env)
 
-        guard_out = work / f"guard-{variant}.json"
-        junit = out / f"junit-{variant}.xml"
-        test_env = dict(venv_env, PYTHONPATH=str(HERE / "cleanroom_guard"), CLEANROOM_GUARD_OUT=str(guard_out),
-                        CLEANROOM_GUARD_MODULES=",".join(stack_modules), CLEANROOM_GUARD_SITE=v["introspect"].get("site_packages", ""))
-        v["pytest"] = log.run(f"{variant}_pytest",
-                              [str(vpy), "-m", "pytest", *spec["pytest_args"], "-p", "cleanroom_guard",
-                               "-p", "no:cacheprovider", "-o", "pythonpath=", f"--junitxml={junit}", "-rfE"],
-                              cwd=tree, env=test_env, timeout=plan["limits"]["pytest_timeout_s"])
-        v["pytest_counts"] = junit_counts(junit)
-        v["pytest_summary_line"] = next((line for line in reversed(log.text(f"{variant}_pytest").splitlines())
-                                         if line.startswith("=") and (" in " in line)), None)
-        v["guard"] = json.loads(guard_out.read_text()) if guard_out.exists() else None
+        v["suites"] = []
+        for i, suite in enumerate(spec["pytest_suites"]):
+            name = f"{variant}_pytest_s{i}"
+            guard_out = work / f"guard-{name}.json"
+            junit = out / f"junit-{name}.xml"
+            test_env = dict(venv_env, PYTHONPATH=str(HERE / "cleanroom_guard"), CLEANROOM_GUARD_OUT=str(guard_out),
+                            CLEANROOM_GUARD_MODULES=",".join(stack_modules),
+                            CLEANROOM_GUARD_SITE=v["introspect"].get("site_packages", ""))
+            run = log.run(name, [str(vpy), "-m", "pytest", *suite, *plan["pytest_common_args"], f"--junitxml={junit}"],
+                          cwd=tree, env=test_env, timeout=plan["limits"]["pytest_timeout_s"])
+            v["suites"].append({
+                "paths": suite, "pytest": run, "counts": junit_counts(junit),
+                "summary_line": next((line for line in reversed(log.text(name).splitlines())
+                                      if line.startswith("=") and " in " in line), None),
+                "guard": json.loads(guard_out.read_text()) if guard_out.exists() else None,
+            })
         # Limpa o que a suíte gerou na árvore para a próxima variante (a árvore volta ao commit).
         subprocess.run(["git", "-C", str(tree), "checkout", "--quiet", "--", "."], check=False)
         subprocess.run(["git", "-C", str(tree), "clean", "-fdxq"], check=False)
 
     (out / "cleanroom_facts.json").write_text(json.dumps(facts, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(json.dumps({"repo": repo_name, "published": facts["variants"]["published"].get("pytest_counts"),
-                      "head_build": facts["variants"]["head_build"].get("pytest_counts")}, default=str)[:2000])
+    print(json.dumps({"repo": repo_name, **{k: [s["counts"] for s in v.get("suites", [])]
+                                            for k, v in facts["variants"].items()}}, default=str)[:2000])
 
 
 if __name__ == "__main__":

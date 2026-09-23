@@ -1,0 +1,122 @@
+$ (cwd=/home/runner/work/_temp/cleanroom/predictor-ops/tree) /home/runner/work/_temp/cleanroom/predictor-ops/venv-head_build/bin/python -m pytest tests_v2 posix_integration -p cleanroom_guard -p no:cacheprovider -o pythonpath= --junitxml=/home/runner/work/_temp/out/predictor-ops/junit-head_build.xml -rfE
+============================= test session starts ==============================
+platform linux -- Python 3.13.15, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/runner/work/_temp/cleanroom/predictor-ops/tree
+configfile: pyproject.toml
+plugins: cov-7.1.0, timeout-2.4.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 88 items
+
+tests_v2/test_architecture_safety.py ........                            [  9%]
+tests_v2/test_cli.py ......                                              [ 15%]
+tests_v2/test_health.py ........                                         [ 25%]
+tests_v2/test_models_config.py .....                                     [ 30%]
+tests_v2/test_operational_safety.py ......                               [ 37%]
+tests_v2/test_process_cleanup.py ........                                [ 46%]
+tests_v2/test_process_tree.py .                                          [ 47%]
+tests_v2/test_provenance.py FF...F                                       [ 54%]
+tests_v2/test_redaction_adversarial.py ....                              [ 59%]
+tests_v2/test_runner.py .......                                          [ 67%]
+tests_v2/test_runner_extended.py .F....                                  [ 73%]
+tests_v2/test_runtime.py .....                                           [ 79%]
+tests_v2/test_stabilization.py ...........                               [ 92%]
+tests_v2/test_version_contract.py .                                      [ 93%]
+tests_v2/test_windows_adapter.py .....                                   [ 98%]
+posix_integration/test_signals_real.py .                                 [100%]
+
+=================================== FAILURES ===================================
+_____________ test_source_clean_dirty_detached_and_missing_commit ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-1/test_source_clean_dirty_detach0')
+
+    def test_source_clean_dirty_detached_and_missing_commit(tmp_path):
+        _git(tmp_path, "init")
+        _git(tmp_path, "config", "user.email", "test@example.invalid")
+        _git(tmp_path, "config", "user.name", "Test")
+        (tmp_path / "file").write_text("one")
+        _git(tmp_path, "add", "file")
+        _git(tmp_path, "commit", "-m", "initial")
+        clean = _source_identity(tmp_path)
+        assert clean["identity_status"] == "VALIDATED" and clean["commit"]
+        assert collect_provenance(strict=True, source_root=tmp_path)["identity_status"] == "VALIDATED"
+        _git(tmp_path, "checkout", "--detach")
+        assert _source_identity(tmp_path)["identity_status"] == "VALIDATED"
+        (tmp_path / "file").write_text("tampered")
+        assert _source_identity(tmp_path)["identity_status"] == "DIRTY"
+        assert collect_provenance(strict=False, source_root=tmp_path)["identity_status"] == "DIRTY"
+>       with pytest.raises(ProvenanceError, match="not validated"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProvenanceError
+
+tests_v2/test_provenance.py:34: Failed
+___________ test_strict_editable_fails_closed_and_permissive_is_safe ___________
+
+    def test_strict_editable_fails_closed_and_permissive_is_safe():
+>       with pytest.raises(ProvenanceError, match="editable"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProvenanceError
+
+tests_v2/test_provenance.py:41: Failed
+__________ test_wheel_record_tampering_fails_in_isolated_environment ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-1/test_wheel_record_tampering_fa0')
+
+    @pytest.mark.timeout(120)
+    def test_wheel_record_tampering_fails_in_isolated_environment(tmp_path):
+        dist = tmp_path / "dist"
+        subprocess.run(
+            [sys.executable, "-m", "hatchling", "build", "-t", "wheel", "-d", str(dist)],
+            cwd=Path(__file__).parents[1],
+            check=True,
+            capture_output=True,
+        )
+        wheel = next(dist.glob("*.whl"))
+        environment = tmp_path / "venv"
+        subprocess.run([sys.executable, "-m", "venv", str(environment)], check=True)
+        python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        subprocess.run([python, "-m", "pip", "install", str(wheel)], check=True, capture_output=True)
+        probe = (
+            "from predictor_ops.provenance import collect_provenance; "
+            "print(collect_provenance(strict=True)['identity_status'])"
+        )
+>       assert (
+            subprocess.run([python, "-I", "-c", probe], cwd=tmp_path, capture_output=True, text=True).stdout.strip()
+            == "VALIDATED"
+        )
+E       AssertionError: assert '' == 'VALIDATED'
+E         
+E         - VALIDATED
+
+tests_v2/test_provenance.py:125: AssertionError
+__________ test_strict_setup_failure_is_terminal_and_child_never_runs __________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-1/test_strict_setup_failure_is_t0')
+
+    def test_strict_setup_failure_is_terminal_and_child_never_runs(tmp_path):
+        marker = tmp_path / "must-not-exist"
+        result = run_job(_job(tmp_path, f"open({str(marker)!r},'w').write('bad')", id="strict", provenance_mode="strict"))
+>       assert result.run_status is RunStatus.CONFIGURATION_ERROR and result.exit_code == 3
+E       AssertionError: assert (<RunStatus.SUCCEEDED: 'SUCCEEDED'> is <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'>)
+E        +  where <RunStatus.SUCCEEDED: 'SUCCEEDED'> = RunResult(run_id='7e9199bae33e4a2ca214aa9c514d46d6', run_status=<RunStatus.SUCCEEDED: 'SUCCEEDED'>, exit_code=0, recor...'2026-09-23T06:26:31.086Z', 'exit_code': 0, 'duration_ms': 24, 'output': {'text': '', 'bytes': 0, 'truncated': False}}).run_status
+E        +  and   <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'> = RunStatus.CONFIGURATION_ERROR
+
+tests_v2/test_runner_extended.py:33: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 24, "event": "job_finished", "job_id": "strict", "level": "INFO", "run_id": "7e9199bae33e4a2ca214aa9c514d46d6", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-23T06:26:31.108987Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+- generated xml file: /home/runner/work/_temp/out/predictor-ops/junit-head_build.xml -
+=========================== short test summary info ============================
+FAILED tests_v2/test_provenance.py::test_source_clean_dirty_detached_and_missing_commit - Failed: DID NOT RAISE ProvenanceError
+FAILED tests_v2/test_provenance.py::test_strict_editable_fails_closed_and_permissive_is_safe - Failed: DID NOT RAISE ProvenanceError
+FAILED tests_v2/test_provenance.py::test_wheel_record_tampering_fails_in_isolated_environment - AssertionError: assert '' == 'VALIDATED'
+  
+  - VALIDATED
+FAILED tests_v2/test_runner_extended.py::test_strict_setup_failure_is_terminal_and_child_never_runs - AssertionError: assert (<RunStatus.SUCCEEDED: 'SUCCEEDED'> is <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'>)
+ +  where <RunStatus.SUCCEEDED: 'SUCCEEDED'> = RunResult(run_id='7e9199bae33e4a2ca214aa9c514d46d6', run_status=<RunStatus.SUCCEEDED: 'SUCCEEDED'>, exit_code=0, recor...'2026-09-23T06:26:31.086Z', 'exit_code': 0, 'duration_ms': 24, 'output': {'text': '', 'bytes': 0, 'truncated': False}}).run_status
+ +  and   <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'> = RunStatus.CONFIGURATION_ERROR
+======================== 4 failed, 84 passed in 10.68s =========================
+
+[exit 1]
