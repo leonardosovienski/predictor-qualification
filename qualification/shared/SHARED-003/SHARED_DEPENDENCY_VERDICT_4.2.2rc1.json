@@ -1,0 +1,43 @@
+{
+  "dependency": "predictor-ops",
+  "wheel_version": "4.2.2rc1",
+  "wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3",
+  "source_commit": "9831b0d5e727972b1d85ff48be14ffa58677898b",
+  "baseline": "STACK_BASELINE_V1.1 (D-17)",
+  "owner_mission": "crypto",
+  "numbers_source": "qualification/crypto/RAW_LOGS/ops-failure-v1.1/run35924606026/../OPS_FAILURE_SUMMARY.json (scripts/analyze_ops_failure.py)",
+  "decided_at": "2026-09-23",
+  "issue_id": "SHARED-003",
+  "classification": "test_only",
+  "blocking": false,
+  "revalidates": "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT.json (wheel 4.2.1)",
+  "reproductions": [
+    {
+      "environment": "Linux ubuntu-latest × py3.13 (Actions run 35924606026)",
+      "install": "source",
+      "isolated_test_executions": "10/10",
+      "real_tree": "3/3"
+    },
+    {
+      "environment": "Linux ubuntu-latest × py3.13",
+      "install": "wheel 4.2.2rc1",
+      "isolated_test_executions": "10/10",
+      "probe_test_exact": "40/40",
+      "probe_slow_start": "10/10",
+      "real_tree": "6/6"
+    },
+    {
+      "environment": "windows-latest × py3.13",
+      "install": "wheel 4.2.2rc1",
+      "isolated_test_executions": "3/3",
+      "probe_test_exact": "40/40",
+      "probe_slow_start": "9/10 (partida do filho perto do prazo, mesma causa da 4.2.1)",
+      "real_tree": "6/6"
+    }
+  ],
+  "root_cause": "Inalterada: prazo de 0,2 s do teste contra a latência de partida do Python no Windows. A correção da SHARED-005 não toca runner.py nem o caminho de timeout.",
+  "real_job_answer": "SIM: o job real mata a árvore e trunca a saída (Linux 6/6, windows-latest 6/6 com a wheel 4.2.2rc1).",
+  "evidence": [
+    "qualification/crypto/RAW_LOGS/ops-failure-v1.1/run35924606026/"
+  ]
+}

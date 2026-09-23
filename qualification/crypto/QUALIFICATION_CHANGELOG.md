@@ -47,3 +47,14 @@ PR: [cripto-predictor#126](https://github.com/leonardosovienski/cripto-predictor
 - O commit `b3acbc2` do repo de evidência gravou os logs de `RAW_LOGS/windows-smoke/local/`
   enquanto o runtime Windows ainda escrevia neles. O commit seguinte traz a versão final; nada
   foi editado à mão.
+
+## V1.1 — correção da SHARED-005 (D-17)
+
+| Repo | Commit | O quê | Teste |
+|---|---|---|---|
+| predictor-ops | `9831b0d` (PR #26) | `_mutation_guard`: inicialização da guarda por descritor sem buffer; escrita recusada espera no laço de lock. Versão 4.2.2rc1; contrato de versão do CHANGELOG aceita pré-release PEP 440 | `test_empty_guard_locked_by_another_process_waits_instead_of_crashing` (falha antes, passa depois); corrida 50/50 |
+| cripto-predictor | `341d270` | Ops 4.2.2rc1 (`>=4.2.2rc1,<5`, lock), versão 1.2.0rc2; `test_core_integrity`/`verify_installed_wheels` exigem a wheel nova | suíte Windows 1664/1664; CI verde |
+
+Releases pré-release: predictor-ops `v4.2.2rc1` (asset oficial do workflow Release, `0be70bfb…`), cripto-predictor `v1.2.0rc2` (`6e62f67f…`).
+
+Notas de método: o workflow Release do Ops substituiu, com o mesmo conteúdo e outros carimbos de data, os assets que enviei manualmente um minuto antes; o asset canônico é o do workflow (CORE_IDENTITY_REPORT §3); a suíte Windows de `341d270` perdeu 1 teste para o Modern Standby do host (CR-F018) e foi refeita (1664/1664); de novo um log em andamento (`windows_pytest_341d270_run2.log`) entrou num commit antes de terminar, e a versão final vem no commit seguinte.

@@ -1,0 +1,31 @@
+{
+  "dependency": "predictor-ops",
+  "wheel_version": "4.2.2rc1",
+  "wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3",
+  "source_commit": "9831b0d5e727972b1d85ff48be14ffa58677898b",
+  "baseline": "STACK_BASELINE_V1.1 (D-17)",
+  "owner_mission": "crypto",
+  "numbers_source": "qualification/crypto/RAW_LOGS/ops-failure-v1.1/run35924606026/../OPS_FAILURE_SUMMARY.json (scripts/analyze_ops_failure.py)",
+  "decided_at": "2026-09-23",
+  "issue_id": "SHARED-005",
+  "status": "RESOLVED_IN_4.2.2rc1",
+  "fix": {
+    "pr": "https://github.com/leonardosovienski/predictor-ops/pull/26",
+    "commit": "9831b0d5e727972b1d85ff48be14ffa58677898b",
+    "release": "https://github.com/leonardosovienski/predictor-ops/releases/tag/v4.2.2rc1",
+    "decision": "D-17",
+    "change": "src/predictor_ops/runtime.py _mutation_guard: inicialização da guarda por descritor sem buffer; escrita recusada (byte 0 travado) espera no laço de lock"
+  },
+  "proof": {
+    "deterministic_test": "tests_v2/test_runtime.py::test_empty_guard_locked_by_another_process_waits_instead_of_crashing: FALHA antes (PermissionError) e passa depois, Windows local (qualification/shared/SHARED-005/RAW_LOGS/repro_before_fix.log, repro_after_fix.log)",
+    "real_race_windows_local": "50/50 (antes 1/20 de falha) — qualification/shared/SHARED-005/RAW_LOGS/lockrace_50x_after_fix.log",
+    "real_race_ci_wheel": "Linux source 50/50, Linux wheel 50/50, windows-latest wheel 50/50 — qualification/crypto/RAW_LOGS/ops-failure-v1.1/run35924606026/",
+    "ops_ci": "predictor-ops CI 35905393899 (PR, ubuntu 3.13/3.14, windows-latest, container) e Release 35905678109 (validação da wheel publicada) verdes"
+  },
+  "blocking_for_wheel": {
+    "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e (4.2.1)": true,
+    "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3 (4.2.2rc1)": false
+  },
+  "consumers_note": "Missões que ainda consomem a 4.2.1 (brasileirao, em STACK_BASELINE_V1.1) continuam bloqueadas até migrar para a 4.2.2rc1.",
+  "windows_local_observation": "windows_integration/test_windows_real.py::test_real_present_never_run_disabled_and_failed_task falha no Windows local igual no main 7bd99eb e no branch da correção (3/3 cada; ambiente do Agendador de Tarefas); passa no windows-latest do CI. Sem relação com a SHARED-005."
+}

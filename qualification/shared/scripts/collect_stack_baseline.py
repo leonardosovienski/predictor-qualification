@@ -235,6 +235,8 @@ def main() -> None:
     ap.add_argument("--raw-log", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--linux-facts", type=Path)
+    ap.add_argument("--baseline-id", default="STACK_BASELINE_V1")
+    ap.add_argument("--note")
     args = ap.parse_args()
     args.raw_log.parent.mkdir(parents=True, exist_ok=True)
     r = Runner(args.raw_log)
@@ -252,7 +254,8 @@ def main() -> None:
         linux = {"role": "primary (GitHub Actions, D-9)", "source": "cleanroom-baseline (SHARED-002)",
                  "environments_seen": [json.loads(e) for e in sorted(envs)]}
     baseline = {
-        "baseline_id": "STACK_BASELINE_V1",
+        "baseline_id": args.baseline_id,
+        "note": args.note,
         "common_core_sha256": "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1",
         "mission_prompt": "prompts/baseline_comum_rev8.md",
         "collected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),

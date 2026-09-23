@@ -87,7 +87,7 @@ def build(result: str) -> dict:
         "envelope_version": "NONE",
         "supersedes_sha256": ledger.get("supersedes_sha256"),
         "common_baseline_id": ledger.get("common_baseline_id", "STACK_BASELINE_V1"),
-        "common_baseline_sha256": sha(V1),
+        "common_baseline_sha256": sha(ROOT / "qualification" / "shared" / (ledger.get("common_baseline_id", "STACK_BASELINE_V1") + ".json")),
         "common_core_version": "2.0",
         "common_core_sha256": sha(CORE),
         "frozen_parameters_sha256": sha(QC / "FROZEN_PARAMETERS.json"),

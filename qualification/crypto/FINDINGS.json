@@ -118,13 +118,15 @@
     {
       "id": "CR-F009",
       "severity": "P1",
-      "status": "OPEN_BLOCKED",
+      "status": "FIXED",
       "phase": "ops-failure",
       "title": "SHARED-005: lock local do Ops falha no Windows sob concorrência (bloqueante)",
       "description": "predictor-ops 4.2.1 _mutation_guard: corrida na inicialização da guarda; o processo perdedor morre com PermissionError dentro de run_job. Veredito flaky/bloqueante (C13). Correção exige mudança no Ops congelado: decisão do dono.",
       "evidence": [
         "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json"
-      ]
+      ],
+      "fixed_in": "predictor-ops 9831b0d (PR #26), release v4.2.2rc1 (0be70bfb…), D-17; cripto 341d270 aponta para ela",
+      "proof": "tests_v2/test_runtime.py::test_empty_guard_locked_by_another_process_waits_instead_of_crashing (falha antes, passa depois); corrida real 50/50 em Windows local, Linux source/wheel e windows-latest (qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json)"
     },
     {
       "id": "CR-F010",
@@ -209,6 +211,30 @@
       "description": "Com a wheel publicada e a árvore sem o pacote-fonte: 13 leem GarimpoInvestimentos/trials.json, main.py ou analyzers/* pelo caminho do repo; 2 exigem dist/ construído; 2 checam higiene do checkout. Todos passam no CI do checkout em 2bc63eb. Defeito só de teste (classe T do SHARED-002); a conformidade (48/48) e o E2E rodam contra a wheel.",
       "evidence": [
         "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/full_suite.junit.xml"
+      ]
+    },
+    {
+      "id": "CR-F017",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "v1-1-ops-failure",
+      "title": "predictor-ops: teste windows_integration do Agendador de Tarefas falha neste host Windows",
+      "description": "windows_integration/test_windows_real.py::test_real_present_never_run_disabled_and_failed_task falha 3/3 no Windows local tanto no main intocado (7bd99eb) quanto no branch da correção; passa no windows-latest do CI. Ambiente do Agendador de Tarefas deste host; adaptador transicional que o Cripto não usa. Observação para o dono do Ops.",
+      "evidence": [
+        "qualification/shared/SHARED-005/RAW_LOGS/windows_integration_ab.log"
+      ]
+    },
+    {
+      "id": "CR-F018",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "v1-1-contract-wiring",
+      "title": "Host Windows entra em Modern Standby durante execuções longas",
+      "description": "A suíte de 341d270 levou 2h19 e 1 teste estourou 600 s: o host esteve em Modern Standby (Kernel-Power 506/507) de 16:02 a 18:07; nova janela 18:19–18:45 derrubou 1 de 10 reexecuções. Fora dessas janelas, 9/10 e a suíte completa (1664/1664) passam. Mitigação: scripts/keep_awake.ps1 (SetThreadExecutionState por processo) durante as execuções. Sem efeito no produto.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/v1.1/host_standby_events.log",
+        "qualification/crypto/RAW_LOGS/v1.1/after_result_write_10x.log",
+        "qualification/crypto/RAW_LOGS/v1.1/windows_pytest_341d270_run2.log"
       ]
     }
   ]

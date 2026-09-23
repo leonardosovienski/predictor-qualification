@@ -36,3 +36,7 @@ Tolerância zero, conferida no fim sobre o estado:
 
 Decidir a D-16 (dados reais no Linux/Actions ou numa VM). Com a decisão, o mesmo harness
 (`scripts/soak.py`) roda com o dataset real no runtime suportado Linux, sem mudar o perfil.
+
+## V1.1
+
+Mesmo perfil, mesmo diagnóstico sintético no Linux (run 35925914768): `zero_tolerance_ok = true` (`EVIDENCE_NUMBERS_V1.1.json`). O gate segue **NOT_RUN — BLOCKED: D-16 pendente**.

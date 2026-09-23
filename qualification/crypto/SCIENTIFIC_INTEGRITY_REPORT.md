@@ -63,3 +63,7 @@ CR-F004: o handler reportava o líquido com uma perna e sem funding. Com bruto d
 líquido aparecia como 0 bps, quando o `CostModel` congelado dá −36 bps. E não havia IC do
 líquido. O resultado econômico estava errado a favor do edge. Foi corrigido (`33fed6b`), com
 regressão em `test_net_return_uses_the_frozen_cost_model_and_has_its_own_interval`.
+
+## V1.1 (cripto 1.2.0rc2 + Ops 4.2.2rc1)
+
+Refeito no runtime Windows (`RAW_LOGS/v1.1/windows-local/`): suítes temporais 120/120; canário e ablações falham fechado (0 aceitos); placebo SUPPORTED 3/100; métricas reais idênticas (bruto −45, líquido −83 bps; mesmos ICs). Gates econômico, controles negativos e casos desconfortáveis seguem **NOT_RUN — BLOCKED: D-16 pendente**.

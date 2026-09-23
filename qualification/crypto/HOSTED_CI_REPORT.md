@@ -20,3 +20,16 @@ Estão corrigidos em `6f73051`, verde.
 
 O PR [cripto-predictor#126](https://github.com/leonardosovienski/cripto-predictor/pull/126)
 dispara o mesmo CI no evento `pull_request`.
+
+## V1.1 (D-17: predictor-ops 4.2.2rc1)
+
+Fonte: `RAW_LOGS/v1.1/hosted-ci/`. Todos os jobs com sucesso; nenhum pulado.
+
+| Repo | Commit | Workflow (evento) | Run |
+|---|---|---|---|
+| cripto-predictor | `341d270` (final) | CI (push, branch) | [35906112873](https://github.com/leonardosovienski/cripto-predictor/actions/runs/35906112873) — 4 jobs |
+| cripto-predictor | `341d270` | CI (push, tag `v1.2.0rc2`) | [35925694691](https://github.com/leonardosovienski/cripto-predictor/actions/runs/35925694691) — 4 jobs |
+| predictor-ops | `9831b0d` (final) | CI (pull_request #26) | [35905393899](https://github.com/leonardosovienski/predictor-ops/actions/runs/35905393899) — ubuntu 3.13/3.14, windows-latest, container |
+| predictor-ops | `9831b0d` | CI (push, tag `v4.2.2rc1`) | [35905678198](https://github.com/leonardosovienski/predictor-ops/actions/runs/35905678198) |
+| predictor-ops | `9831b0d` | Release (tag) | [35905678109](https://github.com/leonardosovienski/predictor-ops/actions/runs/35905678109) — build com attestation + validação da wheel publicada |
+| core-predictor | `5a08415` | inalterado (ver acima) | |

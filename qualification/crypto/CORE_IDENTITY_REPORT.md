@@ -39,3 +39,7 @@ qualquer checkout); `RAW_LOGS/final/uv_lock_check_2bc63eb.log`.
 - Nenhum pacote do stack veio de índice público, `vendor/` ou checkout de outro repo.
 
 `LOCK_INTEGRITY`: **PASS**. `CORE_IDENTITY`: **PASS**.
+
+## 3. V1.1
+
+`uv.lock` de `341d270`: predictor-ops `4.2.2rc1` pela URL da release, sha256 `0be70bfb…` = digest do asset (a wheel oficial foi construída pelo workflow Release do Ops e substituiu, com o mesmo conteúdo e outros carimbos de data, o upload manual feito um minuto antes). Range `predictor-ops>=4.2.2rc1,<5`. `uv lock --check` exit 0 (`RAW_LOGS/v1.1/uv_lock_check_341d270.log`). Nos 3 runtimes, `core_identity.json` mostra Ops 4.2.2rc1, cripto 1.2.0rc2 e Core 3.2.1 não editable, do site-packages.

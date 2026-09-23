@@ -82,3 +82,16 @@ que exige decisão do dono (Ops congelado).
 - Na `tests_v2` completa pela wheel, 2 falhas vêm do método (árvore de teste sem `src/` e sem
   `CHANGELOG.md`): `test_wheel_record_tampering_fails_in_isolated_environment` e
   `test_changelog_latest_release_matches_package_version`.
+
+## V1.1 — predictor-ops 4.2.2rc1 (D-17)
+
+Matriz refeita com a wheel nova (Actions run 35924606026, `RAW_LOGS/ops-failure-v1.1/`):
+
+| Ambiente | SHARED-003 isolado | SHARED-004 | Corrida real do lock (SHARED-005) | Árvore real morta |
+|---|---|---|---|---|
+| Linux source | 10/10 | 3/3 passam (editable) | 50/50 | 3/3 |
+| Linux wheel | 10/10 | 0/3 (test_only, igual) | 50/50 | 6/6 |
+| windows-latest wheel | 3/3 | 0/1 (test_only, igual) | 50/50 | 6/6 |
+
+Windows local: teste determinístico da SHARED-005 falha antes e passa depois; corrida 50/50 (antes 1/20 de falha).
+Vereditos: `SHARED-003/004 …_4.2.2rc1.json` (test_only, não bloqueiam) e `SHARED-005/RESOLUTION_4.2.2rc1.json` (resolvida; ainda bloqueia quem usa a 4.2.1).
