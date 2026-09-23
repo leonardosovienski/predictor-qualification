@@ -1,0 +1,928 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "qualification_attestation_v2_0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attestation_version",
+    "stage",
+    "branch",
+    "envelope_version",
+    "supersedes_sha256",
+    "common_baseline_id",
+    "common_baseline_sha256",
+    "common_core_version",
+    "common_core_sha256",
+    "frozen_parameters_sha256",
+    "protected_set_sha256",
+    "frozen_vectors_sha256",
+    "soak_profile_sha256",
+    "domain_contract_sha256",
+    "domain_attestations",
+    "final_commits",
+    "final_wheels",
+    "phases_completed",
+    "environments",
+    "shared_dependency_verdicts",
+    "gates",
+    "findings_file",
+    "counts",
+    "capital_permission",
+    "training_started",
+    "generated_at",
+    "result"
+  ],
+  "properties": {
+    "attestation_version": {
+      "const": "2.0"
+    },
+    "stage": {
+      "enum": [
+        "A",
+        "B"
+      ]
+    },
+    "branch": {
+      "enum": [
+        "crypto",
+        "brasileirao",
+        "stocks",
+        "integration"
+      ]
+    },
+    "envelope_version": {
+      "enum": [
+        "NONE",
+        "V2"
+      ]
+    },
+    "supersedes_sha256": {
+      "$ref": "#/$defs/sha256_or_null"
+    },
+    "common_baseline_id": {
+      "type": "string",
+      "pattern": "^STACK_BASELINE_V(1|2)(\\.[0-9]+)?$"
+    },
+    "common_baseline_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "common_core_version": {
+      "const": "2.0"
+    },
+    "common_core_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "frozen_parameters_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "protected_set_sha256": {
+      "$ref": "#/$defs/sha256_or_null"
+    },
+    "frozen_vectors_sha256": {
+      "$ref": "#/$defs/sha256_or_null"
+    },
+    "soak_profile_sha256": {
+      "$ref": "#/$defs/sha256_or_null"
+    },
+    "domain_contract_sha256": {
+      "$ref": "#/$defs/sha256_or_null"
+    },
+    "domain_attestations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "branch",
+          "attestation_sha256",
+          "contract_sha256",
+          "revalidation"
+        ],
+        "properties": {
+          "branch": {
+            "enum": [
+              "crypto",
+              "brasileirao",
+              "stocks"
+            ]
+          },
+          "attestation_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "contract_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "revalidation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "evidence"
+            ],
+            "properties": {
+              "status": {
+                "$ref": "#/$defs/status"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/evidence"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "final_commits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repo",
+          "commit_sha"
+        ],
+        "properties": {
+          "repo": {
+            "type": "string"
+          },
+          "commit_sha": {
+            "$ref": "#/$defs/git_sha"
+          }
+        }
+      }
+    },
+    "final_wheels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "version",
+          "url",
+          "sha256"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://github\\.com/.+/releases/download/.+\\.whl$"
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "phases_completed": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]+$"
+      }
+    },
+    "environments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "os",
+          "python",
+          "role",
+          "where",
+          "result",
+          "evidence"
+        ],
+        "properties": {
+          "os": {
+            "enum": [
+              "linux",
+              "windows"
+            ]
+          },
+          "python": {
+            "type": "string",
+            "pattern": "^3\\.13(\\.[0-9]+)?$"
+          },
+          "role": {
+            "enum": [
+              "primary",
+              "secondary"
+            ]
+          },
+          "where": {
+            "enum": [
+              "github_actions",
+              "cloud_vm",
+              "local_windows"
+            ]
+          },
+          "result": {
+            "$ref": "#/$defs/status"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/evidence"
+            }
+          }
+        }
+      }
+    },
+    "shared_dependency_verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "issue_id",
+          "dependency",
+          "wheel_sha256",
+          "classification",
+          "blocking",
+          "verdict_file",
+          "verdict_sha256"
+        ],
+        "properties": {
+          "issue_id": {
+            "type": "string"
+          },
+          "dependency": {
+            "type": "string"
+          },
+          "wheel_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "classification": {
+            "enum": [
+              "environmental",
+              "test_only",
+              "flaky",
+              "regression",
+              "bad_install",
+              "unresolved"
+            ]
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "verdict_file": {
+            "type": "string"
+          },
+          "verdict_sha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        },
+        "if": {
+          "properties": {
+            "classification": {
+              "enum": [
+                "unresolved",
+                "regression"
+              ]
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "blocking": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "BLOCKERS_ZERO",
+          "STACK_BASELINE_FROZEN",
+          "LOCK_INTEGRITY",
+          "CORE_IDENTITY",
+          "CLEANROOM_FINAL",
+          "HOSTED_CI",
+          "E2E",
+          "IDEMPOTENCY",
+          "RESTART_RECOVERY",
+          "FAILURE_INJECTION",
+          "PROVENANCE",
+          "AUTHORITY_SEPARATION",
+          "FUTURE_CANARY",
+          "PROTECTED_ARTIFACTS_UNCHANGED",
+          "SOAK",
+          "WINDOWS_SMOKE",
+          "SHARED_DEPENDENCY_CLEAR",
+          "EVIDENCE_CONSISTENCY",
+          "SECRETS_CLEAN",
+          "CAPITAL_FORBIDDEN",
+          "DOMAIN_CONTRACT",
+          "ADMISSION",
+          "OPS_RUNTIME",
+          "CORE_PARTICIPATION",
+          "TEMPORAL_INTEGRITY",
+          "ENVELOPE_V2_CONFORMANCE",
+          "CAIN_INGESTION",
+          "CAIN_CONTAINMENT",
+          "DECISION_POLICY",
+          "N_PLUS_1_DETERMINISTIC",
+          "NEGATIVE_RESULT_NEUTRALITY",
+          "CROSS_DOMAIN_ISOLATION",
+          "DOMAIN_QUALIFIED_IDS",
+          "CONTRADICTION_PRESERVATION",
+          "DOMAIN_CONTRACTS_PRESERVED",
+          "CRYPTO_RUNTIME_WIRING",
+          "CRYPTO_OPS_FAILURE_VERDICT",
+          "CRYPTO_UNCOMFORTABLE_CASES",
+          "CRYPTO_ECONOMIC_METRICS",
+          "CRYPTO_NEGATIVE_CONTROLS",
+          "CRYPTO_SPLIT_BRAIN_CORRUPTION",
+          "BR_OPS_REUSE",
+          "BR_KICKOFF_ORDERING",
+          "BR_TIMEZONE_INTEGRITY",
+          "BR_SAME_KICKOFF_ISOLATION",
+          "BR_METAMORPHIC",
+          "BR_CACHE_STATE",
+          "BR_FUTURE_INJECTION",
+          "STOCKS_CORE_PIN",
+          "STOCKS_EXTERNAL_INTELLIGENCE_AXES",
+          "STOCKS_COLLECTION_MODE",
+          "STOCKS_UNIVERSE_IDENTITY",
+          "STOCKS_PIT_ADVERSARIAL",
+          "STOCKS_NEGATIVE_CONTROLS"
+        ]
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/gate"
+      },
+      "required": [
+        "BLOCKERS_ZERO",
+        "STACK_BASELINE_FROZEN",
+        "LOCK_INTEGRITY",
+        "CORE_IDENTITY",
+        "CLEANROOM_FINAL",
+        "HOSTED_CI",
+        "E2E",
+        "IDEMPOTENCY",
+        "RESTART_RECOVERY",
+        "FAILURE_INJECTION",
+        "PROVENANCE",
+        "AUTHORITY_SEPARATION",
+        "FUTURE_CANARY",
+        "PROTECTED_ARTIFACTS_UNCHANGED",
+        "SOAK",
+        "WINDOWS_SMOKE",
+        "SHARED_DEPENDENCY_CLEAR",
+        "EVIDENCE_CONSISTENCY",
+        "SECRETS_CLEAN",
+        "CAPITAL_FORBIDDEN"
+      ]
+    },
+    "findings_file": {
+      "$ref": "#/$defs/evidence"
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "P0",
+        "P1",
+        "P2"
+      ],
+      "properties": {
+        "P0": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "P1": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "P2": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "capital_permission": {
+      "const": false
+    },
+    "training_started": {
+      "const": false
+    },
+    "generated_at": {
+      "$ref": "#/$defs/datetime"
+    },
+    "result": {
+      "enum": [
+        "QUALIFIED",
+        "NOT_QUALIFIED",
+        "IN_PROGRESS"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "enum": [
+              "QUALIFIED",
+              "NOT_QUALIFIED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "protected_set_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "frozen_vectors_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "soak_profile_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "final_commits": {
+            "minItems": 1
+          },
+          "final_wheels": {
+            "minItems": 1
+          },
+          "environments": {
+            "minItems": 2
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "const": "A"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "branch": {
+            "enum": [
+              "crypto",
+              "brasileirao",
+              "stocks"
+            ]
+          },
+          "envelope_version": {
+            "const": "NONE"
+          },
+          "common_baseline_id": {
+            "pattern": "^STACK_BASELINE_V1(\\.[0-9]+)?$"
+          },
+          "domain_attestations": {
+            "maxItems": 0
+          },
+          "gates": {
+            "required": [
+              "DOMAIN_CONTRACT",
+              "ADMISSION",
+              "OPS_RUNTIME",
+              "CORE_PARTICIPATION",
+              "TEMPORAL_INTEGRITY"
+            ],
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "ENVELOPE_V2_CONFORMANCE",
+                  "CAIN_INGESTION",
+                  "CAIN_CONTAINMENT",
+                  "DECISION_POLICY",
+                  "N_PLUS_1_DETERMINISTIC",
+                  "NEGATIVE_RESULT_NEUTRALITY",
+                  "CROSS_DOMAIN_ISOLATION",
+                  "DOMAIN_QUALIFIED_IDS",
+                  "CONTRADICTION_PRESERVATION",
+                  "DOMAIN_CONTRACTS_PRESERVED"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "const": "A"
+          },
+          "result": {
+            "enum": [
+              "QUALIFIED",
+              "NOT_QUALIFIED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "domain_contract_sha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "const": "B"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "branch": {
+            "const": "integration"
+          },
+          "envelope_version": {
+            "const": "V2"
+          },
+          "common_baseline_id": {
+            "pattern": "^STACK_BASELINE_V2\\.[0-9]+$"
+          },
+          "domain_contract_sha256": {
+            "type": "null"
+          },
+          "gates": {
+            "required": [
+              "ENVELOPE_V2_CONFORMANCE",
+              "CAIN_INGESTION",
+              "CAIN_CONTAINMENT",
+              "DECISION_POLICY",
+              "N_PLUS_1_DETERMINISTIC",
+              "NEGATIVE_RESULT_NEUTRALITY",
+              "CROSS_DOMAIN_ISOLATION",
+              "DOMAIN_QUALIFIED_IDS",
+              "CONTRADICTION_PRESERVATION",
+              "DOMAIN_CONTRACTS_PRESERVED"
+            ],
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "DOMAIN_CONTRACT",
+                  "ADMISSION",
+                  "OPS_RUNTIME",
+                  "CORE_PARTICIPATION",
+                  "TEMPORAL_INTEGRITY",
+                  "CRYPTO_RUNTIME_WIRING",
+                  "CRYPTO_OPS_FAILURE_VERDICT",
+                  "CRYPTO_UNCOMFORTABLE_CASES",
+                  "CRYPTO_ECONOMIC_METRICS",
+                  "CRYPTO_NEGATIVE_CONTROLS",
+                  "CRYPTO_SPLIT_BRAIN_CORRUPTION",
+                  "BR_OPS_REUSE",
+                  "BR_KICKOFF_ORDERING",
+                  "BR_TIMEZONE_INTEGRITY",
+                  "BR_SAME_KICKOFF_ISOLATION",
+                  "BR_METAMORPHIC",
+                  "BR_CACHE_STATE",
+                  "BR_FUTURE_INJECTION",
+                  "STOCKS_CORE_PIN",
+                  "STOCKS_EXTERNAL_INTELLIGENCE_AXES",
+                  "STOCKS_COLLECTION_MODE",
+                  "STOCKS_UNIVERSE_IDENTITY",
+                  "STOCKS_PIT_ADVERSARIAL",
+                  "STOCKS_NEGATIVE_CONTROLS"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "const": "B"
+          },
+          "result": {
+            "enum": [
+              "QUALIFIED",
+              "NOT_QUALIFIED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "domain_attestations": {
+            "minItems": 3,
+            "maxItems": 3,
+            "prefixItems": [
+              {
+                "properties": {
+                  "branch": {
+                    "const": "crypto"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "branch": {
+                    "const": "brasileirao"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "branch": {
+                    "const": "stocks"
+                  }
+                }
+              }
+            ],
+            "items": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "const": "QUALIFIED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "counts": {
+            "properties": {
+              "P0": {
+                "const": 0
+              },
+              "P1": {
+                "const": 0
+              }
+            }
+          },
+          "gates": {
+            "additionalProperties": {
+              "properties": {
+                "status": {
+                  "const": "PASS"
+                }
+              }
+            }
+          },
+          "domain_attestations": {
+            "items": {
+              "properties": {
+                "revalidation": {
+                  "properties": {
+                    "status": {
+                      "const": "PASS"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "shared_dependency_verdicts": {
+            "items": {
+              "properties": {
+                "blocking": {
+                  "const": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "branch": {
+            "const": "crypto"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gates": {
+            "required": [
+              "CRYPTO_RUNTIME_WIRING",
+              "CRYPTO_OPS_FAILURE_VERDICT",
+              "CRYPTO_UNCOMFORTABLE_CASES",
+              "CRYPTO_ECONOMIC_METRICS",
+              "CRYPTO_NEGATIVE_CONTROLS",
+              "CRYPTO_SPLIT_BRAIN_CORRUPTION"
+            ],
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "BR_OPS_REUSE",
+                  "BR_KICKOFF_ORDERING",
+                  "BR_TIMEZONE_INTEGRITY",
+                  "BR_SAME_KICKOFF_ISOLATION",
+                  "BR_METAMORPHIC",
+                  "BR_CACHE_STATE",
+                  "BR_FUTURE_INJECTION",
+                  "STOCKS_CORE_PIN",
+                  "STOCKS_EXTERNAL_INTELLIGENCE_AXES",
+                  "STOCKS_COLLECTION_MODE",
+                  "STOCKS_UNIVERSE_IDENTITY",
+                  "STOCKS_PIT_ADVERSARIAL",
+                  "STOCKS_NEGATIVE_CONTROLS"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "branch": {
+            "const": "brasileirao"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gates": {
+            "required": [
+              "BR_OPS_REUSE",
+              "BR_KICKOFF_ORDERING",
+              "BR_TIMEZONE_INTEGRITY",
+              "BR_SAME_KICKOFF_ISOLATION",
+              "BR_METAMORPHIC",
+              "BR_CACHE_STATE",
+              "BR_FUTURE_INJECTION"
+            ],
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "CRYPTO_RUNTIME_WIRING",
+                  "CRYPTO_OPS_FAILURE_VERDICT",
+                  "CRYPTO_UNCOMFORTABLE_CASES",
+                  "CRYPTO_ECONOMIC_METRICS",
+                  "CRYPTO_NEGATIVE_CONTROLS",
+                  "CRYPTO_SPLIT_BRAIN_CORRUPTION",
+                  "STOCKS_CORE_PIN",
+                  "STOCKS_EXTERNAL_INTELLIGENCE_AXES",
+                  "STOCKS_COLLECTION_MODE",
+                  "STOCKS_UNIVERSE_IDENTITY",
+                  "STOCKS_PIT_ADVERSARIAL",
+                  "STOCKS_NEGATIVE_CONTROLS"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "branch": {
+            "const": "stocks"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gates": {
+            "required": [
+              "STOCKS_CORE_PIN",
+              "STOCKS_EXTERNAL_INTELLIGENCE_AXES",
+              "STOCKS_COLLECTION_MODE",
+              "STOCKS_UNIVERSE_IDENTITY",
+              "STOCKS_PIT_ADVERSARIAL",
+              "STOCKS_NEGATIVE_CONTROLS"
+            ],
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "CRYPTO_RUNTIME_WIRING",
+                  "CRYPTO_OPS_FAILURE_VERDICT",
+                  "CRYPTO_UNCOMFORTABLE_CASES",
+                  "CRYPTO_ECONOMIC_METRICS",
+                  "CRYPTO_NEGATIVE_CONTROLS",
+                  "CRYPTO_SPLIT_BRAIN_CORRUPTION",
+                  "BR_OPS_REUSE",
+                  "BR_KICKOFF_ORDERING",
+                  "BR_TIMEZONE_INTEGRITY",
+                  "BR_SAME_KICKOFF_ISOLATION",
+                  "BR_METAMORPHIC",
+                  "BR_CACHE_STATE",
+                  "BR_FUTURE_INJECTION"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sha256_or_null": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/sha256"
+        }
+      ]
+    },
+    "git_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "datetime": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "NOT_RUN"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "PASS"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

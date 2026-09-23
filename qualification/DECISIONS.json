@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "note": "Aprovado = está no main (commit ou merge do dono). Mudança = PR com nova entrada ou texto; o agente abre, o dono faz merge.",
+  "decisions": [
+    {
+      "decision_id": "D-1",
+      "question": "`WINDOWS_SMOKE` do Stocks vs. \"não criar venv/instalar no Windows\"",
+      "text": "O Windows local do Stocks não recebe instalação (regra do repo). `WINDOWS_SMOKE` do Stocks roda no GitHub Actions `windows-latest` × py3.13 (E2E + restart) e vale como PASS/FAIL normal; não existe isenção.",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-2",
+      "question": "Checkout local sujo do CAIN",
+      "text": "Preservar por patch + cópia + bundle (HYG-005) sem alterar `C:\\CAIN\\projeto`; nada descartado nem publicado (pode conter dados privados)",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-3",
+      "question": "Runtime de qualificação no Windows",
+      "text": "`crypto`: `C:\\Cripto\\qualificacao\\runtime\\` (cumpre a regra de armazenamento); `brasileirao`: `C:\\QUALIFICACAO\\runtime\\brasileirao\\`; `integration`: CAIN e Brasileirão em `C:\\QUALIFICACAO\\runtime\\integration\\`, a parte Cripto em `C:\\Cripto\\qualificacao\\runtime\\integration\\` (regra de armazenamento do Cripto); `stocks`: não há runtime no Windows (D-1). Instalações operacionais intocadas",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-4",
+      "question": "Versões dos pacotes do protocolo",
+      "text": "Publicar exatamente as rc auditadas; versão final depois = mudança C14",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-5",
+      "question": "\"Trabalhe sozinho, sem agentes\" (Cripto)",
+      "text": "Cada missão é executada por **um único agente**, sem subagentes. Na Etapa A, até três agentes em paralelo, um por domínio, cada um mudando só o seu repo de domínio",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-6",
+      "question": "CI hospedado e conta usada pelo agente",
+      "text": "CI obrigatório (C21). O agente usa a conta GitHub do dono pelo `gh`. Ele abre branches, PRs, dispara workflows e publica releases pré-release; **não** faz merge nem push em `main` (bloqueado em `.claude/settings.json`). Aprovar = o dono fazer merge.",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-7",
+      "question": "Range do Core no Stocks",
+      "text": "`>=3.2.1,<4` (HYG-009)",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-8",
+      "question": "Instalação operacional do CAIN (0.4.12)",
+      "text": "Não atualizar durante a qualificação; decisão separada depois da `PRETRAINING_ATTESTATION`",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-9",
+      "question": "Host Linux primário (C11) e dados",
+      "text": "A máquina local não comporta Linux. Linux principal = **GitHub Actions** `ubuntu-latest` × py3.13 para testes, reproduções da SHARED-003, E2E; **VM Linux na nuvem sob demanda** (ou GitHub Codespaces) para o soak e para o que exigir processo de longa duração, destruída ao fim. Usa só **cópias** hash-verificadas dos dados necessários (sem dado sem direito de redistribuição em repo público); evidência no repositório de evidência. Nada é instalado no Python do Windows para o Stocks. Aprovar esta decisão emenda, **só para a qualificação**, a regra \"todo trabalho em `C:\\Cripto`\" do Cripto no que roda fora desta máquina",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-10",
+      "question": "Armazenamento do Stocks",
+      "text": "Cópia de trabalho da evidência da missão em `C:\\STOCKS\\work\\qualification\\` (cumpre `AGENTS.md:29`), publicada no repositório de evidência",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-11",
+      "question": "Visibilidade do `predictor-qualification`",
+      "text": "Público (todos os repos do dono são públicos). Nunca contém segredos (C0) nem dados comprados/grandes (entram por caminho local + sha256).",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-12",
+      "question": "Fronteira entre as etapas",
+      "text": "Cada contrato de domínio (C24) é aprovado pelo dono (merge) ao fim da missão da Etapa A. Na Etapa B, mudanças no repo de domínio só dentro dos `adapter_paths`; fora disso, a Etapa A daquele domínio reabre (C24.4). O envelope V2 é desenhado a partir dos três contratos.",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-13",
+      "question": "Integração V1",
+      "text": "**Extinta.** Não há qualificação em V1. Testes e workflows de integração V1 saem da coleta e do CI de push/PR (HYG-003, HYG-015), preservados no histórico e como referência para os testes da Etapa B; `cain-research` não é dependência de nenhum repo de domínio na Etapa A",
+      "status": "APPROVED"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "schema_version": 2,
+  "note": "TODO → DONE. O agente marca DONE no PR quando o critério de aceite tem evidência; vale quando o dono faz merge.",
+  "items": [
+    {
+      "id": "HYG-001",
+      "action": "Publicar `predictor-research-protocol` 1.0.3rc1, `-snapshot` 1.0.2rc1 e `-bundle` 1.0.1rc1 como releases imutáveis do `ecosystem-predictor` (uma tag por pacote) — D-4",
+      "acceptance": "Assets baixáveis; sha256 registrados; build reproduzido 2× com mesmo hash",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-002",
+      "action": "`cain`: `tool.uv.sources` para os três pacotes (URLs de HYG-001); criar `uv.lock`; **remover** `vendor/` dos pacotes do stack e o passo de CI que o usa",
+      "acceptance": "`uv lock --check` e `uv sync --locked` verdes",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-003",
+      "action": "`cripto-predictor`: `tool.uv.sources` para `predictor-research-protocol` (URL de HYG-001); regenerar `uv.lock`; **nenhuma** dependência de `cain-research`. `tests/test_research_execution.py` (teste de integração V1 que importa `cain`) sai da coleta: movido para `legacy/v1_integration/` fora de `testpaths`, preservado no histórico — D-13",
+      "acceptance": "`uv lock --check` e `uv sync --locked --all-extras` verdes; suíte coleta sem `cain`",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-004",
+      "action": "**Todos os 7 repos:** todo passo de CI que instala pacote do stack usa `uv sync --locked` (Core: `--frozen`→`--locked`; Ops: `uv sync`→`--locked`; CAIN: `pip`→`uv`), respeitando a exceção de C4 (smoke da própria wheel e requirements com `--require-hashes`). No Ecosystem, cada pacote de `packages/*` passa a ter `uv.lock` próprio (ou vira membro de um workspace uv) e é testado por lock nas versões de Python que declara",
+      "acceptance": "Para cada workflow de push/PR: run URL hospedado cujo log mostra `uv sync --locked` e conclusão `success`",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-005",
+      "action": "Preservar o estado do checkout local sujo do CAIN (`24f784c` + 14 caminhos) **sem alterar nada em `C:\\CAIN`** — D-2",
+      "acceptance": "Em `C:\\QUALIFICACAO\\preserve\\cain-24f784c-20260922\\`: `git status`, `git diff` (patch dos rastreados), cópia dos não rastreados e `git bundle` verificado; `C:\\CAIN` intocado",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-006",
+      "action": "A qualificação usa **clones novos** (não os checkouts operacionais): `C:\\QUALIFICACAO\\repos\\{cain,ecosystem-predictor,core-predictor,predictor-ops,brasileirao-predictor}`, `C:\\Cripto\\qualificacao\\cripto-predictor`, `C:\\STOCKS\\work\\qualification\\stocks-predictor`; todos em `main` limpo, igual ao remoto (depois dos merges acima)",
+      "acceptance": "`git status` limpo e `HEAD == origin/main` nos 7 clones",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-007",
+      "action": "**CI hospedado verde** nos 7 repos no `main` pós-higiene",
+      "acceptance": "Run URLs + `success`; única falha tolerada: `test_timeout_and_truncation`, que então é registrada em `SHARED_ISSUES.json` como SHARED-003 e não bloqueia a Fase 0",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-008",
+      "action": "Rodar a suíte do Ops 1× em Linux × py3.13 e 1× em Windows × py3.13 (triagem; o veredito é da missão `crypto` da Etapa A)",
+      "acceptance": "Logs brutos; SHARED-003 registrado em `SHARED_ISSUES.json` com o estado observado",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-009",
+      "action": "`stocks-predictor`: range `predictor-core>=3.2.1,<4` — D-7",
+      "acceptance": "Lock inalterado em 3.2.1",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-010",
+      "action": "Repositório `predictor-qualification` criado pelo dono com o kit (núcleo v2.0, schema, DECISIONS, HYGIENE, `.gitattributes` com `qualification/** text eol=lf`)",
+      "acceptance": "sha256 do núcleo e do schema = MANIFEST, no `main`",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-011",
+      "action": "Localizar ou clonar o checkout de `ecosystem-predictor` sob raiz aprovada",
+      "acceptance": "Caminho registrado",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-012",
+      "action": "Criar as raízes de runtime no Windows (D-3) e o procedimento reproduzível da VM Linux sob demanda (D-9: script de provisionamento versionado no repositório de evidência)",
+      "acceptance": "Diretórios criados; script testado uma vez; nenhuma escrita em instalação operacional",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    },
+    {
+      "id": "HYG-015",
+      "action": "**Aposentar os workflows de integração V1** (D-13): `brasileirao-predictor/.github/workflows/cain-export.yml`, `stocks-predictor/.github/workflows/cain-export.yml`, `cripto-predictor/.github/workflows/integration-audit.yml`, `core-predictor/.github/workflows/consumer-compatibility.yml`, `cain/.github/workflows/cain-supply-linux.yml`, `cain/.github/workflows/cain-completion.yml`, `ecosystem-predictor/.github/workflows/cain-crypto-integration.yml`. Cada um passa a `workflow_dispatch` apenas, com cabeçalho \"aposentado por D-13\", e fica fora do escopo de `HOSTED_CI`; nenhum pacote novo é adicionado a BR ou Stocks",
+      "acceptance": "Diff dos 7 workflows; run de push/PR sem esses workflows",
+      "status": "TODO",
+      "evidence_file": null,
+      "evidence_sha256": null,
+      "commits": []
+    }
+  ]
+}
