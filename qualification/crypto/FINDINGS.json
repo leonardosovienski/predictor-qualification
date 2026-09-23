@@ -20,6 +20,19 @@
         "qualification/crypto/RAW_LOGS/freeze-parameters/ls_remote.log"
       ],
       "owner_action": "arquivar e apagar (ou autorizar) as branches antigas"
+    },
+    {
+      "id": "CR-F002",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "baseline",
+      "title": "Suíte do Cripto no Windows depende de CRIPTO_ROOT ancestral do TEMP",
+      "description": "tests/conftest.py cria CRIPTO_ROOT = tempdir próprio quando CRIPTO_ROOT não está definido; tests/test_output_dir_bootstrap.py e tests/test_mode_composition.py passam tmp_path (fora desse tempdir) como diretório operacional, e local_runtime.within_root recusa. Com TEMP em C:\\Cripto\\qualificacao\\tmp e sem CRIPTO_ROOT: 2 falhas; com CRIPTO_ROOT ancestral do TEMP: passam (A/B). Defeito só de teste/ambiente, sem efeito no código de produção. Também: 2 testes de distribuição exigem `uv build` antes da suíte (como o ci.yml faz).",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b.log",
+        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log"
+      ],
+      "resolution_plan": "método documentado em qualification/crypto/scripts/win_suite.sh"
     }
   ]
 }

@@ -1,0 +1,231 @@
+# commit 5fd4e1b06c79231fd3d9485a1483f3b65e854bea status=0 dirty entries
+uv 0.12.18 (01cb90c1a 2026-09-22 x86_64-pc-windows-msvc)
+Resolved 80 packages in 2.17s
+   Building cripto-predictor @ file:///C:/Cripto/qualificacao/cripto-predictor
+      Built cripto-predictor @ file:///C:/Cripto/qualificacao/cripto-predictor
+Prepared 1 package in 12.16s
+Uninstalled 1 package in 49ms
+Installed 1 package in 82ms
+ ~ cripto-predictor==1.1.1rc4 (from file:///C:/Cripto/qualificacao/cripto-predictor)
+uv sync exit=0
+3.13.14 (main, Aug  5 2026, 16:10:10) [MSC v.1944 64 bit (AMD64)] Windows-11-10.0.26200-SP0
+........................................................................ [  4%]
+........................................................................ [  8%]
+........................................................................ [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 22%]
+..............................FF........................................ [ 26%]
+........................................................................ [ 31%]
+........................................................................ [ 35%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 48%]
+.....F.................................................................. [ 53%]
+....F................................................................... [ 57%]
+........................................................................ [ 62%]
+........................................................................ [ 66%]
+........................................................................ [ 71%]
+........................................................................ [ 75%]
+........................................................................ [ 80%]
+........................................................................ [ 84%]
+........................................................................ [ 88%]
+........................................................................ [ 93%]
+........................................................................ [ 97%]
+..................................                                       [100%]
+================================== FAILURES ===================================
+_________ test_sdist_contains_build_sources_without_research_archives _________
+
+    def test_sdist_contains_build_sources_without_research_archives():
+        sdists = sorted((ROOT / "dist").glob("*.tar.gz"))
+>       assert sdists, "rode uv build antes da suíte para validar o pacote fonte"
+E       AssertionError: rode uv build antes da suíte para validar o pacote fonte
+E       assert []
+
+tests\test_distribution_security.py:14: AssertionError
+__________ test_built_wheels_contain_no_runtime_artifacts_or_secrets __________
+
+    def test_built_wheels_contain_no_runtime_artifacts_or_secrets():
+        wheels = sorted((ROOT / "dist").glob("*.whl"))
+>       assert wheels, (
+            f"nenhum .whl em {ROOT / 'dist'} — rode `uv build` antes da suíte "
+            "(este teste inspeciona o wheel construído, não o checkout)"
+        )
+E       AssertionError: nenhum .whl em C:\CRIPTO\qualificacao\cripto-predictor\dist — rode `uv build` antes da suíte (este teste inspeciona o wheel construído, não o checkout)
+E       assert []
+
+tests\test_distribution_security.py:33: AssertionError
+_____ test_ingestion_settings_do_not_require_unrelated_model_credentials ______
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/tmp/pt-baseline/test_ingestion_settings_do_not0')
+
+    def test_ingestion_settings_do_not_require_unrelated_model_credentials(tmp_path):
+        code = """
+    import os
+    for key in list(os.environ):
+        if key.endswith(("_API_KEY", "_AUTH_TOKEN")):
+            del os.environ[key]
+    from GarimpoInvestimentos.runtime_mode import select_mode
+    select_mode("ingest")
+    from GarimpoInvestimentos.config import settings, Settings
+    assert settings.runtime_mode == "ingest"
+    try:
+        Settings(runtime_mode="analysis", _env_file=None)
+    except Exception:
+        pass
+    else:
+        raise AssertionError("analysis credentials were bypassed")
+    try:
+        select_mode("analysis")
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("mode changed after configuration")
+    """
+        import os
+    
+        env = os.environ.copy()
+        empty = tmp_path / "empty.env"
+        empty.write_text("")
+        env["CRIPTO_ENV_FILE"] = str(empty)
+>       subprocess.run([sys.executable, "-c", code], env=env, check=True)
+
+tests\test_mode_composition.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+input = None, capture_output = False, timeout = None, check = True
+popenargs = (['C:\\Cripto\\qualificacao\\cripto-predictor\\.venv\\Scripts\\python.exe', '-c', '\nimport os\nfor key in list(os.env...("analysis")\nexcept RuntimeError:\n    pass\nelse:\n    raise AssertionError("mode changed after configuration")\n'],)
+kwargs = {'env': {'AI_AGENT': 'claude-code_2-1-280_agent', 'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\leona\\AppData\\Roaming', 'CACHE_DIR': 'C:\\CRIPTO\\qualificacao\\tmp\\cripto-pytest-tdsdbdb2\\cache', ...}}
+process = <Popen: returncode: 1 args: ['C:\\Cripto\\qualificacao\\cripto-predictor\\.v...>
+stdout = None, stderr = None, retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['C:\\Cripto\\qualificacao\\cripto-predictor\\.venv\\Scripts\\python.exe', '-c', '\nimport os\nfor key in list(os.environ):\n    if key.endswith(("_API_KEY", "_AUTH_TOKEN")):\n        del os.environ[key]\nfrom GarimpoInvestimentos.runtime_mode import select_mode\nselect_mode("ingest")\nfrom GarimpoInvestimentos.config import settings, Settings\nassert settings.runtime_mode == "ingest"\ntry:\n    Settings(runtime_mode="analysis", _env_file=None)\nexcept Exception:\n    pass\nelse:\n    raise AssertionError("analysis credentials were bypassed")\ntry:\n    select_mode("analysis")\nexcept RuntimeError:\n    pass\nelse:\n    raise AssertionError("mode changed after configuration")\n']' returned non-zero exit status 1.
+
+C:\QUALIFICACAO\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\subprocess.py:577: CalledProcessError
+---------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+  File "<string>", line 8, in <module>
+    from GarimpoInvestimentos.config import settings, Settings
+  File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\config.py", line 16, in <module>
+    class Settings(BaseSettings):
+    ...<144 lines>...
+            return self
+  File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\config.py", line 22, in Settings
+    env_file=environment_file(),
+             ~~~~~~~~~~~~~~~~^^
+  File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\local_runtime.py", line 105, in environment_file
+    configure_local_runtime()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\local_runtime.py", line 66, in configure_local_runtime
+    paths[name] = str(within_root(root, os.getenv(name) or default))
+                      ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\local_runtime.py", line 41, in within_root
+    raise LocalRuntimePathError("Caminho operacional fora de CRIPTO_ROOT")
+GarimpoInvestimentos.local_runtime.LocalRuntimePathError: Caminho operacional fora de CRIPTO_ROOT
+_____________ test_main_aplica_output_dir_antes_de_importar_paths _____________
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/tmp/pt-baseline/test_main_aplica_output_dir_an0')
+
+    def test_main_aplica_output_dir_antes_de_importar_paths(tmp_path):
+        result = _run(
+            "import sys; sys.argv=['app','--output-dir',sys.argv[1]]; "
+            "\ntry: import GarimpoInvestimentos.main"
+            "\nexcept ModuleNotFoundError: pass"
+            "\nfrom GarimpoInvestimentos.core.paths import OUTPUT_DIR; print(OUTPUT_DIR.resolve())",
+            str(tmp_path),
+        )
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 2, in <module>
+E             try: import GarimpoInvestimentos.main
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\main.py", line 20, in <module>
+E             from GarimpoInvestimentos.core.paths import FEATURE_STORE_DB, OUTPUT_DIR
+E           File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\core\paths.py", line 12, in <module>
+E             configure_local_runtime()
+E             ~~~~~~~~~~~~~~~~~~~~~~~^^
+E           File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\local_runtime.py", line 60, in configure_local_runtime
+E             paths[name] = str(within_root(root, raw))
+E                               ~~~~~~~~~~~^^^^^^^^^^^
+E           File "C:\Cripto\qualificacao\cripto-predictor\GarimpoInvestimentos\local_runtime.py", line 41, in within_root
+E             raise LocalRuntimePathError("Caminho operacional fora de CRIPTO_ROOT")
+E         GarimpoInvestimentos.local_runtime.LocalRuntimePathError: Caminho operacional fora de CRIPTO_ROOT
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['C:\\Cripto\\qualificacao\\cripto-predictor\\.venv\\Scripts\\python.exe', '-c', "import sys; sy...de CRIPTO_ROOT")\nGarimpoInvestimentos.local_runtime.LocalRuntimePathError: Caminho operacional fora de CRIPTO_ROOT\n').returncode
+
+tests\test_output_dir_bootstrap.py:31: AssertionError
+- generated xml file: C:\QUALIFICACAO\predictor-qualification\qualification\crypto\RAW_LOGS\baseline\windows_pytest_5fd4e1b.junit.xml -
+=========================== short test summary info ===========================
+FAILED tests/test_distribution_security.py::test_sdist_contains_build_sources_without_research_archives
+FAILED tests/test_distribution_security.py::test_built_wheels_contain_no_runtime_artifacts_or_secrets
+FAILED tests/test_mode_composition.py::test_ingestion_settings_do_not_require_unrelated_model_credentials
+FAILED tests/test_output_dir_bootstrap.py::test_main_aplica_output_dir_antes_de_importar_paths
+4 failed, 1614 passed in 596.62s (0:09:56)
+pytest exit=1

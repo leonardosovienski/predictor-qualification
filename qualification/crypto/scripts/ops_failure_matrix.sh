@@ -69,3 +69,6 @@ for i in $(seq 1 10); do ( cd "$WORK" && "$PY" "$PROBE" test-exact "$WORK/probe/
 for i in $(seq 1 10); do ( cd "$WORK" && "$PY" "$PROBE" a-b-delay "$WORK/probe/b$i" ) >> "$OUT/probe_a_b_delay.jsonl" 2>>"$OUT/probe_errors.log"; done
 for i in $(seq 1 3); do ( cd "$WORK" && "$PY" "$PROBE" real-tree "$WORK/probe/r$i" ) >> "$OUT/probe_real_tree.jsonl" 2>>"$OUT/probe_errors.log"; done
 echo "done $(date -u +%FT%TZ)" >> "$OUT/env.log"
+
+# sondas extras (A/B causal da SHARED-003 e árvore real corrigida)
+( cd "$WORK" && bash "$(dirname "$PROBE")/ops_probe_extra.sh" "$PY" "$OUT/extra" 30 )
