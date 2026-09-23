@@ -1,0 +1,52 @@
+# 2026-09-23T05:50:17Z checagens pós-merge nos clones de qualificação (uv 0.12.18)
+## HYG-002 cain 8b8915aa7c9053b8f078a9fba20b7029180d114c
+$ ls vendor
+ls: cannot access 'C:/QUALIFICACAO/repos/cain/vendor': No such file or directory
+$ tool.uv.sources
+[tool.uv.sources]
+predictor-research-snapshot = { url = "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-snapshot-v1.0.2rc1/predictor_research_snapshot-1.0.2rc1-py3-none-any.whl" }
+predictor-research-bundle = { url = "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-bundle-v1.0.1rc1/predictor_research_bundle-1.0.1rc1-py3-none-any.whl" }
+predictor-research-protocol = { url = "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-protocol-v1.0.3rc1/predictor_research_protocol-1.0.3rc1-py3-none-any.whl" }
+$ uv lock --check
+Resolved 28 packages in 1.84s
+exit=0
+$ hashes dos pacotes do stack no uv.lock
+predictor_research_bundle-1.0.1rc1-py3-none-any.whl", hash = "sha256:65cf40c59c4f65d013a1134051fb94aa7c75b44f4ea6c71a54e25519143d0ea9
+predictor_research_protocol-1.0.3rc1-py3-none-any.whl", hash = "sha256:312ab9742271de9f0efe6912f5828122d546751e559f493bede01c8fc6a24032
+predictor_research_snapshot-1.0.2rc1-py3-none-any.whl", hash = "sha256:3bd4c0414ac2d457923601e3f919f6353b5cb9370a0f420a7a3ffc013a0aafad
+## HYG-003 cripto 5fd4e1b06c79231fd3d9485a1483f3b65e854bea
+$ grep -c cain uv.lock
+0
+$ ls tests/test_research_execution.py legacy/v1_integration
+ls: cannot access 'C:/Cripto/qualificacao/cripto-predictor/tests/test_research_execution.py': No such file or directory
+README.md
+test_research_execution.py
+test_research_recovery.py
+$ testpaths
+testpaths = ["tests"]
+$ uv lock --check (UV_CACHE_DIR em C:/Cripto)
+Resolved 80 packages in 1.31s
+exit=0
+## HYG-009 stocks 4e98a67b68c55888a4788663f3d5bf0899966cb4
+13:  "predictor-core>=3.2.1,<4",
+$ git diff --stat 5cf27f44 HEAD -- uv.lock   (baseline pré-higiene → main)
+(vazio = lock inalterado)
+name = "predictor-core"
+version = "3.2.1"
+source = { url = "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl" }
+## HYG-015 gatilhos no main
+brasileirao-predictor/.github/workflows/cain-export.yml triggers=[push,pull_request,] cabeçalho_D13=0
+stocks-predictor/.github/workflows/cain-export.yml triggers=[workflow_dispatch,] cabeçalho_D13=1
+cripto-predictor/.github/workflows/integration-audit.yml triggers=[workflow_dispatch,] cabeçalho_D13=1
+core-predictor/.github/workflows/consumer-compatibility.yml triggers=[workflow_dispatch,] cabeçalho_D13=1
+cain/.github/workflows/cain-supply-linux.yml triggers=[workflow_dispatch,] cabeçalho_D13=1
+cain/.github/workflows/cain-completion.yml triggers=[workflow_dispatch,] cabeçalho_D13=1
+ecosystem-predictor/.github/workflows/cain-crypto-integration.yml triggers=[workflow_dispatch,] cabeçalho_D13=1
+## HYG-006 clones
+C:/QUALIFICACAO/repos/cain branch=main HEAD=8b8915aa7c9053b8f078a9fba20b7029180d114c origin/main=8b8915aa7c9053b8f078a9fba20b7029180d114c porcelain=0
+C:/QUALIFICACAO/repos/ecosystem-predictor branch=main HEAD=0a4f87e53d3d131e449096f82ba7b0c672b91d85 origin/main=0a4f87e53d3d131e449096f82ba7b0c672b91d85 porcelain=0
+C:/QUALIFICACAO/repos/core-predictor branch=main HEAD=5a0841509f091ea0aa95bde0d3d65e2a1a9e984d origin/main=5a0841509f091ea0aa95bde0d3d65e2a1a9e984d porcelain=0
+C:/QUALIFICACAO/repos/predictor-ops branch=main HEAD=7bd99ebaea09c74a2ac4243d8991a81c44625a6c origin/main=7bd99ebaea09c74a2ac4243d8991a81c44625a6c porcelain=0
+C:/QUALIFICACAO/repos/brasileirao-predictor branch=main HEAD=34d73e25104425aee2eeda1e8f7a2c01902a686e origin/main=34d73e25104425aee2eeda1e8f7a2c01902a686e porcelain=0
+C:/Cripto/qualificacao/cripto-predictor branch=main HEAD=5fd4e1b06c79231fd3d9485a1483f3b65e854bea origin/main=5fd4e1b06c79231fd3d9485a1483f3b65e854bea porcelain=0
+C:/STOCKS/work/qualification/stocks-predictor branch=main HEAD=4e98a67b68c55888a4788663f3d5bf0899966cb4 origin/main=4e98a67b68c55888a4788663f3d5bf0899966cb4 porcelain=0
