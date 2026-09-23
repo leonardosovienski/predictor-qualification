@@ -79,6 +79,18 @@
       "question": "Integração V1",
       "text": "**Extinta.** Não há qualificação em V1. Testes e workflows de integração V1 saem da coleta e do CI de push/PR (HYG-003, HYG-015), preservados no histórico e como referência para os testes da Etapa B; `cain-research` não é dependência de nenhum repo de domínio na Etapa A",
       "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-14",
+      "question": "HYG-001: os wheels auditados de snapshot/bundle (e o protocol) foram buildados de árvore de trabalho Windows com fim de linha misto/CRLF e não se reproduzem do git. Quais bytes publicar?",
+      "text": "Publicar o build LF canônico: `git archive` com `core.autocrlf=false` (bytes exatos dos blobs) do `main` do `ecosystem-predictor`, `SOURCE_DATE_EPOCH=1758240000`, reproduzido 2× com o mesmo hash. Conteúdo idêntico ao auditado com EOL normalizado; hash diferente do `STACK_MANIFEST` da auditoria (HF-001)",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-15",
+      "question": "HYG-004: jobs de CI de push/PR que instalam pacotes do stack fora de lock (git+ de checkouts de outros repos, pip de URL#sha256, build a partir de clone de outro repo)",
+      "text": "Saem do push/PR: movidos sem alteração para um workflow só `workflow_dispatch`, com cabeçalho citando D-13/D-15 e fora do escopo de `HOSTED_CI`. Ecosystem: `real-plugin-integration`, `research-transport`, `released-wheel-integration`, `core-distribution` → `cross-repo-compatibility.yml`. O mesmo critério aplicado ao job `consumer-contracts` do Ops (`consumer-contracts.yml`) vale com o merge de predictor-ops#25. A integração entre repositórios volta a ser provada na Etapa B",
+      "status": "APPROVED"
     }
   ]
 }
