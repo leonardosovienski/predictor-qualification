@@ -1,0 +1,16 @@
+# 2026-09-23T05:23:50Z HYG-008 coleta e execução dirigida, Windows local, CPython 3.13.14, HEAD=b19e69527c0fda5cb1f96281d3a984fea1431768
+$ git rev-list -n1 v4.2.1
+ddd91444282569ae8282e7c96e0ec372ef4e5144
+$ pytest --collect-only -q | grep -c ::
+87
+$ pytest --collect-only -q | grep timeout_and_truncation
+tests_v2/test_runner.py::test_timeout_and_truncation
+$ pytest -v tests_v2/test_runner.py::test_timeout_and_truncation  (repetição 1)
+tests_v2/test_runner.py::test_timeout_and_truncation PASSED              [100%]
+============================== 1 passed in 1.13s ==============================
+$ pytest -v tests_v2/test_runner.py::test_timeout_and_truncation  (repetição 2)
+tests_v2/test_runner.py::test_timeout_and_truncation PASSED              [100%]
+============================== 1 passed in 1.49s ==============================
+$ pytest -v tests_v2/test_runner.py::test_timeout_and_truncation  (repetição 3)
+tests_v2/test_runner.py::test_timeout_and_truncation PASSED              [100%]
+============================== 1 passed in 2.63s ==============================
