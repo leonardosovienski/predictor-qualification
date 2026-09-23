@@ -7,9 +7,9 @@
 set -uo pipefail
 
 MODE="$1"; OUT="$2"; RUNS3="$3"; RUNS4="$4"; FULL="${5:-1}"
-OPS_COMMIT=7bd99ebaea09c74a2ac4243d8991a81c44625a6c
-WHEEL_URL=https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.1/predictor_ops-4.2.1-py3-none-any.whl
-WHEEL_SHA=da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e
+OPS_COMMIT="${OPS_COMMIT:-7bd99ebaea09c74a2ac4243d8991a81c44625a6c}"
+WHEEL_URL="${OPS_WHEEL_URL:-https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.1/predictor_ops-4.2.1-py3-none-any.whl}"
+WHEEL_SHA="${OPS_WHEEL_SHA:-da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e}"
 T3='tests_v2/test_runner.py::test_timeout_and_truncation'
 T4=('tests_v2/test_provenance.py::test_source_clean_dirty_detached_and_missing_commit'
     'tests_v2/test_provenance.py::test_strict_editable_fails_closed_and_permissive_is_safe'
@@ -39,9 +39,9 @@ else
   if [ -n "$EXE" ]; then PY="$WORK/venv/Scripts/python.exe"; else PY="$WORK/venv/bin/python"; fi
   "$PY" -m ensurepip >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL ensurepip" >> "$OUT/env.log"; exit 3; }
   "$PY" -m pip install -q --require-hashes -r "$WORK/req.txt" >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL deps" >> "$OUT/env.log"; exit 3; }
-  curl -sSfL -o "$WORK/predictor_ops-4.2.1-py3-none-any.whl" "$WHEEL_URL"
-  ( cd "$WORK" && echo "$WHEEL_SHA  predictor_ops-4.2.1-py3-none-any.whl" | sha256sum -c - ) >> "$OUT/env.log" 2>&1 || { echo "WHEEL SHA MISMATCH" >> "$OUT/env.log"; exit 3; }
-  "$PY" -m pip install -q --no-deps "$WORK/predictor_ops-4.2.1-py3-none-any.whl" >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL wheel" >> "$OUT/env.log"; exit 3; }
+  curl -sSfL -o "$WORK/$(basename "$WHEEL_URL")" "$WHEEL_URL"
+  ( cd "$WORK" && echo "$WHEEL_SHA  $(basename "$WHEEL_URL")" | sha256sum -c - ) >> "$OUT/env.log" 2>&1 || { echo "WHEEL SHA MISMATCH" >> "$OUT/env.log"; exit 3; }
+  "$PY" -m pip install -q --no-deps "$WORK/$(basename "$WHEEL_URL")" >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL wheel" >> "$OUT/env.log"; exit 3; }
   # árvore de teste sem src/: os testes só podem importar a wheel instalada
   mkdir -p "$WORK/tree"
   cp -r "$WORK/ops/tests_v2" "$WORK/ops/pyproject.toml" "$WORK/tree/"
@@ -72,3 +72,7 @@ echo "done $(date -u +%FT%TZ)" >> "$OUT/env.log"
 
 # sondas extras (A/B causal da SHARED-003 e árvore real corrigida)
 ( cd "$WORK" && bash "$(dirname "$PROBE")/ops_probe_extra.sh" "$PY" "$OUT/extra" 30 )
+
+# SHARED-005: corrida real de dois processos pelo lock de um job novo (N execuções isoladas)
+LOCKRACE="${LOCKRACE_RUNS:-0}"
+for i in $(seq 1 "$LOCKRACE"); do run_one shared005_lockrace "$i" tests_v2/test_runtime.py::test_local_lock_has_one_winner_across_processes; done

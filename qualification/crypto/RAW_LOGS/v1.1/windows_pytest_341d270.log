@@ -1,0 +1,131 @@
+# 2026-09-23T18:58:09Z commit 341d270e4d709150c581c3cd93f4518d483009eb dirty_entries=0 CRIPTO_ROOT=C:/Cripto/qualificacao/w/0923T185809
+uv 0.12.18 (01cb90c1a 2026-09-22 x86_64-pc-windows-msvc)
+Resolved 79 packages in 379ms
+   Building cripto-predictor @ file:///C:/Cripto/qualificacao/cripto-predictor
+      Built cripto-predictor @ file:///C:/Cripto/qualificacao/cripto-predictor
+Prepared 1 package in 3.98s
+Uninstalled 2 packages in 221ms
+Installed 2 packages in 120ms
+ - cripto-predictor==1.2.0rc1 (from file:///C:/Cripto/qualificacao/cripto-predictor)
+ + cripto-predictor==1.2.0rc2 (from file:///C:/Cripto/qualificacao/cripto-predictor)
+ - predictor-ops==4.2.1 (from https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.1/predictor_ops-4.2.1-py3-none-any.whl)
+ + predictor-ops==4.2.2rc1 (from https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl)
+uv sync exit=0
+Building wheel from source distribution...
+Successfully built dist\cripto_predictor-1.2.0rc2.tar.gz
+Successfully built dist\cripto_predictor-1.2.0rc2-py3-none-any.whl
+uv build exit=0
+3.13.14 (main, Aug  5 2026, 16:10:10) [MSC v.1944 64 bit (AMD64)] Windows-11-10.0.26200-SP0
+.............................F.......................................... [  4%]
+........................................................................ [  8%]
+........................................................................ [ 12%]
+........................................................................ [ 17%]
+........................................................................ [ 21%]
+........................................................................ [ 25%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 38%]
+........................................................................ [ 43%]
+........................................................................ [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 56%]
+........................................................................ [ 60%]
+........................................................................ [ 64%]
+........................................................................ [ 69%]
+........................................................................ [ 73%]
+........................................................................ [ 77%]
+........................................................................ [ 82%]
+........................................................................ [ 86%]
+........................................................................ [ 90%]
+........................................................................ [ 95%]
+........................................................................ [ 99%]
+........                                                                 [100%]
+================================== FAILURES ===================================
+_ test_process_death_at_each_point_recovers_exactly_once[after_result_write] __
+
+tmp_path = WindowsPath('C:/CRIPTO/qualificacao/w/0923T185809/operacao/temporarios/pytest-of-leona/pytest-0/test_process_death_at_each_poi7')
+point = 'after_result_write'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+        env = build(tmp_path)
+        path = write_request(env, "r", request("crypto:REQ-FAULT-001"))
+        code, _ = cli(env, "process", str(path), fault=point)
+        assert code == FAULT_EXIT
+        if point == "before_admission_commit":
+            with sqlite3.connect(env["state"] / "admission.sqlite") as db:
+                assert db.execute("SELECT count(*) FROM request_inbox").fetchone()[0] == 0
+                assert db.execute("SELECT count(*) FROM admissions").fetchone()[0] == 0
+>       code, lines = cli(env, "process", str(path))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\conformance\test_failure_recovery.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\fixtures.py:285: in cli
+    completed = subprocess.run(
+C:\QUALIFICACAO\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\subprocess.py:556: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\QUALIFICACAO\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\subprocess.py:1222: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Popen: returncode: 0 args: ['C:\\Cripto\\qualificacao\\cripto-predictor\\.v...>
+input = None, endtime = 624479.5111456, orig_timeout = 600
+
+    def _communicate(self, input, endtime, orig_timeout):
+        # Start reader threads feeding into a list hanging off of this
+        # object, unless they've already been started.
+        if self.stdout and not hasattr(self, "_stdout_buff"):
+            self._stdout_buff = []
+            self.stdout_thread = \
+                    threading.Thread(target=self._readerthread,
+                                     args=(self.stdout, self._stdout_buff))
+            self.stdout_thread.daemon = True
+            self.stdout_thread.start()
+        if self.stderr and not hasattr(self, "_stderr_buff"):
+            self._stderr_buff = []
+            self.stderr_thread = \
+                    threading.Thread(target=self._readerthread,
+                                     args=(self.stderr, self._stderr_buff))
+            self.stderr_thread.daemon = True
+            self.stderr_thread.start()
+    
+        # Start writer thread to send input to stdin, unless already
+        # started.  The thread writes input and closes stdin when done,
+        # or continues in the background on timeout.
+        if self.stdin and not hasattr(self, "_stdin_thread"):
+            self._stdin_thread = \
+                    threading.Thread(target=self._writerthread,
+                                     args=(input,))
+            self._stdin_thread.daemon = True
+            self._stdin_thread.start()
+    
+        # Wait for the writer thread, or time out.  If we time out, the
+        # thread remains writing and the fd left open in case the user
+        # calls communicate again.
+        if hasattr(self, "_stdin_thread"):
+            self._stdin_thread.join(self._remaining_time(endtime))
+            if self._stdin_thread.is_alive():
+                raise TimeoutExpired(self.args, orig_timeout)
+    
+        # Wait for the reader threads, or time out.  If we time out, the
+        # threads remain reading and the fds left open in case the user
+        # calls communicate again.
+        if self.stdout is not None:
+            self.stdout_thread.join(self._remaining_time(endtime))
+            if self.stdout_thread.is_alive():
+                raise TimeoutExpired(self.args, orig_timeout)
+        if self.stderr is not None:
+            self.stderr_thread.join(self._remaining_time(endtime))
+            if self.stderr_thread.is_alive():
+>               raise TimeoutExpired(self.args, orig_timeout)
+E               subprocess.TimeoutExpired: Command '['C:\\Cripto\\qualificacao\\cripto-predictor\\.venv\\Scripts\\cripto-research.exe', '--state', 'C:\\CRIPTO\\qualificacao\\w\\0923T185809\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_process_death_at_each_poi7\\s', 'process', '--policy', 'C:\\CRIPTO\\qualificacao\\w\\0923T185809\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_process_death_at_each_poi7\\policy.json', '--objects', 'C:\\CRIPTO\\qualificacao\\w\\0923T185809\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_process_death_at_each_poi7\\objects', 'C:\\CRIPTO\\qualificacao\\w\\0923T185809\\operacao\\temporarios\\pytest-of-leona\\pytest-0\\test_process_death_at_each_poi7\\requests\\r.json']' timed out after 600 seconds
+
+C:\QUALIFICACAO\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\subprocess.py:1669: TimeoutExpired
+- generated xml file: C:\QUALIFICACAO\predictor-qualification\qualification\crypto\RAW_LOGS\v1.1\windows_pytest_341d270.junit.xml -
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_write]
+1 failed, 1663 passed in 8334.36s (2:18:54)
+pytest exit=1

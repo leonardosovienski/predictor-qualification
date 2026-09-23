@@ -1,0 +1,49 @@
+# Missão crypto, C14 da D-17: SHARED-003/004/005 refeitas com predictor-ops 4.2.2rc1
+# (STACK_BASELINE_V1.1). Mesmo script da matriz congelada; corrida real do lock 50×.
+# Sem segredos; só repos e releases públicos.
+name: Crypto ops-failure V1.1 (predictor-ops 4.2.2rc1)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/crypto-ops-failure-v1-1.yml
+
+permissions:
+  contents: read
+
+env:
+  OPS_COMMIT: 9831b0d5e727972b1d85ff48be14ffa58677898b
+  OPS_WHEEL_URL: https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl
+  OPS_WHEEL_SHA: 0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3
+  LOCKRACE_RUNS: "50"
+
+jobs:
+  matrix:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: linux-source, os: ubuntu-latest, mode: source, runs3: 10, runs4: 3, full: 1}
+          - {label: linux-wheel, os: ubuntu-latest, mode: wheel, runs3: 10, runs4: 3, full: 1}
+          - {label: windows-latest-wheel, os: windows-latest, mode: wheel, runs3: 3, runs4: 1, full: 1}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Matriz
+        shell: bash
+        run: bash qualification/crypto/scripts/ops_failure_matrix.sh "${{ matrix.mode }}" "$RUNNER_TEMP/out/${{ matrix.label }}" "${{ matrix.runs3 }}" "${{ matrix.runs4 }}" "${{ matrix.full }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-failure-v1-1-${{ matrix.label }}
+          path: ${{ runner.temp }}/out/${{ matrix.label }}
+          if-no-files-found: error
