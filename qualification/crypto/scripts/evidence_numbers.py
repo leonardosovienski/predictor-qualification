@@ -14,7 +14,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 RAW = ROOT / "qualification" / "crypto" / "RAW_LOGS"
-RUNTIME_RUN = "run35885023422"
+import argparse
+
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--runtime-run", default="run35885023422")
+_ap.add_argument("--local", default="windows-smoke/local")
+_ap.add_argument("--protected", default="final/protected_set_check_2bc63eb.json")
+_ap.add_argument("--ops-summary", default="ops-failure/OPS_FAILURE_SUMMARY.json")
+_ap.add_argument("--out", default="EVIDENCE_NUMBERS.json")
+ARGS = _ap.parse_args()
+RUNTIME_RUN = ARGS.runtime_run
 
 
 def junit(path: Path) -> dict:
@@ -57,7 +66,10 @@ def main() -> None:
         p = RAW / "contract-wiring" / f"windows_pytest_{h}.log"
         if p.exists():
             n[f"checkout_windows_suite_{h}"] = pytest_line(p)
-    ops = json.loads((RAW / "ops-failure" / "OPS_FAILURE_SUMMARY.json").read_text(encoding="utf-8"))["sources"]
+    if ARGS.out != "EVIDENCE_NUMBERS.json":
+        for p in sorted((RAW / "v1.1").glob("windows_pytest_*.log")):
+            n[f"checkout_windows_suite_{p.stem.removeprefix('windows_pytest_')}"] = pytest_line(p)
+    ops = json.loads((RAW / ARGS.ops_summary).read_text(encoding="utf-8"))["sources"]
     iso = [0, 0]
     for envs in ops.values():
         for d in envs.values():
@@ -96,7 +108,7 @@ def main() -> None:
                 "requests_with_result", "stored_results", "domain_effects", "ops_jobs", "ops_success_per_job_max",
                 "lost", "unexpected", "reread_mismatch", "violations", "reconcile_exit")},
                 "zero_tolerance_ok": verdict["zero_tolerance_ok"]}
-    local = RAW / "windows-smoke" / "local"
+    local = RAW / ARGS.local
     n["runtime_windows_local"] = {
         "conformance": junit(local / "conformance.junit.xml"),
         "temporal_suites": junit(local / "temporal_suites.junit.xml"),
@@ -107,10 +119,10 @@ def main() -> None:
     n["science_real"] = {"economic_metrics": science["economic_metrics"],
                          "negative_controls": science["negative_controls"],
                          "future_canary": {"leaks": len(science["future_canary"]["leaks"])}}
-    protected = json.loads((RAW / "final" / "protected_set_check_2bc63eb.json").read_text(encoding="utf-8"))
+    protected = json.loads((RAW / ARGS.protected).read_text(encoding="utf-8"))
     n["protected_set"] = {"items": protected["items"], "unchanged": protected["unchanged"],
                           "changed_or_missing": len(protected["changed_or_missing"])}
-    out = ROOT / "qualification" / "crypto" / "EVIDENCE_NUMBERS.json"
+    out = ROOT / "qualification" / "crypto" / ARGS.out
     out.write_text(json.dumps(n, indent=1, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({k: (v if not isinstance(v, dict) else {kk: vv for kk, vv in v.items()
                                                             if not isinstance(vv, (dict, list))})

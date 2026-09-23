@@ -47,3 +47,9 @@ exercita o código instalado.
 
 Execuções anteriores preservadas como erro de método:
 - `run35883218077`: árvore de testes sem `scripts/`, e a raiz temporária do windows-latest passou do limite de 120 caracteres do contrato. A conformidade (48/48), o E2E e o soak no Linux já estavam OK nesse run.
+
+## 3. cleanroom-final V1.1 (cripto 1.2.0rc2 + Ops 4.2.2rc1)
+
+- Wheels: cripto-predictor 1.2.0rc2 `6e62f67f…` (build reprodutível de `341d270`, `RAW_LOGS/v1.1/build_rc2_341d270.log`), predictor-ops 4.2.2rc1 `0be70bfb…` (release oficial do Ops), predictor-core 3.2.1.
+- Linux primário e windows-latest (run 35925914768): conformidade 48/48; suíte completa 1647 passed + as **mesmas** 17 T de antes (CR-F016); E2E 20/20 checagens.
+- Windows local (`RAW_LOGS/v1.1/windows-local/`): conformidade 48/48; E2E real 10/10.

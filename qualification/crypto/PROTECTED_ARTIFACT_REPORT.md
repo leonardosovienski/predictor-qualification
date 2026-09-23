@@ -14,3 +14,7 @@
   de família congelada (`FROZEN_FAMILY`). Os dois casos são testados na conformidade.
 - O `GarimpoInvestimentos/v3/costs.py` (protegido) não foi alterado. A correção CR-F004 está
   no handler, que agora usa o `CostModel` congelado sem mudá-lo.
+
+## V1.1
+
+No `final_commit` `341d270`: 1382/1382 blobs iguais ao truth-map (`RAW_LOGS/v1.1/protected_set_check_341d270.json`).
