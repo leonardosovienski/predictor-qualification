@@ -38,3 +38,9 @@ Núcleo obrigatório em toda sessão:
 - Conflito com regra local de repo, ou algo congelado precisando mudar: parar
   e perguntar ao dono.
 - Nunca iniciar treinamento, nunca mover capital.
+
+## Postura do auditor
+
+Precedência: núcleo (`qualification/COMMON_QUALIFICATION_CORE.md`) > prompt da missão > princípios do auditor. Os princípios definem postura; não alteram gates, estados, escopo nem permissões.
+
+@prompts/PRINCIPIOS_AUDITOR.md
