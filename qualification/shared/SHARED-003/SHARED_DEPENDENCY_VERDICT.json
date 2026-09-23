@@ -1,0 +1,104 @@
+{
+  "issue_id": "SHARED-003",
+  "dependency": "predictor-ops",
+  "wheel_version": "4.2.1",
+  "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
+  "owner_mission": "crypto",
+  "test": "tests_v2/test_runner.py::test_timeout_and_truncation",
+  "classification": "test_only",
+  "blocking": false,
+  "numbers_source": "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json (gerado por qualification/crypto/scripts/analyze_ops_failure.py a partir dos logs brutos)",
+  "reproductions": [
+    {
+      "environment": "Linux ubuntu-latest × py3.13.14 (GitHub Actions)",
+      "install": "source (uv sync --locked)",
+      "runs": "35831189005, 35831881258, 35833205145",
+      "isolated_test_executions": "30/30 passaram",
+      "probe_test_exact_run_job": "60/60 com as asserções do teste",
+      "probe_slow_start": "10/10",
+      "probe_ample_deadline": "10/10",
+      "real_tree": "12/12 filho e neto mortos, saída truncada"
+    },
+    {
+      "environment": "Linux ubuntu-latest × py3.13.14 (GitHub Actions)",
+      "install": "wheel publicada 4.2.1 (sha256 conferido), venv limpo, árvore sem src/",
+      "runs": "35831881258, 35833205145 (35831189005 inválido: setup)",
+      "isolated_test_executions": "20/20 passaram",
+      "probe_test_exact_run_job": "50/50",
+      "probe_slow_start": "10/10",
+      "probe_ample_deadline": "10/10",
+      "real_tree": "9/9"
+    },
+    {
+      "environment": "Windows 11 local × CPython 3.13.14",
+      "install": "source (uv sync --locked)",
+      "isolated_test_executions": "10/10 passaram",
+      "full_tests_v2": "87 passed",
+      "probe_test_exact_run_job": "39/40 (1 falha: exit 124, término windows_job por timeout, 0 bytes)",
+      "probe_slow_start": "0/10 (sempre 0 bytes, todos mortos por timeout)",
+      "probe_ample_deadline": "10/10",
+      "real_tree": "3/3"
+    },
+    {
+      "environment": "Windows 11 local × CPython 3.13.14",
+      "install": "wheel publicada 4.2.1, venv limpo, árvore sem src/",
+      "isolated_test_executions": "10/10 passaram",
+      "full_tests_v2": "81 passed, 6 failed (SHARED-004 ×3, SHARED-005 ×1, 2 artefatos do método: árvore sem CHANGELOG.md e sem src/)",
+      "probe_test_exact_run_job": "40/40",
+      "probe_slow_start": "0/10",
+      "probe_ample_deadline": "10/10",
+      "real_tree": "3/3"
+    },
+    {
+      "environment": "GitHub Actions windows-latest (Windows Server 2025) × py3.13.14",
+      "install": "wheel publicada 4.2.1",
+      "runs": "35831881258, 35833205145",
+      "isolated_test_executions": "2/2 passaram",
+      "probe_test_exact_run_job": "50/50",
+      "probe_slow_start": "8/10",
+      "probe_ample_deadline": "10/10",
+      "real_tree": "6/6 válidos (run 35833205145); 3 do run 35831881258 inválidos por bug de aspas da sonda, preservados"
+    }
+  ],
+  "root_cause": "O teste dá 0,2 s de prazo desde o spawn e exige que o filho Python já tenha escrito 20 bytes. No Windows a partida do interpretador (spawn suspenso + job object + import do site) consome boa parte desse prazo: mediana 0,10–0,13 s e máximo 0,16 s no Windows local, ~0,047 s no windows-latest, ~0,012 s no Linux. Quando a partida passa do prazo, o Ops mata o filho corretamente (exit 124, reason timeout, término windows_job), mas o filho ainda não escreveu nada: output.bytes = 0 e a asserção `bytes == 20` falha.",
+  "cause_demonstration": {
+    "failing_execution_signature": "Windows local source, sonda test-exact: exit_code 124, run_status FAILED, termination {method: windows_job, reason: timeout}, output_bytes 0, truncated false, duration 324 ms (RAW_LOGS/ops-failure/windows-local/windows-local-source/probe_test_exact.jsonl)",
+    "intervention_A_slow_start": "mesmo run_job, mesmo prazo de 0,2 s, filho que importa módulos antes do print: Windows local 0/10 (source) e 0/10 (wheel), sempre 0 bytes e 20/20 mortos por timeout em ~0,3 s; windows-latest 8/10; Linux 10/10 (source) e 10/10 (wheel) — dose-resposta com a latência de partida",
+    "intervention_B_ample_deadline": "mesmo filho do teste com prazo de 3 s (só diagnóstico; o teste não foi alterado): 10/10 em todos os ambientes, saída truncada em exatamente 20 bytes",
+    "intervention_C_short_start": "filho com python -S -E (partida mais curta): 10/10 em todos os ambientes"
+  },
+  "hypotheses": {
+    "H1 término do filho × árvore de processos no Windows": "REFUTADA como causa: job real (filho cria neto e trava) morto por timeout com filho e neto mortos em 3/3 no Windows local (source e wheel) e no windows-latest; método windows_job",
+    "H2 antivírus/spawn atrasando além de 0,2 s": "SUSTENTADA: latência de partida medida perto do prazo; falha só com 0 bytes; A/B slow-start reproduz de forma determinística; A/B prazo folgado elimina",
+    "H3 exit_code 124 dependente de plataforma": "REFUTADA: 124 e reason timeout em todas as execuções que atingiram o prazo, Linux e Windows",
+    "H4 leitura bloqueante de stdout/stderr depois do timeout": "REFUTADA: execuções terminam em ~0,3 s com prazo 0,2 s; nenhuma trava; reader encerra",
+    "H5 contagem de bytes com \\r\\n": "REFUTADA: no Windows a saída retida é exatamente 20 bytes em todas as execuções em que o filho escreveu (a quebra \\r\\n fica além do limite)"
+  },
+  "real_job_answer": "SIM. O job real do Ops (predictor_ops.run_job da wheel 4.2.1, sem mock) mata o processo e a árvore (filho e neto) no Windows e trunca a saída no limite: 3/3 no Windows local source, 3/3 no Windows local wheel, 6/6 no windows-latest (e 21/21 no Linux); saída truncada em 100 bytes; exit 124; reason timeout.",
+  "affected_code_paths": [
+    "nenhum caminho de produção: o defeito é o pressuposto de tempo do teste (prazo de 0,2 s para partir e escrever)"
+  ],
+  "affected_missions": [
+    "crypto",
+    "brasileirao",
+    "stocks"
+  ],
+  "blocking_rationale": "test_only com causa demonstrada por intervenção A/B (C13): não bloqueia. O comportamento de timeout que as missões usam em runtime (matar a árvore e truncar) está correto em todos os ambientes.",
+  "recommendation_for_ops_owner": "Tornar o teste independente da latência de partida (ex.: o filho sinaliza prontidão por arquivo e o prazo conta a partir dela, ou prazo que cubra a partida medida no Windows). Não é permitido nesta missão (proibido aumentar timeout/afrouxar assert); fica como proposta para o dono do Ops.",
+  "evidence": [
+    "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json",
+    "qualification/crypto/RAW_LOGS/ops-failure/run35831881258/",
+    "qualification/crypto/RAW_LOGS/ops-failure/run35833205145/",
+    "qualification/crypto/RAW_LOGS/ops-failure/windows-local/",
+    "qualification/crypto/RAW_LOGS/ops-failure/windows-local-extra/",
+    "qualification/crypto/scripts/ops_failure_matrix.sh",
+    "qualification/crypto/scripts/ops_timeout_probe.py",
+    "qualification/crypto/scripts/analyze_ops_failure.py"
+  ],
+  "method_errors_preserved": [
+    "run 35831189005: variante wheel não instalou (ensurepip -q inválido) — descartada da matriz, logs preservados",
+    "sonda real-tree no Windows antes da correção de aspas (run 35831881258 e windows-local): sem linha válida — descartada, logs preservados"
+  ],
+  "decided_at": "2026-09-23",
+  "report": "qualification/crypto/OPS_FAILURE_REPORT.md"
+}

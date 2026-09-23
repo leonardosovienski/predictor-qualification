@@ -40,6 +40,8 @@ def probes(path: Path) -> list[dict]:
 
 def env_summary(env_dir: Path) -> dict:
     out: dict = {"env_log_head": (env_dir / "env.log").read_text(encoding="utf-8").splitlines()[:1]}
+    if (env_dir / "extra").is_dir():
+        out["extra"] = env_summary(env_dir / "extra")
     env_text = (env_dir / "env.log").read_text(encoding="utf-8")
     m = re.search(r"^predictor_ops (\S+) ", env_text, re.M)
     out["predictor_ops_file"] = m.group(1) if m else None
@@ -62,7 +64,7 @@ def env_summary(env_dir: Path) -> dict:
         "max_s": max(start) if start else None,
         "over_0_2s": sum(1 for s in start if s > 0.2),
     }
-    for name in ("test_exact", "a_b_delay"):
+    for name in ("test_exact", "a_b_delay", "slow_start", "ample"):
         rows = probes(env_dir / f"probe_{name}.jsonl")
         out[f"probe_{name}"] = {
             "n": len(rows),
@@ -94,8 +96,22 @@ def main() -> None:
             summary["sources"][source][env_dir.name] = env_summary(env_dir)
     out = root / "OPS_FAILURE_SUMMARY.json"
     out.write_text(json.dumps(summary, indent=1, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+    def line(label, s):
+        print(f"  {label}: exact={s['probe_test_exact']['assertions_pass']}/{s['probe_test_exact']['n']} "
+              f"bytes={s['probe_test_exact']['output_bytes_values']} slow={s['probe_slow_start']['assertions_pass']}/{s['probe_slow_start']['n']} "
+              f"slow_bytes={s['probe_slow_start']['output_bytes_values']} ample={s['probe_ample']['assertions_pass']}/{s['probe_ample']['n']} "
+              f"startup_med={s['probe_startup']['median_s']} max={s['probe_startup']['max_s']} "
+              f"tree={s['probe_real_tree']['killed_tree_and_truncated']}/{s['probe_real_tree']['n']} "
+              f"child_alive={s['probe_real_tree']['child_alive_after']} grand_alive={s['probe_real_tree']['grandchild_alive_after']} "
+              f"{s['probe_real_tree']['termination_methods']}")
+
     for source, envs in summary["sources"].items():
         for env, s in envs.items():
+            if "extra" in s:
+                line(f"{source}/{env}/extra", s["extra"])
+            if s["shared003_test"]["executions"] == 0 and "probe_slow_start" in s and s["probe_slow_start"]["n"]:
+                line(f"{source}/{env}", s)
+                continue
             print(f"{source}/{env}: setup_failed={s['setup_failed']} 003={s['shared003_test']['executions_all_passed']}/{s['shared003_test']['executions']} "
                   f"004={s['shared004_tests']['executions_all_passed']}/{s['shared004_tests']['executions']} "
                   f"full={[ (r.get('passed'), r.get('failed')) for r in s['full_tests_v2']['runs']]} "

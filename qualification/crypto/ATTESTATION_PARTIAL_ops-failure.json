@@ -1,8 +1,19 @@
 {
-  "note": "Estado corrente dos gates da missão crypto; fonte de scripts/attest.py. Parciais emitidos nunca são reescritos (C8).",
-  "common_baseline_id": "STACK_BASELINE_V1",
+  "attestation_version": "2.0",
+  "stage": "A",
+  "branch": "crypto",
+  "envelope_version": "NONE",
   "supersedes_sha256": null,
+  "common_baseline_id": "STACK_BASELINE_V1",
+  "common_baseline_sha256": "30c318a1f6006a77ce9e4fcb3e31acfe9562116dcfa00d76300e50f66a6bff81",
+  "common_core_version": "2.0",
+  "common_core_sha256": "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1",
+  "frozen_parameters_sha256": "9a50ae089c5b96223614f0817be4c2dfe6fde2a910e1de83a70ee75860dd4599",
+  "protected_set_sha256": "5f4409d0bb432df99be55d1499219970334993bbb90cc0c56d692f91b82b01d9",
+  "frozen_vectors_sha256": null,
+  "soak_profile_sha256": null,
   "domain_contract_sha256": null,
+  "domain_attestations": [],
   "final_commits": [],
   "final_wheels": [],
   "phases_completed": [
@@ -20,7 +31,8 @@
       "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
       "classification": "test_only",
       "blocking": false,
-      "verdict_file": "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT.json"
+      "verdict_file": "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT.json",
+      "verdict_sha256": "ae5d01e74b88809189055fb23377ac184b264da169ad5e68cb25f2f15df50536"
     },
     {
       "issue_id": "SHARED-004",
@@ -28,7 +40,8 @@
       "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
       "classification": "test_only",
       "blocking": false,
-      "verdict_file": "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT.json"
+      "verdict_file": "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT.json",
+      "verdict_sha256": "0b4d08f35a638a53c1869c67e15bc62d76eda28e6b6fed618283da09f0f152d7"
     },
     {
       "issue_id": "SHARED-005",
@@ -36,7 +49,8 @@
       "wheel_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
       "classification": "flaky",
       "blocking": true,
-      "verdict_file": "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json"
+      "verdict_file": "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json",
+      "verdict_sha256": "0c19ea437d0d979b07b8e2269075a8327880c07d83b87628a939f5db742ef788"
     }
   ],
   "gates": {
@@ -48,9 +62,18 @@
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/STACK_BASELINE.json",
-        "qualification/crypto/RAW_LOGS/baseline/collect_mission_baseline.log",
-        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log"
+        {
+          "file": "qualification/crypto/STACK_BASELINE.json",
+          "sha256": "8fa44e203c6bed3277485c59b0ad27dfdf71661147d445f253606c963fe90f0c"
+        },
+        {
+          "file": "qualification/crypto/RAW_LOGS/baseline/collect_mission_baseline.log",
+          "sha256": "852917e0426edc8a5503730414f8f5e589f49634a73ccfb4d9811ad01cfa86a1"
+        },
+        {
+          "file": "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log",
+          "sha256": "f99f4cb2f9c5351af7cf055b46047faec3d2a13267bbd9328d39f08e74899681"
+        }
       ],
       "note": "Baseline coletado antes de qualquer mudança: HEADs cripto 5fd4e1b, core 5a08415, ops 7bd99eb, iguais ao STACK_BASELINE_V1; clones limpos; wheels do lock = assets das releases. Windows local 1618 passed (método do CI); o run 1 (4 falhas) é erro de método preservado (sem uv build e CRIPTO_ROOT fora do TEMP, CR-F002)."
     },
@@ -127,9 +150,18 @@
     "SHARED_DEPENDENCY_CLEAR": {
       "status": "FAIL",
       "evidence": [
-        "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json",
-        "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT.json",
-        "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT.json"
+        {
+          "file": "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json",
+          "sha256": "0c19ea437d0d979b07b8e2269075a8327880c07d83b87628a939f5db742ef788"
+        },
+        {
+          "file": "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT.json",
+          "sha256": "ae5d01e74b88809189055fb23377ac184b264da169ad5e68cb25f2f15df50536"
+        },
+        {
+          "file": "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT.json",
+          "sha256": "0b4d08f35a638a53c1869c67e15bc62d76eda28e6b6fed618283da09f0f152d7"
+        }
       ],
       "note": "SHARED-003 e SHARED-004 não bloqueiam; SHARED-005 (lock local do Ops no Windows) é flaky em caminho de runtime → bloqueante até correção do Ops (decisão do dono, V1.<n>)."
     },
@@ -181,9 +213,18 @@
     "CRYPTO_OPS_FAILURE_VERDICT": {
       "status": "PASS",
       "evidence": [
-        "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT.json",
-        "qualification/crypto/OPS_FAILURE_REPORT.md",
-        "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json"
+        {
+          "file": "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT.json",
+          "sha256": "ae5d01e74b88809189055fb23377ac184b264da169ad5e68cb25f2f15df50536"
+        },
+        {
+          "file": "qualification/crypto/OPS_FAILURE_REPORT.md",
+          "sha256": "501663f8fe8145c9bfaa0223c3e23bc6ba40b432780755a7b091149b63485ba3"
+        },
+        {
+          "file": "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json",
+          "sha256": "8015ba907f4412ccf6eee5f42c1cc263ef7a9db4554e083bd4089c24eed281a7"
+        }
       ],
       "note": "SHARED-003 test_only não bloqueante, causa demonstrada por A/B; o job real do Ops mata a árvore e trunca no Windows (3/3 local source, 3/3 local wheel, 6/6 windows-latest)."
     },
@@ -207,5 +248,18 @@
       "evidence": [],
       "note": "fase ainda não executada"
     }
-  }
+  },
+  "findings_file": {
+    "file": "qualification/crypto/FINDINGS.json",
+    "sha256": "fb697b853f990a27119061dec9084fa696614f77d8c346df52b19628587110be"
+  },
+  "counts": {
+    "P0": 0,
+    "P1": 7,
+    "P2": 4
+  },
+  "capital_permission": false,
+  "training_started": false,
+  "generated_at": "2026-09-23T14:00:52+00:00",
+  "result": "IN_PROGRESS"
 }
