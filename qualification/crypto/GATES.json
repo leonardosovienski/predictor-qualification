@@ -2,7 +2,7 @@
   "note": "Estado corrente dos gates da missão crypto; fonte de scripts/attest.py. Parciais emitidos nunca são reescritos (C8).",
   "common_baseline_id": "STACK_BASELINE_V1",
   "supersedes_sha256": null,
-  "domain_contract_sha256": null,
+  "domain_contract_sha256": "0831fe3db2b7ca41a26ff7665f93c07b0edda3c937ac4ce83fe0e96720a9eb55",
   "final_commits": [
     {
       "repo": "cripto-predictor",
@@ -51,7 +51,9 @@
     "science",
     "windows-smoke",
     "hosted-ci",
-    "soak"
+    "soak",
+    "contract-sign-off",
+    "attestation"
   ],
   "environments": [
     {
@@ -287,12 +289,13 @@
       "note": "capital_permission=false no contrato (validate_result recusa true), no JobConfig (SHADOW_DECISION) e em todo resultado; nenhum caminho concede capital."
     },
     "DOMAIN_CONTRACT": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
         "qualification/crypto/DOMAIN_RESEARCH_CONTRACT.json",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/full_suite.junit.xml"
       ],
-      "note": "BLOCKED: aguarda merge do dono (contract-sign-off). Contrato completo; regras de adapter_paths testadas; suíte de conformidade verde no runtime suportado."
+      "note": "Contrato completo (C24.1) aprovado pelo merge do dono (predictor-qualification #8, 7148610, 2026-09-23T18:26:58Z); regras de adapter_paths testadas (test_import_closure); suíte de conformidade 48/48 no runtime suportado."
     },
     "ADMISSION": {
       "status": "PASS",
@@ -378,5 +381,6 @@
       ],
       "note": "DB sem FS, FS sem DB, artefato alterado, hash errado, conteúdo alterado após materializar, referência de outra pesquisa e metadata inconsistente: falha fechada (exit 5), sem reparo silencioso."
     }
-  }
+  },
+  "final_result": "NOT_QUALIFIED"
 }
