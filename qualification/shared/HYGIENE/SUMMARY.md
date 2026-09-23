@@ -17,14 +17,24 @@ Nenhum treinamento iniciado, nenhum capital movido, nenhuma instalação operaci
 | HYG-009 `stocks` Core `>=3.2.1,<4` | DONE | `HYG-009.md` | stocks#91 |
 | HYG-008 suíte do Ops Linux/Windows | DONE | `HYG-008.md` | — |
 | HYG-012 runtime Windows + VM Linux | DONE | `HYG-012.md` | predictor-qualification#2 |
-| HYG-015 workflows V1 aposentados | **TODO** (6/7) | `HYG-015.md` | stocks#92, cripto#125, core#32, cain#9, ecosystem#26; **brasileirao#75 aberto** |
-| HYG-004 CI por `uv sync --locked` | **TODO** (6/7) | `HYG-004.md` | cain#8, cripto#124, core#33, ops#25, ecosystem#27; **brasileirao#76 aberto** |
-| HYG-006 clones limpos = `origin/main` | **TODO** | `HYG-006.md` | depende de brasileirao#75/#76 |
-| HYG-007 CI verde nos 7 `main` | **TODO** (6/7) | `HYG-007.md` | Brasileirão vermelho até #76 |
+| HYG-015 workflows V1 aposentados | DONE | `HYG-015.md` | stocks#92, cripto#125, core#32, cain#9, ecosystem#26, brasileirao#75 |
+| HYG-004 CI por `uv sync --locked` | DONE | `HYG-004.md` | cain#8, cripto#124, core#33, ops#25, ecosystem#27, brasileirao#76 |
+| HYG-006 clones limpos = `origin/main` | DONE | `HYG-006.md` | — |
+| HYG-007 CI verde nos 7 `main` | DONE | `HYG-007.md` | 7/7 success |
 
-**Bloqueio único:** os PRs brasileirao-predictor#75 e #76 (CI verde nos PRs) ainda não foram
-mergeados. Depois do merge, é preciso conferir o CI do `main` e o clone e marcar os quatro itens
-restantes.
+**Todos os 13 itens estão `DONE`.** Os 7 repositórios têm `uv.lock` versionado, instalam o stack
+só pelo lock no CI e estão com o CI verde no `main`. Os 7 clones de qualificação estão limpos e
+iguais ao remoto. O `STACK_BASELINE_V1` (prompt `baseline_comum_rev8.md`) pode partir deste estado:
+
+| Repo | `main` final |
+|---|---|
+| cain | `8b8915aa7c9053b8f078a9fba20b7029180d114c` |
+| ecosystem-predictor | `0a4f87e53d3d131e449096f82ba7b0c672b91d85` |
+| core-predictor | `5a0841509f091ea0aa95bde0d3d65e2a1a9e984d` |
+| predictor-ops | `7bd99ebaea09c74a2ac4243d8991a81c44625a6c` |
+| brasileirao-predictor | `e14f3394c1908fae6d2f25754e6ab3a6792dbf1e` |
+| cripto-predictor | `5fd4e1b06c79231fd3d9485a1483f3b65e854bea` |
+| stocks-predictor | `4e98a67b68c55888a4788663f3d5bf0899966cb4` |
 
 ## Decisões tomadas na fase (em `DECISIONS.json`)
 

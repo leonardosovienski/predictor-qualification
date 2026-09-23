@@ -39,10 +39,18 @@
       "id": "HYG-004",
       "action": "**Todos os 7 repos:** todo passo de CI que instala pacote do stack usa `uv sync --locked` (Core: `--frozen`→`--locked`; Ops: `uv sync`→`--locked`; CAIN: `pip`→`uv`), respeitando a exceção de C4 (smoke da própria wheel e requirements com `--require-hashes`). No Ecosystem, cada pacote de `packages/*` passa a ter `uv.lock` próprio (ou vira membro de um workspace uv) e é testado por lock nas versões de Python que declara",
       "acceptance": "Para cada workflow de push/PR: run URL hospedado cujo log mostra `uv sync --locked` e conclusão `success`",
-      "status": "TODO",
+      "status": "DONE",
       "evidence_file": "qualification/shared/HYGIENE/HYG-004.md",
-      "evidence_sha256": "57b7fa6c96a53523ba83001770bcf61a1b9e5007d91187bb96c6912b87d63d4e",
-      "commits": []
+      "evidence_sha256": "06284b3107b05d6ebc4fc72f3ecf42ab66ed606ead1f29e4991421648e27104d",
+      "commits": [
+        "cain@8b8915aa7c9053b8f078a9fba20b7029180d114c",
+        "cripto-predictor@5fd4e1b06c79231fd3d9485a1483f3b65e854bea",
+        "core-predictor@5a0841509f091ea0aa95bde0d3d65e2a1a9e984d",
+        "predictor-ops@7bd99ebaea09c74a2ac4243d8991a81c44625a6c",
+        "ecosystem-predictor@0a4f87e53d3d131e449096f82ba7b0c672b91d85",
+        "brasileirao-predictor@e14f3394c1908fae6d2f25754e6ab3a6792dbf1e",
+        "stocks-predictor@4e98a67b68c55888a4788663f3d5bf0899966cb4"
+      ]
     },
     {
       "id": "HYG-005",
@@ -59,19 +67,35 @@
       "id": "HYG-006",
       "action": "A qualificação usa **clones novos** (não os checkouts operacionais): `C:\\QUALIFICACAO\\repos\\{cain,ecosystem-predictor,core-predictor,predictor-ops,brasileirao-predictor}`, `C:\\Cripto\\qualificacao\\cripto-predictor`, `C:\\STOCKS\\work\\qualification\\stocks-predictor`; todos em `main` limpo, igual ao remoto (depois dos merges acima)",
       "acceptance": "`git status` limpo e `HEAD == origin/main` nos 7 clones",
-      "status": "TODO",
+      "status": "DONE",
       "evidence_file": "qualification/shared/HYGIENE/HYG-006.md",
-      "evidence_sha256": "80648c6c6aebd52d39d0bc8a958f2dc8a6243e769b4a52fec78ab574038cda50",
-      "commits": []
+      "evidence_sha256": "07c87c0468c554e744accf939c8dbc95008de42bfcce00c78fa0b82591f270e9",
+      "commits": [
+        "cain@8b8915aa7c9053b8f078a9fba20b7029180d114c",
+        "ecosystem-predictor@0a4f87e53d3d131e449096f82ba7b0c672b91d85",
+        "core-predictor@5a0841509f091ea0aa95bde0d3d65e2a1a9e984d",
+        "predictor-ops@7bd99ebaea09c74a2ac4243d8991a81c44625a6c",
+        "brasileirao-predictor@e14f3394c1908fae6d2f25754e6ab3a6792dbf1e",
+        "cripto-predictor@5fd4e1b06c79231fd3d9485a1483f3b65e854bea",
+        "stocks-predictor@4e98a67b68c55888a4788663f3d5bf0899966cb4"
+      ]
     },
     {
       "id": "HYG-007",
       "action": "**CI hospedado verde** nos 7 repos no `main` pós-higiene",
       "acceptance": "Run URLs + `success`; única falha tolerada: `test_timeout_and_truncation`, que então é registrada em `SHARED_ISSUES.json` como SHARED-003 e não bloqueia a Fase 0",
-      "status": "TODO",
+      "status": "DONE",
       "evidence_file": "qualification/shared/HYGIENE/HYG-007.md",
-      "evidence_sha256": "ac775eb85304b41843c01893e3fcf5d975c479d9b1d996450ee686899a208896",
-      "commits": []
+      "evidence_sha256": "273936a40554919dfc8461729e8ce150bfd4763c4130abfdb704f34ee1008505",
+      "commits": [
+        "cain@8b8915aa7c9053b8f078a9fba20b7029180d114c",
+        "ecosystem-predictor@0a4f87e53d3d131e449096f82ba7b0c672b91d85",
+        "core-predictor@5a0841509f091ea0aa95bde0d3d65e2a1a9e984d",
+        "predictor-ops@7bd99ebaea09c74a2ac4243d8991a81c44625a6c",
+        "brasileirao-predictor@e14f3394c1908fae6d2f25754e6ab3a6792dbf1e",
+        "cripto-predictor@5fd4e1b06c79231fd3d9485a1483f3b65e854bea",
+        "stocks-predictor@4e98a67b68c55888a4788663f3d5bf0899966cb4"
+      ]
     },
     {
       "id": "HYG-008",
@@ -132,10 +156,17 @@
       "id": "HYG-015",
       "action": "**Aposentar os workflows de integração V1** (D-13): `brasileirao-predictor/.github/workflows/cain-export.yml`, `stocks-predictor/.github/workflows/cain-export.yml`, `cripto-predictor/.github/workflows/integration-audit.yml`, `core-predictor/.github/workflows/consumer-compatibility.yml`, `cain/.github/workflows/cain-supply-linux.yml`, `cain/.github/workflows/cain-completion.yml`, `ecosystem-predictor/.github/workflows/cain-crypto-integration.yml`. Cada um passa a `workflow_dispatch` apenas, com cabeçalho \"aposentado por D-13\", e fica fora do escopo de `HOSTED_CI`; nenhum pacote novo é adicionado a BR ou Stocks",
       "acceptance": "Diff dos 7 workflows; run de push/PR sem esses workflows",
-      "status": "TODO",
+      "status": "DONE",
       "evidence_file": "qualification/shared/HYGIENE/HYG-015.md",
-      "evidence_sha256": "3f664d7c7f8c322b621554dc70dd680c519a2e9d1e1d323c82a7cb2a92835968",
-      "commits": []
+      "evidence_sha256": "cf090ead63db47be8cacb7ff43b9c3608bab7860b2b26e8172118ce390c357f3",
+      "commits": [
+        "brasileirao-predictor@b2b096c",
+        "stocks-predictor@7c846fe",
+        "cripto-predictor@5fd4e1b06c79231fd3d9485a1483f3b65e854bea",
+        "core-predictor@1ce777d",
+        "cain@8b8915aa7c9053b8f078a9fba20b7029180d114c",
+        "ecosystem-predictor@0a4f87e53d3d131e449096f82ba7b0c672b91d85"
+      ]
     }
   ]
 }
