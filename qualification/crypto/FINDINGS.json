@@ -24,7 +24,7 @@
     {
       "id": "CR-F002",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "baseline",
       "title": "Suíte do Cripto no Windows depende de CRIPTO_ROOT ancestral do TEMP",
       "description": "tests/conftest.py cria CRIPTO_ROOT = tempdir próprio quando CRIPTO_ROOT não está definido; tests/test_output_dir_bootstrap.py e tests/test_mode_composition.py passam tmp_path (fora desse tempdir) como diretório operacional, e local_runtime.within_root recusa. Com TEMP em C:\\Cripto\\qualificacao\\tmp e sem CRIPTO_ROOT: 2 falhas; com CRIPTO_ROOT ancestral do TEMP: passam (A/B). Defeito só de teste/ambiente, sem efeito no código de produção. Também: 2 testes de distribuição exigem `uv build` antes da suíte (como o ci.yml faz).",
@@ -32,74 +32,88 @@
         "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b.log",
         "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log"
       ],
-      "resolution_plan": "método documentado em qualification/crypto/scripts/win_suite.sh"
+      "resolution_plan": "método documentado em qualification/crypto/scripts/win_suite.sh",
+      "fixed_in": "método documentado em scripts/win_suite.sh; suíte Windows do baseline 1618 passed",
+      "proof": "—"
     },
     {
       "id": "CR-F003",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "truth-map",
       "title": "AdmissionStore: max_pending_tasks nunca libera",
       "description": "AdmissionStore conta todo ACCEPTED como pendente para sempre (não existe API de conclusão). Reproduzido em 5fd4e1b com max_pending_tasks=2: o 3º pedido é REJECTED GLOBAL_PENDING_QUOTA. No soak (≥20 ciclos) o domínio pararia de admitir.",
       "evidence": [
         "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
-      ]
+      ],
+      "fixed_in": "33fed6b",
+      "proof": "tests/test_research_domain_units.py::test_pending_quota_is_released_when_the_request_terminates"
     },
     {
       "id": "CR-F004",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "truth-map",
       "title": "Handler reporta custo líquido errado (1 perna, sem funding) e sem IC do líquido",
       "description": "research_worker.evaluate reporta net_return_bps = gross_bps − (fee+slippage) = 1 perna e sem funding. O CostModel congelado cobra 2 pernas (30 bps) + funding. Reproduzido em 5fd4e1b: bruto +15 bps, líquido reportado 0 bps, líquido pelo CostModel −36 bps. Nenhum IC do líquido. Esconde prejuízo: resultado econômico errado.",
       "evidence": [
         "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
-      ]
+      ],
+      "fixed_in": "33fed6b",
+      "proof": "tests/test_research_domain_units.py::test_net_return_uses_the_frozen_cost_model_and_has_its_own_interval"
     },
     {
       "id": "CR-F005",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "cleanroom-baseline",
       "title": "GarimpoInvestimentos/output fora da wheel",
       "description": ".gitignore com `output/` sem âncora exclui GarimpoInvestimentos/output (reporter.py) da wheel; o caminho padrão de análise quebra no runtime instalado (SHARED-002).",
       "evidence": [
         "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
-      ]
+      ],
+      "fixed_in": "33fed6b/9844976 (.gitignore /output/)",
+      "proof": "wheel 1.2.0rc1 contém GarimpoInvestimentos/output/reporter.py (RAW_LOGS/publish-candidates/build_rc_2bc63eb.log)"
     },
     {
       "id": "CR-F006",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "truth-map",
       "title": "Circuito de pesquisa não alcançável de entrypoint",
       "description": "AdmissionStore, ReferenceStore, ResearchExecutor, ResultOutbox, research_worker e research_recovery não são alcançados por nenhum [project.scripts] nem entry-point (grafo AST + trace em runtime). Não existe entrypoint que leia pedidos em arquivo (C24.1).",
       "evidence": [
         "qualification/crypto/RAW_LOGS/truth-map/import_graph_baseline.json",
         "qualification/crypto/RAW_LOGS/truth-map/runtime_trace_checkout.log"
-      ]
+      ],
+      "fixed_in": "33fed6b (cripto-research)",
+      "proof": "tests/conformance/test_import_closure.py; E2E pela wheel (RAW_LOGS/cleanroom-final/run35885023422)"
     },
     {
       "id": "CR-F007",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "truth-map",
       "title": "Admission/execução/resultado acoplados ao envelope V1",
       "description": "research_admission, research_execution e research_results importam research_protocol (verify_task, validate_result, sign_result) e usam ResearchTaskV1/ResearchResultV1 com autenticação HMAC do CAIN. O prompt §8 exige domínio sem envelope.",
       "evidence": [
         "qualification/crypto/RAW_LOGS/truth-map/envelope_coupling_grep.log"
-      ]
+      ],
+      "fixed_in": "33fed6b",
+      "proof": "tests/conformance/test_import_closure.py::test_no_entrypoint_reaches_envelope_cain_or_adapter_paths"
     },
     {
       "id": "CR-F008",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "truth-map",
       "title": "Estado científico e validação temporal decididos no domínio, não no Core",
       "description": "O worker decide SUPPORTED/REFUTED/INCONCLUSIVE e valida o tempo com código próprio; o Core só fornece bootstrap e o registro de trial. CORE_PARTICIPATION exige estado científico e validação temporal do Core real.",
       "evidence": [
         "qualification/crypto/ARCHITECTURE_TRUTH_MAP.json"
-      ]
+      ],
+      "fixed_in": "33fed6b",
+      "proof": "e2e_runtime.py: 'Core trial registry holds the trial and the scientific state'; conformance canário (LookaheadError do replay do Core)"
     },
     {
       "id": "CR-F009",
@@ -137,34 +151,64 @@
     {
       "id": "CR-F012",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "contract-wiring",
       "title": "GarimpoInvestimentos.__version__ divergente da distribuição",
       "description": "__init__.__version__ = '1.1.1rc2' enquanto pyproject/metadata = '1.1.1rc4' em 5fd4e1b. Ninguém usa internamente, mas expõe versão errada.",
       "evidence": [
         "qualification/crypto/RAW_LOGS/truth-map/core_identity_checkout_baseline.json"
-      ]
+      ],
+      "fixed_in": "6f73051",
+      "proof": "tests/test_package_version_contract.py"
     },
     {
       "id": "CR-F013",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "contract-wiring",
       "title": "Circuito de pesquisa quebra no Windows com raiz de estado profunda (MAX_PATH)",
       "description": "Achado na suíte Windows: caminhos internos (experiments/EXP-<32hex>/.reference-materialization.json.<uuid>.tmp; ops-runtime/idempotency/.economic-<sha256>.json.<uuid>.tmp do predictor_ops) passam de 260 caracteres sob raízes longas; o job falha (fecha como OPS_FAILED_RETRYABLE/exit 3), nunca produz resultado. Defeito de operação no Windows.",
       "evidence": [
         "qualification/crypto/RAW_LOGS/contract-wiring/windows_pytest_9844976.log"
-      ]
+      ],
+      "fixed_in": "6f73051",
+      "proof": "tests/test_research_domain_units.py::test_windows_state_root_longer_than_max_path_budget_fails_fast; suíte Windows 1664 passed em 2bc63eb"
     },
     {
       "id": "CR-F014",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "contract-wiring",
       "title": "Coverage: subprocessos da conformidade herdavam o pytest-cov",
       "description": "Os subprocessos cripto-research rodavam fora do repo com as variáveis COV_CORE_* e gravavam dados sem branch; o combine do pytest-cov falhava (exit 3) com todos os testes passando. Encanamento de teste, sem efeito no produto.",
       "evidence": [
         "https://github.com/leonardosovienski/cripto-predictor/actions/runs/35876787921 (job quality: 1661 passed, INTERNALERROR Can't combine statement coverage data with branch data)"
+      ],
+      "fixed_in": "6f73051",
+      "proof": "job quality do CI verde em 2bc63eb (run 35881545740)"
+    },
+    {
+      "id": "CR-F015",
+      "severity": "P1",
+      "status": "FIXED",
+      "phase": "contract-wiring",
+      "title": "Duplicata depois de mudança de policy devolvia REJECTED em vez do resultado autoritativo",
+      "description": "execute() revalidava a policy antes de procurar o resultado armazenado; reenviar um pedido concluído depois de mudar a policy voltava REJECTED (POLICY_CHANGED). Quebra de idempotência. Reproduzido em 2bafad9 pelo teste novo; corrigido em 2bc63eb; a mesma prova passa.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/contract-wiring/repro_duplicate_after_policy_change.log"
+      ],
+      "fixed_in": "2bc63eb",
+      "proof": "tests/conformance/test_contract_conformance.py::test_duplicate_after_policy_change_returns_the_stored_result"
+    },
+    {
+      "id": "CR-F016",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "cleanroom-final",
+      "title": "17 testes da suíte dependem do checkout (não rodam contra a wheel instalada)",
+      "description": "Com a wheel publicada e a árvore sem o pacote-fonte: 13 leem GarimpoInvestimentos/trials.json, main.py ou analyzers/* pelo caminho do repo; 2 exigem dist/ construído; 2 checam higiene do checkout. Todos passam no CI do checkout em 2bc63eb. Defeito só de teste (classe T do SHARED-002); a conformidade (48/48) e o E2E rodam contra a wheel.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/full_suite.junit.xml"
       ]
     }
   ]

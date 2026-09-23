@@ -5,8 +5,12 @@
   "repo": "cripto-predictor",
   "implementation": {
     "contract_module": "GarimpoInvestimentos/research_contract.py",
-    "final_commit": "PREENCHIDO_EM_PUBLISH_CANDIDATES",
-    "wheel": "PREENCHIDO_EM_PUBLISH_CANDIDATES"
+    "final_commit": "2bc63ebdc47f93661a4f37cb988b06939de060fe",
+    "version": "1.2.0rc1",
+    "wheel": {
+      "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc1/cripto_predictor-1.2.0rc1-py3-none-any.whl",
+      "sha256": "1f76b8c4dbcb2ca145c053a7dc84d98d30c49859d95c1e1a78ad4d5916b3df49"
+    }
   },
   "requester_trust": "LOCAL_FILE_ONLY",
   "entrypoint": {
@@ -31,7 +35,8 @@
       "2": "REJECTED (pedido inválido, policy, hipótese encerrada, recusa do handler) ou CONFLICT",
       "3": "NOT_READY (objeto de referência ausente) ou OPS_FAILED_RETRYABLE (falha/timeout do Ops, retry permitido)",
       "4": "TEMPORAL_INTEGRITY_VIOLATION (dado disponível depois do cutoff, cutoff divergente, ordem temporal)",
-      "5": "RECONCILIATION_REQUIRED (corrupção, split-brain ou divergência de hash; nunca reparado em silêncio)"
+      "5": "RECONCILIATION_REQUIRED (corrupção, split-brain ou divergência de hash; nunca reparado em silêncio)",
+      "1": "erro de configuração do operador (ex.: STATE_ROOT_TOO_LONG, policy inválida)"
     },
     "multiple_requests": "o exit code é o maior entre os pedidos"
   },
@@ -45,70 +50,207 @@
     "$id": "crypto-research-request/1",
     "type": "object",
     "additionalProperties": false,
-    "required": ["schema_version", "request_id", "request_type", "research_id", "hypothesis_id", "references", "data_cutoff", "parameters", "priority_hint"],
+    "required": [
+      "schema_version",
+      "request_id",
+      "request_type",
+      "research_id",
+      "hypothesis_id",
+      "references",
+      "data_cutoff",
+      "parameters",
+      "priority_hint"
+    ],
     "properties": {
-      "schema_version": {"const": "crypto-research-request/1"},
-      "request_id": {"$ref": "#/$defs/crypto_id"},
-      "request_type": {"enum": ["BACKTEST_EXISTING_HYPOTHESIS"]},
-      "research_id": {"$ref": "#/$defs/crypto_id"},
-      "hypothesis_id": {"$ref": "#/$defs/crypto_id"},
+      "schema_version": {
+        "const": "crypto-research-request/1"
+      },
+      "request_id": {
+        "$ref": "#/$defs/crypto_id"
+      },
+      "request_type": {
+        "enum": [
+          "BACKTEST_EXISTING_HYPOTHESIS"
+        ]
+      },
+      "research_id": {
+        "$ref": "#/$defs/crypto_id"
+      },
+      "hypothesis_id": {
+        "$ref": "#/$defs/crypto_id"
+      },
       "references": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["protocol", "dataset", "baseline", "cost_model", "evidence"],
+        "required": [
+          "protocol",
+          "dataset",
+          "baseline",
+          "cost_model",
+          "evidence"
+        ],
         "properties": {
-          "protocol": {"$ref": "#/$defs/ref"},
-          "dataset": {"$ref": "#/$defs/ref"},
-          "baseline": {"$ref": "#/$defs/ref"},
-          "cost_model": {"$ref": "#/$defs/ref"},
-          "evidence": {"$ref": "#/$defs/ref"}
+          "protocol": {
+            "$ref": "#/$defs/ref"
+          },
+          "dataset": {
+            "$ref": "#/$defs/ref"
+          },
+          "baseline": {
+            "$ref": "#/$defs/ref"
+          },
+          "cost_model": {
+            "$ref": "#/$defs/ref"
+          },
+          "evidence": {
+            "$ref": "#/$defs/ref"
+          }
         }
       },
-      "data_cutoff": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "data_cutoff": {
+        "type": "string",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"
+      },
       "parameters": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["symbol", "horizon_days", "max_observations", "fee_bps", "slippage_bps"],
+        "required": [
+          "symbol",
+          "horizon_days",
+          "max_observations",
+          "fee_bps",
+          "slippage_bps"
+        ],
         "properties": {
-          "symbol": {"type": "string", "pattern": "^[A-Z0-9]{2,20}$"},
-          "horizon_days": {"type": "integer", "minimum": 1, "maximum": 90},
-          "max_observations": {"type": "integer", "minimum": 4, "maximum": 5000},
-          "fee_bps": {"type": "integer", "minimum": 0, "maximum": 1000},
-          "slippage_bps": {"type": "integer", "minimum": 0, "maximum": 1000},
-          "placebo_seed": {"type": "integer", "minimum": 0, "maximum": 1000000}
+          "symbol": {
+            "type": "string",
+            "pattern": "^[A-Z0-9]{2,20}$"
+          },
+          "horizon_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 90
+          },
+          "max_observations": {
+            "type": "integer",
+            "minimum": 4,
+            "maximum": 5000
+          },
+          "fee_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "slippage_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "placebo_seed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          }
         }
       },
-      "priority_hint": {"enum": ["LOW", "NORMAL", "HIGH"]},
-      "client_ref": {"description": "JSON opaco ≤ 1024 bytes canônicos; fora do idempotency_key e do hash de conteúdo; devolvido sem alteração"}
+      "priority_hint": {
+        "enum": [
+          "LOW",
+          "NORMAL",
+          "HIGH"
+        ]
+      },
+      "client_ref": {
+        "description": "JSON opaco ≤ 1024 bytes canônicos; fora do idempotency_key e do hash de conteúdo; devolvido sem alteração"
+      }
     },
     "$defs": {
-      "crypto_id": {"type": "string", "pattern": "^crypto:[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"},
+      "crypto_id": {
+        "type": "string",
+        "pattern": "^crypto:[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+      },
       "ref": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "version"],
+        "required": [
+          "name",
+          "version"
+        ],
         "properties": {
-          "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"},
-          "version": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"}
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          }
         }
       }
     },
-    "never_in_request": ["comando", "módulo", "path", "URL", "handler", "permissão de capital"],
+    "never_in_request": [
+      "comando",
+      "módulo",
+      "path",
+      "URL",
+      "handler",
+      "permissão de capital"
+    ],
     "no_cain_envelope_or_transport": true
   },
-  "client_ref": {"opaque": true, "excluded_from": ["idempotency_key", "request_content_hash"], "echoed_in": "outcome.client_ref da própria submissão"},
+  "client_ref": {
+    "opaque": true,
+    "excluded_from": [
+      "idempotency_key",
+      "request_content_hash"
+    ],
+    "echoed_in": "outcome.client_ref da própria submissão"
+  },
   "admission_policy": {
     "id_field": "policy_id",
     "version_field": "policy_version",
     "sha256": "content_hash canônico do arquivo de policy, gravado em cada recibo (policy_hash) e no resultado (provenance.admission_policy_hash)",
     "schema": "CryptoResearchAdmissionPolicyV2 (GarimpoInvestimentos/research_admission.py load_policy)",
     "owner": "CRIPTO_OPERATOR",
-    "decisions": ["ACCEPTED", "REJECTED", "CONFLICT", "REQUIRES_READMISSION"],
-    "reason_codes": ["ADMITTED", "REQUEST_SIZE_LIMIT", "PARAMETER_SIZE_LIMIT", "HYPOTHESIS_CLOSED", "HYPOTHESIS_NOT_ACTIVE", "HYPOTHESIS_NOT_ADMITTED", "SYMBOL_NOT_ALLOWED", "HANDLER_NOT_ALLOWED", "HANDLER_UNAVAILABLE", "REFERENCE_UNAUTHORIZED_OR_UNKNOWN", "PENDING_QUOTA", "REQUEST_ID_CONTENT_CONFLICT", "POLICY_CHANGED", "RESOLUTION_CHANGED", "SCHEMA_INVALID", "REQUEST_TYPE_NOT_ALLOWED", "PARAMETER_OUT_OF_BOUNDS"],
-    "decides": ["tipo de pedido", "handler (allowlist compilada)", "budget (timeout, retries, recursos)", "prioridade (limitada por max_priority)", "referências aceitas (registry name/version → revision_id + sha256)", "hipóteses admitidas (crypto:H1..H9 do charters/scientific_state.json nunca são reabertas)", "símbolos"],
+    "decisions": [
+      "ACCEPTED",
+      "REJECTED",
+      "CONFLICT",
+      "REQUIRES_READMISSION"
+    ],
+    "reason_codes": [
+      "ADMITTED",
+      "REQUEST_SIZE_LIMIT",
+      "PARAMETER_SIZE_LIMIT",
+      "HYPOTHESIS_CLOSED",
+      "HYPOTHESIS_NOT_ACTIVE",
+      "HYPOTHESIS_NOT_ADMITTED",
+      "SYMBOL_NOT_ALLOWED",
+      "HANDLER_NOT_ALLOWED",
+      "HANDLER_UNAVAILABLE",
+      "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+      "PENDING_QUOTA",
+      "REQUEST_ID_CONTENT_CONFLICT",
+      "POLICY_CHANGED",
+      "RESOLUTION_CHANGED",
+      "SCHEMA_INVALID",
+      "REQUEST_TYPE_NOT_ALLOWED",
+      "PARAMETER_OUT_OF_BOUNDS"
+    ],
+    "decides": [
+      "tipo de pedido",
+      "handler (allowlist compilada)",
+      "budget (timeout, retries, recursos)",
+      "prioridade (limitada por max_priority)",
+      "referências aceitas (registry name/version → revision_id + sha256)",
+      "hipóteses admitidas (crypto:H1..H9 do charters/scientific_state.json nunca são reabertas)",
+      "símbolos"
+    ],
     "pending_quota": "max_pending_requests conta só pedidos aceitos sem resultado terminal (liberado por mark_terminal)"
   },
-  "handler_allowlist": {"BACKTEST_EXISTING_HYPOTHESIS": "crypto.handlers.backtest_existing_hypothesis.v1 → python -m GarimpoInvestimentos.research_worker (escolhido pelo executor, nunca pelo pedido), executado como job real do predictor_ops"},
+  "handler_allowlist": {
+    "BACKTEST_EXISTING_HYPOTHESIS": "crypto.handlers.backtest_existing_hypothesis.v1 → python -m GarimpoInvestimentos.research_worker (escolhido pelo executor, nunca pelo pedido), executado como job real do predictor_ops"
+  },
   "adapter_api": {
     "function": "GarimpoInvestimentos.research_runner.Circuit(state, policy, objects).submit_request(raw: bytes, *, source: str) -> outcome",
     "reread": "Circuit(state).show(request_id) -> (exit_code, payload)",
@@ -117,21 +259,75 @@
   "result_schema": {
     "id": "crypto-research-result/1",
     "validator": "GarimpoInvestimentos.research_contract.validate_result",
-    "top_level": ["schema_version", "result_id", "request_id", "admission_id", "experiment_id", "research_id", "hypothesis_id", "result_state", "operational_state", "scientific_state", "economic_state", "capital_permission", "produced_at", "core_facts", "ops_facts", "domain_facts", "provenance"],
+    "top_level": [
+      "schema_version",
+      "result_id",
+      "request_id",
+      "admission_id",
+      "experiment_id",
+      "research_id",
+      "hypothesis_id",
+      "result_state",
+      "operational_state",
+      "scientific_state",
+      "economic_state",
+      "capital_permission",
+      "produced_at",
+      "core_facts",
+      "ops_facts",
+      "domain_facts",
+      "provenance"
+    ],
     "separated_facts": {
       "core_facts": "identidade da wheel do Core; trial_ids do TrialRegistryV2; scientific_state_source = core_trial_registry; trial_row_hash; dataset_fingerprint; temporal_validation (predictor_core.measurement.replay); estatísticas bootstrap_ci",
       "ops_facts": "identidade da wheel do Ops; job_id; economic_lock_id; ops_run_id do SUCCEEDED; ops_run_ids e attempt_ids de todas as tentativas; retry_count; estado terminal; started/finished/heartbeat; ops_record_hash",
       "domain_facts": "identidade do cripto-predictor; handler; identidades de dataset/protocolo/custos/baseline/evidência; data_cutoff; qualidade de dados; métricas bruto e líquido com IC; custos; comparação com baseline; placebo_seed; sha256 do efeito"
     },
     "distinct_states": {
-      "operational_state": ["SUCCEEDED", "FAILED", "TIMEOUT", "SKIPPED_ALREADY_SUCCEEDED"],
-      "scientific_state": ["SUPPORTED", "REFUTED", "INCONCLUSIVE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"],
-      "economic_state": ["WATCH", "NO_EDGE", "NOT_EVALUATED"]
+      "operational_state": [
+        "SUCCEEDED",
+        "FAILED",
+        "TIMEOUT",
+        "SKIPPED_ALREADY_SUCCEEDED"
+      ],
+      "scientific_state": [
+        "SUPPORTED",
+        "REFUTED",
+        "INCONCLUSIVE",
+        "INSUFFICIENT_SAMPLE",
+        "NOT_EVALUATED"
+      ],
+      "economic_state": [
+        "WATCH",
+        "NO_EDGE",
+        "NOT_EVALUATED"
+      ]
     },
-    "invariants": ["Ops não SUCCEEDED ⇒ scientific/economic NOT_EVALUATED e result_state FAILED_OPERATIONAL", "economic WATCH ⇒ scientific SUPPORTED", "WATCH_NO_CAPITAL ⇒ economic WATCH", "capital_permission sempre false", "IDs com prefixo crypto:"]
+    "invariants": [
+      "Ops não SUCCEEDED ⇒ scientific/economic NOT_EVALUATED e result_state FAILED_OPERATIONAL",
+      "economic WATCH ⇒ scientific SUPPORTED",
+      "WATCH_NO_CAPITAL ⇒ economic WATCH",
+      "capital_permission sempre false",
+      "IDs com prefixo crypto:"
+    ]
   },
-  "result_states": ["WATCH_NO_CAPITAL", "NO_EDGE", "INCONCLUSIVE", "REFUTED", "CLOSED_INSUFFICIENT_SAMPLE", "INCONCLUSIVE_DATA_QUALITY", "FAILED_OPERATIONAL"],
-  "non_result_outcomes": ["NOT_READY", "REJECTED", "CONFLICT", "OPS_FAILED_RETRYABLE", "TEMPORAL_INTEGRITY_VIOLATION", "RECONCILIATION_REQUIRED"],
+  "result_states": [
+    "WATCH_NO_CAPITAL",
+    "NO_EDGE",
+    "INCONCLUSIVE",
+    "REFUTED",
+    "CLOSED_INSUFFICIENT_SAMPLE",
+    "INCONCLUSIVE_DATA_QUALITY",
+    "FAILED_OPERATIONAL"
+  ],
+  "non_result_outcomes": [
+    "NOT_READY",
+    "REJECTED",
+    "CONFLICT",
+    "OPS_FAILED_RETRYABLE",
+    "TEMPORAL_INTEGRITY_VIOLATION",
+    "RECONCILIATION_REQUIRED"
+  ],
   "negative_states_note": "NO_EDGE, INCONCLUSIVE, CLOSED_INSUFFICIENT_SAMPLE e INCONCLUSIVE_DATA_QUALITY são resultados; NOT_READY é outcome não terminal (objeto de referência ainda indisponível) e não gera resultado.",
   "id_fields": {
     "request": "request_id (crypto:…, declarado no pedido)",
@@ -159,15 +355,51 @@
     "reread": "cripto-research show <request_id> / Circuit.show: confere hash do blob e bytes do arquivo; divergência = RECONCILIATION_REQUIRED",
     "never_recomputed": true
   },
-  "adapter_paths": ["GarimpoInvestimentos/adapters/"],
-  "adapter_entrypoints": {"allowed_to_create_in_stage_b": ["cripto-research-adapter → GarimpoInvestimentos.adapters.<módulo>:main"], "present_in_stage_a": []},
+  "adapter_paths": [
+    "GarimpoInvestimentos/adapters/"
+  ],
+  "adapter_entrypoints": {
+    "allowed_to_create_in_stage_b": [
+      "cripto-research-adapter → GarimpoInvestimentos.adapters.<módulo>:main"
+    ],
+    "present_in_stage_a": []
+  },
   "adapter_paths_rules_evidence": "tests/conformance/test_import_closure.py (regras 1 e 2); regra 3 = adapter_api",
   "conformance_suite": {
     "path": "tests/conformance/",
     "vectors": "tests/conformance/fixtures.py (datasets sintéticos determinísticos: positive, case_a, case_b, insufficient, future_canary; cutoff 2026-08-31T00:00:00Z; canário FUTURE_CANARY_CRYPTO_001)",
-    "covers": ["E2E", "IDEMPOTENCY", "FUTURE_CANARY", "TEMPORAL_INTEGRITY", "RESTART_RECOVERY", "FAILURE_INJECTION", "CRYPTO_SPLIT_BRAIN_CORRUPTION", "AUTHORITY_SEPARATION", "ADMISSION", "adapter_paths"],
+    "covers": [
+      "E2E",
+      "IDEMPOTENCY",
+      "FUTURE_CANARY",
+      "TEMPORAL_INTEGRITY",
+      "RESTART_RECOVERY",
+      "FAILURE_INJECTION",
+      "CRYPTO_SPLIT_BRAIN_CORRUPTION",
+      "AUTHORITY_SEPARATION",
+      "ADMISSION",
+      "adapter_paths"
+    ],
     "runs_against": "o GarimpoInvestimentos e o cripto-research INSTALADOS (checkout no CI; wheel publicada no cleanroom)",
     "frozen_vectors": "qualification/crypto/FROZEN_VECTORS.json (sha256 dos arquivos da suíte no final_commit)"
   },
-  "capital_permission": false
+  "capital_permission": false,
+  "state_layout": {
+    "root": "--state DIR (operador)",
+    "files": {
+      "admission": "admission.sqlite",
+      "authoritative_results": "results.sqlite",
+      "outcomes": "outcomes/",
+      "journal": "x/journal.sqlite",
+      "experiments": "x/e/<logical_hash[:16]>/",
+      "ops_runtime": "x/o/ (predictor_ops: lock, heartbeat, events, idempotency)"
+    },
+    "windows_max_state_root_chars": 120,
+    "windows_rule": "raiz de estado com mais de 120 caracteres no Windows falha logo (STATE_ROOT_TOO_LONG, exit 1) por causa do MAX_PATH e do layout do predictor_ops"
+  },
+  "fault_injection": {
+    "env": "CRIPTO_RESEARCH_FAULT",
+    "points": "GarimpoInvestimentos/research_faults.py (qualificação; inativo sem a variável)",
+    "exit_code": 86
+  }
 }

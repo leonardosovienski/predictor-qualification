@@ -1,0 +1,620 @@
+........................................................................ [  4%]
+........................................................................ [  8%]
+........................................................................ [ 12%]
+........................................................................ [ 17%]
+........................................................................ [ 21%]
+........................................................................ [ 25%]
+......FF................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 38%]
+...................FFFFF................................F............... [ 43%]
+F................F...................................................... [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 56%]
+........................................................................ [ 60%]
+........................................................................ [ 64%]
+....F..........................................FFFF..................... [ 69%]
+....F................................................................... [ 73%]
+........................................................................ [ 77%]
+........................F............................................... [ 82%]
+........................................................................ [ 86%]
+........................................................................ [ 90%]
+........................................................................ [ 95%]
+........................................................................ [ 99%]
+........                                                                 [100%]
+================================== FAILURES ===================================
+_________ test_sdist_contains_build_sources_without_research_archives _________
+
+    def test_sdist_contains_build_sources_without_research_archives():
+        sdists = sorted((ROOT / "dist").glob("*.tar.gz"))
+>       assert sdists, "rode uv build antes da suíte para validar o pacote fonte"
+E       AssertionError: rode uv build antes da suíte para validar o pacote fonte
+E       assert []
+
+tests\test_distribution_security.py:14: AssertionError
+__________ test_built_wheels_contain_no_runtime_artifacts_or_secrets __________
+
+    def test_built_wheels_contain_no_runtime_artifacts_or_secrets():
+        wheels = sorted((ROOT / "dist").glob("*.whl"))
+>       assert wheels, (
+            f"nenhum .whl em {ROOT / 'dist'} — rode `uv build` antes da suíte "
+            "(este teste inspeciona o wheel construído, não o checkout)"
+        )
+E       AssertionError: nenhum .whl em C:\q\tmp.CTpSxoJKOi\tree\dist — rode `uv build` antes da suíte (este teste inspeciona o wheel construído, não o checkout)
+E       assert []
+
+tests\test_distribution_security.py:33: AssertionError
+__________________ test_snapshot_contem_as_travas_essenciais __________________
+
+    def test_snapshot_contem_as_travas_essenciais():
+>       snap = build_snapshot()
+               ^^^^^^^^^^^^^^^^
+
+tests\test_freeze_h6_definition.py:11: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\freeze_h6_definition.py:67: in build_snapshot
+    trials = json.loads(TRIALS_JSON.read_text(encoding="utf-8"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+__________________ test_hash_e_deterministico_entre_chamadas __________________
+
+    def test_hash_e_deterministico_entre_chamadas():
+>       a = build_snapshot()
+            ^^^^^^^^^^^^^^^^
+
+tests\test_freeze_h6_definition.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\freeze_h6_definition.py:67: in build_snapshot
+    trials = json.loads(TRIALS_JSON.read_text(encoding="utf-8"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+_________________ test_hash_muda_se_a_entrada_do_trial_mudar __________________
+
+tmp_path = WindowsPath('C:/q/tmp.CTpSxoJKOi/cr/operacao/temporarios/pytest-of-runneradmin/pytest-0/test_hash_muda_se_a_entrada_do0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015044DBDFD0>
+
+    def test_hash_muda_se_a_entrada_do_trial_mudar(tmp_path, monkeypatch):
+        import scripts.freeze_h6_definition as mod
+    
+>       original = json.loads(mod.TRIALS_JSON.read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_freeze_h6_definition.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+______________ test_check_falha_quando_snapshot_gravado_diverge _______________
+
+tmp_path = WindowsPath('C:/q/tmp.CTpSxoJKOi/cr/operacao/temporarios/pytest-of-runneradmin/pytest-0/test_check_falha_quando_snapsh0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001504B70B850>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001504501AA50>
+
+    def test_check_falha_quando_snapshot_gravado_diverge(tmp_path, monkeypatch, capsys):
+        import scripts.freeze_h6_definition as mod
+    
+        out_path = tmp_path / "h6_definition_frozen.json"
+        monkeypatch.setattr(mod, "OUT_PATH", out_path)
+    
+>       stale = mod.build_snapshot()
+                ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_freeze_h6_definition.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\freeze_h6_definition.py:67: in build_snapshot
+    trials = json.loads(TRIALS_JSON.read_text(encoding="utf-8"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+______________ test_check_passa_quando_snapshot_gravado_confere _______________
+
+tmp_path = WindowsPath('C:/q/tmp.CTpSxoJKOi/cr/operacao/temporarios/pytest-of-runneradmin/pytest-0/test_check_passa_quando_snapsh0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001504B70BB60>
+
+    def test_check_passa_quando_snapshot_gravado_confere(tmp_path, monkeypatch):
+        import scripts.freeze_h6_definition as mod
+    
+        out_path = tmp_path / "h6_definition_frozen.json"
+        monkeypatch.setattr(mod, "OUT_PATH", out_path)
+    
+>       mod.main([])  # gera
+        ^^^^^^^^^^^^
+
+tests\test_freeze_h6_definition.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\freeze_h6_definition.py:139: in main
+    fresh = build_snapshot()
+            ^^^^^^^^^^^^^^^^
+scripts\freeze_h6_definition.py:67: in build_snapshot
+    trials = json.loads(TRIALS_JSON.read_text(encoding="utf-8"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+_____ test_h6_spearman_verdict_continua_confere_com_o_snapshot_congelado ______
+
+    def test_h6_spearman_verdict_continua_confere_com_o_snapshot_congelado():
+        """A barreira que de fato importa: rodar o proprio mecanismo de governanca
+        e confirmar que o codigo de h6_spearman_verdict (e close_h6_inverted_
+        signal) nao mudou um byte. Roda o script real em vez de reimplementar a
+        logica de hash aqui — o que importa e' o script continuar dizendo OK."""
+        from scripts.freeze_h6_definition import main as freeze_main
+    
+>       assert freeze_main(["--check"]) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_h6_power_context.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\freeze_h6_definition.py:139: in main
+    fresh = build_snapshot()
+            ^^^^^^^^^^^^^^^^
+scripts\freeze_h6_definition.py:67: in build_snapshot
+    trials = json.loads(TRIALS_JSON.read_text(encoding="utf-8"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+____________ test_modulo_nao_importa_nem_referencia_register_trial ____________
+
+    def test_modulo_nao_importa_nem_referencia_register_trial():
+        """Estrutural de propósito: um teste comportamental só pegaria o caminho que
+        ele exercita. Registrar trial sozinho tornaria o denominador do DSR algo que
+        uma máquina infla à vontade."""
+>       fonte = (ROOT / "GarimpoInvestimentos" / "analyzers" / "hypothesis_loop.py").read_text(
+            encoding="utf-8"
+        )
+
+tests\test_hypothesis_loop.py:49: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/analyzers/hypothesis_loop.py')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\analyzers\\hypothesis_loop.py'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+_________________ test_run_round_nao_toca_o_trials_json_real __________________
+
+tmp_path = WindowsPath('C:/q/tmp.CTpSxoJKOi/cr/operacao/temporarios/pytest-of-runneradmin/pytest-0/test_run_round_nao_toca_o_tria0')
+
+    def test_run_round_nao_toca_o_trials_json_real(tmp_path):
+        """Prova comportamental, complementar à estrutural: roda o laço inteiro e
+        confere que o registro oficial ficou byte-idêntico."""
+        trials = ROOT / "GarimpoInvestimentos" / "trials.json"
+>       antes = trials.read_bytes()
+                ^^^^^^^^^^^^^^^^^^^
+
+tests\test_hypothesis_loop.py:225: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:625: in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'rb', buffering = -1, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+________ test_artefato_nao_e_capturado_por_nenhuma_regra_do_gitignore _________
+
+    def test_artefato_nao_e_capturado_por_nenhuma_regra_do_gitignore():
+        """Todo o ponto do artefato é ser VERSIONADO — se o .gitignore o capturar,
+        a ponte produção->git volta a estar quebrada, e em silêncio.
+    
+        A versão anterior deste teste comparava H6_STATUS_PATH.parents com
+        OUTPUT_DIR e era uma TAUTOLOGIA: OUTPUT_DIR é o diretório de dados do
+        usuário (platformdirs, ex. ~/.local/share/cripto-predictor/output), nunca
+        um ancestral do pacote — a asserção não podia falhar e portanto não
+        guardava nada. Esta versão confronta as regras reais do .gitignore.
+    
+        Aproximação consciente: aplica fnmatch aos padrões, sem implementar
+        negação (`!`) nem a semântica completa do Git. Cobre o caso realista —
+        alguém adiciona `*.json`, `h6_status.json` ou `GarimpoInvestimentos/h6_*`."""
+        import fnmatch
+    
+>       alvo = quality_snapshot.H6_STATUS_PATH.relative_to(ROOT).as_posix()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_quality_snapshot.py:446: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/venv/Lib/site-packages/GarimpoInvestimentos/h6_status.json')
+other = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree'), walk_up = False
+_deprecated = (), step = 0
+
+    def relative_to(self, other, /, *_deprecated, walk_up=False):
+        """Return the relative path to another path identified by the passed
+        arguments.  If the operation is not possible (because this is not
+        related to the other path), raise ValueError.
+    
+        The *walk_up* parameter controls whether `..` may be used to resolve
+        the path.
+        """
+        if _deprecated:
+            msg = ("support for supplying more than one positional argument "
+                   "to pathlib.PurePath.relative_to() is deprecated and "
+                   "scheduled for removal in Python 3.14")
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            other = self.with_segments(other, *_deprecated)
+        elif not isinstance(other, PurePath):
+            other = self.with_segments(other)
+        for step, path in enumerate(chain([other], other.parents)):
+            if path == self or path in self.parents:
+                break
+            elif not walk_up:
+>               raise ValueError(f"{str(self)!r} is not in the subpath of {str(other)!r}")
+E               ValueError: 'C:\\q\\tmp.CTpSxoJKOi\\venv\\Lib\\site-packages\\GarimpoInvestimentos\\h6_status.json' is not in the subpath of 'C:\\q\\tmp.CTpSxoJKOi\\tree'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:385: ValueError
+____________ TestRegistroCientifico.test_trials_json_e_utf8_valido ____________
+
+self = <test_registry_e_scripts_encoding.TestRegistroCientifico object at 0x00000150444AA350>
+
+    def test_trials_json_e_utf8_valido(self):
+>       TRIALS.read_bytes().decode("utf-8")
+        ^^^^^^^^^^^^^^^^^^^
+
+tests\test_registry_e_scripts_encoding.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:625: in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'rb', buffering = -1, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+____________ TestRegistroCientifico.test_trials_json_sem_mojibake _____________
+
+self = <test_registry_e_scripts_encoding.TestRegistroCientifico object at 0x00000150444AAD50>
+
+    def test_trials_json_sem_mojibake(self):
+        """O registro é o artefato científico do projeto — texto corrompido nele
+        é perda de informação, não cosmética."""
+>       texto = TRIALS.read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_registry_e_scripts_encoding.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+________ TestRegistroCientifico.test_trials_json_sem_nomes_duplicados _________
+
+self = <test_registry_e_scripts_encoding.TestRegistroCientifico object at 0x000001504465B5C0>
+
+    def test_trials_json_sem_nomes_duplicados(self):
+        """Reconciliar registros divergentes à mão pode duplicar entradas; o
+        nome é a identidade da tentativa e tem que ser único."""
+>       nomes = [t["name"] for t in json.loads(TRIALS.read_text(encoding="utf-8"))]
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_registry_e_scripts_encoding.py:94: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+_______ TestRegistroCientifico.test_grade_de_thresholds_esta_registrada _______
+
+self = <test_registry_e_scripts_encoding.TestRegistroCientifico object at 0x000001504465B6F0>
+
+    def test_grade_de_thresholds_esta_registrada(self):
+        """As 16 tentativas da varredura de 2026-09-04 rodaram em produção e
+        ficaram só na máquina local até 2026-09-05 — o registro público
+        subestimava a multiplicidade, e é dela que o Deflated Sharpe desconta.
+        Este teste impede que elas sumam de novo numa resolução de conflito."""
+>       nomes = {t["name"] for t in json.loads(TRIALS.read_text(encoding="utf-8"))}
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_registry_e_scripts_encoding.py:103: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/trials.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+___________ test_python_payload_is_present_and_not_runtime_ignored ____________
+
+    def test_python_payload_is_present_and_not_runtime_ignored():
+        payload = list((ROOT / "GarimpoInvestimentos").rglob("*.py"))
+>       assert payload
+E       assert []
+
+tests\test_repo_hygiene.py:8: AssertionError
+___________ test_analise_persiste_previsao_ANTES_de_fechar_a_store ____________
+
+    def test_analise_persiste_previsao_ANTES_de_fechar_a_store():
+        """Regressão da conferência de 2026-07-02: um store.close() herdado do fluxo
+        pré-passo-4 rodava antes do append_history — a previsão pontuava, exportava
+        e SUMIA em silêncio (sqlite 'Cannot operate on a closed database' engolido).
+        Asserção estrutural sobre o fonte de main.py (importá-lo exige chaves):
+        o append tem que vir antes do close."""
+        from pathlib import Path
+    
+>       src = (Path(__file__).parent.parent / "GarimpoInvestimentos" / "main.py").read_text(
+            encoding="utf-8"
+        )
+
+tests\test_store_history.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/q/tmp.CTpSxoJKOi/tree/GarimpoInvestimentos/main.py')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\main.py'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\pathlib\_local.py:537: FileNotFoundError
+--- generated xml file: D:\a\_temp\out\windows-latest\full_suite.junit.xml ----
+=========================== short test summary info ===========================
+FAILED tests/test_distribution_security.py::test_sdist_contains_build_sources_without_research_archives - AssertionError: rode uv build antes da suíte para validar o pacote fonte
+assert []
+FAILED tests/test_distribution_security.py::test_built_wheels_contain_no_runtime_artifacts_or_secrets - AssertionError: nenhum .whl em C:\q\tmp.CTpSxoJKOi\tree\dist — rode `uv build` antes da suíte (este teste inspeciona o wheel construído, não o checkout)
+assert []
+FAILED tests/test_freeze_h6_definition.py::test_snapshot_contem_as_travas_essenciais - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_freeze_h6_definition.py::test_hash_e_deterministico_entre_chamadas - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_freeze_h6_definition.py::test_hash_muda_se_a_entrada_do_trial_mudar - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_freeze_h6_definition.py::test_check_falha_quando_snapshot_gravado_diverge - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_freeze_h6_definition.py::test_check_passa_quando_snapshot_gravado_confere - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_h6_power_context.py::test_h6_spearman_verdict_continua_confere_com_o_snapshot_congelado - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_hypothesis_loop.py::test_modulo_nao_importa_nem_referencia_register_trial - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\analyzers\\hypothesis_loop.py'
+FAILED tests/test_hypothesis_loop.py::test_run_round_nao_toca_o_trials_json_real - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_quality_snapshot.py::test_artefato_nao_e_capturado_por_nenhuma_regra_do_gitignore - ValueError: 'C:\\q\\tmp.CTpSxoJKOi\\venv\\Lib\\site-packages\\GarimpoInvestimentos\\h6_status.json' is not in the subpath of 'C:\\q\\tmp.CTpSxoJKOi\\tree'
+FAILED tests/test_registry_e_scripts_encoding.py::TestRegistroCientifico::test_trials_json_e_utf8_valido - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_registry_e_scripts_encoding.py::TestRegistroCientifico::test_trials_json_sem_mojibake - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_registry_e_scripts_encoding.py::TestRegistroCientifico::test_trials_json_sem_nomes_duplicados - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_registry_e_scripts_encoding.py::TestRegistroCientifico::test_grade_de_thresholds_esta_registrada - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\trials.json'
+FAILED tests/test_repo_hygiene.py::test_python_payload_is_present_and_not_runtime_ignored - assert []
+FAILED tests/test_store_history.py::test_analise_persiste_previsao_ANTES_de_fechar_a_store - FileNotFoundError: [Errno 2] No such file or directory: 'C:\\q\\tmp.CTpSxoJKOi\\tree\\GarimpoInvestimentos\\main.py'
+17 failed, 1647 passed in 263.13s (0:04:23)
+[exit 1]

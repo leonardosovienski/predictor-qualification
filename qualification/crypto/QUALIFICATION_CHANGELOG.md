@@ -22,6 +22,13 @@ O que a missão mudou, onde, por quê, com commit e PR. `core-predictor` e `pred
 | `6f73051` | layout curto no disco (`x/`, `x/e/<16hex>`, `x/o`); raiz de estado > 120 caracteres no Windows falha logo | **CR-F013** (MAX_PATH no Windows) | `test_windows_state_root_longer_than_max_path_budget_fails_fast`, suíte Windows |
 | `6f73051` | versão `1.2.0rc1`; `__version__` alinhado à distribuição | CR-F012; `publish-candidates` (versão nova, nunca sobrescrever) | `tests/test_package_version_contract.py` |
 | `6f73051` | conformidade: subprocessos sem variáveis do pytest-cov | CR-F014 | job `quality` do CI |
+| `2bafad9` | teste de corrupção usa diretório temporário irmão (limite de raiz no Windows) | a guarda da CR-F013 recusou o próprio teste aninhado | suíte Windows 1663 passed |
+| `2bc63eb` | `execute()`: o resultado autoritativo é devolvido **antes** de revalidar a policy | **CR-F015** (duplicata depois de mudança de policy voltava REJECTED); reproduzido em 2bafad9, mesma prova passa depois | `test_duplicate_after_policy_change_returns_the_stored_result` |
+
+**final_commit:** `2bc63ebdc47f93661a4f37cb988b06939de060fe`. Release pré-release
+[`v1.2.0rc1`](https://github.com/leonardosovienski/cripto-predictor/releases/tag/v1.2.0rc1),
+wheel `1f76b8c4dbcb2ca145c053a7dc84d98d30c49859d95c1e1a78ad4d5916b3df49` (build reprodutível).
+PR: [cripto-predictor#126](https://github.com/leonardosovienski/cripto-predictor/pull/126).
 
 ## predictor-qualification (evidência)
 
@@ -35,3 +42,8 @@ O que a missão mudou, onde, por quê, com commit e PR. `core-predictor` e `pred
 - `RAW_LOGS/ops-failure/run35831189005/*-wheel`: `ensurepip -q` inválido, a wheel não instalou.
 - `RAW_LOGS/contract-wiring/windows_pytest_9844976.log`: árvore do clone alterada por mim
   (versão/`__init__`) **durante** a execução. Só diagnóstico; as 25 falhas revelaram a CR-F013.
+- `RAW_LOGS/cleanroom-final/run35883218077`: árvore de testes sem `scripts/` e raiz temporária
+  longa no windows-latest (harness); refeito no run 35885023422.
+- O commit `b3acbc2` do repo de evidência gravou os logs de `RAW_LOGS/windows-smoke/local/`
+  enquanto o runtime Windows ainda escrevia neles. O commit seguinte traz a versão final; nada
+  foi editado à mão.

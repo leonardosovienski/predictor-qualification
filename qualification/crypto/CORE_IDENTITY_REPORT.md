@@ -22,6 +22,20 @@ venv do clone, que é diagnóstico de checkout: o `cripto-predictor` está em mo
 - `predictor-research-protocol` só serve ao envelope V1 (CAIN). Sai das dependências nesta
   missão (§8 do prompt; D-13).
 
-## 2. Final
+## 2. Final (runtime suportado com as `final_wheels`)
 
-Preenchido na fase `cleanroom-final`, com as `final_wheels` instaladas no runtime suportado.
+Fonte: `core_identity.json` de cada runtime (`scripts/core_identity.py`, executado de fora de
+qualquer checkout); `RAW_LOGS/final/uv_lock_check_2bc63eb.log`.
+
+| Pacote | pyproject (`2bc63eb`) | tool.uv.sources | uv.lock sha256 | Instalado (Linux, windows-latest, Windows local) |
+|---|---|---|---|---|
+| predictor-core | `>=3.2.1,<4` | release `v3.2.1` | `10ef42f3…b4e3` | 3.2.1, não editable, `direct_url` = URL da release, módulo em site-packages |
+| predictor-ops | `>=4.2.0,<5` | release `v4.2.1` | `da4fa540…6f0e` | 4.2.1, idem |
+| cripto-predictor | — (o próprio projeto) | — | — | 1.2.0rc1, não editable, a wheel da release com sha256 conferido, módulo em site-packages |
+| predictor-research-protocol / cain-research | ausentes | ausentes | ausentes | não instalados (`test_shared_wheel_download_hashes`, `verify_installed_wheels.py`) |
+
+- `uv lock --check` no `final_commit`: exit 0. O CI instala com `uv sync --locked`, e o runtime com o lock exportado e `--require-hashes`.
+- Os bytes das wheels do Core e do Ops instaladas são provados pelo `--require-hashes` (sha256 do lock = asset da release; `STACK_BASELINE.json` → `stack_wheel_verification`: match). A wheel do Cripto tem o sha256 conferido com `sha256sum -c` antes do `pip install`.
+- Nenhum pacote do stack veio de índice público, `vendor/` ou checkout de outro repo.
+
+`LOCK_INTEGRITY`: **PASS**. `CORE_IDENTITY`: **PASS**.
