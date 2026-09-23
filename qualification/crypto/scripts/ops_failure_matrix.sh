@@ -30,18 +30,18 @@ git -C "$WORK/ops" checkout -q "$OPS_COMMIT" >> "$OUT/env.log" 2>&1
 git -C "$WORK/ops" rev-parse HEAD >> "$OUT/env.log"
 
 if [ "$MODE" = "source" ]; then
-  ( cd "$WORK/ops" && uv sync --locked --python 3.13 --all-extras ) >> "$OUT/env.log" 2>&1
+  ( cd "$WORK/ops" && uv sync --locked --python 3.13 --all-extras ) >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL uv sync" >> "$OUT/env.log"; exit 3; }
   TREE="$WORK/ops"
   if [ -n "$EXE" ]; then PY="$TREE/.venv/Scripts/python.exe"; else PY="$TREE/.venv/bin/python"; fi
 else
   ( cd "$WORK/ops" && uv export --locked --all-extras --no-emit-project --format requirements-txt -o "$WORK/req.txt" ) >> "$OUT/env.log" 2>&1
   uv venv "$WORK/venv" --python 3.13 >> "$OUT/env.log" 2>&1
   if [ -n "$EXE" ]; then PY="$WORK/venv/Scripts/python.exe"; else PY="$WORK/venv/bin/python"; fi
-  "$PY" -m ensurepip -q >> "$OUT/env.log" 2>&1
-  "$PY" -m pip install -q --require-hashes -r "$WORK/req.txt" >> "$OUT/env.log" 2>&1
+  "$PY" -m ensurepip >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL ensurepip" >> "$OUT/env.log"; exit 3; }
+  "$PY" -m pip install -q --require-hashes -r "$WORK/req.txt" >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL deps" >> "$OUT/env.log"; exit 3; }
   curl -sSfL -o "$WORK/predictor_ops-4.2.1-py3-none-any.whl" "$WHEEL_URL"
   ( cd "$WORK" && echo "$WHEEL_SHA  predictor_ops-4.2.1-py3-none-any.whl" | sha256sum -c - ) >> "$OUT/env.log" 2>&1 || { echo "WHEEL SHA MISMATCH" >> "$OUT/env.log"; exit 3; }
-  "$PY" -m pip install -q --no-deps "$WORK/predictor_ops-4.2.1-py3-none-any.whl" >> "$OUT/env.log" 2>&1
+  "$PY" -m pip install -q --no-deps "$WORK/predictor_ops-4.2.1-py3-none-any.whl" >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL wheel" >> "$OUT/env.log"; exit 3; }
   # árvore de teste sem src/: os testes só podem importar a wheel instalada
   mkdir -p "$WORK/tree"
   cp -r "$WORK/ops/tests_v2" "$WORK/ops/pyproject.toml" "$WORK/tree/"
@@ -49,7 +49,7 @@ else
   [ -d "$WORK/ops/windows_integration" ] && cp -r "$WORK/ops/windows_integration" "$WORK/tree/"
   TREE="$WORK/tree"
 fi
-( cd "$TREE" && "$PY" -c "import predictor_ops,sys;print('predictor_ops', predictor_ops.__file__, sys.version)" ) >> "$OUT/env.log" 2>&1
+( cd "$TREE" && "$PY" -c "import predictor_ops,sys;print('predictor_ops', predictor_ops.__file__, sys.version)" ) >> "$OUT/env.log" 2>&1 || { echo "SETUP FAIL import" >> "$OUT/env.log"; exit 3; }
 ( cd "$TREE" && "$PY" -m pip freeze 2>/dev/null || true ) >> "$OUT/env.log"
 
 run_one() {  # label, index, test ids...
