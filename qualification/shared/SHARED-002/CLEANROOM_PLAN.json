@@ -1,0 +1,336 @@
+{
+  "plan_id": "SHARED-002-CLEANROOM-BASELINE-V1",
+  "note": "Congelado antes da primeira execução. Diagnóstico (C5 cleanroom-baseline): registra o que quebra, não conserta. Mudança neste arquivo = nova execução inteira.",
+  "environment": {
+    "runner": "ubuntu-24.04",
+    "uv_version": "0.12.18",
+    "uv_asset": "uv-x86_64-unknown-linux-gnu.tar.gz",
+    "uv_sha256": "89eadd7c76fc063887959510d5ba0ab1264dfd5f1143b925ddb73021a40acf16",
+    "python": "3.13.15"
+  },
+  "limits": {
+    "entrypoint_help_timeout_s": 60,
+    "pytest_timeout_s": 3000
+  },
+  "variants": {
+    "published": "wheel(s) próprias = assets da release publicada do repo (runtime suportado, C3.1/C5)",
+    "head_build": "DIAGNÓSTICO: wheel(s) próprias construídas do commit do baseline (uv build); não é cleanroom e nunca vale como PROVEN"
+  },
+  "repos": [
+    {
+      "repo": "cain",
+      "sha": "8b8915aa7c9053b8f078a9fba20b7029180d114c",
+      "export_args": [
+        "--all-extras",
+        "--no-dev"
+      ],
+      "top_level_modules": [
+        "cain"
+      ],
+      "own_dists": [
+        "cain-research"
+      ],
+      "strip_paths": [
+        "src/cain"
+      ],
+      "published_wheels": [
+        {
+          "name": "cain-research",
+          "version": "0.4.5",
+          "url": "https://github.com/leonardosovienski/cain/releases/download/v0.4.5/cain_research-0.4.5-py3-none-any.whl",
+          "sha256": "89f23665ac6d86fc08135aae6ad4dcef14bde326cffcf9c165e5fe27878fcbc9"
+        }
+      ],
+      "head_build": [
+        {
+          "dir": "."
+        }
+      ],
+      "pre_test": [],
+      "pytest_args": [
+        "tests"
+      ]
+    },
+    {
+      "repo": "ecosystem-predictor",
+      "sha": "0a4f87e53d3d131e449096f82ba7b0c672b91d85",
+      "export_args": [
+        "--all-extras",
+        "--no-dev"
+      ],
+      "top_level_modules": [
+        "ecosystem",
+        "research_protocol",
+        "research_snapshot",
+        "research_bundle"
+      ],
+      "own_dists": [
+        "ecosystem-predictor",
+        "predictor-research-protocol",
+        "predictor-research-snapshot",
+        "predictor-research-bundle"
+      ],
+      "strip_paths": [
+        "src/ecosystem",
+        "packages/research-protocol/src",
+        "packages/research-snapshot/src",
+        "packages/research-bundle/src"
+      ],
+      "published_wheels": [
+        {
+          "name": "ecosystem-predictor",
+          "version": "0.2.0",
+          "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/v0.2.0/ecosystem_predictor-0.2.0-py3-none-any.whl",
+          "sha256": "c0925a6039cb31a0446cbb2b15e4d505b6a7a8abb76ed7c24df2fb4073cafb62"
+        },
+        {
+          "name": "predictor-research-protocol",
+          "version": "1.0.3rc1",
+          "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-protocol-v1.0.3rc1/predictor_research_protocol-1.0.3rc1-py3-none-any.whl",
+          "sha256": "312ab9742271de9f0efe6912f5828122d546751e559f493bede01c8fc6a24032"
+        },
+        {
+          "name": "predictor-research-snapshot",
+          "version": "1.0.2rc1",
+          "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-snapshot-v1.0.2rc1/predictor_research_snapshot-1.0.2rc1-py3-none-any.whl",
+          "sha256": "3bd4c0414ac2d457923601e3f919f6353b5cb9370a0f420a7a3ffc013a0aafad"
+        },
+        {
+          "name": "predictor-research-bundle",
+          "version": "1.0.1rc1",
+          "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-bundle-v1.0.1rc1/predictor_research_bundle-1.0.1rc1-py3-none-any.whl",
+          "sha256": "65cf40c59c4f65d013a1134051fb94aa7c75b44f4ea6c71a54e25519143d0ea9"
+        }
+      ],
+      "head_build": [
+        {
+          "dir": "."
+        },
+        {
+          "dir": "packages/research-protocol"
+        },
+        {
+          "dir": "packages/research-snapshot"
+        },
+        {
+          "dir": "packages/research-bundle"
+        }
+      ],
+      "pre_test": [],
+      "pytest_args": [
+        "tests",
+        "packages/research-protocol/tests",
+        "packages/research-snapshot/tests",
+        "packages/research-bundle/tests"
+      ]
+    },
+    {
+      "repo": "core-predictor",
+      "sha": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d",
+      "export_args": [
+        "--all-extras",
+        "--no-dev"
+      ],
+      "top_level_modules": [
+        "predictor_core"
+      ],
+      "own_dists": [
+        "predictor-core"
+      ],
+      "strip_paths": [
+        "src/predictor_core"
+      ],
+      "published_wheels": [
+        {
+          "name": "predictor-core",
+          "version": "3.2.1",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+          "sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"
+        }
+      ],
+      "head_build": [
+        {
+          "dir": "."
+        }
+      ],
+      "pre_test": [],
+      "pytest_args": [
+        "tests"
+      ]
+    },
+    {
+      "repo": "predictor-ops",
+      "sha": "7bd99ebaea09c74a2ac4243d8991a81c44625a6c",
+      "export_args": [
+        "--all-extras",
+        "--no-dev"
+      ],
+      "top_level_modules": [
+        "predictor_ops"
+      ],
+      "own_dists": [
+        "predictor-ops"
+      ],
+      "strip_paths": [
+        "src/predictor_ops"
+      ],
+      "published_wheels": [
+        {
+          "name": "predictor-ops",
+          "version": "4.2.1",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.1/predictor_ops-4.2.1-py3-none-any.whl",
+          "sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e"
+        }
+      ],
+      "head_build": [
+        {
+          "dir": "."
+        }
+      ],
+      "pre_test": [],
+      "pytest_args": [
+        "tests_v2",
+        "posix_integration"
+      ]
+    },
+    {
+      "repo": "brasileirao-predictor",
+      "sha": "e14f3394c1908fae6d2f25754e6ab3a6792dbf1e",
+      "export_args": [
+        "--all-extras",
+        "--no-dev"
+      ],
+      "top_level_modules": [
+        "brasileirao_predictor",
+        "brasileirao_scripts"
+      ],
+      "own_dists": [
+        "brasileirao-predictor"
+      ],
+      "strip_paths": [
+        "brasileirao_predictor",
+        "brasileirao_scripts"
+      ],
+      "published_wheels": [
+        {
+          "name": "brasileirao-predictor",
+          "version": "0.2.0",
+          "url": "https://github.com/leonardosovienski/brasileirao-predictor/releases/download/v0.2.0/brasileirao_predictor-0.2.0-py3-none-any.whl",
+          "sha256": "2a862b4cb955e7e5fc32162248bb306ddcc5519d5fb715c520665082d98e0e4d"
+        }
+      ],
+      "head_build": [
+        {
+          "dir": "."
+        }
+      ],
+      "pre_test": [
+        [
+          "python",
+          "-c",
+          "from brasileirao_predictor.db import connect; c = connect('data/matches.db'); c.commit(); c.close()"
+        ]
+      ],
+      "pytest_args": [
+        "tests"
+      ],
+      "pre_test_note": "Equivalente a brasileirao_scripts/seed_test_fixtures.py (banco vazio com o DDL de brasileirao_predictor.db.connect), usando a wheel instalada; o script instalado gravaria em site-packages/data."
+    },
+    {
+      "repo": "cripto-predictor",
+      "sha": "5fd4e1b06c79231fd3d9485a1483f3b65e854bea",
+      "export_args": [
+        "--all-extras",
+        "--no-dev"
+      ],
+      "top_level_modules": [
+        "GarimpoInvestimentos",
+        "crypto_research_export"
+      ],
+      "own_dists": [
+        "cripto-predictor",
+        "crypto-research-export"
+      ],
+      "strip_paths": [
+        "GarimpoInvestimentos",
+        "packages/research-export/src"
+      ],
+      "published_wheels": [
+        {
+          "name": "cripto-predictor",
+          "version": "1.1.0",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.1.0/cripto_predictor-1.1.0-py3-none-any.whl",
+          "sha256": "41e48e0dd74cb28d5367257495a3fd51048a5c66e594d1d50cf5e854c74a82fe"
+        },
+        {
+          "name": "crypto-research-export",
+          "version": "1.0.1",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.1.0/crypto_research_export-1.0.1-py3-none-any.whl",
+          "sha256": "f5b9f254e1058895e4b25fe978d3f82b5248e52a008fa26bc814adde2c1cd86b"
+        }
+      ],
+      "head_build": [
+        {
+          "dir": "."
+        },
+        {
+          "dir": "packages/research-export"
+        }
+      ],
+      "pre_test": [],
+      "pytest_args": [
+        "tests",
+        "packages/research-export/tests"
+      ]
+    },
+    {
+      "repo": "stocks-predictor",
+      "sha": "4e98a67b68c55888a4788663f3d5bf0899966cb4",
+      "export_args": [
+        "--all-extras",
+        "--no-dev"
+      ],
+      "top_level_modules": [
+        "stocks_predictor"
+      ],
+      "own_dists": [
+        "stocks-predictor"
+      ],
+      "strip_paths": [
+        "stocks_predictor"
+      ],
+      "published_wheels": [
+        {
+          "name": "stocks-predictor",
+          "version": "0.2.0",
+          "url": "https://github.com/leonardosovienski/stocks-predictor/releases/download/v0.2.0/stocks_predictor-0.2.0-py3-none-any.whl",
+          "sha256": "a839aeca095b27ce65ab7a29333713223e89358f1bf5878ca8f1dcaaab5440ae"
+        }
+      ],
+      "head_build": [
+        {
+          "dir": "."
+        }
+      ],
+      "pre_test": [],
+      "pytest_args": [
+        "tests"
+      ]
+    }
+  ],
+  "test_tree": "clone com sparse-checkout que exclui strip_paths (git status limpo), para a suíte importar só a wheel instalada; guard do pytest registra a origem de todo módulo do stack",
+  "stack_modules": [
+    "cain",
+    "ecosystem",
+    "research_protocol",
+    "research_snapshot",
+    "research_bundle",
+    "predictor_core",
+    "predictor_ops",
+    "brasileirao_predictor",
+    "brasileirao_scripts",
+    "GarimpoInvestimentos",
+    "crypto_research_export",
+    "stocks_predictor"
+  ]
+}
