@@ -1,4 +1,7 @@
-# COMMON_QUALIFICATION_CORE — NÚCLEO COMUM DE QUALIFICAÇÃO (v2.1 — enxuto)
+# COMMON_QUALIFICATION_CORE — NÚCLEO COMUM DE QUALIFICAÇÃO (v2.2 — enxuto)
+
+**v2.2 (2026-09-24, D-20):** C0.2 confere o schema pelo sha256 registrado em
+`MANIFEST.sha256` (o texto fixava o schema da v2.0). Nenhum outro requisito mudou.
 
 **v2.1 (2026-09-24, D-19):** C11 e C7.1 admitem o Linux do dono (`owner_linux`) como
 ambiente primário **só** para dado real privado, sem direito de redistribuição. Nenhum
@@ -38,8 +41,8 @@ Etapa B — integração (uma missão)
    igual ao do prompt da missão (64 caracteres). Diferente = aborta. Se a única
    diferença for CRLF, corrigir o checkout (`.gitattributes` com
    `qualification/** text eol=lf`) e recalcular.
-2. **Schema:** sha256 de `qualification/ATTESTATION_SCHEMA.json` =
-   `3594e35044626264a18270ee4e079e653e3b940f1e7a72d36f2b70972f5bf970`.
+2. **Schema:** sha256 de `qualification/ATTESTATION_SCHEMA.json` = o registrado
+   para ele em `MANIFEST.sha256` no `main` (`sha256sum -c MANIFEST.sha256` passa).
 3. **Arquivos no `main` do repositório de evidência:**
    `qualification/DECISIONS.json` e `qualification/HYGIENE.json`. Para as
    missões das Etapas A e B, todos os itens de `HYGIENE.json` em `DONE` e o
