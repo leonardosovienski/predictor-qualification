@@ -70,6 +70,18 @@
         "qualification/stocks/QUALIFICATION_CHANGELOG.md"
       ],
       "fix_commit": "9a6c09ae92991c8490be624f5693865bcbaeca26"
+    },
+    {
+      "id": "ST-F006",
+      "severity": "P2",
+      "status": "FIXED",
+      "phase": "contract-sign-off",
+      "title": "CI do main vermelho depois do merge: selo R8 invalidado por #93/#94",
+      "description": "Os dependabot #93 (actions/checkout v7 no cain-export.yml) e #94 (hatchling 1.32.0 -> 1.32.3 em pyproject.toml e tools/build-requirements.txt) foram mesclados antes do #95. O selo R8 (docs/engineering/current-operational-evidence.json) amarra o hash de pyproject.toml e tools/build-requirements.txt; o CI do main no merge 2a18513 falhou em tools/verify_operational_evidence.py ('current operational code changed: pyproject.toml'). Sem efeito em resultado: o pacote .py não mudou. Corrigido em 61fc017 (ressela; recibos real/capacidade continuam válidos) e C14: rc2, cleanroom-final e evidência refeitos sobre o main.",
+      "evidence": [
+        "qualification/stocks/RAW_LOGS/c14-rc2/ci_main_2a18513_failure.json"
+      ],
+      "fix_commit": "61fc017256ffea815ae96bbe02b847dccdb395cc"
     }
   ]
 }
