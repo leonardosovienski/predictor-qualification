@@ -3,8 +3,8 @@
 ```text
 stage  = B
 branch = integration
-núcleo = qualification/COMMON_QUALIFICATION_CORE.md v2.0
-sha256 = 50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1
+núcleo = qualification/COMMON_QUALIFICATION_CORE.md v2.1
+sha256 = a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b
 ```
 
 Objetivo: o CAIN propõe pesquisas aos três domínios pelo envelope V2, recebe
