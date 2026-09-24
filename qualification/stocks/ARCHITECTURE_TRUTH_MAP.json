@@ -1,0 +1,118 @@
+{
+  "schema": "stocks/ARCHITECTURE_TRUTH_MAP/1",
+  "phase": "truth-map",
+  "repo": "stocks-predictor",
+  "commit": "4e98a67b68c55888a4788663f3d5bf0899966cb4",
+  "maturity_scale": "C2: NOT_PRESENT < DECLARED < IMPLEMENTED < INSTANTIATED < REACHABLE < EXERCISED < PROVEN (REACHABLE = alcançável de [project.scripts] ou serviço)",
+  "method": {
+    "static": "qualification/stocks/scripts/truth_map.py imports (AST de todo stocks_predictor/ no commit; closure a partir dos entry-points e de `python -m stocks_predictor`) → RAW_LOGS/truth-map/import_graph_baseline.json",
+    "suite": "RAW_LOGS/baseline/run35942985460 (Linux 945 passed; windows-latest interrompido na coleta, ST-F001)",
+    "runtime": "não há wheel publicada do HEAD (v0.2.0 é de 56c1a7b; 5 arquivos do pacote mudaram) e não há [project.scripts]: nenhum componente é PROVEN no baseline"
+  },
+  "entrypoints": {
+    "project_scripts": {},
+    "entry_points": {
+      "predictor.plugins": {
+        "stocks": "stocks_predictor.ecosystem_plugin:PLUGIN"
+      }
+    },
+    "module_main": "python -m stocks_predictor → stocks_predictor.operations:main (doctor, init, inspect, ingest, snapshot, restore, profile, evidence, simulate-selected, external collect/verify/status)",
+    "repo_script_not_installed": "main.py (ingest, adjust, universe, backtest, backtest-h*, attest-power, paper, ops...) — roda só do checkout"
+  },
+  "components": [
+    {
+      "component": "construção do universo",
+      "code": "stocks_predictor/universe.py (rank_universe, select_universe, legacy_select_universe, materialize_snapshot)",
+      "maturity": "EXERCISED",
+      "runtime": "alcançável de python -m stocks_predictor (closure) mas sem [project.scripts]; nos backtests julgados usa legacy_select_universe (estado de quarentena mais recente, não PIT estrito — docstring)",
+      "pit": "filtra preços por date < asof; não tem available_at, CNPJ nem evento de listagem/deslistagem: backfill/entrega atrasada não são detectáveis; identidade por prefixo de 4 letras do ticker (heurística, não CNPJ)"
+    },
+    {
+      "component": "fatores",
+      "code": "stocks_predictor/factor.py (momentum_12_1, realized_vol, fundamentais com embargo)",
+      "maturity": "EXERCISED",
+      "runtime": "idem"
+    },
+    {
+      "component": "ranking/carteira/custos",
+      "code": "stocks_predictor/portfolio.py, execution.py, backtest.py (legacy_walk_forward, walk_forward, judge)",
+      "maturity": "EXERCISED",
+      "runtime": "backtest.py fora da closure de qualquer entrypoint instalado; só main.py do checkout e testes"
+    },
+    {
+      "component": "BIG_WINNER / frozen V2",
+      "code": "stocks_predictor/big_winner_v2.py, big_winner_shadow.py (byte-frozen), experiments/BIG_WINNER_*",
+      "maturity": "EXERCISED",
+      "runtime": "fora da closure dos entrypoints; tools/run_big_winner_shadow.py (checkout)"
+    },
+    {
+      "component": "prospectivo/sombra",
+      "code": "stocks_predictor/prospective_big_winner.py (byte-frozen), paper.py",
+      "maturity": "EXERCISED",
+      "runtime": "fora da closure dos entrypoints"
+    },
+    {
+      "component": "Trial Registry",
+      "code": "stocks_predictor/trials_gate.py (predictor_core.measurement.trials legado + harness), trials.json/trials_v2.json",
+      "maturity": "EXERCISED",
+      "runtime": "sem escritor TrialRegistryV2 em runtime; trials_v2.json gerado por tools/migrate_trials_schema.py"
+    },
+    {
+      "component": "External Intelligence",
+      "code": "stocks_predictor/external_intelligence.py (coleta B3/CVM, PIT, verify/status)",
+      "maturity": "EXERCISED",
+      "runtime": "python -m stocks_predictor external ...; quebra no Windows no import (ST-F001); readiness só em EXTERNAL_INTELLIGENCE_TRIAL_READINESS_MATRIX.json (nenhum código lê a matriz)"
+    },
+    {
+      "component": "Predictor Core",
+      "code": "predictor-core 3.2.1 (wheel pela release; range >=3.2.1,<4)",
+      "maturity": "EXERCISED",
+      "runtime": "kernel.infra (db, external_intelligence) na closure do __main__; measurement (bootstrap, stats, trials) só em backtest/report/rj_judge/trials_gate, fora dos entrypoints; replay e TrialRegistryV2 não usados"
+    },
+    {
+      "component": "Predictor Ops",
+      "code": "—",
+      "maturity": "NOT_PRESENT",
+      "runtime": "nenhuma dependência nem import de predictor_ops (prompt §3 confirmado)"
+    },
+    {
+      "component": "plugin",
+      "code": "stocks_predictor/ecosystem_plugin.py",
+      "maturity": "REACHABLE",
+      "runtime": "entry-point predictor.plugins; só health WAITING e capabilities (supports_prediction/settlement/collection = false, capital FORBIDDEN)"
+    },
+    {
+      "component": "circuito de pesquisa por pedido em arquivo (admission, handler, job do Ops, resultado)",
+      "code": "—",
+      "maturity": "NOT_PRESENT",
+      "runtime": "a construir (prompt §7)"
+    }
+  ],
+  "dependencies": {
+    "declared": [
+      "PyYAML>=6.0,<7",
+      "predictor-core>=3.2.1,<4"
+    ],
+    "uv_sources": {
+      "predictor-core": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl"
+    },
+    "stack_packages": "predictor-core; nenhum predictor-research-* / cain-research / predictor-ops"
+  },
+  "scientific_state": {
+    "trials_json": "15 tentativas (H1,H2,H4..H16; H3 não executada), todas julgadas",
+    "trials_v2_json": "15 linhas (H1 JUDGED, demais UNKNOWN — migração mecânica)",
+    "RESEARCH_FREEZE": "H17/H18/H19 pausadas; H17 INCONCLUSIVE_DATA_QUALITY; H7/H9/H10/H12/H13 embargo original (AGENTS.md)",
+    "promotion": "nenhuma nesta missão"
+  },
+  "external_intelligence_readiness_at_baseline": "matriz 21/09: B3_LENDING, CVM_VLMO, CVM_BUYBACK, CVM_CDA listadas em eligible_families com readiness NOT_READY; ver EXTERNAL_INTELLIGENCE_READINESS.json (fase pit-universe-canary-negative)",
+  "divergences_from_prompt": [
+    {
+      "item": "verify_history_protected.py / verify_real_protected.py",
+      "observed": "importam inspect_state (ROOT da sessão 20260907, CANON = C:/Users/Superleo13/stocks-predictor-work) e gravam em outputs/: presos a outra máquina, não executáveis aqui sem alterar o repo",
+      "handling": "ST-F003 (P2); executados como diagnóstico numa cópia descartável no Actions (fase cleanroom-baseline); a checagem equivalente é o hash do conjunto protegido (PROTECTED_ARTIFACT_REPORT.md)"
+    }
+  ],
+  "windows": "a suíte do baseline não coleta no windows-latest (ST-F001)",
+  "capital_permission": false,
+  "training_started": false
+}
