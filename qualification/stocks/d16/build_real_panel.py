@@ -63,6 +63,7 @@ from __future__ import annotations
 import base64
 import csv
 import hashlib
+import http.client
 import io
 import json
 import sys
@@ -126,21 +127,51 @@ def b3_token(issuer: str) -> str:
     return base64.b64encode(raw.encode("ascii")).decode("ascii")
 
 
-def fetch(url: str, *, tries: int = 4) -> tuple[int, bytes]:
+def fetch(url: str, *, tries: int = 12) -> tuple[int, bytes]:
+    """GET com retomada: a conexão cortada no meio (IncompleteRead, reset) continua de onde parou
+    com `Range: bytes=N-` e `If-Range: <ETag>` (se o arquivo mudou no servidor, recomeça do zero).
+    O tamanho total é conferido; a integridade final é o sha256 fixado (conferido por quem chama)."""
+    data = bytearray()
+    etag = total = None
+    status = None
     last = None
     for attempt in range(tries):
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        headers = {"User-Agent": USER_AGENT}
+        if data and etag:
+            headers["Range"] = f"bytes={len(data)}-"
+            headers["If-Range"] = etag
+        request = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=180) as response:
-                return response.status, response.read()
+                resumed = response.status == 206 and bool(data)
+                if resumed:
+                    content_range = response.headers.get("Content-Range", "")
+                    if not content_range.startswith(f"bytes {len(data)}-"):
+                        raise http.client.HTTPException(f"unexpected Content-Range {content_range!r}")
+                else:
+                    data = bytearray()
+                    status = response.status
+                    etag = response.headers.get("ETag")
+                    length = response.headers.get("Content-Length")
+                    total = int(length) if length and length.isdigit() else None
+                while True:
+                    chunk = response.read(1 << 20)
+                    if not chunk:
+                        break
+                    data += chunk
+            if total is not None and len(data) != total:
+                raise http.client.IncompleteRead(bytes(), total - len(data))
+            return status, bytes(data)
         except urllib.error.HTTPError as exc:
-            if exc.code < 500:
+            if exc.code < 500 and exc.code != 416:
                 return exc.code, exc.read()
             last = exc
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            if exc.code == 416:
+                data = bytearray()
+        except (urllib.error.URLError, http.client.HTTPException, OSError) as exc:
             last = exc
-        time.sleep(3 * (attempt + 1))
-    raise RuntimeError(f"download failed after {tries} tries: {url}: {last!r}")
+        time.sleep(min(5 * (attempt + 1), 30))
+    raise RuntimeError(f"download failed after {tries} tries: {url}: {last!r} ({len(data)} bytes kept)")
 
 
 def cached(cache: Path, name: str, url: str, expected: str | None, log: list) -> bytes:
