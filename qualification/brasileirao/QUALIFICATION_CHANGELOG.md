@@ -65,4 +65,7 @@ Nenhuma mudança no brasileirao-predictor, no core-predictor nem no predictor-op
 | `SOAK_REPORT.md`, `REAL_DATA_METRICS.md`, `D16_PC2_REPORT.md` (novo) | números do PC 2 (de `evidence_numbers_pc2.json`), BR-F018 e a emenda proposta da D-9/schema |
 | `ATTESTATION_PARTIAL_d16-pc2.json` (novo) | checkpoint (C8) com o estado depois da noite; nenhum parcial anterior reescrito |
 
+Regressão do `soak.py` no Actions: run 35980611463 (`279f3a6`) `success`; soak sintético idêntico ao da Etapa A
+(`RAW_LOGS/d16-pc2-20260924/actions-run35980611463/soak_regression.json`).
+
 Erros de método da noite: ver `D16_PC2_REPORT.md` §3.

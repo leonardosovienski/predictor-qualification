@@ -78,6 +78,14 @@ Driver `scripts/pc2_d16_runtime.sh` (análogo Linux do `windows_runtime.sh` + `r
 `NOT_RUN` com a nota "evidência bruta com dado real pronta no PC 2; aguarda emenda da D-9 e do schema
 (C14)", porque o PC 2 não é, hoje, um Linux primário admitido pela D-9 nem pelo enum `where` do schema.
 
+**Regressão do caminho sintético** (a mudança no `soak.py` não pode alterar o que a Etapa A já provou): o
+push desta branch disparou o `brasileirao-runtime.yml`, run
+[35980611463](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35980611463)
+(`279f3a6`), `success` nos dois jobs. `actions-run35980611463/soak_regression.json`: soak sintético no Linux
+primário idêntico ao da Etapa A (run 35963501898) — 71 chamadas, mesma distribuição por falha, mesmo resumo,
+tolerância zero ok; conformidade 89/89 no Linux e no windows-latest; E2E sintético 26/26 nos dois; a suíte
+completa pela wheel repete exatamente os 46 casos da classe T (BR-F017, limitação aceita).
+
 Erros de método desta noite (preservados, não contam): `d16/export_METHOD_ERROR_idempotency_path.*` (o
 exportador procurou o registro de idempotência do Ops na pasta do job; ele fica em `x/o/idempotency/`),
 `d16/fit_sensitivity_METHOD_ERROR_*` (diagnóstico sem o filtro `available_at < refit_at`; contraprova que
