@@ -118,3 +118,15 @@ Só acréscimos; nenhum arquivo citado pela attestation mudou (`attest.py check`
 | `scripts/strict_audit.py`, `scripts/optimum_check.py` (novos) e `RAW_LOGS/c14-rc3-20260924/review-final/**` | diagnóstico complementar do BR-F018: comparação exata sem tolerância dos 20 resultados reais entre os SOs, e o ótimo da rc3 contra o da rc2 nos 62 refits reais (`BR_F018_REQUALIFICATION_REPORT.md` §9) |
 | `BR_F018_REQUALIFICATION_REPORT.md` §8 e §9 | o terceiro erro de método (sha256 antigo do contrato na primeira attestation) estava preservado sem explicação; resultado da revisão |
 | este arquivo | commits e PRs que faltavam (C6) |
+
+PR #41 (merge `74ab96e`), commit `0701797`.
+
+### Conferência dos `.md` (2026-09-24, depois do #41; branch `brasileirao2/conferencia-mds-20260924`)
+
+Os 15 `.md` de `qualification/brasileirao/` relidos contra a evidência bruta. Os 11 citados pela attestation estão
+coerentes com o `EVIDENCE_NUMBERS.json` e os logs, com uma exceção (errata abaixo). Nenhum deles foi editado.
+
+| O quê | Por quê |
+|---|---|
+| `REAL_DATA_METRICS.md`: título, "Leitura" marcada como rc2, "Leitura (rc3, vigente)" nova, nota da D-9 "na época" | a "Leitura" descrevia os números da rc2 (ROI líquido 1X2 −10,6% a −20,2%, IC sempre cruzando zero); na rc3 é −10,6% a −23,2% e, em 2022, o IC95 fica inteiro abaixo de zero. As três tabelas do arquivo = `scripts/render_metrics.py` sobre o `EVIDENCE_NUMBERS.json` (conferido com `diff`) |
+| `D16_PC2_REPORT.md`: aviso de desfecho e errata | relatório datado que ainda dizia BR-F018 aberto e `E2E`/`SOAK` em `NOT_RUN`; errata do `SOAK_REPORT.md` (81 → 82 arquivos na varredura sem dado; ele é atestado e não muda) |

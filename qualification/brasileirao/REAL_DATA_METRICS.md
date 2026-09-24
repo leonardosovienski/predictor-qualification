@@ -1,4 +1,4 @@
-# REAL_DATA_METRICS — missão brasileirao (dado real, Windows local, wheel v0.3.0rc2)
+# REAL_DATA_METRICS — missão brasileirao (dado real; rc2 no Windows local e no Linux do PC 2; rc3 vigente)
 
 **Diagnóstico, não gate e não autorização de capital (C22).** Nenhum gate do braço mede edge; estas
 métricas respondem "o modelo de serving congelado ganha dinheiro?" com o circuito qualificado.
@@ -63,7 +63,24 @@ métricas respondem "o modelo de serving congelado ganha dinheiro?" com o circui
 | 2026-1X2-climatology | 101 | -0.1006 | [-0.1252, -0.0760] | +0.0095 |
 | 2026-OU25-climatology | 90 | +0.0252 | [+0.0023, +0.0481] | -0.1480 |
 
-## Leitura
+### Leitura (rc3, vigente)
+
+Das duas tabelas da rc3, acima.
+
+* **1X2:** melhor que a climatologia PIT (significativo em 2022 e 2024; nos demais o IC cruza zero) e **pior que o
+  mercado de fechamento** (significativo em 2021, 2023 e 2024), como na rc2. Ao preço de fechamento, o ROI líquido por
+  aposta foi negativo em todas as temporadas (−10,6% a −23,2%). Em 2022 o IC95 fica **inteiro abaixo de zero**
+  ([−43,0%, −1,8%]), então a perda é significativa. Nas demais temporadas o IC cruza zero no limite superior.
+* **O/U 2.5:** sem ganho mensurável contra climatologia ou mercado (todos `INCONCLUSIVE`); ROI líquido entre −12,2% e
+  +1,2% por aposta, IC cruzando zero. 2023 e 2024 continuam `INCONCLUSIVE_DATA_QUALITY` (249/380 e 246/380 jogos com
+  a linha de fechamento).
+* **CLV (diagnóstico com o preço de abertura):** médio negativo em todas as temporadas de 1X2 (−4,9% a −10,0%, IC95
+  abaixo de zero).
+* **Conclusão:** não há edge demonstrável no modelo de serving congelado; `NO_EDGE` onde avaliado; nenhuma
+  recomendação de aposta sai daqui; `capital_permission = false`. Nenhum estado mudou da rc2 para a rc3; mudaram
+  números (ex.: nº de apostas em 2022–2026), e o de 2022 no 1X2 ficou pior.
+
+## Leitura (rc2, Windows local — histórico; a leitura vigente é a da rc3, no fim do arquivo)
 
 * **1X2:** o modelo é melhor que a climatologia PIT (significativo em 2022 e 2024; nos demais o IC
   cruza zero) e **pior que o mercado de fechamento** (significativo em 2021, 2023 e 2024). Ao preço
@@ -80,7 +97,7 @@ métricas respondem "o modelo de serving congelado ganha dinheiro?" com o circui
 
 ## Linux do PC 2 (D-16, 2026-09-24) — mesmos pedidos, mesma wheel, mesmo snapshot
 
-Evidência bruta (a D-9 ainda não admite o PC 2 como Linux primário). Fonte:
+Evidência bruta (na época, a D-9 ainda não admitia o PC 2 como Linux primário; hoje admite, D-19). Fonte:
 `RAW_LOGS/d16-pc2-20260924/d16/evidence_numbers_pc2.json` → `metrics.pc2_real` (tirado dos resultados
 `show` do PC 2, que carregam o dado e ficam só no PC 2 — sha256 em `d16/private_manifest.sha256` — por
 `scripts/evidence_numbers.py`; tabela por `scripts/render_metrics.py`, cópia em
