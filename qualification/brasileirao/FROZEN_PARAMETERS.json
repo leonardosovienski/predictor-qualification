@@ -1,0 +1,255 @@
+{
+  "schema": "brasileirao/FROZEN_PARAMETERS/1",
+  "phase": "freeze-parameters",
+  "stage": "A",
+  "branch": "brasileirao",
+  "code": "BR",
+  "envelope_version": "NONE",
+  "common_baseline": "STACK_BASELINE_V1.1",
+  "identity": {
+    "common_core_sha256": "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1",
+    "attestation_schema_sha256": "3594e35044626264a18270ee4e079e653e3b940f1e7a72d36f2b70972f5bf970",
+    "mission_prompt": "prompts/prompt_etapa_a_brasileirao_rev8.md",
+    "mission_prompt_sha256": "eaf950b9e4b2795e03749c2eac5c15489ffaa91f2dcff564a6d98ab8355f9053",
+    "auditor_principles_sha256": "4f3bea0e709bb525da57de9ec29a886e8c08d30206970093e040ee6c361369f9",
+    "evidence_main_at_c0": "f21bbbcccb06252cd5bc156c4093d571d03f0933",
+    "decisions_json_sha256": "e510d75a774f2a417b395e099ab667e32afc61452e494ceee970f3c943b2be07",
+    "hygiene_json_sha256": "d6e3eeed8baa978cd828bebf0ef8539bb2af258104748600cd1d162cbd098701",
+    "stack_baseline_v1_1_sha256": "6e081ac5fed0d50bd2c6d8f874f8e04a02591ba7130e4862260de4a7fc0aa4e8",
+    "shared_issues_sha256": "1f5f26b97bca60f15324205e0744bd226b395ddabfb11d33102a2a322d412ea3"
+  },
+  "repos": {
+    "brasileirao-predictor": {
+      "role": "muda nesta missão",
+      "clone": "C:\\QUALIFICACAO\\repos\\brasileirao-predictor",
+      "baseline_head": "e14f3394c1908fae6d2f25754e6ab3a6792dbf1e",
+      "prompt_said": "34d73e2 (prompt §3, 22/09); o main real tem HYG-004 e HYG-015 por cima (BR-F001); vale o código"
+    },
+    "core-predictor": {
+      "role": "congelado (só wheel publicada v3.2.1)",
+      "baseline_head": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d",
+      "wheel_url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+      "wheel_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"
+    },
+    "predictor-ops": {
+      "role": "congelado (só wheel publicada v4.2.2rc1, D-17)",
+      "release_commit": "9831b0d5e727972b1d85ff48be14ffa58677898b",
+      "wheel_url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl",
+      "wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3",
+      "note": "no baseline o brasileirao-predictor ainda consome a 4.2.1 (da4fa540…, bloqueante pela SHARED-005); a missão migra para a 4.2.2rc1 e refaz o C14 (D-17)"
+    }
+  },
+  "decisions_cited": {
+    "D-3": "runtime Windows em C:\\QUALIFICACAO\\runtime\\brasileirao\\ (venv nova, só final wheels com --require-hashes)",
+    "D-5": "um agente por missão, sem subagentes",
+    "D-6": "conta do dono via gh; sem merge nem push em main",
+    "D-9": "Linux primário = GitHub Actions ubuntu-latest × py3.13",
+    "D-11": "repositório de evidência público; nada de segredo nem dado sem direito de redistribuição",
+    "D-12": "contrato aprovado por merge; Etapa B só nos adapter_paths",
+    "D-13": "integração V1 extinta; cain-research fora das dependências do domínio",
+    "D-15": "jobs de CI fora de lock saem do push/PR",
+    "D-17": "predictor-ops 4.2.2rc1 corrige a SHARED-005; STACK_BASELINE_V1.1; C14 nas missões que usam o Ops",
+    "D-16": {
+      "status": "PENDENTE",
+      "evidence": "ausente de qualification/DECISIONS.json em f21bbbcccb06252cd5bc156c4093d571d03f0933",
+      "owner_instruction": "o que depender de dados reais no Linux/Actions fica NOT_RUN com note 'BLOCKED: D-16 pendente'; fixture sintética serve como diagnóstico, nunca como PASS"
+    }
+  },
+  "d16_dependency_rule": {
+    "note": "Interpretação congelada antes de qualquer execução, no mesmo padrão do crypto. Vale até D-16 ser decidida no main; decisão nova = C14.",
+    "real_data_required_for_pass": [
+      "E2E (parte Linux primária)",
+      "SOAK"
+    ],
+    "proven_by_frozen_conformance_vectors": {
+      "gates": [
+        "FUTURE_CANARY",
+        "TEMPORAL_INTEGRITY",
+        "BR_KICKOFF_ORDERING",
+        "BR_TIMEZONE_INTEGRITY",
+        "BR_METAMORPHIC",
+        "BR_SAME_KICKOFF_ISOLATION",
+        "BR_CACHE_STATE",
+        "BR_FUTURE_INJECTION",
+        "IDEMPOTENCY",
+        "RESTART_RECOVERY",
+        "FAILURE_INJECTION",
+        "ADMISSION",
+        "AUTHORITY_SEPARATION"
+      ],
+      "why": "provam mecanismo (ordem, fuso, isolamento, cache, canário, injeção, falha) com vetores adversariais congelados (sha256 em FROZEN_VECTORS.json), no Linux primário e no Windows, pela wheel publicada. Os mesmos testes rodam também com o dado real no Windows local como corroboração; divergência entre sintético e real = achado."
+    },
+    "linux_with_synthetic_fixture": "E2E/SOAK no Linux com dataset sintético rodam como DIAGNÓSTICO (para achar defeitos); nunca fecham gate",
+    "windows_local_real_data": {
+      "source": "C:\\BRASILEIRAO\\DADOS_PRESERVADOS\\snapshots_sqlite\\matches__20260908T193132732597Z__787a29d9a12e.sqlite3 (só leitura, URI mode=ro&immutable=1)",
+      "source_sha256": "53fe73504dd745bd6916b65c6f1485083738fdbf2c580daf8118c3d1b18e15d2",
+      "copy": "C:\\QUALIFICACAO\\runtime\\brasileirao\\data\\matches_source_copy.sqlite3 (sqlite3.backup)",
+      "copy_sha256": "31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43",
+      "versioned": false,
+      "why_not_versioned": "D-11 e LEIA_PRIMEIRO do Brasileirão: dado privado/sem redistribuição estabelecida; só os sha256 entram na evidência"
+    }
+  },
+  "environments": {
+    "primary": {"os": "Linux", "python": "3.13", "host": "GitHub Actions ubuntu-latest (D-9)"},
+    "secondary": {"os": "Windows 11 local", "python": "3.13.14 (C:\\QUALIFICACAO\\tools\\python\\cpython-3.13.14-windows-x86_64-none)", "runtime_root": "C:\\QUALIFICACAO\\runtime\\brasileirao\\"},
+    "additional": {"os": "windows-latest", "host": "GitHub Actions", "role": "informativo"}
+  },
+  "phases": [
+    "freeze-parameters", "baseline", "truth-map", "cleanroom-baseline", "contract-admission", "ops-mapping",
+    "publish-candidates", "cleanroom-final", "temporal-suite", "e2e", "idempotency-failure", "windows-smoke",
+    "hosted-ci", "soak", "contract-sign-off", "attestation"
+  ],
+  "shared_dependencies": {
+    "SHARED-003": {"verdict": "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json", "classification": "test_only", "blocking": false},
+    "SHARED-004": {"verdict": "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json", "classification": "test_only", "blocking": false},
+    "SHARED-005": {"resolution": "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json", "blocking_for_4.2.1": true, "blocking_for_4.2.2rc1": false},
+    "mission_obligation": "reexecutar nesta missão, pela wheel 4.2.2rc1, as falhas que tocam o Ops (timeout e crash do job no Linux e no Windows, lock) — C14 da D-17"
+  },
+  "protected_set_initial": {
+    "identity": "hash do blob git no commit baseline e14f3394c1908fae6d2f25754e6ab3a6792dbf1e",
+    "globs": [
+      "docs/open_source_research/OSR-20260911-01/PROTECTED_PATHS.txt e todas as linhas dele",
+      "contracts/h8-ou25-frozen-candidate.json",
+      "reports/**/frozen_candidate.json",
+      "reports/benchmark_h9_frozen_*.json"
+    ],
+    "hypotheses": ["brasileirao:H8", "brasileirao:H9", "brasileirao:H14", "brasileirao:H15", "brasileirao:A1"],
+    "plus": "holdouts, frozen trials (data/trials*.json), artefatos de avaliação, calendários protegidos e arquivos de bytes congelados do ruff (resolvidos em truth-map → PROTECTED_SET.json)"
+  },
+  "scientific_policy": {
+    "source": "docs/PREDICTION_PROTOCOL.md e docs/PROJECT_LOGIC_REGISTER.md §5 (baseline e14f339)",
+    "seasons": {"2021": "DEVELOPMENT", "2022": "DEVELOPMENT", "2023": "DEVELOPMENT", "2024": "VALIDATION", "2025": "HOLDOUT_SEALED", "2026": "EXPLORATORY"},
+    "holdout_rule": "pedido com evento-alvo em 2025 → REJECTED HOLDOUT_SEALED na admission; o handler recusa evento-alvo de 2025 mesmo se a policy errar (dupla trava)",
+    "information_rule": "resultados de 2025 podem ENTRAR como informação (Elo/refit) de previsões posteriores, como no serving; nunca como alvo avaliado",
+    "protected_hypotheses_rule": "pedido com hypothesis_id em {H8, H9, H14, H15, A1} → REJECTED PROTECTED_HYPOTHESIS",
+    "no_retuning": "nenhum hiperparâmetro, threshold ou janela é escolhido olhando resultado; o modelo avaliado é o do config.yaml do baseline (MODEL_ALGORITHM_VERSION nbdc-normalized-elo-horizon-v2, ensemble_xg desligado)"
+  },
+  "research_request": {
+    "request_schema": "brasileirao-research-request/1",
+    "request_types": {"WALKFORWARD_FORECAST_EVALUATION": "brasileirao.handlers.walkforward_forecast_evaluation.v1"},
+    "domain_prefix": "brasileirao",
+    "requester_trust": "LOCAL_FILE_ONLY",
+    "reference_kinds": ["dataset", "model", "features", "baseline", "cost_model", "odds"],
+    "targets": ["1X2", "OU25"],
+    "max_events_per_request": 400,
+    "decision_lead_minutes": {"min": 15, "max": 10080, "frozen_vectors": 60},
+    "never_in_request": ["comando", "módulo", "path", "URL", "SQL", "handler", "permissão de capital"]
+  },
+  "temporal_contract": {
+    "inequality": "∀ informação i usada na previsão t: available_at(i) < cutoff(t)",
+    "cutoff_t": "cutoff(t) = min(kickoff(t) − decision_lead_minutes, data_cutoff do pedido)",
+    "available_at": {
+      "match_result": "kickoff_at + 180 min (RESULT_LATENCY_MINUTES = 180; result_observed_at do snapshot é carimbo de backfill de 2026-09-07 para todo o histórico e não mede disponibilidade no mundo)",
+      "match_result_without_kickoff": "(date UTC + 1 dia) T03:00Z (conservador: pior caso kickoff 23:59Z + 180 min)",
+      "odds_close": "kickoff_at (só avaliação econômica ex post; nunca entra na previsão)",
+      "model_parameters": "refit_at(t) = primeiro instante UTC do mês de cutoff(t); ajuste só com resultados de available_at < refit_at (refit mensal)",
+      "elo": "recalculado de zero a cada cutoff(t) só com resultados de available_at < cutoff(t); janela elo.window_years relativa a cutoff(t)",
+      "db_caches": "current_elo, model_parameters e xg_model_parameters do snapshot NUNCA são lidos (estado do momento da captura = futuro)"
+    },
+    "timestamps": "toda data-hora com fuso explícito; sem fuso → rejeita (nunca adivinha); hora local inexistente/ambígua (horário de verão antes de 2019) → rejeita; normalização para UTC por zoneinfo",
+    "enforced_by": "predictor_core.measurement.replay (key/available_at; LookaheadError) + filtro estrutural PastView",
+    "violation": "TEMPORAL_INTEGRITY_VIOLATION (exit 4), sem efeito, sem trial, sem resultado"
+  },
+  "ops_job": {
+    "mechanism": "o mesmo da sombra: jobs file schema_version \"3\" validado pelo Ops → sys.executable -m predictor_ops run --job <id> --config <arquivo> (processo filho), nunca run_job importado nem executor paralelo",
+    "schema_version": "3",
+    "job_id": "brasileirao-research-<logical_hash[:24]> (determinístico)",
+    "command": "[sys.executable, \"-m\", \"brasileirao_predictor.research_runtime.worker\", …args do executor] — módulo da wheel, nunca caminho de checkout",
+    "timeout_seconds": "resource_budget da policy (vetores congelados: 1800; teste de timeout: 3)",
+    "heartbeat_interval_seconds": 1,
+    "max_output_bytes": 1048576,
+    "expected_artifact": "<experimento>/domain-effect.json",
+    "provenance_mode": "strict",
+    "provenance": {"domain": "brasileirao", "request_id": "…", "request_content_hash": "…", "admission_id": "…", "logical_hash": "…", "wheel": "brasileirao-predictor versão + sha256 do RECORD instalado"},
+    "job_type": "FORECAST_GENERATION (o job gera previsões; não decide sombra nem executa; nunca EXECUTION)",
+    "economic_key": {"domain": "brasileirao", "event_id": "<experiment_id>", "market": "<target>", "decision_stage": "research_forecast", "logical_time": "<data_cutoff>"},
+    "capital_permission": false,
+    "exit_statuses": {"0": "SUCCEEDED"},
+    "runtime_root": "<state>/x/o (dentro do diretório de qualificação)"
+  },
+  "evaluation": {
+    "scores": {"1X2": "RPS (predictor_core.measurement.metrics.rps), Brier, log-loss", "OU25": "Brier, log-loss"},
+    "baselines": {"CLIMATOLOGY_PIT": "frequências de resultado no conjunto de informação de cada previsão", "MARKET_CLOSE_SHIN": "Shin das odds de fechamento (só referência ex post)"},
+    "paired_statistic": "média de Δ = score_modelo − score_baseline por evento",
+    "ci": {"function": "predictor_core.measurement.bootstrap.bootstrap_ci", "scheme": "cluster", "cluster": "kickoff_at", "n_boot": 1000, "seed": 13, "confidence": 0.95},
+    "min_evaluated_events": 30,
+    "min_calibration_matches": 100,
+    "scientific_state": "SUPPORTED se IC_hi(Δ) < 0; REFUTED se IC_lo(Δ) > 0; INCONCLUSIVE caso contrário; INSUFFICIENT_SAMPLE se n < 30",
+    "data_quality": "INCONCLUSIVE_DATA_QUALITY se > 10% dos eventos-alvo ficarem sem kickoff válido ou sem odds quando odds são pedidas"
+  },
+  "costs_methodology": {
+    "execution_price": "odd de fechamento (último preço pré-jogo); o preço de abertura não tem carimbo de hora na base histórica → não entra no resultado",
+    "edge_window": "p_modelo × odd − 1 ∈ [0.02, 0.15] (backtest.min_edge/max_edge do config.yaml do baseline)",
+    "stake": 1,
+    "gross": "ganhou: odd − 1; perdeu: −1",
+    "net": "odd_efetiva = 1 + (odd − 1) × (1 − 0.02) (slippage/limite de 2% sobre o ganho)",
+    "tax": "15% sobre o ganho líquido positivo por ano-calendário (Lei 14.790/2023, art. 31), estimativa pontual separada",
+    "ci": "bootstrap_ci do Core, cluster por kickoff_at, n_boot 1000, seed 13, sobre a média do líquido por aposta",
+    "min_bets": 30,
+    "economic_state": "WATCH só se científico SUPPORTED e IC_lo(líquido) > 0; senão NO_EDGE; sem odds ou < 30 apostas → NOT_EVALUATED",
+    "clv": "não mensurável no histórico (sem preço pré-jogo com carimbo de hora antes do fechamento); CLV da população 'abertura' só como diagnóstico fora do resultado, rotulado"
+  },
+  "future_canary": {
+    "token": "FUTURE_CANARY_BR_001",
+    "rows": "partidas com kickoff depois do data_cutoff: time 'FUTURE_CANARY_BR_001' e placares extremos (17–0) contra times reais; odds com captured_at depois do cutoff; tabelas de cache (current_elo, model_parameters) com valores extremos",
+    "search": "bytes de efeito, trial, resultado, outcome, jobs file e eventos do Ops; comparação diferencial com e sem as linhas canário (previsões byte-idênticas)",
+    "leak": "P0"
+  },
+  "metamorphic": {
+    "permutations": 5,
+    "seeds": [11, 23, 37, 41, 53],
+    "what": "ordem de inserção das linhas de matches e sofascore_matches no dataset (mesmo conteúdo)",
+    "invariant": "previsões por evento, métricas e estados; comparador congelado = igualdade exata do JSON canônico do efeito sem os campos de identidade do arquivo do dataset",
+    "vector_hashes": "FROZEN_VECTORS.json"
+  },
+  "timezone_vectors": {
+    "zones": ["America/Sao_Paulo", "America/Manaus", "America/Cuiaba", "America/Rio_Branco"],
+    "dst_before_2019": [
+      "2018-02-17T23:30 America/Sao_Paulo (hora repetida, ambígua)",
+      "2018-11-04T00:30 America/Sao_Paulo (hora inexistente)",
+      "2016-10-16T00:30 America/Cuiaba (hora inexistente)"
+    ],
+    "naive": "2024-05-01T19:00:00 sem fuso → rejeita"
+  },
+  "idempotency": {
+    "key": "request_id",
+    "content_identity": "sha256 canônico do pedido sem client_ref",
+    "cases": ["retry", "restart", "duplicata", "fora de ordem", "concorrência (2 processos)", "mesma key + conteúdo diferente → CONFLICT", "crash entre efeito e dedupe → 1 efeito"]
+  },
+  "failure_injection_points": [
+    "before_admission_commit", "after_admission", "during_materialization", "before_ops", "after_ops",
+    "after_domain_effect", "during_result_write", "after_result_write", "after_result_store",
+    "ops_worker_crash", "ops_worker_hang (timeout do Ops)", "ops_worker_slow"
+  ],
+  "failure_cases_extra": [
+    "pedido duplicado", "pedido fora de ordem", "DB lock (SQLite do estado travado por outro processo)",
+    "DB × FS divergentes", "artefato ausente", "artefato corrompido", "snapshot com hash divergente"
+  ],
+  "failure_environments": ["Linux primário (Actions)", "Windows local", "windows-latest (informativo)"],
+  "soak_profile": {
+    "file": "QUALIFICATION_PROFILE_BR_V1.json (congelado antes do soak)",
+    "environment": "Linux primário, runtime suportado",
+    "normal_cycles": 20,
+    "restarts": 5,
+    "duplicate_requests": 5,
+    "runs_per_relevant_failure_class": 3,
+    "same_kickoff_cycles": 5,
+    "out_of_order_dataset_cycles": 5,
+    "future_canary_cycles": 5,
+    "zero_tolerance": ["efeito duplicado", "resultado perdido", "provenance quebrada", "ação não autorizada", "corrupção silenciosa", "vazamento de futuro", "mudança em protegido"]
+  },
+  "kickoff_ordering_revert_proof": {
+    "commit": "a51a68dd5d23734d6ac882cbcf95bc4d5c15b7a6",
+    "revert_only": "brasileirao_scripts/backtest_walkforward.py (hunk do a51a68d)",
+    "keep": "tests/test_walkforward_row_contract.py",
+    "where": "worktree descartável do final_commit",
+    "expect": "falha com o revert; passa restaurado; worktree apagado; sha256 da final wheel inalterado"
+  },
+  "typecheck": "pyright do CI cobre o código novo (brasileirao_predictor/research_runtime); erro no código novo = P1",
+  "suites_before_after_each_change": [
+    "Windows local: suíte completa do repo (uv run --locked pytest) + conformidade",
+    "Linux: CI do PR (ci.yml, publication-validation.yml)"
+  ],
+  "capital_permission": false,
+  "training_started": false
+}

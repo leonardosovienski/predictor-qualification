@@ -1,0 +1,18 @@
+{
+  "schema": "brasileirao/QUALIFICATION_PROFILE/1",
+  "profile_id": "QUALIFICATION_PROFILE_BR_V1",
+  "frozen_in_phase": "contract-admission (antes do soak)",
+  "environment": "Linux primário (GitHub Actions ubuntu-latest x Python 3.13), runtime suportado (venv limpo só com as final_wheels)",
+  "driver": "qualification/brasileirao/scripts/soak.py (cada chamada é um processo novo do brasileirao-research instalado)",
+  "vectors": "tests/conformance/fixtures.py do final_commit (sha256 em FROZEN_VECTORS.json)",
+  "normal_cycles": 20,
+  "restarts": 5,
+  "duplicate_requests": 5,
+  "runs_per_relevant_failure_class": 3,
+  "relevant_failure_classes": ["ops_worker_crash", "ops_worker_hang (timeout 3 s)", "before_admission_commit", "during_result_write"],
+  "same_kickoff_cycles": 5,
+  "out_of_order_dataset_cycles": 5,
+  "future_canary_cycles": 5,
+  "zero_tolerance": ["efeito duplicado", "resultado perdido", "provenance quebrada", "ação não autorizada", "corrupção silenciosa", "vazamento de futuro", "mudança em protegido"],
+  "d16_rule": "com vetores sintéticos = diagnóstico; SOAK só vira PASS com dados reais no Linux primário (D-16)"
+}

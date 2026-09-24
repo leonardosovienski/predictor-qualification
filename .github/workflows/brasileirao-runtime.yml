@@ -1,0 +1,51 @@
+# Missão brasileirao: runtime suportado (C3.1) com as final_wheels publicadas.
+# Fases cleanroom-final, temporal-suite, idempotency-failure (suíte de conformidade), e2e e soak
+# no Linux primário (D-9); windows-latest como informação adicional (o secundário é o Windows local, D-3).
+# O alvo (commit, wheel, sha256) vem de qualification/brasileirao/runtime_target.json.
+# Sem segredos; só repos e releases públicos; nenhum dado real (D-16 pendente: E2E/SOAK no Linux = diagnóstico).
+name: Brasileirao runtime (cleanroom-final, conformance, e2e, soak)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/brasileirao/runtime_target.json
+      - qualification/brasileirao/scripts/runtime_cleanroom.sh
+      - qualification/brasileirao/scripts/e2e_runtime.py
+      - qualification/brasileirao/scripts/soak.py
+      - .github/workflows/brasileirao-runtime.yml
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: linux-primary, os: ubuntu-latest, soak: 1}
+          - {label: windows-latest, os: windows-latest, soak: 0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Runtime suportado
+        shell: bash
+        run: |
+          t=qualification/brasileirao/runtime_target.json
+          bash qualification/brasileirao/scripts/runtime_cleanroom.sh "$RUNNER_TEMP/out/${{ matrix.label }}" \
+            "$(jq -r .commit $t)" "$(jq -r .wheel_url $t)" "$(jq -r .wheel_sha256 $t)" "${{ matrix.soak }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: brasileirao-runtime-${{ matrix.label }}
+          path: ${{ runner.temp }}/out/${{ matrix.label }}
+          if-no-files-found: error

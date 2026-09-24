@@ -1,0 +1,20 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+__________ test_ou25_is_evaluated_against_the_canonical_closing_line __________
+
+lab = Lab(root=WindowsPath('C:/QUALIFICACAO/runtime/brasileirao/t2/brq-j9e_1w_5'), registry=[{'kind': 'model', 'name': 'serv...9f215fa41aaa81568ae81728e58c19', 'sqlite_sha256': '8827b83bb67bdbd4aba8caddcca854470ca5accdbb606391c09234e0aeb96e26'}})
+
+    def test_ou25_is_evaluated_against_the_canonical_closing_line(lab: Lab) -> None:
+        """BR-F015: O/U 2.5 closing prices live in odds_lines (the flat columns are empty in the real data)."""
+        request = fixtures.request("brasileirao:REQ-OU25-LINES-001", target="OU25", baseline="market")
+        code, outcome = lab.submit(request)
+        assert code == 0 and outcome["status"] == "RESULT", outcome
+        result = lab.show(request["request_id"])[1]["result"]
+        domain = result["domain_facts"]
+>       assert domain["data_quality"]["missing_market"] == 0
+E       assert 56 == 0
+
+tests\conformance\test_contract_conformance.py:290: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_contract_conformance.py::test_ou25_is_evaluated_against_the_canonical_closing_line
+1 failed in 41.04s

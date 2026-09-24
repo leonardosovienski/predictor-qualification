@@ -1,0 +1,483 @@
+{
+  "schema": "domain-research-contract/1",
+  "domain_prefix": "brasileirao",
+  "stage": "A",
+  "repo": "brasileirao-predictor",
+  "implementation": {
+    "package": "brasileirao_predictor/research_runtime/",
+    "contract_module": "brasileirao_predictor/research_runtime/contract.py",
+    "final_commit": "04b42c9245e6ec75d72ec6a27d151ee2afef5e70",
+    "version": "0.3.0rc2",
+    "wheel": {
+      "url": "https://github.com/leonardosovienski/brasileirao-predictor/releases/download/v0.3.0rc2/brasileirao_predictor-0.3.0rc2-py3-none-any.whl",
+      "sha256": "70344f2264e99c41808e90db26bdc94369504e3b45d125c77e01aebe71ad7b1a"
+    },
+    "stack": {
+      "predictor-core": {
+        "version": "3.2.1",
+        "sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"
+      },
+      "predictor-ops": {
+        "version": "4.2.2rc1",
+        "sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3"
+      }
+    }
+  },
+  "requester_trust": "LOCAL_FILE_ONLY",
+  "entrypoint": {
+    "script": "brasileirao-research",
+    "target": "brasileirao_predictor.research_runtime.runner:main",
+    "source": "[project.scripts] do brasileirao-predictor",
+    "request_format": "um arquivo JSON UTF-8 por pedido (brasileirao-research-request/1), ≤ 256 KiB; chaves duplicadas e NaN/Infinity recusados",
+    "request_folder": "qualquer pasta do operador; `brasileirao-research --state S process --policy P --objects O ARQ...` ou `run --inbox DIR` (todos os *.json em ordem de nome)",
+    "data_root": "nenhuma raiz implícita: dataset (snapshot SQLite com sha256), modelo, features, baselines, custos e odds vêm só do object store do operador (--objects), escolhidos por nome/versão no registry da policy e conferidos por sha256; o entrypoint não lê checkout, .git, config.yaml nem BRASILEIRAO_PROJECT_ROOT",
+    "distribution_provenance": "versão e sha256 do RECORD da distribuição instalada (importlib.metadata) em domain_facts.identity e no provenance do job do Ops",
+    "commands": {
+      "process": "submete e executa cada arquivo, em ordem",
+      "run": "processa todos os *.json de --inbox",
+      "show": "relê o resultado autoritativo do ResultStore (nunca recalcula)",
+      "reconcile": "achados de integridade (somente leitura)",
+      "backup": "bundle de recuperação consistente (nunca altera a fonte)",
+      "restore": "restaura um bundle num diretório novo e vazio",
+      "put-object": "provisionamento de objeto de referência JSON pelo operador",
+      "put-dataset": "captura de um banco SQLite por sqlite3.backup (fonte aberta só leitura) + integrity_check; grava o blob e o manifesto (sqlite_sha256, as_of, captured_at, tabelas)"
+    },
+    "stdout": "uma linha JSON de outcome (brasileirao-research-outcome/1) por pedido; logs do Ops vão para stderr",
+    "outcome_file": "<state>/outcomes/<request_id>.<carimbo>.<sha12>.json com o outcome completo (inclui o resultado)",
+    "exit_codes": {
+      "0": "RESULT (produzido nesta submissão) ou DUPLICATE (resultado autoritativo já existia)",
+      "2": "REJECTED (pedido inválido, policy, holdout, hipótese protegida, recusa do handler) ou CONFLICT",
+      "3": "NOT_READY (objeto de referência ausente) ou OPS_FAILED_RETRYABLE (falha/timeout/lock do Ops, retry permitido)",
+      "4": "TEMPORAL_INTEGRITY_VIOLATION (timestamp sem fuso, resultado impossível no as_of, LookaheadError do Core)",
+      "5": "RECONCILIATION_REQUIRED (corrupção, split-brain ou divergência de hash; nunca reparado em silêncio)",
+      "1": "erro de configuração do operador (policy inválida, STATE_ROOT_TOO_LONG)"
+    },
+    "multiple_requests": "o exit code é o maior entre os pedidos"
+  },
+  "invalid_duplicate_conflict_behavior": {
+    "invalid": "REJECTED com reason (SCHEMA_INVALID, REQUEST_TYPE_NOT_ALLOWED, PARAMETER_OUT_OF_BOUNDS, REQUEST_SIZE_LIMIT); registrado em invalid_submissions; nunca entra no inbox",
+    "duplicate": "mesmo request_id e mesmo conteúdo (sem client_ref): DUPLICATE com o mesmo resultado autoritativo; client_ref da submissão devolvido sem alteração",
+    "conflict": "mesmo request_id e conteúdo diferente: CONFLICT; o pedido e o resultado originais nunca são sobrescritos"
+  },
+  "request_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "brasileirao-research-request/1",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema_version",
+      "request_id",
+      "request_type",
+      "research_id",
+      "hypothesis_id",
+      "competition",
+      "season",
+      "target",
+      "events",
+      "data_cutoff",
+      "decision_lead_minutes",
+      "references",
+      "priority_hint"
+    ],
+    "properties": {
+      "schema_version": {
+        "const": "brasileirao-research-request/1"
+      },
+      "request_id": {
+        "$ref": "#/$defs/br_id"
+      },
+      "request_type": {
+        "enum": [
+          "WALKFORWARD_FORECAST_EVALUATION"
+        ]
+      },
+      "research_id": {
+        "$ref": "#/$defs/br_id"
+      },
+      "hypothesis_id": {
+        "$ref": "#/$defs/br_id"
+      },
+      "competition": {
+        "enum": [
+          "Brasileirão Série A"
+        ]
+      },
+      "season": {
+        "type": "integer",
+        "minimum": 2000,
+        "maximum": 2100
+      },
+      "target": {
+        "enum": [
+          "1X2",
+          "OU25"
+        ]
+      },
+      "events": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kickoff_from",
+          "kickoff_to"
+        ],
+        "properties": {
+          "kickoff_from": {
+            "$ref": "#/$defs/utc"
+          },
+          "kickoff_to": {
+            "$ref": "#/$defs/utc"
+          },
+          "fixtures": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 400,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "event_id",
+                "kickoff_at"
+              ],
+              "properties": {
+                "event_id": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "kickoff_at": {
+                  "$ref": "#/$defs/utc"
+                }
+              }
+            }
+          }
+        },
+        "description": "kickoff_from < kickoff_to; fixtures (opcional) = event_ids com o kickoff esperado, conferido contra o dataset (divergência = KICKOFF_MISMATCH)"
+      },
+      "data_cutoff": {
+        "$ref": "#/$defs/utc"
+      },
+      "decision_lead_minutes": {
+        "type": "integer",
+        "minimum": 15,
+        "maximum": 10080
+      },
+      "references": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dataset",
+          "model",
+          "features",
+          "baseline",
+          "cost_model"
+        ],
+        "properties": {
+          "dataset": {
+            "$ref": "#/$defs/ref"
+          },
+          "model": {
+            "$ref": "#/$defs/ref"
+          },
+          "features": {
+            "$ref": "#/$defs/ref"
+          },
+          "baseline": {
+            "$ref": "#/$defs/ref"
+          },
+          "cost_model": {
+            "$ref": "#/$defs/ref"
+          },
+          "odds": {
+            "$ref": "#/$defs/ref"
+          }
+        }
+      },
+      "priority_hint": {
+        "enum": [
+          "LOW",
+          "NORMAL",
+          "HIGH"
+        ]
+      },
+      "client_ref": {
+        "description": "JSON opaco ≤ 1024 bytes canônicos; fora do idempotency_key e do hash de conteúdo; devolvido sem alteração"
+      }
+    },
+    "$defs": {
+      "br_id": {
+        "type": "string",
+        "pattern": "^brasileirao:[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+      },
+      "utc": {
+        "type": "string",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+      },
+      "ref": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "version"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          }
+        }
+      }
+    },
+    "never_in_request": [
+      "comando",
+      "módulo",
+      "path",
+      "URL",
+      "SQL",
+      "handler",
+      "permissão de capital"
+    ],
+    "no_cain_envelope_or_transport": true
+  },
+  "client_ref": {
+    "opaque": true,
+    "excluded_from": [
+      "idempotency_key",
+      "request_content_hash"
+    ],
+    "echoed_in": "outcome.client_ref da própria submissão"
+  },
+  "admission_policy": {
+    "id_field": "policy_id",
+    "version_field": "policy_version",
+    "sha256": "content_hash canônico da policy, gravado em cada recibo (policy_hash) e no resultado (provenance.admission_policy_hash)",
+    "schema": "BrasileiraoResearchAdmissionPolicyV1 (brasileirao_predictor/research_runtime/admission.py load_policy)",
+    "owner": "BRASILEIRAO_OPERATOR",
+    "decisions": [
+      "ACCEPTED",
+      "REJECTED",
+      "CONFLICT",
+      "REQUIRES_READMISSION"
+    ],
+    "reason_codes": [
+      "ADMITTED",
+      "REQUEST_SIZE_LIMIT",
+      "PARAMETER_SIZE_LIMIT",
+      "PROTECTED_HYPOTHESIS",
+      "HYPOTHESIS_NOT_ADMITTED",
+      "COMPETITION_NOT_ALLOWED",
+      "HOLDOUT_SEALED",
+      "SEASON_NOT_ALLOWED",
+      "WINDOW_OUTSIDE_SEASON",
+      "HANDLER_NOT_ALLOWED",
+      "HANDLER_UNAVAILABLE",
+      "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+      "PENDING_QUOTA",
+      "REQUEST_ID_CONTENT_CONFLICT",
+      "POLICY_CHANGED",
+      "RESOLUTION_CHANGED"
+    ],
+    "decides": [
+      "tipo de pedido",
+      "handler (allowlist compilada)",
+      "budget (timeout, retries, recursos)",
+      "prioridade (limitada por max_priority)",
+      "referências aceitas (registry name/version → revision_id + sha256)",
+      "hipóteses admitidas e protegidas",
+      "temporadas (2025 HOLDOUT_SEALED obrigatório)",
+      "competições"
+    ],
+    "protected_hypotheses_required": [
+      "brasileirao:H8",
+      "brasileirao:H9",
+      "brasileirao:H14",
+      "brasileirao:H15",
+      "brasileirao:A1"
+    ],
+    "season_policy": {
+      "2021": "DEVELOPMENT",
+      "2022": "DEVELOPMENT",
+      "2023": "DEVELOPMENT",
+      "2024": "VALIDATION",
+      "2025": "HOLDOUT_SEALED",
+      "2026": "EXPLORATORY"
+    },
+    "pending_quota": "max_pending_requests conta só pedidos aceitos sem desfecho terminal (liberado por mark_terminal)"
+  },
+  "handler_allowlist": {
+    "WALKFORWARD_FORECAST_EVALUATION": "brasileirao.handlers.walkforward_forecast_evaluation.v1 → python -m brasileirao_predictor.research_runtime.worker (escolhido pelo executor, nunca pelo pedido), executado como job real do predictor_ops (jobs file v3 + python -m predictor_ops run --job <id> --config <arquivo>, o mesmo mecanismo da sombra)"
+  },
+  "adapter_api": {
+    "function": "brasileirao_predictor.research_runtime.runner.Circuit(state, policy, objects).submit_request(raw: bytes, *, source: str) -> outcome",
+    "reread": "Circuit(state).show(request_id) -> (exit_code, payload)",
+    "same_path_as_entrypoint": "Circuit.submit_file(path) = submit_request(path.read_bytes(), source=str(path)); main() usa submit_file"
+  },
+  "result_schema": {
+    "id": "brasileirao-research-result/1",
+    "validator": "brasileirao_predictor.research_runtime.contract.validate_result",
+    "top_level": [
+      "schema_version",
+      "result_id",
+      "request_id",
+      "admission_id",
+      "experiment_id",
+      "research_id",
+      "hypothesis_id",
+      "result_state",
+      "operational_state",
+      "scientific_state",
+      "economic_state",
+      "capital_permission",
+      "produced_at",
+      "core_facts",
+      "ops_facts",
+      "domain_facts",
+      "provenance"
+    ],
+    "separated_facts": {
+      "core_facts": "identidade da wheel do Core; trial_ids do TrialRegistryV2; scientific_state_source = core_trial_registry; trial_row_hash; dataset_fingerprint (trial_v2.dataset_fingerprint das linhas usadas); temporal_validation (predictor_core.measurement.replay: nº de eventos de informação e de decisão, maior available_at usado − cutoff < 0, caches do banco lidos = []); estatísticas do trial (métricas e IC do Core)",
+      "ops_facts": "identidade da wheel do Ops; mecanismo (jobs file v3 + CLI); job_id; job_type FORECAST_GENERATION; economic_lock_id; ops_run_id do SUCCEEDED; ops_run_ids e attempt_ids de todas as tentativas; retry_count; estado terminal; started/finished/heartbeat; library_provenance (strict, VALIDATED); ops_record_hash",
+      "domain_facts": "identidade do brasileirao-predictor; handler; referências (nome, versão, revision_id, sha256); alvo; data_cutoff; as_of do dataset; qualidade de dados; previsões por evento (cutoff, refit_at, nº de informações, fingerprint, Elo, parâmetros, probabilidades); avaliação (score do modelo × baseline, Δ médio, IC); economia (ROI bruto e líquido com IC, após imposto, CLV não mensurável); sha256 do efeito"
+    },
+    "distinct_states": {
+      "operational_state": [
+        "SUCCEEDED",
+        "FAILED",
+        "TIMEOUT",
+        "SKIPPED_ALREADY_SUCCEEDED"
+      ],
+      "scientific_state": [
+        "SUPPORTED",
+        "REFUTED",
+        "INCONCLUSIVE",
+        "INSUFFICIENT_SAMPLE",
+        "NOT_EVALUATED"
+      ],
+      "economic_state": [
+        "WATCH",
+        "NO_EDGE",
+        "NOT_EVALUATED"
+      ]
+    },
+    "invariants": [
+      "Ops não SUCCEEDED ⇒ scientific/economic NOT_EVALUATED e result_state FAILED_OPERATIONAL",
+      "FAILED_OPERATIONAL ⇒ Ops não SUCCEEDED",
+      "economic WATCH ⇒ scientific SUPPORTED",
+      "WATCH_NO_CAPITAL ⇒ economic WATCH",
+      "FORECAST_ONLY ⇒ scientific e economic NOT_EVALUATED",
+      "capital_permission sempre false",
+      "IDs com prefixo brasileirao:"
+    ]
+  },
+  "result_states": [
+    "WATCH_NO_CAPITAL",
+    "NO_EDGE",
+    "INCONCLUSIVE",
+    "REFUTED",
+    "CLOSED_INSUFFICIENT_SAMPLE",
+    "INCONCLUSIVE_DATA_QUALITY",
+    "FORECAST_ONLY",
+    "FAILED_OPERATIONAL"
+  ],
+  "non_result_outcomes": [
+    "NOT_READY",
+    "REJECTED",
+    "CONFLICT",
+    "OPS_FAILED_RETRYABLE",
+    "TEMPORAL_INTEGRITY_VIOLATION",
+    "RECONCILIATION_REQUIRED"
+  ],
+  "negative_states_note": "NO_EDGE, INCONCLUSIVE, REFUTED, CLOSED_INSUFFICIENT_SAMPLE e INCONCLUSIVE_DATA_QUALITY são resultados; FORECAST_ONLY (domínio) = previsões sem rótulo no snapshot, sem afirmação científica; NOT_READY é desfecho não terminal (objeto de referência indisponível) e não gera resultado.",
+  "id_fields": {
+    "request": "request_id (brasileirao:…, declarado no pedido)",
+    "admission": "admission_id = brasileirao:ADM-<sha256(request_id, content_hash, policy_hash, decisão, motivo)[:32]>",
+    "experiment": "experiment_id = brasileirao:EXP-<logical_hash[:32]>",
+    "attempt": "attempt_id = brasileirao:ATTEMPT-<uuid4>",
+    "ops_run": "ops_run_id = run_id do predictor_ops",
+    "result": "result_id = brasileirao:RESULT-<logical_hash[:32]>",
+    "trial": "trial_id = brasileirao:TRIAL-<logical_hash[:32]>"
+  },
+  "temporal_contract": {
+    "inequality": "∀ informação i usada na previsão t: available_at(i) < cutoff(t)",
+    "cutoff": "cutoff(t) = min(kickoff(t) − decision_lead_minutes, data_cutoff)",
+    "as_of": "data_cutoff ≤ as_of do dataset (senão REJECTED DATA_CUTOFF_AFTER_DATASET_AS_OF)",
+    "available_at": {
+      "match_result": "kickoff_at + 180 min (brasileirao_predictor.pit.RESULT_LATENCY)",
+      "match_result_without_kickoff": "(data UTC + 1 dia) T03:00Z",
+      "odds_close": "kickoff_at; 1X2 de sofascore_matches.odds_home/draw/away, O/U 2.5 de odds_lines (market ou, line 2.5, odd_a over, odd_b under); só avaliação econômica ex post, nunca entra na previsão",
+      "model_parameters": "refit mensal: refit_at(t) = primeiro instante UTC do mês de cutoff(t); ajuste só com resultados de available_at < refit_at",
+      "elo": "recalculado de zero em cada cutoff(t) com resultados de available_at < cutoff(t); janela elo.window_years relativa a cutoff(t)",
+      "labels": "placares dos eventos-alvo entram só depois de todas as previsões existirem (rótulos, nunca features)",
+      "db_caches": "current_elo, model_parameters e xg_model_parameters do snapshot nunca são lidos"
+    },
+    "timestamps": "toda data-hora com fuso explícito; sem fuso → TEMPORAL_INTEGRITY_VIOLATION (nunca adivinha); offsets de sede (−02:00 a −05:00, inclusive horário de verão antes de 2019) normalizados para UTC; pedidos só em UTC 'Z'",
+    "impossible_data": "placar final de jogo que não poderia ter terminado antes do as_of → TEMPORAL_INTEGRITY_VIOLATION",
+    "enforced_by": "predictor_core.measurement.replay (key/available_at, LookaheadError) sobre um fluxo único de eventos de informação e de decisão; na mesma marca de tempo a decisão vem antes (desigualdade estrita)",
+    "violation": "TEMPORAL_INTEGRITY_VIOLATION (exit 4), sem efeito, sem trial, sem resultado"
+  },
+  "idempotency_key": {
+    "key": "request_id",
+    "content_identity": "sha256 canônico do pedido sem client_ref",
+    "same_key_same_content": "1 experimento, 1 efeito (idempotência do Ops por economic_key), 1 resultado; tentativas podem variar",
+    "same_key_different_content": "CONFLICT"
+  },
+  "authoritative_result_source": {
+    "store": "<state>/results.sqlite (ResultStore) + arquivo imutável <state>/x/e/<logical_hash[:16]>/research-result.json",
+    "reread": "brasileirao-research show <request_id> / Circuit.show: confere hash do blob e bytes do arquivo; divergência = RECONCILIATION_REQUIRED",
+    "never_recomputed": true
+  },
+  "adapter_paths": [
+    "brasileirao_predictor/adapters/"
+  ],
+  "adapter_entrypoints": {
+    "allowed_to_create_in_stage_b": [
+      "brasileirao-research-adapter → brasileirao_predictor.adapters.<módulo>:main"
+    ],
+    "present_in_stage_a": []
+  },
+  "adapter_paths_rules_evidence": "tests/conformance/test_import_closure.py (regras 1 e 2); regra 3 = adapter_api",
+  "conformance_suite": {
+    "path": "tests/conformance/",
+    "vectors": "tests/conformance/fixtures.py (datasets SQLite sintéticos determinísticos com o schema de produção: mesmo kickoff, jogo em andamento, 00:30Z do dia seguinte, jogo adiado e remarcado, jogo sem kickoff, caches envenenados; variantes: 5 permutações, canário FUTURE_CANARY_BR_001, offsets de sede, kickoff sem fuso, fixture duplicada, resultado impossível no as_of)",
+    "covers": [
+      "E2E",
+      "IDEMPOTENCY",
+      "FUTURE_CANARY",
+      "TEMPORAL_INTEGRITY",
+      "RESTART_RECOVERY",
+      "FAILURE_INJECTION",
+      "AUTHORITY_SEPARATION",
+      "ADMISSION",
+      "CAPITAL_FORBIDDEN",
+      "BR_KICKOFF_ORDERING",
+      "BR_TIMEZONE_INTEGRITY",
+      "BR_METAMORPHIC",
+      "BR_SAME_KICKOFF_ISOLATION",
+      "BR_CACHE_STATE",
+      "BR_FUTURE_INJECTION",
+      "adapter_paths"
+    ],
+    "runs_against": "o brasileirao_predictor e o brasileirao-research INSTALADOS (checkout no CI; wheel publicada no cleanroom)",
+    "frozen_vectors": "qualification/brasileirao/FROZEN_VECTORS.json (sha256 dos arquivos da suíte no final_commit)"
+  },
+  "capital_permission": false,
+  "state_layout": {
+    "root": "--state DIR (operador)",
+    "files": {
+      "admission": "admission.sqlite",
+      "authoritative_results": "results.sqlite",
+      "outcomes": "outcomes/",
+      "journal": "x/journal.sqlite",
+      "experiments": "x/e/<logical_hash[:16]>/ (referências materializadas, dataset.sqlite3, worker-request.json, ops-job.<n>.json, domain-effect.json, trials-v2.json, research-result.json)",
+      "ops_runtime": "x/o/ (predictor_ops: lock, heartbeat, events, idempotency)"
+    },
+    "windows_max_state_root_chars": 120
+  },
+  "fault_injection": {
+    "env": "BRASILEIRAO_RESEARCH_FAULT",
+    "points": "brasileirao_predictor/research_runtime/faults.py (qualificação; inativo sem a variável)",
+    "exit_code": 86
+  }
+}

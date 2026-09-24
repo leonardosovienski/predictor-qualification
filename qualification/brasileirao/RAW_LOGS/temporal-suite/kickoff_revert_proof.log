@@ -1,0 +1,50 @@
+# 2026-09-24T05:39:46Z prova do revert (prompt §10 BR_KICKOFF_ORDERING): só o hunk de ordenação do a51a68d
+diff --git a/brasileirao_scripts/backtest_walkforward.py b/brasileirao_scripts/backtest_walkforward.py
+index d3ecc84..dc62087 100644
+--- a/brasileirao_scripts/backtest_walkforward.py
++++ b/brasileirao_scripts/backtest_walkforward.py
+@@ -108,6 +108,8 @@ def run_walkforward(cfg, conn):
+     cal_years = cfg["model"].get("calibration_window_years", 4)
+ 
+     rows = db.completed_matches_with_kickoff(conn)
++    # Keep outcomes aligned with the temporal order used by compute_ratings.
++    rows = [row for _key, row in sorted(zip(ratings.temporal_keys(rows), rows), key=lambda item: item[0])]
+     if len(rows) < 2 * block_games:
+         sys.exit(f"base insuficiente: {len(rows)} jogos < 2 blocos de {block_games}")
+ 
+worktree HEAD cff7a3a50a00a5af23c569c57c3203e2d2f2d535
+Checking patch brasileirao_scripts/backtest_walkforward.py...
+Hunk #1 succeeded at 130 (offset -22 lines).
+Applied patch brasileirao_scripts/backtest_walkforward.py cleanly.
+revert apply exit=0
+diff --git a/brasileirao_scripts/backtest_walkforward.py b/brasileirao_scripts/backtest_walkforward.py
+index d6b37fa..1339d13 100644
+--- a/brasileirao_scripts/backtest_walkforward.py
++++ b/brasileirao_scripts/backtest_walkforward.py
+@@ -130,8 +130,6 @@ def run_walkforward(cfg, conn):
+     cal_years = cfg["model"].get("calibration_window_years", 4)
+ 
+     rows = db.completed_matches_with_kickoff(conn)
+-    # Keep outcomes aligned with the temporal order used by compute_ratings.
+-    rows = [row for _key, row in sorted(zip(ratings.temporal_keys(rows), rows), key=lambda item: item[0])]
+     if len(rows) < 2 * block_games:
+         sys.exit(f"base insuficiente: {len(rows)} jogos < 2 blocos de {block_games}")
+ 
+== teste com o revert (deve FALHAR)
+E         
+E         At index 0 diff: '2021-01-01T19:00:00+00:00|kickoff' != '2021-01-01T17:00:00+00:00|kickoff'
+E         Use -v to get more diff
+
+tests\test_walkforward_row_contract.py:24: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_walkforward_row_contract.py::test_walkforward_preserves_kickoff_and_aligns_ratings
+1 failed in 6.06s
+== restaurado
+status: []
+.                                                                        [100%]
+1 passed in 4.39s
+worktree removido: sim
+C:/QUALIFICACAO/repos/brasileirao-predictor cff7a3a [qualification/brasileirao-stage-a]
+C:/QUALIFICACAO/repos/br-dev                cff7a3a [wip/br-dev]
+== wheel publicada v0.3.0rc1:
+sha256:ebea77228c527d81a578d49d40acf3547bc3c3bc9c54a33a0ba824dd78e2919d

@@ -1,0 +1,233 @@
+{
+  "schema": "brasileirao/FINDINGS/1",
+  "severity_scale": "C6: P0 quebra o que dá dinheiro ou faz perder; P1 defeito real sem violação observada; P2 sem efeito em resultado ou operação",
+  "status_values": [
+    "OPEN",
+    "FIXED",
+    "NOT_A_DEFECT",
+    "ACCEPTED_LIMITATION"
+  ],
+  "findings": [
+    {
+      "id": "BR-F001",
+      "severity": "P2",
+      "status": "NOT_A_DEFECT",
+      "phase": "freeze-parameters",
+      "title": "Ponto de partida do prompt desatualizado",
+      "description": "O prompt (§3) diz main=34d73e2 e Ops 4.2.1. O main real do brasileirao-predictor em 2026-09-24 é e14f339 (merges de HYG-004 e HYG-015 por cima de 34d73e2). A missão segue o código (prompt §0).",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/freeze-parameters/ls_remote.log"
+      ],
+      "closed_by": "divergência do prompt registrada; a missão seguiu o código (prompt §0)"
+    },
+    {
+      "id": "BR-F002",
+      "severity": "P2",
+      "status": "FIXED",
+      "phase": "freeze-parameters",
+      "title": "Branches remotas já mescladas no brasileirao-predictor",
+      "description": "fix/walkforward-row-contract-20260919 (a51a68d), hygiene/HYG-004-uv-locked (a2f8665) e hygiene/HYG-015-retire-v1-workflows (3de65fa) continuam no GitHub, todas já contidas em main. O dono pediu que ao final só reste main.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/freeze-parameters/ls_remote.log",
+        "qualification/brasileirao/RAW_LOGS/attestation/branch_cleanup.log"
+      ],
+      "owner_action": "nenhuma: apagar ao fim da missão após conferir ancestralidade (pedido do dono)",
+      "closed_by": "branches mescladas apagadas depois de conferir ancestralidade em main; o brasileirao-predictor ficou só com main (RAW_LOGS/attestation/branch_cleanup.log)"
+    },
+    {
+      "id": "BR-F003",
+      "severity": "P1",
+      "status": "FIXED",
+      "phase": "freeze-parameters",
+      "title": "brasileirao-predictor consome predictor-ops 4.2.1 (SHARED-005 bloqueante)",
+      "description": "pyproject/uv.lock/CI do baseline apontam a wheel 4.2.1 (da4fa540…), bloqueante pela SHARED-005 (RESOLUTION_4.2.2rc1.json: consumidores da 4.2.1 continuam bloqueados até migrar). D-17 manda migrar para 4.2.2rc1.",
+      "evidence": [
+        "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json",
+        "qualification/shared/STACK_BASELINE_V1.1.json"
+      ],
+      "fix_commit": "5344b5f",
+      "note": "pins migrados para 4.2.2rc1; fecha com CI e cleanroom-final verdes",
+      "closed_by": "Ops 4.2.2rc1 no pyproject/lock/CI/Dockerfiles; CI verde em 04b42c9 (35965123063) e runtime só com wheels publicadas (run35963501898, Windows local): identidade 4.2.2rc1 0be70bfb nos 3 ambientes (CORE_IDENTITY_REPORT.md)"
+    },
+    {
+      "id": "BR-F004",
+      "severity": "P0",
+      "status": "FIXED",
+      "phase": "truth-map",
+      "title": "Motor de benchmark treina com jogo ainda em andamento (vazamento de futuro)",
+      "description": "evaluator.py:99 e serving_evaluator.py:178/286 filtram o histórico de ajuste por kickoff < horizonte (kickoff do alvo), não pela disponibilidade do resultado. Jogo que começou antes do alvo e ainda não terminou entra no ajuste dos parâmetros globais (a, b, alpha, rho) com o placar final. No snapshot real: 2 de 20 refits na cadência padrão do benchmark_predictor (retrain_every=100) e 381 de 1956 com retrain_every=1. backtest_walkforward.py tem a mesma classe: calibração e fração de 1T cortadas por DATA UTC (r[0] < first_date), então um jogo de 23:00Z do dia anterior entra no bloco que começa 00:30Z. Elo não é afetado (por time). Os relatórios protegidos (reports/benchmark_*) foram produzidos com este motor e ficam como estão (C15.1).",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/truth-map/probe_inprogress_leak_real.json",
+        "qualification/brasileirao/scripts/probe_inprogress_leak.py",
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ],
+      "fix_commit": "abd232e, 8479ecf",
+      "note": "regressões test_result_availability_guard.py e test_walkforward_result_availability.py falham antes (RAW_LOGS/contract-admission/BR-F004/repro_*) e passam depois (after_fix_*); fecha com a suíte completa e o CI",
+      "closed_by": "regressões falham antes e passam depois (RAW_LOGS/contract-admission/BR-F004/); suíte completa verde no CI de 04b42c9 (2305 passed) e no Windows local de cff7a3a (o único não-verde foi BR-F016, ambiental)"
+    },
+    {
+      "id": "BR-F005",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Janelas de Elo/calibração ancoradas no último jogo do banco em scripts de pesquisa",
+      "description": "backtest_walkforward.py:118 e scripts ad-hoc (auditoria, calib_empate, calib_ou, confound, cosh_free, elasticidade, eval_walkforward, exp_a_calib, exp_f_rho, bootstrap_calibration_window) recortam a janela por rows[-1] (data do último jogo do banco): um dado futuro decide o recorte das previsões históricas. Sem efeito numérico hoje (dados desde 2021, janela de 6 anos). Os scripts ad-hoc não são referenciados por CI, testes nem entrypoint.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/truth-map/date_sites_e14f339.json"
+      ]
+    },
+    {
+      "id": "BR-F006",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Proveniência da sombra não identifica o dado usado na captura",
+      "description": "sombra_diaria.consumer_provenance grava o sha256 de uma cópia do banco ANTES do payload; o payload ingere (escreve) e só depois captura. O hash não descreve o dado lido pela captura (input_scope declara: payload may observe later commits). O PIT do pick está protegido (validate_pick exige predicted_at e odds_captured_at < kickoff). O circuito de pesquisa não herda isso: o handler lê só o snapshot com hash.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ],
+      "owner_action": "decidir se a sombra deve registrar também o hash do banco no momento da captura (mudança operacional, fora do circuito)"
+    },
+    {
+      "id": "BR-F007",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "bet_log.add_bet ignora kickoff sem fuso em vez de rejeitar",
+      "description": "bet_log.py:333-341: kickoff sem fuso gera TypeError na comparação e o código zera kickoff/late, registrando a aposta sem a checagem de aposta atrasada. O prompt diz que bet_log rejeita timestamp sem fuso; vale só para a banca (_timestamp). Fora do circuito de pesquisa.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ]
+    },
+    {
+      "id": "BR-F008",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Exemplos de agendador com caminhos inexistentes ou de checkout",
+      "description": "scheduler.prospective.example.json aponta scripts/collect_market_research.py, scripts/prospective_readiness.py e python -m src.bet_log (não existem); jobs.market-research.example.json roda .venv/Scripts/python.exe brasileirao_scripts/<script>.py (checkout, schema 1). Ambos são exemplos (activation example-only).",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ]
+    },
+    {
+      "id": "BR-F009",
+      "severity": "P1",
+      "status": "FIXED",
+      "phase": "truth-map",
+      "title": "Wheel publicada 0.2.0 difere do commit com a mesma versão",
+      "description": "A release v0.2.0 (2a862b4c…, tag 4dbd353) difere de e14f339 em 8 arquivos com a mesma versão 0.2.0 (C4). Resolve com release nova na fase publish-candidates.",
+      "evidence": [
+        "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
+      ],
+      "closed_by": "release v0.3.0rc2 = commit 04b42c9 (build reprodutível, sha256 70344f22…); main alinhado pelo PR #78"
+    },
+    {
+      "id": "BR-F010",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "baseline",
+      "title": "Teste de conformidade do pré-registro pulado por atestado de poder vencido",
+      "description": "tests/test_prereg_serving_vs_climatologia.py::test_registro_conforma_ao_schema_do_core faz pytest.skip quando data/trials.harness_attestation.json expira (expirou em 2026-09-19): pulado no CI de e14f339 e no Windows local. Renovar exige rodar attest_rps_power e alterar arquivo protegido; fora do escopo.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35824710652.log",
+        "qualification/brasileirao/RAW_LOGS/baseline/windows_suite_e14f339.log"
+      ],
+      "owner_action": "renovar o atestado (arquivo protegido) ou tornar o teste independente do relógio"
+    },
+    {
+      "id": "BR-F011",
+      "severity": "P2",
+      "status": "FIXED",
+      "phase": "truth-map",
+      "title": "Plugin reporta versão fixa 0.2.0",
+      "description": "ecosystem_plugin.health() devolve version 0.2.0 escrita no código, não a versão da distribuição instalada.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ],
+      "fix_commit": "39efa52",
+      "note": "plugin usa importlib.metadata; teste tests/test_ecosystem_plugin_version.py",
+      "closed_by": "tests/test_ecosystem_plugin_version.py verde no CI de 04b42c9"
+    },
+    {
+      "id": "BR-F012",
+      "severity": "P1",
+      "status": "FIXED",
+      "phase": "truth-map",
+      "title": "Circuito de pesquisa da Etapa A não existe",
+      "description": "Nenhum entrypoint lê pedido de pesquisa em arquivo; não há admission, handler da allowlist, resultado com core/ops/domain facts nem releitura autoritativa (NOT_PRESENT). Construído na fase contract-admission.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json",
+        "qualification/brasileirao/RAW_LOGS/truth-map/import_graph_e14f339.json"
+      ],
+      "fix_commit": "39efa52",
+      "note": "circuito construído; fecha com cleanroom-final/E2E",
+      "closed_by": "brasileirao-research PROVEN: conformidade 89/89 pela wheel publicada no Linux primário, windows-latest e Windows local; E2E real 25/25 no Windows"
+    },
+    {
+      "id": "BR-F013",
+      "severity": "P2",
+      "status": "NOT_A_DEFECT",
+      "phase": "truth-map",
+      "title": "Ops no baseline: head do main (31d3939) ≠ commit da release 4.2.2rc1 (9831b0d)",
+      "description": "O STACK_BASELINE_V1.1 registra 9831b0d (branch do PR #26); o main do predictor-ops tem o squash 31d3939 com árvore idêntica (git diff --stat vazio). A wheel 4.2.2rc1 foi construída de 9831b0d. Sem efeito: a identidade usada é a wheel.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/baseline/ops_9831b0d_vs_31d3939.diffstat",
+        "qualification/brasileirao/STACK_BASELINE.json"
+      ],
+      "closed_by": "árvores idênticas (diffstat vazio); a identidade usada é a wheel 4.2.2rc1"
+    },
+    {
+      "id": "BR-F014",
+      "severity": "P1",
+      "status": "FIXED",
+      "phase": "contract-admission",
+      "title": "Circuito novo: submissões concorrentes do mesmo pedido corriam na materialização",
+      "description": "Na primeira execução da suíte de conformidade (Windows local), test_concurrent_submissions_of_the_same_request_produce_one_effect expôs que dois processos com o mesmo pedido materializavam as mesmas referências ao mesmo tempo; o segundo recebia PermissionError no arquivo somente-leitura recém-copiado pelo primeiro e marcava o experimento RECONCILIATION_REQUIRED. Correção no próprio código novo: lock exclusivo do SO por experimento (liberado se o processo morre); o concorrente recebe OPS_FAILED_RETRYABLE EXPERIMENT_BUSY sem mexer no estado. Fica OPEN até a suíte passar no runtime suportado.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/contract-admission/conformance_windows_first_run_tail.log"
+      ],
+      "fix_commit": "39efa52",
+      "closed_by": "test_concurrent_submissions_of_the_same_request_produce_one_effect verde nos 3 ambientes pela wheel v0.3.0rc2"
+    },
+    {
+      "id": "BR-F015",
+      "severity": "P1",
+      "status": "FIXED",
+      "phase": "windows-smoke",
+      "title": "Handler novo lia as odds O/U 2.5 de fechamento das colunas flat, vazias no dado real",
+      "description": "No dado real (Windows, v0.3.0rc1) todo pedido OU25 terminou INCONCLUSIVE_DATA_QUALITY com missing_market = 100%: sofascore_matches.odds_over/odds_under são NULL em todas as temporadas; a forma canônica da linha principal de O/U é odds_lines (market ou, line 2.5, odd_a = over, odd_b = under; 1897 linhas). A fixture sintética preenchia as colunas flat e não expunha o defeito. Correção: fechamento O/U lido de odds_lines; fixture reproduz a realidade (flat vazio).",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/windows-smoke/real/result_2023-OU25-climatology.json",
+        "qualification/brasileirao/EVIDENCE_NUMBERS.json"
+      ],
+      "fix_commit": "cff7a3a",
+      "closed_by": "teste falha antes (RAW_LOGS/windows-smoke/BR-F015_repro_before_fix.log) e passa depois; dado real com v0.3.0rc2: OU25 avaliado em 2021, 2022 e 2026; 2023 e 2024 seguem INCONCLUSIVE_DATA_QUALITY por cobertura real de odds_lines (249/380 e 246/380), pela regra congelada"
+    },
+    {
+      "id": "BR-F016",
+      "severity": "P2",
+      "status": "ACCEPTED_LIMITATION",
+      "phase": "contract-admission",
+      "title": "Modern Standby do host Windows interrompe execuções longas (ambiental)",
+      "description": "Na suíte Windows de cff7a3a, test_admission_rejects_before_any_execution[SCHEMA_INVALID6] estourou o timeout de 600 s do harness com 1039 s de relógio; o log de energia mostra o host entrando em espera às 05:20:21Z e saindo às 05:37:36Z, exatamente durante o teste (a suíte começou às 05:18:57Z). Sozinho o teste passa 3/3. Mesma classe da CR-F018 do crypto. Mitigação: execuções locais longas sob keep_awake.ps1 (SetThreadExecutionState por processo, sem mudar configuração de energia).",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/contract-admission/windows_suite_cff7a3a.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/contract-admission/windows_power_events_506_507.log",
+        "qualification/brasileirao/RAW_LOGS/contract-admission/schema_invalid6_rerun_x3.log"
+      ]
+    },
+    {
+      "id": "BR-F017",
+      "severity": "P2",
+      "status": "ACCEPTED_LIMITATION",
+      "phase": "cleanroom-final",
+      "title": "Testes que leem o checkout falham na árvore sem os pacotes-fonte (classe T)",
+      "description": "Suíte completa contra a wheel publicada (árvore = final_commit sem brasileirao_predictor/ e brasileirao_scripts/, via git archive): 44 failed + 2 errors de coleta no Linux primário e no windows-latest. 42 são os mesmos da classe T do cleanroom-baseline (SHARED-002: scripts abertos por caminho, config.yaml e data/ do checkout, atestado do repo); os 4 a mais usam git/.gitignore (a árvore do git archive não tem .git). Nenhum exercita o código instalado; todos passam no CI do commit. A suíte de conformidade (que roda o circuito instalado) passa inteira.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/full_suite.junit.xml",
+        "qualification/shared/RAW_LOGS/SHARED-002/run35827048915/cleanroom-brasileirao-predictor/junit-head_build_pytest_s0.xml"
+      ]
+    }
+  ]
+}

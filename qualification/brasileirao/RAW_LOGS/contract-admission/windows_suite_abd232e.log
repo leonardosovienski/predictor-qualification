@@ -1,0 +1,79 @@
+# 2026-09-24T03:16:52Z commit abd232e1287873da50130120de8008fdec2be361 dirty_entries=0 RUNROOT=C:/QUALIFICACAO/runtime/brasileirao/w/0924T031652
+uv 0.12.18 (01cb90c1a 2026-09-22 x86_64-pc-windows-msvc)
+Resolved 60 packages in 2.74s
+Checked 60 packages in 185ms
+uv sync exit=0
+3.13.14 (main, Aug  5 2026, 16:10:10) [MSC v.1944 64 bit (AMD64)] Windows-11-10.0.26200-SP0
+core 3.2.1 C:\QUALIFICACAO\repos\brasileirao-predictor\.venv\Lib\site-packages\predictor_core\__init__.py
+ops 4.2.2rc1 C:\QUALIFICACAO\repos\brasileirao-predictor\.venv\Lib\site-packages\predictor_ops\__init__.py
+validate_env_example exit=0
+preservado (já existe): data\matches.db
+seed_test_fixtures exit=0
+All checks passed!
+ruff check exit=0
+446 files already formatted
+ruff format exit=0
+0 errors, 0 warnings, 0 informations
+pyright exit=0
+........................................................................ [ 63%]
+........................................................................ [ 66%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+........................................................................ [ 76%]
+........................................................................ [ 79%]
+........................................................................ [ 83%]
+........................................................................ [ 86%]
+........................................................................ [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 96%]
+........................................................................ [ 99%]
+...............                                                          [100%]
+================================== FAILURES ===================================
+________________________ test_ht_fraction_forward_only ________________________
+
+    def test_ht_fraction_forward_only():
+        """H2: a fração de gols do 1T só pode ver jogos ANTERIORES ao corte."""
+        spec = importlib.util.spec_from_file_location("wf", ROOT / "brasileirao_scripts" / "backtest_walkforward.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        # 60 jogos antes do corte (1 gol no 1T de 2 no total → frac 0.5),
+        # 40 depois com fração diferente que NÃO pode contaminar
+        rows = [("2024-01-01", 1, 1, 1, 0)] * 60 + [("2025-01-01", 3, 3, 0, 0)] * 40
+>       frac, n = mod._ht_fraction(rows, "2024-12-31")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_brasileirao_domain.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+rows_ht = [('2024-01-01', 1, 1, 1, 0), ('2024-01-01', 1, 1, 1, 0), ('2024-01-01', 1, 1, 1, 0), ('2024-01-01', 1, 1, 1, 0), ('2024-01-01', 1, 1, 1, 0), ('2024-01-01', 1, 1, 1, 0), ...]
+cut = '2024-12-31'
+
+    def _ht_fraction(rows_ht, cut):
+        """Fração média de gols no 1T usando SÓ jogos cujo resultado já existia em `cut`
+        (kickoff + 180 min, brasileirao_predictor.pit; BR-F004 — o corte por data deixava
+        entrar jogo em andamento). Espelha display.ht_goal_fraction, forward-only.
+        None se n < 50 (mesmo piso do serving)."""
+        tot_ht = tot_ft = n = 0
+        for when, hs, as_, hht, aht in rows_ht:
+>           if _result_available(when) >= cut or hht is None or aht is None:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: '>=' not supported between instances of 'datetime.datetime' and 'str'
+
+brasileirao_scripts\backtest_walkforward.py:108: TypeError
+============================== warnings summary ===============================
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[dixon_coles]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[dixon_coles]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\.venv\Lib\site-packages\scipy\optimize\_numdiff.py:710: RuntimeWarning: invalid value encountered in subtract
+    df = [f_eval - f0 for f_eval in f_evals]
+
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[serving]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[serving]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\brasileirao_predictor\serving_evaluator.py:218: RuntimeWarning: fit_goal_model: parametro b=4.0000 cravado no bound [-1, 4] — verifique o formato do history (diff, hs, as)
+    self.params = model.fit_goal_model(hist_cal, sample_weights=weights)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_brasileirao_domain.py::test_ht_fraction_forward_only - Type...
+1 failed, 2215 passed, 1 skipped, 30 deselected, 4 warnings, 30 subtests passed in 450.29s (0:07:30)
+pytest exit=1
+# git status after: 0 entries

@@ -1,0 +1,260 @@
+{
+  "schema": "brasileirao/ARCHITECTURE_TRUTH_MAP/1",
+  "phase": "truth-map",
+  "repo": "brasileirao-predictor",
+  "commit": "e14f3394c1908fae6d2f25754e6ab3a6792dbf1e",
+  "maturity_scale": "NOT_PRESENT < DECLARED < IMPLEMENTED < INSTANTIATED < REACHABLE < EXERCISED < PROVEN (C2)",
+  "method": [
+    "código: leitura dos módulos no commit + grafo de imports por AST (RAW_LOGS/truth-map/import_graph_e14f339.json, scripts/truth_map.py)",
+    "datas: inventário de todo ponto que lê/cria data-hora (RAW_LOGS/truth-map/date_sites_e14f339.json, scripts/date_sites.py): 325 pontos",
+    "runtime: suíte completa do checkout no Windows local (RAW_LOGS/baseline/windows_suite_e14f339.log: 2207 passed, 1 skipped) e no CI hospedado (RAW_LOGS/baseline/hosted_ci/run_35824710652.log: 2206 passed, 2 skipped, 30 integration passed); instalação limpa da wheel publicada 0.2.0 e do build de e14f339 no Linux pelo SHARED-002 (qualification/shared/SHARED-002/CLEANROOM_REPORT.md, run 35827048915)",
+    "sonda temporal no dado real (cópia com sha256): RAW_LOGS/truth-map/probe_inprogress_leak_real.json"
+  ],
+  "entrypoints": {
+    "[project.scripts] brasileirao-predict": {"target": "brasileirao_predictor.predict:main", "closure_modules": 19, "reads": "config.yaml da raiz do projeto + data/matches.db (cache current_elo/model_parameters)", "ops": false, "core": "predictor_core.kernel.obs (telemetria)", "research_request": false},
+    "[project.scripts] brasileirao-kernel": {"target": "brasileirao_predictor.kernel_cli:main", "closure_modules": 14, "reads": "Redis (REDIS_URL) + cache do modelo", "ops": false, "core": "telemetria", "research_request": false},
+    "[project.scripts] brasileirao-shadow": {"target": "brasileirao_scripts.sombra_diaria:main", "closure_modules": 25, "reads": "BRASILEIRAO_PROJECT_ROOT (obrigatório fora de checkout) + data/matches.db ao vivo", "ops": true, "core": "TrialRegistry (sombra.py)", "research_request": false},
+    "[entry-points.predictor.plugins] brasileirao": {"target": "brasileirao_predictor.ecosystem_plugin:PLUGIN", "closure_modules": 2, "reads": "nada (metadados)", "ops": false, "core": false, "research_request": false, "defect": "versão '0.2.0' fixa no código (health)"},
+    "conclusion": "nenhum entrypoint lê pedido de pesquisa em arquivo (prompt §3 confirmado): o circuito da Etapa A não existe no baseline (NOT_PRESENT)"
+  },
+  "components": [
+    {
+      "component": "prediction (serving CLI)",
+      "files": ["brasileirao_predictor/predict.py", "brasileirao_predictor/display.py"],
+      "entrypoint": "brasileirao-predict",
+      "call_chain": "main → build(cfg) → db.load_elo/db.load_params (cache) ou cron_update_models.compute → model.predict_match → display",
+      "state": "lê cache current_elo e model_parameters de data/matches.db; recalcula em memória se config_hash/n_matches divergem",
+      "persistence": "nenhuma (só leitura)",
+      "core": "predictor_core.kernel.obs.emit_event; bootstrap_ci no display",
+      "ops": "não",
+      "temporal_boundary": "estado do cache = 'agora' (todos os resultados já no banco). upcoming_fixtures usa date.today() LOCAL contra a coluna date em UTC (predict.py:65)",
+      "wheel_or_checkout": "wheel, mas ROOT/config vêm de project_root() (checkout ou BRASILEIRAO_PROJECT_ROOT); a wheel não traz config.yaml (SHARED-002)",
+      "level": "REACHABLE"
+    },
+    {
+      "component": "formal prediction (protocolo de prontidão)",
+      "files": ["brasileirao_predictor/prediction_protocol.py"],
+      "entrypoint": "alcançável de brasileirao-predict (closure)",
+      "call_chain": "PredictionReadinessInput (pydantic) → relatório de prontidão",
+      "state": "nenhum; valida declarações do chamador (evidence_scope CALLER_DECLARATIONS_ONLY, provenance_verified False)",
+      "persistence": "nenhuma",
+      "core": "não",
+      "ops": "não",
+      "temporal_boundary": "exige datetime com fuso em todos os campos e normaliza para UTC (validate_aware_datetimes)",
+      "wheel_or_checkout": "wheel",
+      "level": "EXERCISED (tests/test_prediction_protocol.py)"
+    },
+    {
+      "component": "model update (cron)",
+      "files": ["brasileirao_predictor/cron_update_models.py"],
+      "entrypoint": "python -m (passo cron_models da sombra)",
+      "call_chain": "run → compute(cfg, conn) → db.completed_matches_with_kickoff → ratings.compute_ratings(asof=date.today()) → model.fit_goal_model → db.save_elo/save_params",
+      "state": "janela Elo e de calibração relativas ao ÚLTIMO jogo do banco (correto ao vivo)",
+      "persistence": "ESCREVE current_elo, model_parameters (e xg_model_parameters com ensemble) no banco",
+      "core": "não",
+      "ops": "dentro do job da sombra",
+      "temporal_boundary": "asof=date.today() LOCAL (cron_update_models.py:57); o cache gravado é estado 'do momento da captura' — qualquer uso histórico dele é futuro (regra do contrato: nunca ler)",
+      "wheel_or_checkout": "wheel (python -m) com raiz de dados explícita",
+      "level": "REACHABLE (brasileirao-shadow)"
+    },
+    {
+      "component": "sombra diária (shadow)",
+      "files": ["brasileirao_scripts/sombra_diaria.py", "brasileirao_scripts/sombra_diaria_payload.py", "brasileirao_scripts/sombra.py"],
+      "entrypoint": "brasileirao-shadow --task-name brasileirao-sombra-{manha,noite} [--check]",
+      "call_chain": "main → consumer_provenance (sqlite3.backup do banco para hash) → jobs file schema_version 3 {id, command=[sys.executable,-X,utf8,-m,brasileirao_scripts.sombra_diaria_payload], provenance, runtime.root} → subprocess sys.executable -m predictor_ops run --job <id> --config <arquivo> → payload roda 9 passos (odds_smoke, odds_stability, ingest, espelho, collection_only, cron_models, settle, capture, report) como subprocessos",
+      "state": "banco vivo data/matches.db; picks append-only data/sombra_picks.jsonl; snapshots do bookmaker",
+      "persistence": "o payload ESCREVE no banco (ingest, espelho, cron) antes de capturar",
+      "core": "TrialRegistry (bookmaker congelado da trial)",
+      "ops": "SIM: job real do predictor_ops pelo módulo instalado; timeout/heartbeat/expected_artifact/provenance_mode/job_type nos padrões (3600 s, 30 s, nenhum, permissive, nenhum)",
+      "temporal_boundary": "o hash de proveniência é do banco ANTES do payload; os passos seguintes leem o banco já alterado pela ingestão ('payload may observe later commits'). O pick exige predicted_at < kickoff e odds_captured_at < kickoff (prospective_shadow.validate_pick) — o PIT do pick está protegido; o que falha é a proveniência: o hash registrado não identifica o dado que a captura usou (BR-F006)",
+      "wheel_or_checkout": "wheel; fora de checkout exige BRASILEIRAO_PROJECT_ROOT; consumer_provenance usa git do SOURCE_ROOT (sem .git → commit None)",
+      "level": "REACHABLE (EXERCISED em tests/test_operational_provenance.py, test_sombra_runtime_paths.py)"
+    },
+    {
+      "component": "settlement",
+      "files": ["brasileirao_predictor/settle.py", "brasileirao_scripts/sombra.py (--settle)", "brasileirao_predictor/bet_log.py"],
+      "entrypoint": "python -m brasileirao_predictor.settle; passo settle da sombra",
+      "call_chain": "grade/record_result sobre predictions.jsonl; sombra.settle liquida picks contra resultado + fechamento (validate_settlement: closing < kickoff ≤ settled)",
+      "state": "jsonl append-only",
+      "persistence": "escreve jsonl de resultados",
+      "core": "TrialRegistry (sombra)",
+      "ops": "dentro do job da sombra",
+      "temporal_boundary": "validate_settlement exige fechamento pré-kickoff; bet_log.add_bet IGNORA kickoff sem fuso (ValueError/TypeError → kickoff None, sem checagem de aposta atrasada) em vez de rejeitar (BR-F007); banca rejeita timestamp sem fuso",
+      "wheel_or_checkout": "wheel/python -m com raiz de dados",
+      "level": "REACHABLE (settle da sombra)"
+    },
+    {
+      "component": "coleta (ingest Sofascore, odds, market research)",
+      "files": ["brasileirao_predictor/ingest_sofascore.py", "brasileirao_scripts/sync_matches_from_sofascore.py", "brasileirao_scripts/collect_market_research.py", "brasileirao_scripts/record_odds_smoke.py", "brasileirao_predictor/data/*"],
+      "entrypoint": "passos da sombra; jobs.market-research.example.json (schema 1)",
+      "call_chain": "ingest_sofascore → db.upsert_ss_matches/update_kickoff (fromtimestamp UTC)/insert_snapshots; collect_market_research → provider → bitemporal store",
+      "state": "banco (sofascore_matches, match_kickoff_versions, odds_snapshots, odds_lines), jsonl",
+      "persistence": "escreve",
+      "core": "predictor_core.data.contracts (DataUnavailableError), contracts.collection",
+      "ops": "coleta de market research roda como job do Ops (jobs file schema 1) mas com command = .venv/Scripts/python.exe brasileirao_scripts/<script>.py — caminho de checkout (BR-F008)",
+      "temporal_boundary": "kickoff do startTimestamp (epoch) → UTC sem ambiguidade; reagendamento versionado em match_kickoff_versions; result_observed_at write-once por trigger (histórico inteiro carimbado em 2026-09-07 pelo backfill → não mede disponibilidade)",
+      "wheel_or_checkout": "checkout (jobs.market-research.example.json)",
+      "level": "IMPLEMENTED/EXERCISED"
+    },
+    {
+      "component": "scheduler",
+      "files": ["scheduler.prospective.example.json", "jobs.market-research.example.json", "brasileirao_scripts/install_windows_scheduler.ps1"],
+      "entrypoint": "exemplos (activation: example-only)",
+      "call_chain": "scheduler.prospective.example.json aponta scripts/collect_market_research.py, scripts/prospective_readiness.py e 'python -m src.bet_log' — caminhos que NÃO existem no repo (scripts/ e src/ antigos) (BR-F008)",
+      "state": "—",
+      "persistence": "—",
+      "core": "não",
+      "ops": "jobs.market-research: jobs file schema 1 do Ops, caminhos de checkout",
+      "temporal_boundary": "UTC declarado",
+      "wheel_or_checkout": "checkout",
+      "level": "DECLARED"
+    },
+    {
+      "component": "Redis/kernel",
+      "files": ["brasileirao_predictor/kernel_cli.py", "brasileirao_predictor/kernel_daemon.py", "brasileirao_predictor/kernel_redis_v2.py", "dotnet/LineupWorker"],
+      "entrypoint": "brasileirao-kernel (--redis/REDIS_URL)",
+      "call_chain": "kernel_cli → kernel_daemon (numba) ↔ Redis ↔ Worker .NET",
+      "state": "Redis",
+      "persistence": "Redis",
+      "core": "telemetria",
+      "ops": "não",
+      "temporal_boundary": "hot path ao vivo (fora do circuito de pesquisa)",
+      "wheel_or_checkout": "wheel + extra kernel",
+      "level": "EXERCISED (CI com Redis de serviço, compose)"
+    },
+    {
+      "component": "Core (predictor-core 3.2.1)",
+      "files": ["uso em 60+ módulos"],
+      "entrypoint": "biblioteca",
+      "call_chain": "measurement.bootstrap/metrics/stats/trials, contracts.registry/points/trial_v2, testing.prequential/harness, kernel.obs",
+      "state": "TrialRegistry (data/trials.json) em scripts de pesquisa; nenhum registro V2 em runtime",
+      "persistence": "trials.json (protegido)",
+      "core": "—",
+      "ops": "—",
+      "temporal_boundary": "PrequentialEvaluator entrega history = observações anteriores na ordem da lista; o filtro de disponibilidade fica com o consumidor (ver evaluator)",
+      "wheel_or_checkout": "wheel publicada v3.2.1 (sha256 10ef42f3…) pelo uv.lock",
+      "level": "REACHABLE"
+    },
+    {
+      "component": "Ops (predictor-ops)",
+      "files": ["brasileirao_scripts/sombra_diaria.py", "brasileirao_scripts/sombra_diaria_payload.py (redaction)"],
+      "entrypoint": "via sombra (python -m predictor_ops run)",
+      "call_chain": "jobs file v3 → FileJobConfigSource → run_job (lock, heartbeat, timeout, eventos, idempotência só com economic_key)",
+      "state": "runtime_root()/operations",
+      "persistence": "eventos/heartbeat do Ops",
+      "core": "—",
+      "ops": "—",
+      "temporal_boundary": "—",
+      "wheel_or_checkout": "wheel publicada 4.2.1 (da4fa540…) — bloqueante pela SHARED-005 até migrar para 4.2.2rc1 (BR-F003)",
+      "level": "REACHABLE"
+    },
+    {
+      "component": "evaluator (motor prequencial de benchmark)",
+      "files": ["brasileirao_predictor/evaluator.py", "brasileirao_predictor/serving_evaluator.py", "brasileirao_scripts/benchmark_predictor.py"],
+      "entrypoint": "python brasileirao_scripts/benchmark_predictor.py (checkout)",
+      "call_chain": "benchmark_predictor → observações por (kickoff, home, away) → PrequentialEvaluator.run(min_history=200, retrain_every=100) → _fit(history, horizon=kickoff do alvo): usable = kickoff < horizon",
+      "state": "em memória",
+      "persistence": "reports/*.json (protegidos)",
+      "core": "PrequentialEvaluator, PredictionPoint, métricas",
+      "ops": "não",
+      "temporal_boundary": "DEFEITO (BR-F004, P0): o filtro é kickoff < horizonte, não disponibilidade do resultado; jogo que começou antes do alvo e ainda não terminou entra no ajuste com o placar final. Dado real: 2 de 20 refits na cadência padrão (retrain_every=100), 381 de 1956 com retrain_every=1 (RAW_LOGS/truth-map/probe_inprogress_leak_real.json). Afeta os parâmetros globais (a, b, α, ρ); o Elo é por time e não é afetado (um time não joga duas partidas sobrepostas)",
+      "wheel_or_checkout": "evaluator na wheel; script de benchmark no checkout",
+      "level": "EXERCISED"
+    },
+    {
+      "component": "walk-forward (backtest)",
+      "files": ["brasileirao_scripts/backtest_walkforward.py", "brasileirao_predictor/backtest.py"],
+      "entrypoint": "python brasileirao_scripts/backtest_walkforward.py (checkout, banco read-only)",
+      "call_chain": "db.completed_matches_with_kickoff → ordena por ratings.temporal_keys (a51a68d) → janela Elo relativa ao ÚLTIMO jogo do banco → compute_ratings → blocos alinhados por data UTC → calibração com r[0] < first_date → predict_match → _settle (abertura, senão fechamento)",
+      "state": "em memória",
+      "persistence": "ESCREVE data/backtest_bets_walkforward.csv, data/walkforward_summary.json na raiz do projeto",
+      "core": "bootstrap_ci, probabilistic_sharpe_ratio, TrialRegistry",
+      "ops": "não",
+      "temporal_boundary": "(1) calibração por DATA UTC: jogo do dia anterior que termina depois do primeiro kickoff do bloco (ex.: 23:00Z × bloco começando 00:30Z) entra no ajuste — mesma classe do BR-F004; (2) janela Elo e de calibração ancoradas no último jogo do banco (dado do futuro decide o recorte; sem efeito numérico hoje porque os dados começam em 2021 e a janela é de 6 anos) (BR-F005); (3) aposta na ABERTURA, cujo horário não existe na base, com modelo que já viu resultados até a data do bloco",
+      "wheel_or_checkout": "checkout",
+      "level": "EXERCISED (tests/test_walkforward_row_contract.py, test_walkforward_temporal_blocks.py)"
+    },
+    {
+      "component": "xG",
+      "files": ["brasileirao_predictor/xg_model.py"],
+      "entrypoint": "alcançável de predict/kernel/shadow (closure)",
+      "call_chain": "xg_model.fit (só com ensemble_xg.enabled) / predict / blend",
+      "state": "xg_model_parameters no banco",
+      "persistence": "cron grava",
+      "core": "não",
+      "ops": "não",
+      "temporal_boundary": "ensemble_xg DESLIGADO desde 2026-08-22 (h12); pesos por data relativa ao fit_date",
+      "wheel_or_checkout": "wheel",
+      "level": "REACHABLE (desligado por config)"
+    },
+    {
+      "component": "Elo",
+      "files": ["brasileirao_predictor/ratings.py", "brasileirao_predictor/elo_baseline.py"],
+      "entrypoint": "alcançável de predict/kernel/shadow",
+      "call_chain": "compute_ratings: lotes por temporal_keys (kickoff; dia inteiro colapsa se faltar kickoff), decaimento por time, deltas do lote aplicados juntos",
+      "state": "puro",
+      "persistence": "via cron",
+      "core": "elo_baseline usa PrequentialEvaluator",
+      "ops": "não",
+      "temporal_boundary": "mesmo kickoff = mesmo lote (isolamento); kickoff sem fuso → ValueError (temporal_keys); jogo em andamento só afeta os dois times dele",
+      "wheel_or_checkout": "wheel",
+      "level": "REACHABLE"
+    },
+    {
+      "component": "pacote research",
+      "files": ["brasileirao_predictor/research/** (46 módulos)"],
+      "entrypoint": "nenhum (não alcançável de [project.scripts]); scripts de pesquisa por checkout",
+      "call_chain": "—",
+      "state": "—",
+      "persistence": "reports/ (protegidos)",
+      "core": "métricas, bootstrap, stats, registry",
+      "ops": "não",
+      "temporal_boundary": "economic_decision.py e shadow_portfolio.py NÃO alcançáveis de nenhum entrypoint (import_graph); pyright exclui research/",
+      "wheel_or_checkout": "wheel (código) / checkout (execução)",
+      "level": "IMPLEMENTED"
+    },
+    {
+      "component": "plugin do ecosystem",
+      "files": ["brasileirao_predictor/ecosystem_plugin.py"],
+      "entrypoint": "[entry-points.predictor.plugins] brasileirao",
+      "call_chain": "PLUGIN.health/capabilities (metadados)",
+      "state": "nenhum",
+      "persistence": "nenhuma",
+      "core": "não",
+      "ops": "não",
+      "temporal_boundary": "—",
+      "wheel_or_checkout": "wheel",
+      "level": "REACHABLE; capital_permission FORBIDDEN; versão '0.2.0' fixa"
+    },
+    {
+      "component": "circuito de pesquisa da Etapa A (pedido em arquivo → admission → handler → Ops → Core → resultado)",
+      "files": [],
+      "entrypoint": "nenhum",
+      "level": "NOT_PRESENT",
+      "note": "construído nesta missão (fase contract-admission)"
+    }
+  ],
+  "dependencies": {
+    "predictor-core": {"pyproject": ">=3.2.1,<4", "uv_source": "release v3.2.1", "lock_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3", "release_asset_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"},
+    "predictor-ops": {"pyproject": ">=4.2.0,<5", "uv_source": "release v4.2.1", "lock_sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e", "note": "a D-17 exige 4.2.2rc1"},
+    "forbidden_reached_from_entrypoints": {"research_protocol": false, "cain": false, "ecosystem": false, "research_snapshot": false, "research_bundle": false}
+  },
+  "wheel_packaging": {
+    "packages": ["brasileirao_predictor", "brasileirao_scripts"],
+    "not_in_wheel": ["config.yaml", "data/*.json (times, aliases, trials)", "contracts/"],
+    "published_vs_commit": "0.2.0 publicada (2a862b4c…, tag 4dbd353) ≠ e14f339 em 8 arquivos; mesma versão (BR-F009)"
+  },
+  "timezone_map": {
+    "inventory": "RAW_LOGS/truth-map/date_sites_e14f339.json (325 pontos: UTC_EXPLICIT 88, AWARE_CHECKED 103, NAIVE_PARSE 115, LOCAL_CLOCK 14, ASSUMED_UTC 5)",
+    "sources": "Sofascore startTimestamp (epoch) → UTC; sem hora local no banco. Datas 'date' = data UTC do kickoff (2322/2322 conferidas no snapshot).",
+    "naive_parse_note": "os NAIVE_PARSE são quase todos date.fromisoformat de data UTC (sem hora) em scripts de pesquisa; nenhum lê hora local de sede",
+    "local_clock": "cron_update_models.py:57 e predict.py:65 usam date.today() local; o resto é rótulo/nome de arquivo em scripts de pesquisa",
+    "assumed_utc": "sportmonks_provider.py:131 (a requisição fixa timezone=UTC: regra declarada da fonte); benchmark_predictor.py:219, h4_verdict_bootstrap.py:75, run_h4_sweep.py:70 (data sem hora → meia-noite UTC, rodada vira bloco — documentado em READINESS)",
+    "dst_pre_2019": "não há dado anterior a 2021 no snapshot; o horário de verão brasileiro (até 2019) não aparece em nenhum dado armazenado porque tudo vem em epoch. O risco existe só em entrada textual com hora local — o contrato do circuito rejeita (vetores congelados)"
+  },
+  "divergences_from_prompt": [
+    "main = e14f339, não 34d73e2 (BR-F001)",
+    "bet_log.py não rejeita kickoff sem fuso na add_bet: ignora a checagem (BR-F007); a banca sim rejeita",
+    "PROTECTED_PATHS.txt tem 172 linhas (confirmado); PROTECTED_SET.json com 1877 arquivos após resolver declarações"
+  ]
+}
