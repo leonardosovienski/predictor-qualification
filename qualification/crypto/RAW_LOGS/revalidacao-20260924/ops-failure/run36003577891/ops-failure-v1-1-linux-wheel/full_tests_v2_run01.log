@@ -1,0 +1,439 @@
+..........................................FF...F............F........... [ 81%]
+..........F.....                                                         [100%]
+=================================== FAILURES ===================================
+_____________ test_source_clean_dirty_detached_and_missing_commit ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-13/test_source_clean_dirty_detach0')
+
+    def test_source_clean_dirty_detached_and_missing_commit(tmp_path):
+        _git(tmp_path, "init")
+        _git(tmp_path, "config", "user.email", "test@example.invalid")
+        _git(tmp_path, "config", "user.name", "Test")
+        (tmp_path / "file").write_text("one")
+        _git(tmp_path, "add", "file")
+        _git(tmp_path, "commit", "-m", "initial")
+        clean = _source_identity(tmp_path)
+        assert clean["identity_status"] == "VALIDATED" and clean["commit"]
+        assert collect_provenance(strict=True, source_root=tmp_path)["identity_status"] == "VALIDATED"
+        _git(tmp_path, "checkout", "--detach")
+        assert _source_identity(tmp_path)["identity_status"] == "VALIDATED"
+        (tmp_path / "file").write_text("tampered")
+        assert _source_identity(tmp_path)["identity_status"] == "DIRTY"
+        assert collect_provenance(strict=False, source_root=tmp_path)["identity_status"] == "DIRTY"
+>       with pytest.raises(ProvenanceError, match="not validated"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProvenanceError
+
+tests_v2/test_provenance.py:34: Failed
+___________ test_strict_editable_fails_closed_and_permissive_is_safe ___________
+
+    def test_strict_editable_fails_closed_and_permissive_is_safe():
+>       with pytest.raises(ProvenanceError, match="editable"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProvenanceError
+
+tests_v2/test_provenance.py:41: Failed
+__________ test_wheel_record_tampering_fails_in_isolated_environment ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-13/test_wheel_record_tampering_fa0')
+
+    @pytest.mark.timeout(120)
+    def test_wheel_record_tampering_fails_in_isolated_environment(tmp_path):
+        dist = tmp_path / "dist"
+>       subprocess.run(
+            [sys.executable, "-m", "hatchling", "build", "-t", "wheel", "-d", str(dist)],
+            cwd=Path(__file__).parents[1],
+            check=True,
+            capture_output=True,
+        )
+
+tests_v2/test_provenance.py:110: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/tmp.GlZrZiSU8K/venv/bin/python', '-m', 'hatchling', 'build', '-t', 'wheel', ...],)
+kwargs = {'cwd': PosixPath('/tmp/tmp.GlZrZiSU8K/tree'), 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/tmp.GlZrZiSU8K/venv/bin/python', '-m', 'hatchling', 'build', '-t', 'wheel', '-d', '/tmp/pytest-of-runner/pytest-13/test_wheel_record_tampering_fa0/dist']' returned non-zero exit status 1.
+
+/home/runner/work/_temp/uv-python-dir/cpython-3.13.14-linux-x86_64-gnu/lib/python3.13/subprocess.py:577: CalledProcessError
+__________ test_strict_setup_failure_is_terminal_and_child_never_runs __________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-13/test_strict_setup_failure_is_t0')
+
+    def test_strict_setup_failure_is_terminal_and_child_never_runs(tmp_path):
+        marker = tmp_path / "must-not-exist"
+        result = run_job(_job(tmp_path, f"open({str(marker)!r},'w').write('bad')", id="strict", provenance_mode="strict"))
+>       assert result.run_status is RunStatus.CONFIGURATION_ERROR and result.exit_code == 3
+E       AssertionError: assert (<RunStatus.SUCCEEDED: 'SUCCEEDED'> is <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'>)
+E        +  where <RunStatus.SUCCEEDED: 'SUCCEEDED'> = RunResult(run_id='6322b9cc4d7147d89f1d1cc85a1b545b', run_status=<RunStatus.SUCCEEDED: 'SUCCEEDED'>, exit_code=0, recor...'2026-09-24T13:08:37.246Z', 'exit_code': 0, 'duration_ms': 25, 'output': {'text': '', 'bytes': 0, 'truncated': False}}).run_status
+E        +  and   <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'> = RunStatus.CONFIGURATION_ERROR
+
+tests_v2/test_runner_extended.py:33: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 25, "event": "job_finished", "job_id": "strict", "level": "INFO", "run_id": "6322b9cc4d7147d89f1d1cc85a1b545b", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.268384Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+____________ test_changelog_latest_release_matches_package_version _____________
+
+    def test_changelog_latest_release_matches_package_version():
+        root = Path(__file__).parents[1]
+        with (root / "pyproject.toml").open("rb") as handle:
+            package_version = tomllib.load(handle)["project"]["version"]
+>       changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests_v2/test_version_contract.py:10: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/runner/work/_temp/uv-python-dir/cpython-3.13.14-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/runner/work/_temp/uv-python-dir/cpython-3.13.14-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/tmp.GlZrZiSU8K/tree/CHANGELOG.md'), mode = 'r'
+buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmp.GlZrZiSU8K/tree/CHANGELOG.md'
+
+/home/runner/work/_temp/uv-python-dir/cpython-3.13.14-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+==================================== PASSES ====================================
+__________________ test_execution_is_economically_idempotent ___________________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 107, "event": "job_finished", "job_id": "execute", "level": "INFO", "run_id": "4427153d413f4053b5195f0b30525b2f", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:32.725691Z"}
+___________ test_ambiguous_execution_failure_requires_reconciliation ___________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 106, "event": "job_finished", "job_id": "execute", "level": "INFO", "run_id": "8dbb07d83171407187eb7cf6f54c5053", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:32.841918Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+____ test_all_normal_exit_paths_close_popen_streams[print('ok')-SUCCEEDED] _____
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 25, "event": "job_finished", "job_id": "cleanup", "level": "INFO", "run_id": "23af8a4b243f4bb0bd9439d91f280dff", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:32.877382Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+__ test_all_normal_exit_paths_close_popen_streams[raise SystemExit(9)-FAILED] __
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 25, "event": "job_finished", "job_id": "cleanup", "level": "INFO", "run_id": "65fc42cbc54548dbac48ca6c8d246aa2", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:32.918686Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+_ test_all_normal_exit_paths_close_popen_streams[raise SystemExit(2)-PARTIAL] __
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 25, "event": "job_finished", "job_id": "cleanup", "level": "INFO", "run_id": "35d040542e1848ac9e8437fbd2033988", "run_status": "PARTIAL", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:32.956478Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+_____________ test_timeout_and_cancellation_close_reader_and_pipe ______________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 110, "event": "job_finished", "job_id": "timeout", "level": "INFO", "run_id": "2ec976c547744538862b64660ae304a2", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.080437Z"}
+{"duration_ms": 6, "event": "job_finished", "job_id": "cancel", "level": "INFO", "run_id": "bcf4e436bb644cec955ce8313b0df500", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.087763Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+_________ test_exception_after_popen_terminates_child_and_closes_pipe __________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 4, "event": "job_finished", "job_id": "setup-error", "level": "INFO", "run_id": "a1ea971475b34f1284b895f92a293a32", "run_status": "CONFIGURATION_ERROR", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.095570Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+____________ test_reader_failure_is_observable_and_resources_close _____________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 25, "event": "job_finished", "job_id": "read-failure", "level": "INFO", "run_id": "360826ede33c464f996be2e4018680c0", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.123462Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+___________ test_repeated_runs_do_not_accumulate_handles_or_readers ____________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-0", "level": "INFO", "run_id": "87dc54af87e740c8ac207cf2e494c203", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.161509Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-1", "level": "INFO", "run_id": "30116ee20dda4b86b51bb51afd1f5f7c", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.185975Z"}
+{"duration_ms": 24, "event": "job_finished", "job_id": "repeat-2", "level": "INFO", "run_id": "73bb6a82aed84e5c9c48c5b5321f08fe", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.211669Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-3", "level": "INFO", "run_id": "1e3b58a8d382442f83e180ab1c0ba262", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.236544Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-4", "level": "INFO", "run_id": "2b5a08b1abaa4fc4afc3f050fd55f2c3", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.261221Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-5", "level": "INFO", "run_id": "aac0f3318a45431ba8797f0037e3a468", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.286152Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-6", "level": "INFO", "run_id": "5cfec1cf8c544cf78f394cbec6c1a436", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.310894Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-7", "level": "INFO", "run_id": "fb0fb3e9d3204915965123aa06811d64", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.335518Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-8", "level": "INFO", "run_id": "5a83cf68234144e7aa01b85afe4bb106", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.360201Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-9", "level": "INFO", "run_id": "14a5f3102ce3464ebf747c1df45246ae", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.384746Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-10", "level": "INFO", "run_id": "029c178241d543a1b2d6cd88a173931d", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.409271Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-11", "level": "INFO", "run_id": "242ac90871ca4139941e78718218bfff", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.433783Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-12", "level": "INFO", "run_id": "b035c3c32ecc4b86a1799af5be2b5856", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.458325Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-13", "level": "INFO", "run_id": "4c196c51776744e798429875ef0613a8", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.482627Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-14", "level": "INFO", "run_id": "acec09a8aba64150b986a045fca735bf", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.507282Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-15", "level": "INFO", "run_id": "6ba5401f0ac14983b907e000fe0ec8a4", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.531673Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-16", "level": "INFO", "run_id": "7d093336b63c411c90a8bc392bd8487a", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.556137Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-17", "level": "INFO", "run_id": "6546ced4fb4e42e985af5ced2c40f426", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.580709Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-18", "level": "INFO", "run_id": "c59fbfa460104a09ac40e818a18e0f6a", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.605742Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-19", "level": "INFO", "run_id": "f154ce6d98434c9d92b7c0ce016ad5d9", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.630573Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-20", "level": "INFO", "run_id": "1b85245b9e974cb69ecebeb26173714d", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.655475Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-21", "level": "INFO", "run_id": "49abef73225643aeb0a95a9b818a01c9", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.679859Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-22", "level": "INFO", "run_id": "f89f28b91b814b0ca6035f13aced14d1", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.704332Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-23", "level": "INFO", "run_id": "681274256ebf43f3a15b453b7602bef0", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.728800Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-24", "level": "INFO", "run_id": "41684500fd654b7a865a215adcc09c9e", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.753548Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-25", "level": "INFO", "run_id": "4ef19d1c6b8342279891ae59a2b9d278", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.778202Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-26", "level": "INFO", "run_id": "2ab7f527751e462b93c5320086649cbd", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.802384Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-27", "level": "INFO", "run_id": "f238eddab3eb4543a048cce00e9e261e", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.826849Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-28", "level": "INFO", "run_id": "d3368a4ec3b041f8923d5712075b1681", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.851459Z"}
+{"duration_ms": 23, "event": "job_finished", "job_id": "repeat-29", "level": "INFO", "run_id": "a7cb3f41ecc04511852617ef455562c6", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:33.876494Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+__________ test_large_stdout_and_stderr_are_drained_without_deadlock ___________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 318, "event": "job_finished", "job_id": "large-output", "level": "INFO", "run_id": "62fb78c9a88646d989c9b95a603e04b3", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:34.821883Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+______ test_timeout_kills_real_parent_child_grandchild_with_spaced_paths _______
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 1547, "event": "job_finished", "job_id": "tree-timeout", "level": "INFO", "run_id": "347e9cacd97e42d7a27ff872f6ecb36c", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:36.372215Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+____________________ test_success_provenance_and_artifacts _____________________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 55, "event": "job_finished", "job_id": "test", "level": "INFO", "run_id": "2dc2c75a70614b25a89cf2d16600d199", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:36.685850Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+_________________________ test_timeout_and_truncation __________________________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 210, "event": "job_finished", "job_id": "test", "level": "INFO", "run_id": "6d581296b9444e85b4bae87909ca9121", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:36.901868Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+___________________ test_crash_and_missing_expected_artifact ___________________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 55, "event": "job_finished", "job_id": "crash", "level": "INFO", "run_id": "d7af8b27b6ac4c7382b9b8b3bee5575e", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:36.960048Z"}
+{"duration_ms": 55, "event": "job_finished", "job_id": "artifact", "level": "INFO", "run_id": "67aada68654e43858345e6c8a629b7cd", "run_status": "PARTIAL", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.016827Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+________________________________ test_shutdown _________________________________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 107, "event": "job_finished", "job_id": "shutdown", "level": "INFO", "run_id": "4731e333939b47f18b9805af2cb8459a", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.127404Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+_____________ test_redacts_environment_arguments_stdout_and_stderr _____________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 55, "event": "job_finished", "job_id": "test", "level": "INFO", "run_id": "a6abd7d35efa433397540a0eae5682ed", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.185712Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+_______________ test_partial_exit_and_scientific_state_transport _______________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 25, "event": "job_finished", "job_id": "partial", "level": "INFO", "run_id": "dbf090e4284342f88437aaa348989e0a", "run_status": "PARTIAL", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.214184Z"}
+{"duration_ms": 25, "event": "job_finished", "job_id": "source", "level": "INFO", "run_id": "b792ee70153e4dc3a29383613f8c3c15", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.240698Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+INFO     predictor_ops:runner.py:345 job_finished
+___________________ test_lock_loss_terminates_and_cleans_up ____________________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 5, "event": "job_finished", "job_id": "lost", "level": "INFO", "run_id": "3a440f7feddc4c948a9ebcfea4a2880b", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.278551Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+____________ test_terminal_persistence_failure_still_releases_lock _____________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 5, "event": "job_finished", "job_id": "persist", "level": "INFO", "run_id": "0d2a0ccf790b4228a7cb6b80e92dafa0", "run_status": "CONFIGURATION_ERROR", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:37.333966Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+_______ test_exited_parent_with_inherited_stdout_is_bounded_and_isolated _______
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 69, "event": "job_finished", "job_id": "orphan", "level": "INFO", "run_id": "b18424a4eee04caba1e8c1b1e152a530", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:38.844028Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+___________ test_unknown_submission_is_preserved_without_reexecution ___________
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 106, "event": "job_finished", "job_id": "execute", "level": "INFO", "run_id": "6b28724a26954c269f1f0680e61c0a2c", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:38.972671Z"}
+------------------------------ Captured log call -------------------------------
+INFO     predictor_ops:runner.py:345 job_finished
+=========================== short test summary info ============================
+PASSED tests_v2/test_architecture_safety.py::test_nonfinite_risk_is_rejected[nan]
+PASSED tests_v2/test_architecture_safety.py::test_nonfinite_risk_is_rejected[inf]
+PASSED tests_v2/test_architecture_safety.py::test_nonfinite_risk_is_rejected[-inf]
+PASSED tests_v2/test_architecture_safety.py::test_identity_separator_cannot_create_a_collision
+PASSED tests_v2/test_architecture_safety.py::test_generic_v3_job_does_not_need_economic_identity
+PASSED tests_v2/test_architecture_safety.py::test_defaults_never_authorize_execution
+PASSED tests_v2/test_architecture_safety.py::test_freshness_is_checked_at_execution_time[-61-risk_snapshot_stale]
+PASSED tests_v2/test_architecture_safety.py::test_freshness_is_checked_at_execution_time[1-risk_snapshot_from_future]
+PASSED tests_v2/test_cli.py::test_cli_validate_and_run_outside_checkout
+PASSED tests_v2/test_cli.py::test_no_tools_namespace_required
+PASSED tests_v2/test_cli.py::test_cli_main_paths
+PASSED tests_v2/test_cli.py::test_cli_provenance_is_strict_and_machine_readable
+PASSED tests_v2/test_cli.py::test_cli_provenance_fails_closed
+PASSED tests_v2/test_cli.py::test_cli_configuration_errors
+PASSED tests_v2/test_health.py::test_recent_success_is_healthy_and_deterministic
+PASSED tests_v2/test_health.py::test_scheduler_failure_wins_and_expected_disabled_is_skipped
+PASSED tests_v2/test_health.py::test_absence_and_degraded_states_are_never_success[SOURCE_UNAVAILABLE]
+PASSED tests_v2/test_health.py::test_absence_and_degraded_states_are_never_success[PARTIAL]
+PASSED tests_v2/test_health.py::test_absence_and_degraded_states_are_never_success[DEGRADED]
+PASSED tests_v2/test_health.py::test_absence_and_degraded_states_are_never_success[FAILED]
+PASSED tests_v2/test_health.py::test_missing_invalid_and_stale_heartbeat_fail_closed
+PASSED tests_v2/test_health.py::test_health_policy_rejects_unknown_fields
+PASSED tests_v2/test_models_config.py::test_taxonomy_is_complete
+PASSED tests_v2/test_models_config.py::test_scientific_state_is_opaque_and_separate
+PASSED tests_v2/test_models_config.py::test_config_is_strict_and_unique
+PASSED tests_v2/test_models_config.py::test_runtime_rejects_nonlocal_backend_and_external_requires_https
+PASSED tests_v2/test_models_config.py::test_load_job_missing
+PASSED tests_v2/test_operational_safety.py::test_schema_v2_requires_typed_economic_jobs_and_unique_keys
+PASSED tests_v2/test_operational_safety.py::test_only_execution_jobs_can_receive_capital_permission
+PASSED tests_v2/test_operational_safety.py::test_execution_is_economically_idempotent
+PASSED tests_v2/test_operational_safety.py::test_ambiguous_execution_failure_requires_reconciliation
+PASSED tests_v2/test_operational_safety.py::test_retry_policy_never_resubmits_unknown_orders
+PASSED tests_v2/test_operational_safety.py::test_kill_switch_fails_closed_and_reports_all_reasons
+PASSED tests_v2/test_process_cleanup.py::test_all_normal_exit_paths_close_popen_streams[print('ok')-SUCCEEDED]
+PASSED tests_v2/test_process_cleanup.py::test_all_normal_exit_paths_close_popen_streams[raise SystemExit(9)-FAILED]
+PASSED tests_v2/test_process_cleanup.py::test_all_normal_exit_paths_close_popen_streams[raise SystemExit(2)-PARTIAL]
+PASSED tests_v2/test_process_cleanup.py::test_timeout_and_cancellation_close_reader_and_pipe
+PASSED tests_v2/test_process_cleanup.py::test_exception_after_popen_terminates_child_and_closes_pipe
+PASSED tests_v2/test_process_cleanup.py::test_reader_failure_is_observable_and_resources_close
+PASSED tests_v2/test_process_cleanup.py::test_repeated_runs_do_not_accumulate_handles_or_readers
+PASSED tests_v2/test_process_cleanup.py::test_large_stdout_and_stderr_are_drained_without_deadlock
+PASSED tests_v2/test_process_tree.py::test_timeout_kills_real_parent_child_grandchild_with_spaced_paths
+PASSED tests_v2/test_provenance.py::test_safe_serialization_rejects_unserializable
+PASSED tests_v2/test_provenance.py::test_wheel_record_unit_validation_and_adversarial_failures
+PASSED tests_v2/test_provenance.py::test_wheel_missing_record_and_editable_metadata_fail_closed
+PASSED tests_v2/test_redaction_adversarial.py::test_flags_urls_headers_json_unicode_overlap_and_short_values
+PASSED tests_v2/test_redaction_adversarial.py::test_invalid_bytes_idempotence_and_adversarial_runtime
+PASSED tests_v2/test_redaction_adversarial.py::test_internal_redactor_failure_is_fail_closed
+PASSED tests_v2/test_redaction_adversarial.py::test_short_sensitive_named_env_value_does_not_corrupt_unrelated_generated_data
+PASSED tests_v2/test_runner.py::test_success_provenance_and_artifacts
+PASSED tests_v2/test_runner.py::test_concurrent_run_is_skipped
+PASSED tests_v2/test_runner.py::test_timeout_and_truncation
+PASSED tests_v2/test_runner.py::test_crash_and_missing_expected_artifact
+PASSED tests_v2/test_runner.py::test_shutdown
+PASSED tests_v2/test_runner.py::test_redacts_environment_arguments_stdout_and_stderr
+PASSED tests_v2/test_runner.py::test_json_logger_and_disabled_otel
+PASSED tests_v2/test_runner_extended.py::test_partial_exit_and_scientific_state_transport
+PASSED tests_v2/test_runner_extended.py::test_lock_loss_terminates_and_cleans_up
+PASSED tests_v2/test_runner_extended.py::test_atomic_failure_leaves_no_temporary_and_preserves_previous
+PASSED tests_v2/test_runner_extended.py::test_jsonl_concurrent_writers_are_parseable
+PASSED tests_v2/test_runner_extended.py::test_terminal_persistence_failure_still_releases_lock
+PASSED tests_v2/test_runtime.py::test_local_lock_exclusion_release_and_stale
+PASSED tests_v2/test_runtime.py::test_local_lock_has_one_winner_across_processes
+PASSED tests_v2/test_runtime.py::test_factory_is_local_only
+PASSED tests_v2/test_runtime.py::test_stale_takeover_has_one_winner_across_processes
+PASSED tests_v2/test_runtime.py::test_atomic_json_and_durable_jsonl
+PASSED tests_v2/test_runtime.py::test_empty_guard_locked_by_another_process_waits_instead_of_crashing
+PASSED tests_v2/test_stabilization.py::test_early_persistence_failure_releases_lock
+PASSED tests_v2/test_stabilization.py::test_skipped_metadata_is_redacted_before_persistence
+PASSED tests_v2/test_stabilization.py::test_capture_memory_is_bounded_before_newline
+PASSED tests_v2/test_stabilization.py::test_capture_redacts_secret_across_capture_boundary
+PASSED tests_v2/test_stabilization.py::test_exited_parent_with_inherited_stdout_is_bounded_and_isolated
+PASSED tests_v2/test_stabilization.py::test_risk_blocks_have_no_subprocess_effect[missing]
+PASSED tests_v2/test_stabilization.py::test_risk_blocks_have_no_subprocess_effect[incomplete]
+PASSED tests_v2/test_stabilization.py::test_risk_blocks_have_no_subprocess_effect[stale]
+PASSED tests_v2/test_stabilization.py::test_risk_blocks_have_no_subprocess_effect[future]
+PASSED tests_v2/test_stabilization.py::test_risk_blocks_have_no_subprocess_effect[limits]
+PASSED tests_v2/test_stabilization.py::test_unknown_submission_is_preserved_without_reexecution
+PASSED tests_v2/test_windows_adapter.py::test_non_windows_fails_closed
+PASSED tests_v2/test_windows_adapter.py::test_present_disabled_failed_never_run_and_success
+PASSED tests_v2/test_windows_adapter.py::test_quoting_spaced_paths_no_console_and_compat_view
+PASSED tests_v2/test_windows_adapter.py::test_permission_missing_powershell_invalid_json_and_schema_fail_closed
+PASSED tests_v2/test_windows_adapter.py::test_overdue_is_fail_closed
+FAILED tests_v2/test_provenance.py::test_source_clean_dirty_detached_and_missing_commit - Failed: DID NOT RAISE ProvenanceError
+FAILED tests_v2/test_provenance.py::test_strict_editable_fails_closed_and_permissive_is_safe - Failed: DID NOT RAISE ProvenanceError
+FAILED tests_v2/test_provenance.py::test_wheel_record_tampering_fails_in_isolated_environment - subprocess.CalledProcessError: Command '['/tmp/tmp.GlZrZiSU8K/venv/bin/python', '-m', 'hatchling', 'build', '-t', 'wheel', '-d', '/tmp/pytest-of-runner/pytest-13/test_wheel_record_tampering_fa0/dist']' returned non-zero exit status 1.
+FAILED tests_v2/test_runner_extended.py::test_strict_setup_failure_is_terminal_and_child_never_runs - AssertionError: assert (<RunStatus.SUCCEEDED: 'SUCCEEDED'> is <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'>)
+ +  where <RunStatus.SUCCEEDED: 'SUCCEEDED'> = RunResult(run_id='6322b9cc4d7147d89f1d1cc85a1b545b', run_status=<RunStatus.SUCCEEDED: 'SUCCEEDED'>, exit_code=0, recor...'2026-09-24T13:08:37.246Z', 'exit_code': 0, 'duration_ms': 25, 'output': {'text': '', 'bytes': 0, 'truncated': False}}).run_status
+ +  and   <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'> = RunStatus.CONFIGURATION_ERROR
+FAILED tests_v2/test_version_contract.py::test_changelog_latest_release_matches_package_version - FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmp.GlZrZiSU8K/tree/CHANGELOG.md'
+5 failed, 83 passed in 7.19s
+[exit 1]
