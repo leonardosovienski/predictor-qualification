@@ -85,3 +85,10 @@ A D-19 mudou o núcleo para a v2.1 (`owner_linux` como Linux primário só para 
 - `scripts/attest.py`: `CORE_SHA` = v2.1. `common_core_version` e `attestation_version` ficam `"2.0"`, porque o schema v2.1 ainda os fixa com `const`.
 - `565326d3…` preservada byte a byte como `QUALIFICATION_ATTESTATION_superseded_565326d367a5.json`. Nova fase `v2-1-core` (`ATTESTATION_PARTIAL_v2-1-core.json`) e nova `QUALIFICATION_ATTESTATION.json` sha256 `ec22a085125a08c6c102c6f0d48d6ef623c5ebbd21da0629b47d96ae9765fc69` (`supersedes_sha256 = 565326d3…`). Continua `QUALIFIED`: 31/31 PASS, P0 = P1 = 0, P2 = 8. Gates, evidências, ambientes, wheels, vereditos e contagens estão idênticos; muda só o sha do núcleo, a data, o `supersedes` e a fase.
 - Não mudam (registro histórico do núcleo em vigor quando foram gravados): `FROZEN_PARAMETERS.json`, `STACK_BASELINE.json` e `STACK_BASELINE_V1.1.json` continuam citando o núcleo v2.0.
+
+## C14 "Núcleo (versão)" v2.1 → v2.2 (D-20, 2026-09-24)
+
+Núcleo v2.2 (PR #30): o C0.2 passa a conferir o schema pelo `MANIFEST.sha256`. Nenhum requisito do crypto mudou; nenhuma fase refeita.
+`scripts/attest.py` com o sha256 da v2.2 (`d681e423…`) e `common_core_version` 2.2. **CR-F021 → FIXED**: o `check()` confere também `environments[*].evidence`, `shared_dependency_verdicts[*].verdict_sha256` e `findings_file` (prova em `RAW_LOGS/c14-nucleo-v2.2/check.log`).
+`QUALIFICATION_ATTESTATION.json` reemitida: **QUALIFIED**, 31/31 PASS (mesmos estados), P0=0 P1=0 P2=7; a anterior foi preservada como
+`QUALIFICATION_ATTESTATION_superseded_ec22a085125a.json` (`supersedes_sha256`). `attest.py check` OK.
