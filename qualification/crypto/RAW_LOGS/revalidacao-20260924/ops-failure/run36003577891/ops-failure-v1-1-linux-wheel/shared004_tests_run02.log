@@ -1,0 +1,57 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_____________ test_source_clean_dirty_detached_and_missing_commit ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-11/test_source_clean_dirty_detach0')
+
+    def test_source_clean_dirty_detached_and_missing_commit(tmp_path):
+        _git(tmp_path, "init")
+        _git(tmp_path, "config", "user.email", "test@example.invalid")
+        _git(tmp_path, "config", "user.name", "Test")
+        (tmp_path / "file").write_text("one")
+        _git(tmp_path, "add", "file")
+        _git(tmp_path, "commit", "-m", "initial")
+        clean = _source_identity(tmp_path)
+        assert clean["identity_status"] == "VALIDATED" and clean["commit"]
+        assert collect_provenance(strict=True, source_root=tmp_path)["identity_status"] == "VALIDATED"
+        _git(tmp_path, "checkout", "--detach")
+        assert _source_identity(tmp_path)["identity_status"] == "VALIDATED"
+        (tmp_path / "file").write_text("tampered")
+        assert _source_identity(tmp_path)["identity_status"] == "DIRTY"
+        assert collect_provenance(strict=False, source_root=tmp_path)["identity_status"] == "DIRTY"
+>       with pytest.raises(ProvenanceError, match="not validated"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProvenanceError
+
+tests_v2/test_provenance.py:34: Failed
+___________ test_strict_editable_fails_closed_and_permissive_is_safe ___________
+
+    def test_strict_editable_fails_closed_and_permissive_is_safe():
+>       with pytest.raises(ProvenanceError, match="editable"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProvenanceError
+
+tests_v2/test_provenance.py:41: Failed
+__________ test_strict_setup_failure_is_terminal_and_child_never_runs __________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-11/test_strict_setup_failure_is_t0')
+
+    def test_strict_setup_failure_is_terminal_and_child_never_runs(tmp_path):
+        marker = tmp_path / "must-not-exist"
+        result = run_job(_job(tmp_path, f"open({str(marker)!r},'w').write('bad')", id="strict", provenance_mode="strict"))
+>       assert result.run_status is RunStatus.CONFIGURATION_ERROR and result.exit_code == 3
+E       AssertionError: assert (<RunStatus.SUCCEEDED: 'SUCCEEDED'> is <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'>)
+E        +  where <RunStatus.SUCCEEDED: 'SUCCEEDED'> = RunResult(run_id='06f9f33eed2f48f4befc4028ec1cabed', run_status=<RunStatus.SUCCEEDED: 'SUCCEEDED'>, exit_code=0, recor...'2026-09-24T13:08:31.243Z', 'exit_code': 0, 'duration_ms': 26, 'output': {'text': '', 'bytes': 0, 'truncated': False}}).run_status
+E        +  and   <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'> = RunStatus.CONFIGURATION_ERROR
+
+tests_v2/test_runner_extended.py:33: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"duration_ms": 26, "event": "job_finished", "job_id": "strict", "level": "INFO", "run_id": "06f9f33eed2f48f4befc4028ec1cabed", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-24T13:08:31.266407Z"}
+=========================== short test summary info ============================
+FAILED tests_v2/test_provenance.py::test_source_clean_dirty_detached_and_missing_commit - Failed: DID NOT RAISE ProvenanceError
+FAILED tests_v2/test_provenance.py::test_strict_editable_fails_closed_and_permissive_is_safe - Failed: DID NOT RAISE ProvenanceError
+FAILED tests_v2/test_runner_extended.py::test_strict_setup_failure_is_terminal_and_child_never_runs - AssertionError: assert (<RunStatus.SUCCEEDED: 'SUCCEEDED'> is <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'>)
+ +  where <RunStatus.SUCCEEDED: 'SUCCEEDED'> = RunResult(run_id='06f9f33eed2f48f4befc4028ec1cabed', run_status=<RunStatus.SUCCEEDED: 'SUCCEEDED'>, exit_code=0, recor...'2026-09-24T13:08:31.243Z', 'exit_code': 0, 'duration_ms': 26, 'output': {'text': '', 'bytes': 0, 'truncated': False}}).run_status
+ +  and   <RunStatus.CONFIGURATION_ERROR: 'CONFIGURATION_ERROR'> = RunStatus.CONFIGURATION_ERROR
+3 failed in 0.19s
+[exit 1]
