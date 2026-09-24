@@ -88,3 +88,10 @@ admite `owner_linux` para dado privado). Sem refazer fases:
 | `QUALIFICATION_ATTESTATION_superseded_c95145a78a46.json` | a anterior (v2.0), preservada byte a byte | C7.1 regra 8 | `supersedes_sha256` da nova |
 
 `d16/verify_stage_a.py` continua conferindo o núcleo v2.0: é a verificação do passo 0 da D-16, feita no HEAD 3983de1, e fica como registro.
+
+## C14 "Núcleo (versão)" v2.1 → v2.2 (D-20, 2026-09-24)
+
+Núcleo v2.2 (PR #30): o C0.2 passa a conferir o schema pelo `MANIFEST.sha256`. Nenhum requisito do stocks mudou; nenhuma fase refeita.
+`scripts/attest.py` com o sha256 da v2.2 (`d681e423…`) e `common_core_version` 2.2. O modo `--schema-only` (parciais históricos, CI) aceita os núcleos v2.0 e v2.1 em que eles foram emitidos.
+`QUALIFICATION_ATTESTATION.json` reemitida: **QUALIFIED**, 31/31 PASS (mesmos estados), P0=0 P1=0 P2=5; a anterior foi preservada como
+`QUALIFICATION_ATTESTATION_superseded_f7923a88b7be.json` (`supersedes_sha256`). `attest.py check` OK.
