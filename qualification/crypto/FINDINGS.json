@@ -266,13 +266,14 @@
     {
       "id": "CR-F021",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "d16",
       "title": "attest.py check não confere environments, vereditos compartilhados nem findings_file",
-      "description": "A C7.1 regra 3 diz 'todo arquivo de evidência existe e o sha256 confere no commit da attestation'. O check() do scripts/attest.py só confere as evidências dos gates, e só na árvore atual. Não confere environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 nem findings_file, e foi isso que deixou passar o item (b) do CR-F020. O d16_crosscheck.py attestations cobre esses campos, no commit de cada attestation. Correção sugerida: estender check() do attest.py.",
+      "description": "A C7.1 regra 3 diz 'todo arquivo de evidência existe e o sha256 confere no commit da attestation'. O check() do scripts/attest.py só confere as evidências dos gates, e só na árvore atual. Não confere environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 nem findings_file, e foi isso que deixou passar o item (b) do CR-F020. O d16_crosscheck.py attestations cobre esses campos, no commit de cada attestation. Correção sugerida: estender check() do attest.py. Corrigido em 2026-09-24 (C14 do núcleo v2.2, autorizado pelo dono): check() confere também environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 e findings_file; cópias adulteradas nos três campos são acusadas (RAW_LOGS/c14-nucleo-v2.2/check.log). A conferência é na árvore atual; no commit de cada attestation segue valendo o d16_crosscheck.py.",
       "evidence": [
         "qualification/crypto/scripts/attest.py",
-        "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log"
+        "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log",
+        "qualification/crypto/RAW_LOGS/c14-nucleo-v2.2/check.log"
       ]
     }
   ]
