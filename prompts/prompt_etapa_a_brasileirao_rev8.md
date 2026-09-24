@@ -3,8 +3,8 @@
 ```text
 stage  = A
 branch = brasileirao   (nome do braço no schema, não é branch Git)
-núcleo = qualification/COMMON_QUALIFICATION_CORE.md v2.1
-sha256 = a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b
+núcleo = qualification/COMMON_QUALIFICATION_CORE.md v2.2
+sha256 = d681e423499e202c735ee1f110311a9721019ef11e21ae824f4791bada7c7d2c
 ```
 
 Objetivo: provar que o Brasileirão roda pesquisa **de verdade** por Core e
