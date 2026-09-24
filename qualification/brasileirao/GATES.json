@@ -2,7 +2,7 @@
   "note": "Fonte única dos estados de gate (attest.py). Editado só por scripts/ledger.py.",
   "common_baseline_id": "STACK_BASELINE_V1.1",
   "supersedes_sha256": null,
-  "domain_contract_sha256": null,
+  "domain_contract_sha256": "e6f98ca28e50555f57c65adb030cc90ea9141249daebe44a333ca69970b1d824",
   "final_commits": [
     {
       "repo": "brasileirao-predictor",
@@ -51,7 +51,9 @@
     "idempotency-failure",
     "windows-smoke",
     "hosted-ci",
-    "soak"
+    "soak",
+    "contract-sign-off",
+    "attestation"
   ],
   "environments": [
     {
@@ -288,10 +290,10 @@
     "SECRETS_CLEAN": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/secrets/scan_evidence_and_br_diff.json",
+        "qualification/brasileirao/RAW_LOGS/secrets/scan_final_attestation.json",
         "qualification/brasileirao/scripts/scan_secrets.py"
       ],
-      "note": "scan_secrets.py na evidência, no workflow e no diff e14f339..04b42c9 do brasileirao-predictor (linhas e mensagens): 1 alerta, revisado: o marcador público do canário em FROZEN_PARAMETERS.json (chave token). Nenhum segredo."
+      "note": "scan_secrets.py na evidência final, no workflow e no diff e14f339..e540f97 do brasileirao-predictor (linhas e mensagens): 1 alerta, revisado — o marcador público do canário em FROZEN_PARAMETERS.json (chave token). Nenhum segredo."
     },
     "CAPITAL_FORBIDDEN": {
       "status": "PASS",
@@ -303,13 +305,13 @@
       "note": "capital_permission=false no contrato (validate_result recusa true), no jobs file (FORECAST_GENERATION, nunca EXECUTION), em todo resultado e outcome; research/economic_decision.py, shadow_portfolio.py e bet_log não alcançáveis do entrypoint (import closure)."
     },
     "DOMAIN_CONTRACT": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
         "qualification/brasileirao/DOMAIN_RESEARCH_CONTRACT.json",
         "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
         "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json"
       ],
-      "note": "Aguardando contract-sign-off: contrato completo (C24.1) em DOMAIN_RESEARCH_CONTRACT.json; regras de adapter_paths testadas (test_import_closure, 5/5 nos 3 ambientes); suíte de conformidade verde no runtime suportado (89/89 x 3). Falta só o merge do dono."
+      "note": "Contrato completo (C24.1) aprovado pelo merge do dono (predictor-qualification #14, 2047c8a, 2026-09-24T07:15:34Z); regras de adapter_paths testadas (test_import_closure 5/5 nos 3 ambientes); conformidade 89/89 pela wheel publicada no Linux primário, windows-latest e Windows local."
     },
     "ADMISSION": {
       "status": "PASS",
