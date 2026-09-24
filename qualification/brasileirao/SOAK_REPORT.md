@@ -1,12 +1,36 @@
 # SOAK_REPORT — missão brasileirao (gate `SOAK`, C10)
 
-**Estado do gate: `NOT_RUN` — BLOCKED: evidência bruta com dado real pronta no PC 2; aguarda emenda
-da D-9 e do schema (C14).** A D-16 (no `main` desde 2026-09-24, PR #16) autorizou E2E e SOAK do
-Brasileirão no PC 2 (Ubuntu 24.04 no WSL2) sobre `matches_source_copy.sqlite3`, com evidência bruta até
-o dono emendar a D-9 (que só admite Actions ou VM na nuvem como Linux primário) e o `where` do schema.
-O soak com o dado real rodou inteiro na noite de 2026-09-24 (seção abaixo); **o bruto teria sido `PASS`
-pelos critérios congelados.** Histórico: até a D-16 o gate estava `NOT_RUN — BLOCKED: D-16 pendente`
-(regra congelada `FROZEN_PARAMETERS.json` → `d16_dependency_rule`).
+**Estado do gate: `PASS` (requalificação rc3, 2026-09-24).** Com a emenda da D-9 no `main` (D-19: o PC 2
+do dono vale como Linux primário `owner_linux` só para dado privado; núcleo v2.2, D-20), o soak rodou no PC 2
+com o dado real, pela wheel 0.3.0rc3 (`25cdf4d`, `403e6a02…`), com o perfil `QUALIFICATION_PROFILE_BR_V1`
+inteiro e tolerância zero sem exceção (seção "Requalificação rc3" abaixo). Histórico: `NOT_RUN — BLOCKED:
+D-16 pendente` até a D-16; depois `NOT_RUN — evidência bruta pronta no PC 2; aguarda emenda da D-9 e do
+schema` (rc2, PR #19), com bruto `PASS`.
+
+## Requalificação rc3 — soak com o dado real no Linux primário `owner_linux` (C14 do BR-F018)
+
+* Onde: PC 2 (Ubuntu 24.04.5 LTS no WSL2, provisionado por `provision_linux_vm.sh`, recibo
+  `RAW_LOGS/c14-rc3-20260924/host/PROVISION_RECEIPT.json`), Python 3.13.15 gerenciado. Runtime suportado:
+  dependências de runtime do `uv.lock` do `25cdf4d` com `--require-hashes` + wheel publicada 0.3.0rc3 (sha256
+  conferido). Driver `scripts/pc2_d16_runtime.sh` → `scripts/soak.py --real-dataset` (o mesmo da rc2).
+* Dado: cópia `~/predictors/runtime/brasileirao2/data/matches_source_copy.sqlite3`, sha256 `31f30a4d…` na fonte
+  e na cópia, antes e depois (`RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/dataset_sha256.log`); nada do dado na
+  evidência (`scan_final/no_data_rows_check.json`).
+* Números (`EVIDENCE_NUMBERS.json` → `soak.pc2_owner_linux_real_rc3`, de `d16-pc2-rc3/soak.jsonl`):
+
+| Medida | Valor |
+|---|---|
+| chamadas de processo | 71 (54 sem falha; 4 `before_admission_commit`, 4 `during_result_write`, 3 `ops_worker_crash`, 3 `ops_worker_hang`, 1 `during_materialization`, 1 `after_ops`, 1 `after_result_store`) |
+| pedidos com resultado / guardados / efeitos de domínio | 49 / 49 / 49 |
+| perdidos / inesperados / releitura ≠ blob autoritativo | 0 / 0 / 0 |
+| SUCCEEDED do Ops por job (máximo) / jobs | 1 / 49 |
+| `reconcile` | exit 0, sem achados |
+| violações (duplicata, restart, falha, mesmo kickoff, permutação, canário, autoridade/IDs) | 0 |
+| veredito de tolerância zero | `true` |
+
+* Soak sintético da rc3 no Actions (run 36010604163, linux-primary): o mesmo resultado
+  (`soak.actions_linux_synthetic_rc3`), idêntico ao da Etapa A.
+* Protegidos: 1877/1877 iguais no `25cdf4d` (`c14/protected_check_25cdf4d.json`).
 
 ## Diagnóstico com vetores sintéticos (Linux primário, runtime suportado)
 

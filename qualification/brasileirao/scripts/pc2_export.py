@@ -55,23 +55,24 @@ def main() -> int:
         put(args.priv / "real" / name, f"real/{name}")
     for path in sorted((args.priv / "real").glob("outcome_*.jsonl")):
         put(path, f"real/{path.name}", outcome=True)
-    put(args.priv / "e2e_real" / "E2E_SUMMARY.json", "e2e_real/E2E_SUMMARY.json")
-    put(args.priv / "e2e_real" / "process_1.stdout.jsonl", "e2e_real/process_1.stdout.jsonl", outcome=True)
-    put(args.priv / "e2e_real" / "process_1.stderr.log", "e2e_real/process_1.stderr.log")
-    first = json.loads((args.priv / "e2e_real" / "process_1.stdout.jsonl").read_text(encoding="utf-8").splitlines()[-1])
-    exp = first["experiment_id"].split("-", 1)[1]
-    for path in sorted((args.state / "x" / "e" / exp[:16]).glob("ops-job.*.json")):
-        put(path, f"e2e_real/ops/{path.name}")
-    job = args.state / "x" / "o" / f"brasileirao-research-{exp[:24]}"
-    for name in ("events.jsonl", "heartbeat.json"):
-        put(job / name, f"e2e_real/ops/{name}")
-    # o registro de idempotência do Ops fica em x/o/idempotency/<economic_lock_id>.json, com o job_id dentro
-    records = [p for p in sorted((args.state / "x" / "o" / "idempotency").glob("*.json"))
-               if json.loads(p.read_text(encoding="utf-8")).get("job_id") == job.name]
-    if len(records) == 1:
-        put(records[0], "e2e_real/ops/idempotency_record.json")
-    else:
-        refused.append({"file": "e2e_real/ops/idempotency_record.json", "why": f"{len(records)} registros para {job.name}"})
+    if (args.priv / "e2e_real" / "process_1.stdout.jsonl").is_file():  # sem E2E (BRQ_ONLY_REAL=1): só o dado real
+        put(args.priv / "e2e_real" / "E2E_SUMMARY.json", "e2e_real/E2E_SUMMARY.json")
+        put(args.priv / "e2e_real" / "process_1.stdout.jsonl", "e2e_real/process_1.stdout.jsonl", outcome=True)
+        put(args.priv / "e2e_real" / "process_1.stderr.log", "e2e_real/process_1.stderr.log")
+        first = json.loads((args.priv / "e2e_real" / "process_1.stdout.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+        exp = first["experiment_id"].split("-", 1)[1]
+        for path in sorted((args.state / "x" / "e" / exp[:16]).glob("ops-job.*.json")):
+            put(path, f"e2e_real/ops/{path.name}")
+        job = args.state / "x" / "o" / f"brasileirao-research-{exp[:24]}"
+        for name in ("events.jsonl", "heartbeat.json"):
+            put(job / name, f"e2e_real/ops/{name}")
+        # o registro de idempotência do Ops fica em x/o/idempotency/<economic_lock_id>.json, com o job_id dentro
+        records = [p for p in sorted((args.state / "x" / "o" / "idempotency").glob("*.json"))
+                   if json.loads(p.read_text(encoding="utf-8")).get("job_id") == job.name]
+        if len(records) == 1:
+            put(records[0], "e2e_real/ops/idempotency_record.json")
+        else:
+            refused.append({"file": "e2e_real/ops/idempotency_record.json", "why": f"{len(records)} registros para {job.name}"})
     manifest = []
     for path in sorted(p for p in args.priv.rglob("*") if p.is_file()):
         manifest.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(args.priv).as_posix()}")

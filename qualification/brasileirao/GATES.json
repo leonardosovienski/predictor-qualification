@@ -2,11 +2,11 @@
   "note": "Fonte única dos estados de gate (attest.py). Editado só por scripts/ledger.py.",
   "common_baseline_id": "STACK_BASELINE_V1.1",
   "supersedes_sha256": null,
-  "domain_contract_sha256": "e6f98ca28e50555f57c65adb030cc90ea9141249daebe44a333ca69970b1d824",
+  "domain_contract_sha256": "1c75fc4507df8d48f1278e3c9475c627e8fce7cf25483395fe760e480cc752ec",
   "final_commits": [
     {
       "repo": "brasileirao-predictor",
-      "commit_sha": "04b42c9245e6ec75d72ec6a27d151ee2afef5e70"
+      "commit_sha": "25cdf4d9bb309d33f066fbc6a379f5d98c69f08a"
     },
     {
       "repo": "core-predictor",
@@ -20,9 +20,9 @@
   "final_wheels": [
     {
       "name": "brasileirao-predictor",
-      "version": "0.3.0rc2",
-      "url": "https://github.com/leonardosovienski/brasileirao-predictor/releases/download/v0.3.0rc2/brasileirao_predictor-0.3.0rc2-py3-none-any.whl",
-      "sha256": "70344f2264e99c41808e90db26bdc94369504e3b45d125c77e01aebe71ad7b1a"
+      "version": "0.3.0rc3",
+      "url": "https://github.com/leonardosovienski/brasileirao-predictor/releases/download/v0.3.0rc3/brasileirao_predictor-0.3.0rc3-py3-none-any.whl",
+      "sha256": "403e6a022b10e2b6d05ef1828894bf3ad0b1d049301e3dfce9cf79dc262000ea"
     },
     {
       "name": "predictor-core",
@@ -58,26 +58,28 @@
   "environments": [
     {
       "os": "linux",
-      "python": "3.13",
+      "python": "3.13.15",
       "role": "primary",
-      "where": "github_actions",
-      "result": "NOT_RUN",
+      "where": "owner_linux",
+      "result": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/env.log",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/soak.jsonl"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/env.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/host/PROVISION_RECEIPT.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl"
       ]
     },
     {
       "os": "windows",
-      "python": "3.13.14",
+      "python": "3.13.15",
       "role": "secondary",
       "where": "local_windows",
       "result": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/env.log",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/conformance.junit.xml"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/env.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ]
     }
   ],
@@ -101,13 +103,13 @@
   ],
   "gates": {
     "BLOCKERS_ZERO": {
-      "status": "FAIL",
+      "status": "PASS",
       "evidence": [
         "qualification/brasileirao/FINDINGS.json",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/compare_real_windows_pc2.json",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/fit_sensitivity.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/crossos-real/after_rc3_linuxPC2_x_winPC2.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/crossos-real/before_rc2_winPC2_x_linuxPC2.json"
       ],
-      "note": "P1 aberto: BR-F018 (resultado numérico depende do SO; achado na noite D-16 do PC 2, 2026-09-24). P0 = 0. Até a Etapa A: PASS (P0 = P1 = 0). Corrigidos na missão: BR-F004 (P0), BR-F003, BR-F009, BR-F012, BR-F014, BR-F015 (P1). P2 abertos: BR-F005 a BR-F008, BR-F010."
+      "note": "P0 = 0 e P1 = 0 abertos. BR-F018 (P1, achado na noite D-16) FIXED na rc3: prova com dado real entre sistemas operacionais 20/20 (critério declarado antes de medir). Corrigidos na missão: BR-F004 (P0), BR-F003, BR-F009, BR-F012, BR-F014, BR-F015, BR-F018 (P1). P2 abertos: BR-F005 a BR-F008, BR-F010."
     },
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
@@ -123,34 +125,38 @@
     "LOCK_INTEGRITY": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/lock_check_04b42c9.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/c14/lock_check_25cdf4d.log",
         "qualification/brasileirao/CORE_IDENTITY_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/install.log"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/install.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/install.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/env.log"
       ],
-      "note": "uv lock --check exit 0 em 04b42c9; instalação só pelo lock com --require-hashes no Linux primário, windows-latest e Windows local; o lock mudou só na versão do Ops (4.2.2rc1) e do próprio pacote."
+      "note": "uv lock --check exit 0 no final_commit 25cdf4d (rc3; o lock mudou só na versão do pacote, 0.3.0rc3); instalação só pelo lock com --require-hashes no Linux primário owner_linux (PC 2), no Windows local do PC 2 e no Actions (linux e windows-latest)."
     },
     "CORE_IDENTITY": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/CORE_IDENTITY_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/core_identity.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-windows-latest/core_identity.json",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/core_identity_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/runtime_trace.log"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/core_identity.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/core_identity.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/core_identity.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-windows-latest/core_identity.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/runtime_trace.log"
       ],
-      "note": "pyproject, tool.uv.sources, uv.lock, asset da release, instalação, metadata e módulo em site-packages apontam a mesma wheel: core 3.2.1 (10ef42f3) e ops 4.2.2rc1 (0be70bfb), nos 3 runtimes; nenhum editable, vendor ou checkout."
+      "note": "pyproject, tool.uv.sources, uv.lock, asset da release, instalação, metadata e módulo em site-packages apontam a mesma wheel: core 3.2.1 (10ef42f3) e ops 4.2.2rc1 (0be70bfb) inalterados e brasileirao 0.3.0rc3 (403e6a02), nos 4 runtimes (PC 2 Linux owner_linux, Windows local do PC 2, Actions linux e windows-latest); nenhum editable, vendor ou checkout."
     },
     "CLEANROOM_FINAL": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/CLEANROOM_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-windows-latest/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/env.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-windows-latest/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/full_suite.junit.xml",
         "qualification/brasileirao/EVIDENCE_NUMBERS.json"
       ],
-      "note": "Só wheels publicadas (brasileirao 0.3.0rc2 70344f22, core 3.2.1, ops 4.2.2rc1), árvore sem os pacotes-fonte: conformidade 89/89 no Linux primário, windows-latest e Windows local; suíte completa 2315 casos, 46 da classe T (BR-F017, leem o checkout)."
+      "note": "Só wheels publicadas (brasileirao 0.3.0rc3 403e6a02, core 3.2.1, ops 4.2.2rc1), árvore sem os pacotes-fonte: conformidade 89/89 no Actions (linux e windows-latest, run 36010604163), no Linux primário owner_linux e no Windows local do PC 2; suíte completa pela wheel 2327 casos com os mesmos 46 da classe T (BR-F017) da rc2."
     },
     "HOSTED_CI": {
       "status": "PASS",
@@ -158,126 +164,132 @@
         "qualification/brasileirao/HOSTED_CI_REPORT.md",
         "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35824710652.json",
         "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35824710697.json",
-        "qualification/brasileirao/RAW_LOGS/hosted-ci/br_final_35965123063.json",
-        "qualification/brasileirao/RAW_LOGS/hosted-ci/br_final_35963505773.json",
         "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35823003554.json",
-        "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35905678198.json"
+        "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35905678198.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/hosted-ci/br_run_36006495178.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/hosted-ci/br_run_36007498283.json"
       ],
-      "note": "ci.yml e publication-validation.yml verdes em e14f339 (baseline) e 04b42c9 (final); core 5a08415 e ops 9831b0d/31d3939 verdes; nenhum job pulado."
+      "note": "ci.yml (run 36006495178, pull_request #80, head 25cdf4d: Python 3.13, 3.14, .NET, Compose e os jobs cross-OS ubuntu-latest x windows-latest) e publication-validation.yml (run 36007498283, 25cdf4d) verdes no final_commit da rc3; baseline e14f339 e core 5a08415 / ops 9831b0d-31d3939 (inalterados) verdes; nenhum job pulado."
     },
     "E2E": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-latest-synthetic/E2E_SUMMARY.json",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/e2e_real/E2E_SUMMARY.json",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/e2e_real/ops/events.jsonl",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/gate_tests_pc2.json",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/env.log",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/install.log",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/core_identity.json",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/dataset_sha256.log",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/real/runs.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/ops/events.jsonl",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/env.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/host/PROVISION_RECEIPT.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/dataset_sha256.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/real/runs.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json"
       ],
-      "note": "BLOCKED: evidência bruta com dado real pronta no PC 2; aguarda emenda da D-9 e do schema (C14). Pelos critérios congelados o bruto teria sido PASS: no PC 2 (Ubuntu 24.04/WSL2, Python 3.13.15), venv limpo só com as final_wheels (lock com --require-hashes; wheel 70344f22 conferida), entrypoint brasileirao-research com pedido em arquivo sobre a cópia 31f30a4d (sha256 igual antes e depois, fonte e cópia): 20/20 pedidos reais exit 0 e E2E real 25/25 checagens (processo, término, processo novo relê o mesmo resultado; cadeia de provenance até o Ops e o Core); conformidade 89/89 e todos os gates verdes no mesmo runtime. Diagnóstico anterior: E2E sintético 26/26 no Linux e no windows-latest; E2E real 25/25 no Windows local."
+      "note": "Linux primário owner_linux (PC 2, D-19) com o dado real: venv limpo só com as final_wheels (rc3 403e6a02, --require-hashes), entrypoint brasileirao-research com pedido em arquivo sobre a cópia 31f30a4d (sha256 igual antes e depois, fonte e cópia): 20/20 pedidos reais e E2E real 25/25 (processo, término, processo novo relê o mesmo resultado do store autoritativo; cadeia de provenance até Ops e Core). Windows local do PC 2: E2E real 25/25. Sintético 26/26 no Actions (linux e windows-latest); testes de E2E da conformidade verdes nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest)."
     },
     "IDEMPOTENCY": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-windows-latest/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/conformance.junit.xml"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-windows-latest/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl"
       ],
-      "note": "Pela wheel: mesma key e conteúdo dão 1 experimento, 1 SUCCEEDED do Ops, 1 resultado (DUPLICATE devolve o client_ref da submissão); conteúdo diferente dá CONFLICT; duplicata após mudança de policy devolve o resultado guardado; 2 processos concorrentes dão 1 efeito; fora de ordem dá os mesmos resultados. Linux, windows-latest e Windows local."
+      "note": "Pela wheel rc3: mesma key e conteúdo dão 1 experimento, 1 SUCCEEDED do Ops, 1 resultado (DUPLICATE devolve o client_ref da submissão); conteúdo diferente dá CONFLICT; duplicata após mudança de policy devolve o resultado guardado; 2 processos concorrentes dão 1 efeito; fora de ordem dá os mesmos resultados; verde nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest); soak real: 5 duplicatas, 0 efeito duplicado."
     },
     "RESTART_RECOVERY": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/FAILURE_MATRIX.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-windows-latest/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/conformance.junit.xml"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-windows-latest/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl"
       ],
-      "note": "Morte real do processo nos 9 pontos da FAILURE_MATRIX: reenvio em processo novo produz exatamente 1 efeito, 1 SUCCEEDED, 1 resultado, reconcile limpo; backup/restore em raiz nova relê os mesmos bytes. Nos 3 ambientes."
+      "note": "Morte real do processo nos 9 pontos da FAILURE_MATRIX: reenvio em processo novo produz exatamente 1 efeito, 1 SUCCEEDED, 1 resultado, reconcile limpo; backup/restore em raiz nova relê os mesmos bytes; verde nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest); soak real: 5 restarts sem perda nem duplicata."
     },
     "FAILURE_INJECTION": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/FAILURE_MATRIX.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-windows-latest/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/conformance.junit.xml"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-windows-latest/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl"
       ],
-      "note": "Matriz congelada (24 casos) injetada na borda sem mock de Core/Ops: crash, timeout (exit 124, termination timeout) e lentidão do job do Ops, orçamento de retries, lock do Ops, DB lock, DB x FS divergentes, artefato ausente/corrompido/alterado, snapshot com hash divergente. Linux primário, windows-latest e Windows local, pela wheel 4.2.2rc1 do Ops."
+      "note": "Matriz congelada (24 casos) injetada na borda sem mock de Core/Ops: crash, timeout (exit 124) e lentidão do job do Ops, orçamento de retries, lock do Ops, DB lock, DB x FS divergentes, artefato ausente/corrompido/alterado, snapshot com hash divergente; verde nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest) pela wheel 4.2.2rc1 do Ops; soak real: 3 por classe relevante."
     },
     "PROVENANCE": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json",
-        "qualification/brasileirao/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/e2e/E2E_SUMMARY.json",
         "qualification/brasileirao/OPS_MAPPING_REPORT.md"
       ],
-      "note": "Cadeia pedido, admission (recibo SQLite, policy_hash), experimento (journal), worker-request, job do Ops (jobs file v3, run_id, strict/VALIDATED), efeito (sha256), trial do TrialRegistryV2 e resultado conferida contra as fontes primárias no E2E (Linux e windows-latest sintético, Windows real)."
+      "note": "Cadeia pedido, admission (recibo SQLite, policy_hash), experimento (journal), job do Ops (jobs file v3, run_id, strict/VALIDATED), efeito (sha256), trial do TrialRegistryV2 e resultado conferida contra as fontes primárias no E2E real (Linux owner_linux e Windows local do PC 2, rc3) e no sintético (Actions)."
     },
     "AUTHORITY_SEPARATION": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
         "qualification/brasileirao/DOMAIN_RESEARCH_CONTRACT.json",
-        "qualification/brasileirao/EVIDENCE_NUMBERS.json"
+        "qualification/brasileirao/EVIDENCE_NUMBERS.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "validate_result impõe: Ops não SUCCEEDED implica NOT_EVALUATED/FAILED_OPERATIONAL; WATCH exige SUPPORTED; WATCH_NO_CAPITAL exige WATCH; FORECAST_ONLY sem afirmação; capital false. Crash e retries esgotados nunca viram resultado científico. Dado real: SUPPORTED contra a climatologia e NO_EDGE (ciência não virou edge)."
+      "note": "validate_result impõe: Ops não SUCCEEDED implica NOT_EVALUATED/FAILED_OPERATIONAL; WATCH exige SUPPORTED; capital false; crash e retries esgotados nunca viram resultado científico (nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3). Dado real rc3: SUPPORTED contra a climatologia (2022 e 2024, 1X2) e NO_EDGE (ciência não virou edge), igual no Linux e no Windows."
     },
     "FUTURE_CANARY": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/FUTURE_CANARY_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/real_corroboration/REAL_CORROBORATION.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/real_corroboration/REAL_CORROBORATION_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl"
       ],
-      "note": "FUTURE_CANARY_BR_001 só depois do cutoff: resultado idêntico com e sem canário e token ausente de efeitos, trials, resultados, outcomes, jobs e eventos do Ops (vetor congelado, 3 ambientes); corroborado com o dado real no Windows; soak sintético com 5 ciclos."
+      "note": "FUTURE_CANARY_BR_001 só depois do cutoff: resultado idêntico com e sem canário e token ausente de efeitos, trials, resultados, outcomes, jobs e eventos do Ops (vetor congelado) nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3; soak com o dado real: 5 ciclos de canário sem diferença; corroboração com o dado real: canary_identical e canary_token_absent."
     },
     "PROTECTED_ARTIFACTS_UNCHANGED": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/PROTECTED_ARTIFACT_REPORT.md",
         "qualification/brasileirao/PROTECTED_SET.json",
-        "qualification/brasileirao/RAW_LOGS/attestation/protected_check_04b42c9.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/c14/protected_check_25cdf4d.json"
       ],
-      "note": "1877/1877 blobs iguais entre truth-map (e14f339) e final_commit (04b42c9); nada retunado; H8/H9/H14/H15/A1 recusadas; 2025 nunca alvo."
+      "note": "1877/1877 blobs iguais entre truth-map (e14f339) e o final_commit da rc3 (25cdf4d); nada retunado (config.yaml intocado); H8/H9/H14/H15/A1 recusadas; 2025 nunca alvo; o atestado de poder protegido (A-04) não foi renovado."
     },
     "SOAK": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
         "qualification/brasileirao/SOAK_REPORT.md",
         "qualification/brasileirao/QUALIFICATION_PROFILE_BR_V1.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/soak.jsonl",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/soak.jsonl",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/evidence_numbers_pc2.json",
-        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/dataset_sha256.log"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/dataset_sha256.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/env.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/host/PROVISION_RECEIPT.json",
+        "qualification/brasileirao/EVIDENCE_NUMBERS.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/soak.jsonl"
       ],
-      "note": "BLOCKED: evidência bruta com dado real pronta no PC 2; aguarda emenda da D-9 e do schema (C14). Pelos critérios congelados o bruto teria sido PASS: perfil QUALIFICATION_PROFILE_BR_V1 inteiro pelo brasileirao-research da wheel, com a cópia real 31f30a4d como base e variantes derivadas dela (canário depois do cutoff, 5 permutações com as seeds congeladas; pares reais de mesmo kickoff): 71 chamadas de processo, 49 resultados = 49 guardados = 49 efeitos, 0 perdidos, 0 inesperados, 0 releituras divergentes, máximo 1 SUCCEEDED do Ops por job, reconcile limpo, 0 violações, tolerância zero ok. Diagnóstico anterior: soak sintético no Linux (Actions) com os mesmos números."
+      "note": "Linux primário owner_linux (PC 2, D-19), runtime suportado com a wheel rc3, dado real (cópia 31f30a4d, sha256 igual antes e depois), perfil QUALIFICATION_PROFILE_BR_V1 inteiro pelo brasileirao-research: 71 chamadas de processo, 49 resultados = 49 guardados = 49 efeitos, 0 perdidos, 0 inesperados, 0 releituras divergentes, máximo 1 SUCCEEDED do Ops por job, reconcile limpo, 0 violações, tolerância zero ok. Soak sintético da rc3 no Actions idêntico ao da Etapa A."
     },
     "WINDOWS_SMOKE": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/install.log",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/core_identity_windows_local.json",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/real/runs.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/install.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/core_identity.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/real/runs.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/env.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/crossos-real/after_rc3_linuxPC2_x_winPC2.json"
       ],
-      "note": "C:\\QUALIFICACAO\\runtime\\brasileirao\\ com as final_wheels (--require-hashes): E2E, restart e releitura com dado real 25/25; 20 pedidos reais; conformidade 89/89 pela wheel instalada."
+      "note": "Windows local do PC 2 (C:\\QUALIFICACAO\\runtime\\brasileirao2\\, autorizado pela missão brasileirao2; uv 0.12.18 e Python 3.13.15 gerenciados, nada no Python do sistema) com as final_wheels (--require-hashes, wheel rc3 conferida): E2E, restart e releitura com o dado real 25/25; 20 pedidos reais idênticos aos do Linux primário (0 diferenças); conformidade 89/89 pela wheel instalada."
     },
     "SHARED_DEPENDENCY_CLEAR": {
       "status": "PASS",
@@ -285,10 +297,9 @@
         "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json",
         "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json",
         "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json"
       ],
-      "note": "Ops 4.2.2rc1: SHARED-003 e SHARED-004 test_only não bloqueantes; SHARED-005 resolvida (não bloqueante para 0be70bfb). Nesta missão o timeout, o crash e o lock do job real do Ops passaram pela wheel 4.2.2rc1 no Linux, windows-latest e Windows local."
+      "note": "Ops 4.2.2rc1 e Core 3.2.1 inalterados na rc3: SHARED-003 e SHARED-004 test_only não bloqueantes; SHARED-005 resolvida (não bloqueante para 0be70bfb). Timeout, crash e lock do job real do Ops passaram pela wheel 4.2.2rc1 nos 4 ambientes (gate_tests_rc3)."
     },
     "EVIDENCE_CONSISTENCY": {
       "status": "PASS",
@@ -296,145 +307,155 @@
         "qualification/brasileirao/EVIDENCE_NUMBERS.json",
         "qualification/brasileirao/scripts/evidence_numbers.py",
         "qualification/brasileirao/scripts/gate_tests.py",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json"
+        "qualification/brasileirao/scripts/compare_real_tolerance.py",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/c14/evidence_numbers_rc3.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/private_manifest.sha256",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/private_manifest.sha256"
       ],
-      "note": "Números dos relatórios tirados dos logs brutos por scripts versionados (evidence_numbers.py, gate_tests.py, protected_check.py, probe_inprogress_leak.py); logs brutos preservados byte a byte (.gitattributes -text)."
+      "note": "Números dos relatórios tirados dos logs brutos por scripts versionados (evidence_numbers.py, gate_tests.py, compare_real_tolerance.py, corroboration_summary.py, protected_check.py); logs brutos preservados byte a byte (.gitattributes -text); resultados com o dado ficam só no PC 2, com sha256 nos manifestos (d16-pc2-rc3/private_manifest.sha256, windows-local-rc3/private_manifest.sha256)."
     },
     "SECRETS_CLEAN": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/secrets/scan_final_attestation.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/scan_final/secrets_scan.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/secrets/scan_br_diff_e540f97_25cdf4d.json",
         "qualification/brasileirao/scripts/scan_secrets.py"
       ],
-      "note": "scan_secrets.py na evidência final, no workflow e no diff e14f339..e540f97 do brasileirao-predictor (linhas e mensagens): 1 alerta, revisado — o marcador público do canário em FROZEN_PARAMETERS.json (chave token). Nenhum segredo."
+      "note": "scan_secrets.py na evidência da requalificação e em todo arquivo alterado (294 arquivos, 0 achados) e no diff e540f97..25cdf4d do brasileirao-predictor (linhas e mensagens, 0 achados); conferência manual do diff antes de cada commit. Nenhum segredo."
     },
     "CAPITAL_FORBIDDEN": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/DOMAIN_RESEARCH_CONTRACT.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/DOMAIN_RESEARCH_CONTRACT.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "capital_permission=false no contrato (validate_result recusa true), no jobs file (FORECAST_GENERATION, nunca EXECUTION), em todo resultado e outcome; research/economic_decision.py, shadow_portfolio.py e bet_log não alcançáveis do entrypoint (import closure)."
+      "note": "capital_permission=false no contrato (validate_result recusa true), no jobs file (FORECAST_GENERATION, nunca EXECUTION), em todo resultado e outcome; economic_decision.py, shadow_portfolio.py e bet_log não alcançáveis do entrypoint (import closure) nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3."
     },
     "DOMAIN_CONTRACT": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/DOMAIN_RESEARCH_CONTRACT.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "Contrato completo (C24.1) aprovado pelo merge do dono (predictor-qualification #14, 2047c8a, 2026-09-24T07:15:34Z); regras de adapter_paths testadas (test_import_closure 5/5 nos 3 ambientes); conformidade 89/89 pela wheel publicada no Linux primário, windows-latest e Windows local."
+      "note": "Contrato C24.1 com o bloco de implementação da rc3 (25cdf4d, 403e6a02); interface (esquemas, allowlist, entrypoint, adapter_paths) idêntica à aprovada no merge do #14; como no precedente do stocks (#13), esta versão do contrato é aprovada pelo merge deste PR de attestation; regras de adapter_paths testadas (5/5) e conformidade 89/89 pela wheel publicada nos 4 ambientes."
     },
     "ADMISSION": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-windows-latest/conformance.junit.xml",
-        "qualification/brasileirao/RAW_LOGS/windows-smoke/rc2/conformance.junit.xml"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-linux-primary/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/cleanroom-final/run36010604163/brasileirao-runtime-windows-latest/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "Pelo entrypoint: comando, handler, módulo, SQL, path, URL, capital, tipo desconhecido, ID sem domínio, cutoff sem Z, lead fora dos limites, alvo inválido, hipótese protegida ou não admitida, temporada 2025 ou fora da policy, janela fora da temporada, referência desconhecida, JSON duplicado/NaN/oversize: REJECTED antes de qualquer execução (22 casos, 3 ambientes)."
+      "note": "Pelo entrypoint: comando, handler, módulo, SQL, path, URL, capital, tipo desconhecido, ID sem domínio, cutoff sem Z, lead fora dos limites, alvo inválido, hipótese protegida ou não admitida, temporada 2025 ou fora da policy, referência desconhecida, JSON duplicado/NaN/oversize: REJECTED antes de qualquer execução (22 casos) nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3."
     },
     "OPS_RUNTIME": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/OPS_MAPPING_REPORT.md",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/ops/events.jsonl",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/ops/ops-job.1.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/ops/events.jsonl",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/ops/ops-job.1.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/ops/idempotency_record.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json"
       ],
-      "note": "Job real pelo mesmo mecanismo da sombra (jobs file v3 + python -m predictor_ops run): run_id, economic_lock_id, heartbeat, attempt/retry_count, timeout (kill da árvore, exit 124), lock_not_acquired, idempotência e eventos terminais produzidos pela wheel 4.2.2rc1; o circuito não importa run_job."
+      "note": "Job real pelo mesmo mecanismo da sombra (jobs file v3 + python -m predictor_ops run): run_id, economic_lock_id, heartbeat, attempt/retry, timeout (kill da árvore, exit 124), lock e eventos terminais produzidos pela wheel 4.2.2rc1 (inalterada); no E2E real rc3 do PC 2: 1 SUCCEEDED, strict/wheel, FORECAST_GENERATION; testes do Ops na conformidade verdes nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest)."
     },
     "CORE_PARTICIPATION": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/show_2.stdout.json",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json"
       ],
-      "note": "Core no circuito: replay/LookaheadError dirige a linha do tempo; rps/brier/log_loss e bootstrap_ci (cluster por kickoff) nas métricas e IC; trial_v2 dataset_fingerprint e TrialRegistryV2 com o estado científico relido do registro; request, experiment, trial, core facts e result correlacionados no E2E."
+      "note": "Core no circuito: replay/LookaheadError dirige a linha do tempo; rps/brier/log_loss e bootstrap_ci (cluster por kickoff) nas métricas e IC; trial_v2 e TrialRegistryV2 com o estado científico relido do registro; no E2E real rc3: trial registrado 1 vez, estado do trial = estado do resultado, replay estrito sem cache do banco lido."
     },
     "TEMPORAL_INTEGRITY": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/TEMPORAL_INTEGRITY_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/real_corroboration/REAL_CORROBORATION.json",
-        "qualification/brasileirao/EVIDENCE_NUMBERS.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/real_corroboration/REAL_CORROBORATION_SUMMARY.json",
+        "qualification/brasileirao/EVIDENCE_NUMBERS.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "available_at(i) < cutoff(t) imposto pelo replay do Core em todo estado (Elo, refit mensal, climatologia, caches, rótulos, odds); o handler lê só o snapshot com hash (escrita na origem depois da captura não muda o resultado); vazamento pré-existente BR-F004 corrigido; dado real: gap máximo -1800 s nos 20 pedidos e corroboração 7/7."
+      "note": "available_at(i) < cutoff(t) imposto pelo replay do Core em todo estado (Elo, refit mensal, climatologia, caches, rótulos, odds); o handler lê só o snapshot com hash; testes temporais verdes nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3; dado real rc3: gap máximo -1800 s nos 20 pedidos e corroboração 7/7."
     },
     "BR_OPS_REUSE": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/OPS_MAPPING_REPORT.md",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/ops/ops-job.1.json",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/ops/events.jsonl"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/ops/ops-job.1.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/e2e_real/ops/events.jsonl"
       ],
-      "note": "Nenhum executor paralelo: o mesmo mecanismo real da sombra (jobs file validado pelo Ops + python -m predictor_ops run --job --config), com o job de pesquisa mais rígido em provenance_mode, expected_artifact, economic_key, job_type e exit_statuses; mapeamento campo a campo e prova em runtime."
+      "note": "Nenhum executor paralelo: o mesmo mecanismo real da sombra (jobs file validado pelo Ops + python -m predictor_ops run --job --config), job de pesquisa mais rígido (provenance_mode strict, expected_artifact, economic_key, job_type, exit_statuses); prova em runtime no E2E real rc3 (PC 2)."
     },
     "BR_KICKOFF_ORDERING": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/kickoff_revert_proof.log"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/kickoff_revert_proof_25cdf4d.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "Pela wheel: arquivo fora de ordem (5 permutações), mesma data, mesmo kickoff, jogo em andamento, rodadas inconsistentes e jogo adiado e remarcado (superseded fora; remarcado no kickoff real; kickoff antigo = KICKOFF_MISMATCH), fixture duplicada = recusa. Prova do revert do a51a68d: falha com o hunk de ordenação revertido, passa restaurado, worktree apagado, wheel publicada inalterada."
+      "note": "Arquivo fora de ordem, mesma data, mesmo kickoff, jogo em andamento, rodadas inconsistentes, adiado e remarcado, fixture duplicada = recusa, verdes nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3. Prova do revert do a51a68d refeita no final_commit 25cdf4d: falha com o trecho de ordenação revertido, passa restaurado, worktree apagado, wheel publicada inalterada."
     },
     "BR_TIMEZONE_INTEGRITY": {
       "status": "PASS",
       "evidence": [
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/truth-map/date_sites_e14f339.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/truth-map/date_sites_e14f339.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "Sedes America/Sao_Paulo, Manaus, Cuiaba e Rio_Branco (offsets -03/-04/-05) normalizam para os mesmos instantes; horário de verão antes de 2019 com offset explícito correto; hora local sem fuso (inclusive a repetida e a inexistente) rejeitada; kickoff sem fuso no dataset dá TEMPORAL_INTEGRITY_VIOLATION. Inventário de todos os pontos que leem datas no truth-map."
+      "note": "Sedes America/Sao_Paulo, Manaus, Cuiaba e Rio_Branco normalizam para os mesmos instantes; horário de verão antes de 2019 com offset explícito; hora local sem fuso (inclusive repetida e inexistente) rejeitada; kickoff sem fuso no dataset dá TEMPORAL_INTEGRITY_VIOLATION: 15/15 nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3. Inventário dos pontos que leem datas (truth-map) inalterado."
     },
     "BR_SAME_KICKOFF_ISOLATION": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/SAME_KICKOFF_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/real_corroboration/REAL_CORROBORATION.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/real_corroboration/REAL_CORROBORATION_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl"
       ],
-      "note": "Resultado do jogo A não muda a previsão do jogo B de mesmo kickoff (nem do jogo seguinte que começa com A em andamento), byte a byte; o teste enxerga a mudança num jogo posterior. Dado real: par de mesmo kickoff de 2024 com o mesmo resultado."
+      "note": "Resultado do jogo A não muda a previsão do jogo B de mesmo kickoff, byte a byte, nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3; soak com o dado real: 5 ciclos com pares reais de mesmo kickoff e a mesma informação; corroboração com o dado real: irmão idêntico e mudança vista só depois."
     },
     "BR_METAMORPHIC": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/METAMORPHIC_REPORT.md",
         "qualification/brasileirao/FROZEN_VECTORS.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/real_corroboration/REAL_CORROBORATION.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/real_corroboration/REAL_CORROBORATION_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/soak.jsonl"
       ],
-      "note": "5 permutações congeladas (seeds 11, 23, 37, 41, 53) da ordem das linhas: resultado idêntico pelo comparador congelado nos 3 ambientes; soak 5 ciclos; dado real 1 permutação idêntica."
+      "note": "5 permutações congeladas (seeds 11, 23, 37, 41, 53) da ordem das linhas: resultado idêntico pelo comparador congelado nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3; soak com o dado real: 5 permutações idênticas à referência; corroboração real: permuted_identical."
     },
     "BR_CACHE_STATE": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/CACHE_STATE_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/real_corroboration/REAL_CORROBORATION.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/real_corroboration/REAL_CORROBORATION_SUMMARY.json"
       ],
-      "note": "Caches do momento da captura (envenenados) nunca lidos; histórico em processo novo igual ao histórico depois de rodar uma data futura no mesmo estado (processos novos) e no mesmo processo (memo de refit compartilhado); dado real com caches envenenados idêntico."
+      "note": "Caches do momento da captura (envenenados) nunca lidos; histórico em processo novo igual ao histórico depois de rodar uma data futura (processos novos e mesmo processo) nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3; corroboração real: poisoned_caches_identical."
     },
     "BR_FUTURE_INJECTION": {
       "status": "PASS",
       "evidence": [
         "qualification/brasileirao/FUTURE_CANARY_REPORT.md",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_actions.json",
-        "qualification/brasileirao/RAW_LOGS/temporal-suite/gate_tests_rc2_windows_local.json"
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/temporal-suite/gate_tests_rc3.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/d16-pc2-rc3/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/windows-local-rc3/conformance.junit.xml"
       ],
-      "note": "Placar de jogo que não poderia ter terminado antes do as_of injetado no banco: TEMPORAL_INTEGRITY_VIOLATION pelo caminho real (entrypoint, Ops, handler), sem resultado; data_cutoff depois do as_of recusado; jogo em andamento excluído; kickoff sem fuso rejeitado."
+      "note": "Placar que não poderia ter terminado antes do as_of injetado no banco: TEMPORAL_INTEGRITY_VIOLATION pelo caminho real (entrypoint, Ops, handler), sem resultado; data_cutoff depois do as_of recusado nos 4 ambientes (Linux primário owner_linux do PC 2, Windows local do PC 2, Actions linux e windows-latest), pela wheel 0.3.0rc3."
     }
-  }
+  },
+  "final_result": "QUALIFIED"
 }

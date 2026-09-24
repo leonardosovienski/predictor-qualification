@@ -1,0 +1,24 @@
+{
+  "schema": "brasileirao/BR_F018_FIX_PLAN/1",
+  "finding": "BR-F018",
+  "declared_at": "2026-09-24T13:10:38Z (commit 497715f, publicado)",
+  "declared_before": "qualquer medição do método de otimização novo (sintético ou real); commit publicado antes das medições",
+  "authorization": "noite/prompts/brasileirao2.md: BR-F018 — o dono escolheu \"Corrigir\": trocar o ajuste por gradiente analítico ou reparametrizar, publicar rc nova do brasileirao-predictor e requalificar o Brasileirão (C14).",
+  "model_invariants": {
+    "rule": "o modelo não muda; só o método de otimização",
+    "objective": "brasileirao_predictor.model.fit_goal_model: mesma negll (Binomial Negativa média-dispersão + Dixon-Coles com normalizador, pesos de recência, penalidade 1e12 fora da região válida)",
+    "parametrization": "theta = (a, b, log_alpha, rho_raw[, theta_xg]); rho = 0.4*tanh(rho_raw); mesmos bounds [(-3,3), (-1,4), (log 1e-4, log 3), (None, None)[, (-5,5)]] e mesmo ponto inicial x0",
+    "features_and_hyperparameters": "config.yaml (protegido) intocado; mesmas features (elo_diff/400, home advantage, delta_xg opcional); mesma janela, meia-vida e max_goals",
+    "return": "(a, b, alpha, rho[, theta_xg]) como hoje; mesmos erros (ModelIntegrityError, OptimizationFailedError) e o mesmo aviso de parâmetro no bound"
+  },
+  "method_change": "L-BFGS-B com gradiente analítico exato da mesma negll (em vez de diferenças finitas) seguido de polimento determinístico da raiz do gradiente (Newton projetado nos bounds); o resultado passa a ser a raiz do gradiente analítico, não o ponto onde o otimizador parou por tolerância",
+  "tolerances": {
+    "same_input_same_platform": "bit a bit (atol 0) nos parâmetros e nas saídas",
+    "perturbation_test": "pesos multiplicados por (1 + 2**-52): |Δ| <= 1e-6 em cada parâmetro devolvido (a, b, alpha, rho, theta_xg) e |Δ| <= 1e-9 em cada probabilidade (p_home, p_draw, p_away, p_over25) e lambda derivada",
+    "cross_os_synthetic_ci": "mesmos vetores sintéticos congelados em ubuntu-latest e windows-latest: parâmetros |Δ| <= 1e-6; probabilidades e lambdas |Δ| <= 1e-9",
+    "cross_os_real_data": "os 20 pedidos reais (real_env.py) Linux PC 2 × Windows PC 2 com a rc nova: campos contínuos das métricas (scores, mean_delta, IC, ROI, líquido, hit_rate) e probabilidades/lambdas por previsão |Δ| <= 1e-9; parâmetros por previsão |Δ| <= 1e-6; campos discretos (estados, n_predictions, n_evaluated, n_bets, status, information_fingerprint, data_quality) exatamente iguais; critério: 20/20",
+    "why_params_looser": "a dispersão alpha perto do limite de Poisson é pouco identificada (direção plana da verossimilhança): a raiz numérica é estável, mas com folga maior nessa direção; as probabilidades, que são o que a previsão usa, ficam na tolerância apertada"
+  },
+  "before_after": "o mesmo comparador roda antes (wheel rc2, espera-se falha: é o BR-F018) e depois (rc nova)",
+  "fixed_rule": "BR-F018 só vira FIXED com a prova com dado real entre sistemas operacionais (critério cross_os_real_data em 20/20)"
+}

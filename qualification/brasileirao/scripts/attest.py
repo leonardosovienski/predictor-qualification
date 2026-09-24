@@ -121,6 +121,9 @@ def check(doc: dict) -> list[str]:
     historical = doc["result"] == "IN_PROGRESS" and doc["common_core_sha256"] in CORE_SHA_HIST
     if doc["common_core_sha256"] != CORE_SHA and not historical:
         problems.append("C7.1(6): common_core_sha256 diferente do núcleo vigente (v2.2)")
+    # C7.1(7): numa attestation final, o sha256 do contrato é o do arquivo que vai para o main com ela
+    if doc["result"] != "IN_PROGRESS" and doc.get("domain_contract_sha256") != sha(QC / "DOMAIN_RESEARCH_CONTRACT.json"):
+        problems.append("C7.1(7): domain_contract_sha256 diferente do DOMAIN_RESEARCH_CONTRACT.json")
     if doc["counts"] != counts():
         problems.append("C7.1(2): counts não bate com FINDINGS.json")
     for gate in doc["gates"].values():

@@ -1,5 +1,7 @@
 # CORE_IDENTITY_REPORT — missão brasileirao (gates `LOCK_INTEGRITY`, `CORE_IDENTITY`, C4)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. `uv lock --check` exit 0 em `25cdf4d` (o lock mudou só na versão do pacote); core 3.2.1 (`10ef42f3…`), ops 4.2.2rc1 (`0be70bfb…`) e brasileirao 0.3.0rc3 carregados do site-packages nos 4 runtimes, sem editable. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 ## 1. Baseline (truth-map)
 
 `e14f339` consumia predictor-core 3.2.1 (`10ef42f3…`) e **predictor-ops 4.2.1** (`da4fa540…`), a wheel

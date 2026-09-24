@@ -232,7 +232,7 @@
     {
       "id": "BR-F018",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "d16-pc2",
       "title": "Resultado numérico depende do SO: o refit do modelo de gols amplifica ruído de ponto flutuante (Windows local × Linux PC 2)",
       "description": "Mesma wheel (brasileirao 0.3.0rc2 70344f22…), mesmo lock (numpy 2.5.3, scipy 1.18.1, pandas 3.0.6 nos dois), mesmo snapshot (sqlite_sha256 31f30a4d… e mesmas contagens de linhas nos dois SOs) e os mesmos 20 pedidos reais: Windows local (windows-smoke rc2) × PC 2 Linux dão conteúdo diferente em 20/20 resultados (métricas iguais em 4/20). O conjunto de informação é idêntico (information_fingerprint igual em 7120/7120 previsões; Elo, climatologia, cutoff e refit_at iguais); diferem os parâmetros do refit mensal (até 1,42e-2) e, por eles, lambdas e probabilidades em 6600/7120 previsões (p_home até 6,2e-3; p_over25 até 3,8e-3). Estados de resultado, científico e econômico iguais em 20/20, mas os números econômicos mudam (até 5 apostas a mais ou a menos por pedido; ROI líquido 2021 OU25 +1,16% no Windows × −0,05% no Linux; em 2022 o IC95 do ROI líquido cruza zero no Windows e fica inteiro abaixo de zero no Linux, 1X2 e O/U). Causa raiz, demonstrada no Linux (fit_sensitivity.py): o mesmo ajuste repetido no mesmo processo é bit-idêntico (62/62 refits), mas pesos multiplicados por (1 + 2^-52) mudam os parâmetros em 62/62 refits (mediana 2,7e-3, máx. 1,6e-2) — o L-BFGS-B de brasileirao_predictor.model.fit_goal_model (gradiente por diferenças finitas, tolerâncias padrão, penalidade 1e12 fora da região válida) amplifica as diferenças de último bit que as libm/BLAS dos binários de cada SO produzem. Apertar só a tolerância (ftol 1e-15, gtol 1e-10) baixa a mediana para 4,1e-4, mas o máximo fica em 1,4e-2 e 1/62 refit passa a falhar: não é conserto simples. Sem vazamento, sem violação temporal, sem resultado duplicado ou perdido; em cada SO o resultado é determinístico (metamórfico, soak e E2E passam). Efeito: o número de um resultado (probabilidades, apostas, ROI, significância) não é determinado só por pedido + dado + wheel + commit; os números de REAL_DATA_METRICS.md valem para o Windows local e diferem no Linux primário. P1 por C6 (afeta resultado, sem violação observada). Decisão do dono: aceitar como limitação documentada (reclassificar, com o motivo) ou corrigir o ajuste no brasileirao-predictor (C14: publish-candidates, cleanroom-final e as fases que exercitam o código).",
@@ -241,8 +241,16 @@
         "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/fit_sensitivity.json",
         "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/fit_sensitivity_tight_1e-15.json",
         "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/evidence_numbers_pc2.json",
-        "qualification/brasileirao/EVIDENCE_NUMBERS.json"
-      ]
+        "qualification/brasileirao/EVIDENCE_NUMBERS.json",
+        "qualification/brasileirao/BR_F018_FIX_PLAN.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/crossos-real/before_rc2_winPC1_x_linuxPC2.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/crossos-real/after_rc3_linuxPC2_x_winPC2.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/br-f018/stability_tests_OLD_code_e0dab9a.log",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/br-f018/fit_sensitivity_NEW_method.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/br-f018/ci-36006495178/crossos-fit-compare/crossos-compare.json"
+      ],
+      "fix_commit": "13c24c0 (brasileirao-predictor, PR #80; rc3 = 25cdf4d, wheel 403e6a02…)",
+      "closed_by": "prova com dado real entre sistemas operacionais (critério declarado antes de medir, BR_F018_FIX_PLAN.json, commit 497715f): rc3 Linux PC 2 × rc3 Windows PC 2 = 20/20 pedidos dentro da tolerância e nenhuma diferença (0/26400 parâmetros, 0/79544 floats, 0/78344 discretos); antes, rc2 Windows × rc2 Linux = 0/20. Testes novos falham no código antigo (3/5) e passam no novo (5/5); CI ubuntu-latest × windows-latest (run 36006495178) com os vetores sintéticos congelados: parâmetros máx. |Δ| 7e-15, demais números idênticos; dado real, 1 ULP nos pesos: máx. 1,1e-16 (antes 1,6e-2)."
     }
   ]
 }

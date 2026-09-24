@@ -1,0 +1,23 @@
+# 2026-09-24T13:15:41Z testes novos do BR-F018 contra o código ANTIGO (model.py de e0dab9a = 04b42c9): devem expor o defeito
+# git: e0dab9af38c0384730a08f3b09a25c3133042e99 + tests/test_fit_numerical_stability.py (não commitado ainda); model.py: e25f8df075c7764b7a17d6caecfd638e0b9c7951
+
+    def test_last_bit_perturbation_with_delta_xg_stays_within_declared_tolerance() -> None:
+        history, weights, delta_xg = _history(20260926, None), _weights(), _delta_xg(20260927)
+        base = fit_goal_model(history, delta_xg=delta_xg, sample_weights=weights)
+        perturbed = fit_goal_model(history, delta_xg=delta_xg, sample_weights=[w * ULP for w in weights])
+        assert len(base) == 5
+        param_gap = max(abs(x - y) for x, y in zip(base, perturbed, strict=True))
+>       assert param_gap <= PARAM_ATOL, f"parâmetros mudaram {param_gap:.3e} com 1 ULP nos pesos"
+E       AssertionError: parâmetros mudaram 4.872e-05 com 1 ULP nos pesos
+E       assert 4.8718279413658555e-05 <= 1e-06
+
+tests/test_fit_numerical_stability.py:93: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/test_fit_numerical_stability.py::test_same_input_gives_bit_identical_parameters[poisson]
+PASSED tests/test_fit_numerical_stability.py::test_same_input_gives_bit_identical_parameters[binomial-negativa]
+FAILED tests/test_fit_numerical_stability.py::test_last_bit_perturbation_stays_within_declared_tolerance[poisson]
+FAILED tests/test_fit_numerical_stability.py::test_last_bit_perturbation_stays_within_declared_tolerance[binomial-negativa]
+FAILED tests/test_fit_numerical_stability.py::test_last_bit_perturbation_with_delta_xg_stays_within_declared_tolerance
+3 failed, 2 passed in 1.36s
+[pytest exit 1]

@@ -1,5 +1,7 @@
 # FUTURE_CANARY_REPORT — missão brasileirao (gates `FUTURE_CANARY`, `BR_FUTURE_INJECTION`)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. Teste do canário verde nos 4 ambientes; soak com o dado real: 5 ciclos de canário sem diferença e sem o token no estado; corroboração real: `canary_identical` e `canary_token_absent`. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 ## Canário `FUTURE_CANARY_BR_001`
 
 Vetor congelado (`tests/conformance/fixtures.py`, `canary=True`): dois jogos **depois** do
