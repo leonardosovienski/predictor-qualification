@@ -223,7 +223,8 @@
             "enum": [
               "github_actions",
               "cloud_vm",
-              "local_windows"
+              "local_windows",
+              "owner_linux"
             ]
           },
           "result": {
@@ -233,6 +234,26 @@
             "type": "array",
             "items": {
               "$ref": "#/$defs/evidence"
+            }
+          }
+        },
+        "if": {
+          "properties": {
+            "where": {
+              "const": "owner_linux"
+            }
+          },
+          "required": [
+            "where"
+          ]
+        },
+        "then": {
+          "properties": {
+            "os": {
+              "const": "linux"
+            },
+            "role": {
+              "const": "primary"
             }
           }
         }
