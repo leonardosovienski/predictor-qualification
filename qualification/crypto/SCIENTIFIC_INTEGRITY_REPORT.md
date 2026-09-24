@@ -43,8 +43,8 @@ Pedido real `crypto:REQ-REAL-E2E-001`, 52 observações. Custos congelados: `Cos
 - Custo médio total: 38 bps (30 de fricção de round-trip + 8 de funding).
 - Decisão do gate econômico: `NO_TRADE`. Estado científico (Core): `INCONCLUSIVE`.
   Econômico: `NO_EDGE`.
-- **Gate `NOT_RUN` — BLOCKED: D-16 pendente.** A regra congelada exige dados reais no Linux
-  primário. As métricas acima são do Windows (secundário) e servem de evidência adicional.
+- As métricas acima são do Windows (secundário) e servem de evidência adicional. O gate
+  fechou com dados reais no Linux primário pela D-16 (seção D-16 no fim).
 
 ## Controles negativos (gate `CRYPTO_NEGATIVE_CONTROLS`)
 
@@ -54,8 +54,7 @@ Pedido real `crypto:REQ-REAL-E2E-001`, 52 observações. Custos congelados: `Cos
 | ablação temporal (ordem trocada; disponível antes de observado) | 0 resultados aceitos | 0 e 0 |
 | labels embaralhados (100 seeds) | `SUPPORTED` em ≤ 10 | **3** (`INCONCLUSIVE` 94, `REFUTED` 3) |
 
-**Gate `NOT_RUN` — BLOCKED: D-16 pendente** (mesma regra). Resultado no Windows: todos dentro
-dos limiares.
+Resultado no Windows: todos dentro dos limiares. O gate fechou pela D-16 (seção D-16 no fim).
 
 ## Correção científica feita nesta missão
 
@@ -66,4 +65,28 @@ regressão em `test_net_return_uses_the_frozen_cost_model_and_has_its_own_interv
 
 ## V1.1 (cripto 1.2.0rc2 + Ops 4.2.2rc1)
 
-Refeito no runtime Windows (`RAW_LOGS/v1.1/windows-local/`): suítes temporais 120/120; canário e ablações falham fechado (0 aceitos); placebo SUPPORTED 3/100; métricas reais idênticas (bruto −45, líquido −83 bps; mesmos ICs). Gates econômico, controles negativos e casos desconfortáveis seguem **NOT_RUN — BLOCKED: D-16 pendente**.
+Refeito no runtime Windows (`RAW_LOGS/v1.1/windows-local/`): suítes temporais 120/120; canário e ablações falham fechado (0 aceitos); placebo SUPPORTED 3/100; métricas reais idênticas (bruto −45, líquido −83 bps; mesmos ICs). Na V1.1, os gates econômico, controles negativos e casos desconfortáveis ficaram **NOT_RUN — BLOCKED: D-16 pendente**; fecharam depois pela D-16 (seção abaixo).
+
+## D-16: Linux primário, dados reais (fecha os gates)
+
+Run [predictor-qualification 35978221282](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35978221282) (ubuntu-latest, Python 3.13), no runtime suportado (wheel `6e62f67f…` conferida). Os dados foram conferidos contra o `.CHECKSUM` publicado (45/45) e são idênticos à cópia do pendrive. Números de `EVIDENCE_NUMBERS_D16.json` (`d16.science`), extraídos de `RAW_LOGS/d16/35978221282/science/SCIENCE_REAL.json`.
+
+**Métricas econômicas** (gate `CRYPTO_ECONOMIC_METRICS`: `PASS`, bruto e líquido separados, cada um com IC). Pedido `crypto:REQ-REAL-E2E-001`, 52 observações. Custos congelados: `CostModel`, 10 + 5 bps por perna, fricção de round-trip 30 bps, funding vigente.
+
+| | Média (bps/semana) | IC 95% bootstrap (iid, 500, seed 17) |
+|---|---|---|
+| bruto | -45 | [-214, 112] |
+| líquido | -83 | [-253, 76] |
+
+- Custo médio total: 38 bps (PnL médio de funding: -8 bps). Decisão do gate econômico: `NO_TRADE`. Estado científico (Core): `INCONCLUSIVE`. Econômico: `NO_EDGE`.
+- Igual ao diagnóstico no Windows. **Descritivo: não é edge, lucro nem autorização de capital (C22).**
+
+**Controles negativos** (gate `CRYPTO_NEGATIVE_CONTROLS`: `PASS`):
+
+| Controle | Resultado esperado (congelado) | Observado |
+|---|---|---|
+| injeção de futuro | 0 resultados aceitos | 0 (`TEMPORAL_INTEGRITY_VIOLATION`) |
+| ablação temporal | 0 resultados aceitos | 0 (`TEMPORAL_INTEGRITY_VIOLATION`, `TEMPORAL_INTEGRITY_VIOLATION`) |
+| labels embaralhados (100 seeds) | `SUPPORTED` em ≤ 10 | **3** (`INCONCLUSIVE` 94, `REFUTED` 3, `SUPPORTED` 3) |
+
+**Canário** (`FUTURE_CANARY_CRYPTO_001` e datas pós-cutoff) nos artefatos dos pedidos legítimos: **0** vazamentos.

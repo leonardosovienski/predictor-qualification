@@ -236,6 +236,44 @@
         "qualification/crypto/RAW_LOGS/v1.1/after_result_write_10x.log",
         "qualification/crypto/RAW_LOGS/v1.1/windows_pytest_341d270_run2.log"
       ]
+    },
+    {
+      "id": "CR-F019",
+      "severity": "P1",
+      "status": "FIXED",
+      "phase": "d16",
+      "title": "Soak não executava 2 das 6 classes de falha do perfil congelado; d16_finalize fecharia SOAK sem essa cobertura",
+      "description": "QUALIFICATION_PROFILE_CRYPTO_V1.plan.failure_classes exige 3 execuções de 6 classes, e checks_at_end exige que o reconcile acuse só as corrupções injetadas. scripts/soak.py executava 4 classes: faltavam 'host do Ops morto durante o job' e 'corrupção (arquivo de resultado alterado)', ambas definidas na FAILURE_MATRIX. No run D-16 35976569248 (main 3983de1), o soak_real.jsonl tem 0 execuções das duas e reconcile_findings vazio; o d16_finalize.py fecharia SOAK=PASS só por zero_tolerance_ok, ou seja, PASS sem evidência. Os SOAK_REPORT V1.0/V1.1 (diagnóstico) listavam só 4 classes. Corrigido no kit (PR #17): o soak.py executa as 6 pelo método dos testes de conformidade, e o d16_finalize exige ≥ minimums.runs_per_relevant_failure_class por classe. Com o log do run 1, o finalize corrigido dá SOAK FAIL; o run definitivo 35978221282 executa as 6 (3/3/3/4/3/3). Perfil, vetores e limiares não mudaram.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/d16/35976569248/soak_real.jsonl",
+        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl",
+        "qualification/crypto/RAW_LOGS/d16-conferencia/finalize_ensaio_runs.log"
+      ],
+      "fixed_in": "predictor-qualification c5d627a + 8693f5d (PR #17)",
+      "proof": "qualification/crypto/RAW_LOGS/d16-conferencia/finalize_ensaio_runs.log: run 35976569248 -> SOAK FAIL (host_killed_during_ops_job 0, result_file_corruption 0); run 35978221282 -> SOAK PASS"
+    },
+    {
+      "id": "CR-F020",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "d16",
+      "title": "Parciais V1.0 declaram sha256 de evidência que não confere no próprio commit",
+      "description": "d16_crosscheck.py attestations (cada attestation no commit em que foi gravada): (a) os 9 parciais gravados em cd7e71d (cleanroom-final, contract-wiring, e2e, hosted-ci, idempotency-failure, publish-candidates, science, soak, windows-smoke) declaram E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json = daedb69a…, mas o blob em cd7e71d é 7f7b4b1e…. O .gitattributes ainda normalizava CRLF->LF em E2E_EVIDENCE; e4c1566, 19 s depois, pôs -text e regravou os bytes originais (daedb69a…), e no main o arquivo confere. (b) ATTESTATION_PARTIAL_baseline.json (f4b22ee) declara FINDINGS.json = 26f5bb51…, que não existe em nenhum commit: o parcial foi gerado às 07:35 UTC e o FINDINGS editado antes do commit das 07:43 UTC. Sem efeito nos gates atuais: os 12 parciais V1.1 e a attestation V1.0 (eb3e79f4…) conferem no próprio commit. C8 proíbe reescrever parciais; fica registrado.",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log"
+      ]
+    },
+    {
+      "id": "CR-F021",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "d16",
+      "title": "attest.py check não confere environments, vereditos compartilhados nem findings_file",
+      "description": "A C7.1 regra 3 diz 'todo arquivo de evidência existe e o sha256 confere no commit da attestation'. O check() do scripts/attest.py só confere as evidências dos gates, e só na árvore atual. Não confere environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 nem findings_file, e foi isso que deixou passar o item (b) do CR-F020. O d16_crosscheck.py attestations cobre esses campos, no commit de cada attestation. Correção sugerida: estender check() do attest.py.",
+      "evidence": [
+        "qualification/crypto/scripts/attest.py",
+        "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log"
+      ]
     }
   ]
 }

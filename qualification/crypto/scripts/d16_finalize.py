@@ -6,7 +6,8 @@ edição, para qualification/crypto/RAW_LOGS/d16/<id>/ (um run do Actions ou da 
 
 Critérios (congelados em FROZEN_PARAMETERS / AUTHORITY_STATE_MATRIX / QUALIFICATION_PROFILE):
   E2E                         e2e_real/E2E_SUMMARY.json all_ok (entrypoint, restart, releitura, provenance)
-  SOAK                        soak_real.jsonl verdict zero_tolerance_ok
+  SOAK                        soak_real.jsonl verdict zero_tolerance_ok  e  cada classe de falha do perfil
+                              (plan.failure_classes, nomes da FAILURE_MATRIX) executada ≥ minimums do perfil
   CRYPTO_UNCOMFORTABLE_CASES  e2e_cases (A, B, C ×3) all_ok  e  soak real (A ×3, C ×3) sem violações
   CRYPTO_ECONOMIC_METRICS     science: bruto e líquido separados, cada um com IC
   CRYPTO_NEGATIVE_CONTROLS    science: injeção de futuro 0, ablação 0, placebo SUPPORTED ≤ 10/100
@@ -27,6 +28,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 QC = ROOT / "qualification" / "crypto"
+# as 6 classes de QUALIFICATION_PROFILE_CRYPTO_V1.plan.failure_classes, pelo nome da falha no log do soak
+SOAK_FAILURE_CLASSES = ("ops_worker_crash", "ops_worker_hang", "host_killed_during_ops_job",
+                        "before_admission_commit", "during_result_write", "result_file_corruption")
 
 
 def main() -> None:
@@ -47,7 +51,17 @@ def main() -> None:
     science = json.loads((d / "science" / "SCIENCE_REAL.json").read_text(encoding="utf-8"))
     soak = [json.loads(l) for l in (d / "soak_real.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
     soak_summary = next(r for r in soak if r["kind"] == "summary")
-    soak_ok = next(r for r in soak if r["kind"] == "verdict")["zero_tolerance_ok"]
+    soak_verdict = next(r for r in soak if r["kind"] == "verdict")["zero_tolerance_ok"]
+    profile = json.loads((QC / "QUALIFICATION_PROFILE_CRYPTO_V1.json").read_text(encoding="utf-8"))
+    if len(profile["plan"]["failure_classes"]) != len(SOAK_FAILURE_CLASSES):
+        raise SystemExit("perfil do soak com classes de falha diferentes das conferidas aqui")
+    minimum = profile["minimums"]["runs_per_relevant_failure_class"]
+    class_runs = {c: 0 for c in SOAK_FAILURE_CLASSES}
+    for r in soak:
+        name = "result_file_corruption" if r["kind"] == "corruption" else r.get("fault") if r["kind"] == "process" else None
+        if name in class_runs:
+            class_runs[name] += 1
+    soak_ok = soak_verdict and all(n >= minimum for n in class_runs.values())
     junit = ET.parse(d / "conformance.junit.xml").getroot()
     suite = junit if junit.tag == "testsuite" else junit[0]
     conformance_ok = int(suite.get("failures", 1)) == 0 and int(suite.get("errors", 1)) == 0 and int(suite.get("skipped", 1)) == 0
@@ -62,8 +76,9 @@ def main() -> None:
                 f"{'todas OK' if e2e['all_ok'] else 'COM FALHA'}; conformidade {conformance_n} testes {'verdes' if conformance_ok else 'COM FALHA'}."),
         "SOAK": (soak_ok, ["soak_real.jsonl"],
                  f"Perfil V1 com dados reais: {soak_summary['requests_with_result']} resultados, perdidos {len(soak_summary['lost'])}, "
-                 f"violações {len(soak_summary['violations'])}, zero_tolerance_ok={soak_ok}."),
-        "CRYPTO_UNCOMFORTABLE_CASES": (cases["all_ok"] and soak_ok, ["e2e_cases/E2E_SUMMARY.json", "soak_real.jsonl"],
+                 f"violações {len(soak_summary['violations'])}, zero_tolerance_ok={soak_verdict}; execuções por classe de "
+                 f"falha (mínimo {minimum}): {class_runs}."),
+        "CRYPTO_UNCOMFORTABLE_CASES": (cases["all_ok"] and soak_verdict, ["e2e_cases/E2E_SUMMARY.json", "soak_real.jsonl"],
                  "Casos A, B, C ×3 no runtime Linux (B com o vetor sintético congelado); A ×3 e C ×3 também sobre dados reais no soak."),
         "CRYPTO_ECONOMIC_METRICS": (bool(econ["separated_with_ci"]), ["science/SCIENCE_REAL.json"],
                  f"Dados reais, Linux: bruto {econ['gross_return_bps']} bps IC {econ['gross_ci_bps']}; líquido {econ['net_return_bps']} bps IC "
