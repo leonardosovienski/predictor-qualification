@@ -82,8 +82,20 @@ def main() -> int:
     envs = {(e["os"], e["role"]) for e in doc["environments"]}
     check("C7.1(5) Linux primary + Windows secondary", ("linux", "primary") in envs and ("windows", "secondary") in envs,
           environments=[(e["os"], e["role"], e["where"], e["result"]) for e in doc["environments"]])
-    check("C7.1(6) common_core_sha256 = v2.0", doc["common_core_sha256"] == CORE_SHA
-          and hashlib.sha256(show("qualification/COMMON_QUALIFICATION_CORE.md")).hexdigest() == CORE_SHA)
+    core_now = hashlib.sha256(show("qualification/COMMON_QUALIFICATION_CORE.md")).hexdigest()
+    check("C7.1(6) common_core_sha256 = sha256 do núcleo no commit", doc["common_core_sha256"] == core_now,
+          attestation=doc["common_core_sha256"], core_at_commit=core_now, v2_0=CORE_SHA)
+    manifest = show("MANIFEST.sha256")
+    if manifest is not None:  # C0.2 (v2.2): schema e núcleo pelo sha256 registrado no MANIFEST do commit
+        listed = {}
+        for line in manifest.decode("utf-8").splitlines():
+            if line.strip():
+                digest, name = line.split(None, 1)
+                listed[name.lstrip("*").strip()] = digest
+        wrong = {name: digest for name, digest in listed.items()
+                 if show(name) is None or hashlib.sha256(show(name)).hexdigest() != digest}
+        check("C0.2 MANIFEST.sha256 confere (inclui schema e núcleo)", not wrong
+              and "qualification/ATTESTATION_SCHEMA.json" in listed, entries=len(listed), wrong=wrong)
     contract = hashlib.sha256(show("qualification/stocks/DOMAIN_RESEARCH_CONTRACT.json")).hexdigest()
     check("C7.1(7) domain_contract_sha256 = contrato no commit", doc["domain_contract_sha256"] == contract,
           attestation=doc["domain_contract_sha256"], contract=contract)
