@@ -75,3 +75,16 @@ Resultado: E2E, WINDOWS_SMOKE, SOAK e STOCKS_NEGATIVE_CONTROLS em PASS (run 3598
 | `.github/workflows/stocks-d16.yml`: só `workflow_dispatch` (sem gatilho de push) | o push do merge refez a D-16 no main com o pin antigo; a resposta da B3 para ALOS tinha mudado e o build falhou fechado (run 36001349055). Fontes mutáveis exigem pin novo antes de cada execução, como no crypto-d16.yml |
 | `RAW_LOGS/d16/run36001349055-main/` | preservar a evidência do run que falhou (C20; não é evidência de gate) |
 | `D16_RUNBOOK.md` §6 | como rodar de novo (pin + dispatch) |
+
+## C14 "Núcleo (versão)" v2.0 → v2.1 (D-19, 2026-09-24)
+
+Núcleo v2.1 (PR #22) e schema com `common_core_version` 2.0|2.1 (PR #26). Nenhum requisito do stocks mudou (a D-19 só
+admite `owner_linux` para dado privado). Sem refazer fases:
+
+| Arquivo | O quê | Por quê | Prova |
+|---|---|---|---|
+| `scripts/attest.py` | `CORE_SHA` da v2.1 (`a3b4b7bb…`), `common_core_version` 2.1; `check()` confere também `environments[*].evidence`, `shared_dependency_verdicts[*].verdict_sha256` e `findings_file` | C7.1 regras 3 e 6; mesmo buraco do CR-F021 do crypto | `RAW_LOGS/c14-nucleo-v2.1/cr-f021_check.log`: cópias adulteradas nos 3 campos são acusadas |
+| `QUALIFICATION_ATTESTATION.json` | reemitida: `QUALIFIED`, 31/31 PASS (mesmos estados), P0=P1=0, P2=5 | C7.1 regra 8 | `attest.py check` OK |
+| `QUALIFICATION_ATTESTATION_superseded_c95145a78a46.json` | a anterior (v2.0), preservada byte a byte | C7.1 regra 8 | `supersedes_sha256` da nova |
+
+`d16/verify_stage_a.py` continua conferindo o núcleo v2.0: é a verificação do passo 0 da D-16, feita no HEAD 3983de1, e fica como registro.
