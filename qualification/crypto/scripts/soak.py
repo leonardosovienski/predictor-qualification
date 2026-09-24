@@ -6,6 +6,8 @@ da suíte de conformidade do final_commit (tests/conformance/fixtures.py, passad
 bruto; ao fim, as checagens de tolerância zero.
 
 Uso: python soak.py --tests <árvore tests/ do final_commit> --work <dir> --log <soak.jsonl>
+     [--real <dir do real_env.py>]   dados reais (D-16): pedidos sobre o dataset real in-sample;
+                                     o caso B continua só com o vetor sintético congelado (case_b)
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ def main() -> int:
     ap.add_argument("--tests", type=Path, required=True)
     ap.add_argument("--work", type=Path, required=True)
     ap.add_argument("--log", type=Path, required=True)
+    ap.add_argument("--real", type=Path)
     args = ap.parse_args()
     sys.path.insert(0, str(args.tests))
     from conformance.fixtures import build, cli, experiments, ops_runtime, request, write_request
@@ -38,8 +41,30 @@ def main() -> int:
         log.flush()
         return row
 
-    env = build(args.work / "main")
-    hang_env = build(args.work / "hang", timeout_seconds=5)
+    if args.real:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("real_env", Path(__file__).with_name("real_env.py"))
+        real_env = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(real_env)
+        policy = json.loads((args.real / "policy.json").read_text(encoding="utf-8"))
+        hang_policy = args.work / "hang-policy.json"
+        args.work.mkdir(parents=True, exist_ok=True)
+        hang_policy.write_text(json.dumps(policy | {"limits": policy["limits"] | {"timeout_seconds": 5}}), encoding="utf-8")
+        (args.work / "requests").mkdir(exist_ok=True)
+        env = {"root": args.work, "policy": args.real / "policy.json", "objects": args.real / "objects",
+               "state": args.work / "s", "requests": args.work / "requests"}
+        hang_env = dict(env, policy=hang_policy, state=args.work / "h")
+        synthetic_request = request
+
+        def request(rid, dataset="positive", **kw):  # noqa: F811 - real-data variant
+            if dataset in ("positive", "case_a"):
+                return real_env.request(rid, "real-in-sample") | kw
+            return synthetic_request(rid, dataset=dataset, **kw)
+        record("mode", data="real", dataset="real-in-sample", note="caso B só com o vetor sintético congelado")
+    else:
+        env = build(args.work / "main")
+        hang_env = build(args.work / "hang", timeout_seconds=5)
     expected_results: dict[str, str] = {}  # request_id -> result_id
     violations: list[str] = []
 
@@ -104,7 +129,8 @@ def main() -> int:
 
     # casos A, B e C (C = crash/hang acima), 3 ciclos cada
     for k in range(3):
-        for case, dataset, want in (("A", "case_a", ("INCONCLUSIVE", "NO_EDGE")), ("B", "case_b", ("SUPPORTED", "NO_EDGE"))):
+        cases = (("A", "case_a", ("INCONCLUSIVE", "NO_EDGE")), ("B", "case_b", ("SUPPORTED", "NO_EDGE")))
+        for case, dataset, want in (cases[:1] if args.real else cases):
             rid = f"crypto:REQ-SOAK-CASE{case}-{k}"
             code, outcome = run(env, f"k{case}{k}", request(rid, dataset=dataset))
             if (outcome.get("scientific_state"), outcome.get("economic_state")) != want:
