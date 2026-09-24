@@ -1,7 +1,7 @@
 # PREPARAR O ENVELOPE V2 (Rev 8 — enxuto)
 
-Núcleo: `qualification/COMMON_QUALIFICATION_CORE.md` v2.2, sha256 =
-`d681e423499e202c735ee1f110311a9721019ef11e21ae824f4791bada7c7d2c`. Um único agente, sem subagentes. Tudo por PR; o dono aprova
+Núcleo: `qualification/COMMON_QUALIFICATION_CORE.md` v2.3, sha256 =
+`beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc`. Um único agente, sem subagentes. Tudo por PR; o dono aprova
 fazendo merge. Você pode publicar releases pré-release (`rc`) dos pacotes do
 protocolo depois que o PR da especificação estiver no `main`.
 
@@ -34,4 +34,6 @@ protocolo depois que o PR da especificação estiver no `main`.
 5. `qualification/shared/STACK_BASELINE_V2.0.json`: HEAD e wheels de todos os
    repos, com os `final_commits` das três missões da Etapa A.
 
-Quando o dono fizer merge de 4 e 5, a Etapa B pode começar.
+Quando o dono fizer merge de 4 e 5, a Etapa B pode começar (três missões, uma por domínio, D-22:
+`prompt_etapa_b_{crypto,stocks,brasileirao}_rev9.md` + `prompt_etapa_b_comum_rev9.md`). A especificação precisa
+servir às três orquestrações: `domain` obrigatório no envelope e correlação que permita encadear episódios por domínio.

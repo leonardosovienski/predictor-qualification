@@ -3,8 +3,8 @@
 ```text
 stage  = A
 branch = stocks        (nome do braço no schema, não é branch Git)
-núcleo = qualification/COMMON_QUALIFICATION_CORE.md v2.2
-sha256 = d681e423499e202c735ee1f110311a9721019ef11e21ae824f4791bada7c7d2c
+núcleo = qualification/COMMON_QUALIFICATION_CORE.md v2.3
+sha256 = beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc
 ```
 
 Objetivo: provar que o Stocks roda pesquisa **de verdade** por Core e Ops,
