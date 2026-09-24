@@ -6,10 +6,10 @@
 > `25cdf4d`, `BR-F018` `FIXED`. `E2E` e `SOAK` foram fechados em `PASS` no `owner_linux`, e a attestation final é
 > `QUALIFIED`. Ver `BR_F018_REQUALIFICATION_REPORT.md`.
 >
-> **Errata do `SOAK_REPORT.md`:** a seção "D-16 no PC 2" diz "0 ocorrências de time, jogador ou event_id em 81
-> arquivos", mas o `scan_final/no_data_rows_check.json` que ela cita diz **82** (o 81 é da primeira das três varreduras
-> de `scan_final/scan_final.log`). Os dois casos dão 0 ocorrências. O `SOAK_REPORT.md` é evidência da attestation e não
-> foi editado.
+> **Errata do `SOAK_REPORT.md` (corrigida):** a seção "D-16 no PC 2" dizia "0 ocorrências de time, jogador ou
+> event_id em 81 arquivos", mas o `scan_final/no_data_rows_check.json` que ela cita diz **82** (o 81 é da primeira das
+> três varreduras de `scan_final/scan_final.log`). Os dois casos dão 0 ocorrências. O `SOAK_REPORT.md` foi corrigido, e a
+> attestation, que o cita como evidência, foi reemitida com `supersedes_sha256` apontando para a anterior (C7.1(8)).
 
 Sessão autônoma no PC 2 (Ubuntu 24.04.5 LTS no WSL2, x86_64). Autorização: D-16 (`APPROVED` no `main`,
 PR #16). Alvo congelado: brasileirao-predictor `04b42c9` / wheel 0.3.0rc2 `70344f22…`, predictor-core

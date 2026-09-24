@@ -1,6 +1,6 @@
 # HOSTED_CI_REPORT — missão brasileirao (gate `HOSTED_CI`, C21)
 
-> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. `ci.yml` run 36006495178 (PR #80, head `25cdf4d`, com os jobs novos cross-OS ubuntu × windows) e `publication-validation.yml` run 36007498283 (`25cdf4d`) verdes; nenhum job pulado; core e ops inalterados. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. `ci.yml` run 36006495178 (PR #80, head `25cdf4d`, com os jobs novos cross-OS ubuntu × windows) e `publication-validation.yml` run 36007498283 (`25cdf4d`) verdes; nenhum job pulado; core e ops inalterados. No `main` depois do merge do #80 (`d80a4ed`, árvore = `25cdf4d`): CI Pipeline run 36007774871 (7 jobs, com os cross-OS) e publication validation run 36007774725 (4 jobs) `success` (`RAW_LOGS/c14-rc3-20260924/hosted-ci/br_main_run_*.json`). Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
 
 Workflows de `push`/`pull_request` verdes no GitHub Actions nos commits do baseline e nos
 `final_commits`, instalando com `uv sync --locked`. Nenhum job pulado (todos `success`).

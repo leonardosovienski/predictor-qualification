@@ -124,9 +124,13 @@ PR #41 (merge `74ab96e`), commit `0701797`.
 ### Conferência dos `.md` (2026-09-24, depois do #41; branch `brasileirao2/conferencia-mds-20260924`)
 
 Os 15 `.md` de `qualification/brasileirao/` relidos contra a evidência bruta. Os 11 citados pela attestation estão
-coerentes com o `EVIDENCE_NUMBERS.json` e os logs, com uma exceção (errata abaixo). Nenhum deles foi editado.
+coerentes com o `EVIDENCE_NUMBERS.json` e os logs, com três exceções: um número errado e dois trechos desatualizados.
+Para corrigir essas exceções, a attestation foi reemitida (C7.1(8)).
 
 | O quê | Por quê |
 |---|---|
 | `REAL_DATA_METRICS.md`: título, "Leitura" marcada como rc2, "Leitura (rc3, vigente)" nova, nota da D-9 "na época" | a "Leitura" descrevia os números da rc2 (ROI líquido 1X2 −10,6% a −20,2%, IC sempre cruzando zero); na rc3 é −10,6% a −23,2% e, em 2022, o IC95 fica inteiro abaixo de zero. As três tabelas do arquivo = `scripts/render_metrics.py` sobre o `EVIDENCE_NUMBERS.json` (conferido com `diff`) |
-| `D16_PC2_REPORT.md`: aviso de desfecho e errata | relatório datado que ainda dizia BR-F018 aberto e `E2E`/`SOAK` em `NOT_RUN`; errata do `SOAK_REPORT.md` (81 → 82 arquivos na varredura sem dado; ele é atestado e não muda) |
+| `D16_PC2_REPORT.md`: aviso de desfecho e errata | relatório datado que ainda dizia BR-F018 aberto e `E2E`/`SOAK` em `NOT_RUN` |
+| `SOAK_REPORT.md` (atestado): 81 → **82** arquivos; seção da noite D-16 com o desfecho | o número não batia com o `scan_final/no_data_rows_check.json` citado (o 81 era da 1ª de 3 varreduras); o texto dizia "o gate continua `NOT_RUN`" e BR-F018 sem desfecho |
+| `HOSTED_CI_REPORT.md` (atestado) e gate `HOSTED_CI` no `GATES.json` (`ledger.py gate`): CI do `main` depois do merge do #80 | os runs 36007774871 e 36007774725 (`d80a4ed`, árvore = `25cdf4d`, `success`) estavam em `RAW_LOGS` sem citação |
+| `QUALIFICATION_ATTESTATION_superseded_094d9571c5e8.json` (a anterior, preservada byte a byte) e `QUALIFICATION_ATTESTATION.json` nova (`b16ecbba…`, `supersedes_sha256` = `094d9571…`), `GATES.json` (`supersedes_sha256`) | C7.1(8). Continua `QUALIFIED`, 32 `PASS`, P0 = P1 = 0; `attest.py check` OK; `stage_a_recheck` OK (164 evidências). Log: `RAW_LOGS/c14-rc3-20260924/review-final/attestation_reemitted.log` |
