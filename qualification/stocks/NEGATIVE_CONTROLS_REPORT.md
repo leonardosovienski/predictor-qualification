@@ -5,7 +5,7 @@
 prova que os controles estão implementados no handler de produção e rodam pelo entrypoint instalado.
 
 Seeds, critérios e aplicabilidade congelados antes (`FROZEN_PARAMETERS.negative_controls`). Log bruto por execução:
-`qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/science/negative_controls.jsonl`; resumo `qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/science/NEGATIVE_CONTROLS_SUMMARY.json`.
+`qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/science/negative_controls.jsonl`; resumo `qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/science/NEGATIVE_CONTROLS_SUMMARY.json`.
 
 Referência (painel sintético `positive`, tendência plantada de propósito): científico SUPPORTED, econômico
 WATCH, excesso bruto 427 bps/período, IC95 bruto [305, 551],

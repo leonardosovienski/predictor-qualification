@@ -24,3 +24,14 @@ rc (`stocks-build-rc.yml`), varredura de segredos (`stocks-secrets.yml`).
 
 Depois do merge do PR #95 pelo dono, o CI de `push` no `main` roda sobre o commit de merge (outro SHA); o gate
 refere-se ao `final_commit` `9a6c09a`, verde no próprio SHA.
+
+## C14 (ST-F006): final_commit `61fc017` (rc2)
+
+Os dependabot #93/#94 foram mesclados antes do #95; o CI de push no merge `2a18513` falhou
+(`tools/verify_operational_evidence.py`: selo R8 desatualizado; `RAW_LOGS/c14-rc2/ci_main_2a18513_failure.json`).
+Corrigido em `61fc017` (ressela), que passa a ser o final_commit:
+
+| repo | commit | workflow / evento | run | resultado |
+|---|---|---|---|---|
+| stocks-predictor | `61fc017` (SHA exato) | CI Pipeline / workflow_dispatch | [35953418753](https://github.com/leonardosovienski/stocks-predictor/actions/runs/35953418753) | success (secrets, Quality 3.13, Quality 3.14) |
+| stocks-predictor | `61fc017` (PR #96) | CI Pipeline / pull_request | [35953419340](https://github.com/leonardosovienski/stocks-predictor/actions/runs/35953419340) | success (secrets, Quality 3.13, Quality 3.14) |

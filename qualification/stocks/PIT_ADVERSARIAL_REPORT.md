@@ -2,7 +2,7 @@
 
 Casos congelados em `FROZEN_PARAMETERS.pit_adversarial_vectors` antes da execução; cada caso quebra de propósito o
 painel sintético e é conferido na visão PIT que o handler de produção usa, pela wheel publicada, no Linux primário e no
-windows-latest (`qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml`, `qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml`).
+windows-latest (`qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml`, `qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml`).
 Uma violação bastaria para FAIL.
 
 | caso | ataque | esperado | teste(s) | Linux + windows |

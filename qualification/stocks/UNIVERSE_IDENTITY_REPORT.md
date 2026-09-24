@@ -7,8 +7,8 @@ dedup por emissor usa o CNPJ conhecido na decisão (não o prefixo de 4 letras d
 ## Pelo entrypoint instalado (wheel publicada)
 
 `universe identical across three fresh processes/state roots`: **True** (30 rebalances; mesmo pedido em 3 raízes de estado novas,
-3 processos) — `qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json`; idem no windows-latest
-(`qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json`).
+3 processos) — `qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json`; idem no windows-latest
+(`qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json`).
 
 ## Vetores congelados (suíte de conformidade pela wheel)
 

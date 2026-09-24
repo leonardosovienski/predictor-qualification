@@ -6,9 +6,9 @@ por hash de blob git (lista do prompt §5 + o que os documentos declaram congela
 `vendor/predictor_core/`, ledger H17, manifestos dos sinais congelados) e 3.698 arquivos de dados imutáveis por
 sha256 (`C:\STOCKS\DADOS_STOCKS.zip*` e `C:\STOCKS\data\**`, incluindo `CATALOG.json`), lidos somente leitura.
 
-Conferência no `final_commit` `9a6c09a` (`scripts/protected_check.py`, saída bruta
-`RAW_LOGS/protected/protected_check_9a6c09a.json`; re-hash dos dados em
-`RAW_LOGS/protected/immutable_data_sha256_final.txt`):
+Conferência no `final_commit` `61fc017` (C14, rc2; a mesma conferência no `9a6c09a` da rc1 deu o mesmo resultado, `RAW_LOGS/protected/protected_check_9a6c09a.json`) (`scripts/protected_check.py`, saída bruta
+`RAW_LOGS/protected/protected_check_61fc017.json`; re-hash dos dados em
+`RAW_LOGS/protected/immutable_data_sha256_c14.txt`):
 
 | verificação | resultado |
 |---|---|

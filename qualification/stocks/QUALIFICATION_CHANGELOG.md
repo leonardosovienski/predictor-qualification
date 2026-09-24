@@ -37,3 +37,15 @@ O que a missão mudou, onde, por quê, com commit e PR. `core-predictor` e `pred
 | `qualification/stocks/scripts/*` | coletor de baseline, truth-map, identidade, runtime limpo, E2E, soak, ciência, números dos logs, relatórios, gates |
 | `qualification/DECISIONS.json`: **D-18** | C19: regra R8 × Python local/D-16 (autorização do dono) |
 | `.gitattributes`: `qualification/stocks/RAW_LOGS/** -text` | logs brutos byte a byte (C20) |
+
+## C14 — rc2 (ST-F006)
+
+| Commit | O quê | Por quê | Teste que prova |
+|---|---|---|---|
+| `61fc017` (branch `qualification/stocks-rc2`, PR #96) | versão `0.3.0rc2`; ressela de `docs/engineering/current-operational-evidence.json` sobre o main (inclui hatchling 1.32.3 e checkout v7 dos #93/#94) | **ST-F006**: CI do main vermelho em `2a18513` (selo R8); o main divergia do final_commit `9a6c09a` | `tools/verify_operational_evidence.py`; CI dispatch 35953418753; suíte Linux/windows-latest (run 35953426762) |
+
+Pré-release [`v0.3.0rc2`](https://github.com/leonardosovienski/stocks-predictor/releases/tag/v0.3.0rc2): wheel
+`92cb1131b4f0ba0b4572d26cb03a1647e239a17f37514c0db1598797119366a8`, sdist
+`b7a98bfedfd8e57d223e5e641cb2068e82c967aadf0798f6b74924e6e443a365` (build reprodutível, run 35953426669).
+Refeitos (C14): publish-candidates, cleanroom-final/e2e/conformidade/ciência/soak (run 35954279991), CI hospedado,
+segredos (run 35955382714), conjunto protegido. **final_commit:** `61fc017256ffea815ae96bbe02b847dccdb395cc`.

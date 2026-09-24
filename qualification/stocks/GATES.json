@@ -1,12 +1,12 @@
 {
-  "note": "Estado corrente da missão stocks (STACK_BASELINE_V1.1, Ops 4.2.2rc1, stocks 0.3.0rc1 9a6c09a). Terminal BLOCKED (C7.3): 27 gates PASS, 4 NOT_RUN com 'BLOCKED: D-16 pendente' (E2E, WINDOWS_SMOKE, SOAK, STOCKS_NEGATIVE_CONTROLS), nenhum FAIL, P0=P1=0. Sem QUALIFICATION_ATTESTATION.json até a D-16; o último parcial (attestation, IN_PROGRESS) registra os bloqueios. Parciais nunca reescritos (C8).",
+  "note": "Estado corrente da missão stocks (STACK_BASELINE_V1.1, Ops 4.2.2rc1, stocks 0.3.0rc2 61fc017 após C14/ST-F006). Terminal BLOCKED (C7.3): 27 gates PASS, 4 NOT_RUN com 'BLOCKED: D-16 pendente' (E2E, WINDOWS_SMOKE, SOAK, STOCKS_NEGATIVE_CONTROLS), nenhum FAIL, P0=P1=0. Sem QUALIFICATION_ATTESTATION.json até a D-16. Parciais nunca reescritos (C8).",
   "common_baseline_id": "STACK_BASELINE_V1.1",
   "supersedes_sha256": null,
-  "domain_contract_sha256": "fd505512bb94a981b3c813f4f367597de28a1fd3cbb6d5d803e5f4086cb8c5c3",
+  "domain_contract_sha256": "76fa8227dd83eb9a9e74697caa73e4d61c68d207f1df5f94135c76508192d66c",
   "final_commits": [
     {
       "repo": "stocks-predictor",
-      "commit_sha": "9a6c09ae92991c8490be624f5693865bcbaeca26"
+      "commit_sha": "61fc017256ffea815ae96bbe02b847dccdb395cc"
     },
     {
       "repo": "core-predictor",
@@ -20,9 +20,9 @@
   "final_wheels": [
     {
       "name": "stocks-predictor",
-      "version": "0.3.0rc1",
-      "url": "https://github.com/leonardosovienski/stocks-predictor/releases/download/v0.3.0rc1/stocks_predictor-0.3.0rc1-py3-none-any.whl",
-      "sha256": "3cc4e04a04967efb11e16000815b8c632cf9659e2703b097a1277dabf5639467"
+      "version": "0.3.0rc2",
+      "url": "https://github.com/leonardosovienski/stocks-predictor/releases/download/v0.3.0rc2/stocks_predictor-0.3.0rc2-py3-none-any.whl",
+      "sha256": "92cb1131b4f0ba0b4572d26cb03a1647e239a17f37514c0db1598797119366a8"
     },
     {
       "name": "predictor-core",
@@ -54,7 +54,12 @@
     "hosted-ci",
     "soak",
     "contract-sign-off",
-    "attestation"
+    "attestation",
+    "c14-publish-candidates",
+    "c14-cleanroom-final",
+    "c14-hosted-ci",
+    "c14-contract-sign-off",
+    "c14-attestation"
   ],
   "environments": [
     {
@@ -64,9 +69,9 @@
       "where": "github_actions",
       "result": "NOT_RUN",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/env.log",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/soak.jsonl"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/env.log",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl"
       ]
     },
     {
@@ -76,9 +81,9 @@
       "where": "github_actions",
       "result": "NOT_RUN",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/env.log",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/env.log",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json"
       ]
     }
   ],
@@ -106,7 +111,7 @@
       "evidence": [
         "qualification/stocks/FINDINGS.json"
       ],
-      "note": "P0=0, P1=0 abertos: ST-F001 (P1, tzdata no Windows) corrigido com teste e provado no windows-latest. Abertos só P2: ST-F002 (branches remotas), ST-F003 (scripts extras presos a outra máquina), ST-F004 (suíte legada só roda contra o checkout)."
+      "note": "P0=0, P1=0 abertos: ST-F001 (P1) corrigido com teste. P2 corrigidos: ST-F005, ST-F006. Abertos só P2: ST-F002 (branches remotas), ST-F003 (scripts extras presos a outra máquina), ST-F004 (suíte legada só roda contra o checkout)."
     },
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
@@ -123,59 +128,61 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/CORE_IDENTITY_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/uv_lock_check.log",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/core_identity.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/requirements.locked.txt",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/uv_lock_check.log",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/core_identity.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/requirements.locked.txt",
         "qualification/stocks/RAW_LOGS/contract-admission-ops-entrypoint/run35948598839/stocks-suite-linux-primary/uv_lock_check.log"
       ],
-      "note": "uv lock --check exit 0 no final_commit 9a6c09a; instalação só pelo lock exportado (--require-hashes) e uv sync --locked; nenhuma dependência fora do lock."
+      "note": "uv lock --check exit 0 no final_commit 61fc017; instalação só pelo lock exportado (--require-hashes) e uv sync --locked; nenhuma dependência fora do lock."
     },
     "CORE_IDENTITY": {
       "status": "PASS",
       "evidence": [
         "qualification/stocks/CORE_IDENTITY_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/core_identity.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/core_identity.json"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/core_identity.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/core_identity.json"
       ],
-      "note": "pyproject ↔ tool.uv.sources (release) ↔ uv.lock ↔ instalação ↔ sha256 da wheel ↔ metadata ↔ módulo em site-packages: Core 10ef42f3…, Ops 0be70bfb…, Stocks 3cc4e04a…, Linux e windows-latest; nada editable, vendor ou checkout."
+      "note": "pyproject ↔ tool.uv.sources (release) ↔ uv.lock ↔ instalação ↔ sha256 da wheel ↔ metadata ↔ módulo em site-packages: Core 10ef42f3…, Ops 0be70bfb…, Stocks 92cb1131…, Linux e windows-latest; nada editable, vendor ou checkout."
     },
     "CLEANROOM_FINAL": {
       "status": "PASS",
       "evidence": [
         "qualification/stocks/CLEANROOM_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/env.log",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/env.log",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/pip_freeze.txt"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/env.log",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/env.log",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/pip_freeze.txt",
+        "qualification/stocks/RAW_LOGS/c14-rc2/suite-run35953426762/stocks-suite-linux-primary/pytest.log"
       ],
-      "note": "Só wheels publicadas (stocks v0.3.0rc1 3cc4e04a…, Core 3.2.1, Ops 4.2.2rc1), fora do checkout: conformidade 87/87 no Linux e no windows-latest; pip check limpo. Suíte legada não coleta sem a pasta-fonte (ST-F004, P2)."
+      "note": "Só wheels publicadas (stocks v0.3.0rc2 92cb1131…, Core 3.2.1, Ops 4.2.2rc1), fora do checkout: conformidade 87/87 no Linux e no windows-latest; pip check limpo. Suíte legada não coleta sem a pasta-fonte (ST-F004, P2)."
     },
     "HOSTED_CI": {
       "status": "PASS",
       "evidence": [
         "qualification/stocks/HOSTED_CI_REPORT.md",
         "qualification/stocks/RAW_LOGS/hosted-ci/run_stocks-predictor_35822899971_baseline_4e98a67.json",
-        "qualification/stocks/RAW_LOGS/hosted-ci/run_stocks-predictor_35950266341_final_9a6c09a_dispatch.json",
+        "qualification/stocks/RAW_LOGS/hosted-ci/run_stocks-predictor_35953418753_final_61fc017_dispatch.json",
         "qualification/stocks/RAW_LOGS/hosted-ci/run_core-predictor_35823003554_core_5a08415.json",
-        "qualification/stocks/RAW_LOGS/hosted-ci/run_predictor-ops_35905678198_ops_9831b0d_push.json"
+        "qualification/stocks/RAW_LOGS/hosted-ci/run_predictor-ops_35905678198_ops_9831b0d_push.json",
+        "qualification/stocks/RAW_LOGS/hosted-ci/run_stocks-predictor_35953419340_final_61fc017_pr.json"
       ],
-      "note": "CI de push/PR verde com uv sync --locked no baseline (stocks 4e98a67, core 5a08415, ops 9831b0d) e nos final_commits (stocks 9a6c09a no SHA exato por workflow_dispatch e no PR #95); nenhum job pulado."
+      "note": "CI de push/PR verde com uv sync --locked no baseline (stocks 4e98a67, core 5a08415, ops 9831b0d) e nos final_commits (stocks 61fc017 no SHA exato por workflow_dispatch e no PR #96); nenhum job pulado. O main 2a18513 falhou (ST-F006, corrigido em 61fc017)."
     },
     "E2E": {
       "status": "NOT_RUN",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json"
       ],
       "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. Diagnóstico pela wheel com fixture sintética congelada: 24/24 checagens no Linux e 24/24 no windows-latest (processo → término → processo novo relê o mesmo resultado byte a byte)."
     },
     "IDEMPOTENCY": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/soak.jsonl"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl"
       ],
       "note": "Pela wheel: mesma idempotency_key (request_id) e conteúdo → 1 experimento, 1 efeito, 1 SUCCEEDED do Ops, 1 trial, 1 resultado, client_ref próprio devolvido; conteúdo diferente → CONFLICT; duplicata após mudança de policy → mesmo resultado."
     },
@@ -183,8 +190,8 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/FAILURE_MATRIX.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
       "note": "Morte real do processo nos 9 pontos + host do Ops morto durante o job: reexecução produz exatamente 1 resultado, relido por processo novo; reconcile sem achados."
     },
@@ -192,16 +199,16 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/FAILURE_MATRIX.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
       "note": "Matriz congelada (19 linhas: admission, materialização, Ops crash/timeout/host, artefato parcial, resultado, duplicado, fora de ordem, schema, corrupção, DB lock, disco cheio) injetada na borda, sem mock de Core/Ops: 19/19 PASS no Linux e no windows-latest; zero duplicata, zero perda, zero mudança em congelado."
     },
     "PROVENANCE": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
         "qualification/stocks/E2E_EVIDENCE/linux-primary/outcome_file.json"
       ],
       "note": "Cadeia pedido → recibo de admission (SQLite) → experimento (journal) → attempt/ops_run (eventos do predictor_ops) → trial (TrialRegistryV2) → efeito (sha256) → resultado, conferida contra as fontes primárias pelo entrypoint instalado; identidades das wheels no resultado."
@@ -209,9 +216,9 @@
     "AUTHORITY_SEPARATION": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml"
       ],
       "note": "Invariantes em validate_result e casos A (Ops ok/Core INCONCLUSIVE/NO_EDGE), B (bruto SUPPORTED/líquido NO_EDGE) e C (Ops FAILED → NOT_EVALUATED) 3× cada pela wheel nos dois runtimes: Ops ok ⇏ ciência ⇏ edge ⇏ capital."
     },
@@ -219,9 +226,9 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/PIT_ADVERSARIAL_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json"
       ],
       "note": "FUTURE_CANARY_STOCKS_001 só depois do cutoff: falha fechada por LookaheadError do Core (exit 4), sem efeito/trial/resultado; ausente de efeito, trial, results.sqlite e outcomes de pedidos legítimos (vetores sintéticos congelados, prompt §4)."
     },
@@ -230,17 +237,17 @@
       "evidence": [
         "qualification/stocks/PROTECTED_ARTIFACT_REPORT.md",
         "qualification/stocks/PROTECTED_SET.json",
-        "qualification/stocks/RAW_LOGS/protected/protected_check_9a6c09a.json",
-        "qualification/stocks/RAW_LOGS/protected/immutable_data_sha256_final.txt",
+        "qualification/stocks/RAW_LOGS/protected/protected_check_61fc017.json",
+        "qualification/stocks/RAW_LOGS/protected/immutable_data_sha256_c14.txt",
         "qualification/stocks/RAW_LOGS/truth-map/immutable_data_sha256.txt"
       ],
-      "note": "81/81 blobs iguais entre truth-map (4e98a67) e final_commit (9a6c09a), 0 itens novos; 3698/3698 arquivos de dados imutáveis com o mesmo sha256 (re-hash somente leitura)."
+      "note": "81/81 blobs iguais entre truth-map (4e98a67) e final_commit (61fc017), 0 itens novos; 3698/3698 arquivos de dados imutáveis com o mesmo sha256 (re-hash somente leitura)."
     },
     "SOAK": {
       "status": "NOT_RUN",
       "evidence": [
         "qualification/stocks/SOAK_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/soak.jsonl",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl",
         "qualification/stocks/QUALIFICATION_PROFILE_STOCKS_V1.json"
       ],
       "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. Diagnóstico com fixture pela wheel no Linux: 73 chamadas, 17 falhas injetadas, 48 resultados, 0 perdidos/duplicados/violações PIT, 0 trials elegíveis, tolerância zero OK."
@@ -248,8 +255,8 @@
     "WINDOWS_SMOKE": {
       "status": "NOT_RUN",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
       "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. O E2E no windows-latest (D-1) também roda no Actions. Diagnóstico com as final wheels: E2E + restart + releitura 24/24, conformidade 87/87."
     },
@@ -259,7 +266,7 @@
         "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json",
         "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json",
         "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/core_identity.json"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/core_identity.json"
       ],
       "note": "Wheel instalada predictor-ops 4.2.2rc1 (0be70bfb…): SHARED-003 e SHARED-004 test_only não bloqueantes (missão crypto); SHARED-005 resolvida (D-17). Nenhuma falha nova de Core/Ops reproduzida nesta missão."
     },
@@ -275,18 +282,18 @@
     "SECRETS_CLEAN": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/secrets/run35950519783/stocks-secrets/evidence_tree.log",
-        "qualification/stocks/RAW_LOGS/secrets/run35950519783/stocks-secrets/stocks_diff.log",
-        "qualification/stocks/RAW_LOGS/secrets/run35950519783/stocks-secrets/gitleaks_checksum.log",
-        "qualification/stocks/RAW_LOGS/hosted-ci/run_stocks-predictor_35950266341_final_9a6c09a_dispatch.json"
+        "qualification/stocks/RAW_LOGS/secrets/run35955382714/stocks-secrets/evidence_tree.log",
+        "qualification/stocks/RAW_LOGS/secrets/run35955382714/stocks-secrets/stocks_diff.log",
+        "qualification/stocks/RAW_LOGS/secrets/run35955382714/stocks-secrets/gitleaks_checksum.log",
+        "qualification/stocks/RAW_LOGS/hosted-ci/run_stocks-predictor_35953418753_final_61fc017_dispatch.json"
       ],
-      "note": "gitleaks 8.24.3 (checksum conferido): árvore qualification/stocks e os 7 commits 4e98a67..9a6c09a sem achados; job secrets do CI do repo (árvore inteira + controle sintético) verde no final_commit."
+      "note": "gitleaks 8.24.3 (checksum conferido): árvore qualification/stocks e os 7 commits 4e98a67..61fc017 sem achados; job secrets do CI do repo (árvore inteira + controle sintético) verde no final_commit."
     },
     "CAPITAL_FORBIDDEN": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/soak.jsonl",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl",
         "qualification/stocks/DOMAIN_RESEARCH_CONTRACT.json"
       ],
       "note": "capital_permission=false no contrato (validate_result recusa outro valor), no JobConfig do Ops (SHADOW_DECISION/MARKET_COLLECTION) e em todo resultado (E2E e soak); nenhum caminho concede capital."
@@ -295,16 +302,16 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/DOMAIN_RESEARCH_CONTRACT.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
-      "note": "Contrato completo (C24.1) aprovado pelo merge do dono (predictor-qualification #12, b24beb3, 2026-09-24T03:50:00Z); regras de adapter_paths testadas (test_import_closure); suíte de conformidade 87/87 no runtime suportado (Linux e windows-latest); stocks-predictor #95 mesclado (2a18513)."
+      "note": "Contrato C24.1 com o bloco de implementação da rc2 (61fc017, 92cb1131…); aprovado pelo merge do PR de attestation (#13) no main; regras de adapter_paths testadas; conformidade 87/87 no runtime suportado (Linux e windows-latest). A versão rc1 do contrato foi aprovada em #12 (b24beb3)."
     },
     "ADMISSION": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml",
         "qualification/stocks/DOMAIN_RESEARCH_CONTRACT.json"
       ],
       "note": "Pelo entrypoint instalado (wheel publicada), Linux e windows-latest: comando, handler, módulo, SQL, capital, budget, path, URL, schema errado, tipo desconhecido, ID sem domínio ou de outro domínio, stocks:H1/H7/H17/H99, hipótese fora da policy, referência desconhecida, limite de parâmetro e PIT inválido → REJECTED antes de qualquer execução (nenhum runtime do Ops criado); coletor fora da policy recusado; só handlers da allowlist compilada."
@@ -312,17 +319,17 @@
     "OPS_RUNTIME": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
       "note": "Handler roda como job real do predictor_ops 4.2.2rc1: run_id, economic_lock_id, heartbeat, attempt/retry_count, timeout com kill (ops_worker_hang), eventos terminais e idempotência econômica usados na reconciliação."
     },
     "CORE_PARTICIPATION": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml"
       ],
       "note": "Trial registrada no TrialRegistryV2 (dataset_fingerprint do Core) e estado científico relido dele; validação temporal por predictor_core.measurement.replay; IC por bootstrap_ci; max_drawdown; o Core não decide universo, ranking nem capital."
     },
@@ -330,8 +337,8 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/PIT_ADVERSARIAL_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
       "note": "Cutoff/PIT em todo estado que afeta a previsão: snapshot (available_at ≤ as_of pelo replay do Core), cada decisão (available_at ≤ decision_at), barras (≥ fechamento), as_of divergente → exit 4."
     },
@@ -339,8 +346,8 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/CORE_IDENTITY_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/core_identity.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/core_identity.json"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/core_identity.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/core_identity.json"
       ],
       "note": "range >=3.2.1,<4 (D-7), fonte release v3.2.1, lock 3.2.1 10ef42f3…, wheel instalada 10ef42f3… nos dois runtimes; baseline idem."
     },
@@ -348,7 +355,7 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/EXTERNAL_INTELLIGENCE_READINESS.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/science/external_intelligence_readiness.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/science/external_intelligence_readiness.json",
         "qualification/stocks/COLLECTION_ONLY_REPORT.md"
       ],
       "note": "7 famílias em 8 eixos independentes pela wheel; elegibilidade só pelo campo readiness (0 READY); PIT efetivo da matriz (B3_LENDING, VLMO, BUYBACK rebaixados para HISTORICAL_ONLY efetivo); nenhum eixo promove outro."
@@ -357,9 +364,9 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/COLLECTION_ONLY_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/soak.jsonl",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml"
       ],
       "note": "COLLECTION_ONLY coleta, valida, persiste e monitora como job do Ops e nunca alimenta trial/ranking/carteira/capital; TRIAL_CONSUMPTION de família não READY → NOT_READY sem trial; 0 trials elegíveis (0 famílias READY); zero consumo de dado inelegível."
     },
@@ -367,9 +374,9 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/UNIVERSE_IDENTITY_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml"
       ],
       "note": "Mesmo pedido em 3 raízes/processos novos = mesmos hashes de universo em todos os rebalances; entradas/saídas só por eventos disponíveis; deslistado presente enquanto existia; ticker e CNPJ trocados preservam a identidade."
     },
@@ -377,8 +384,8 @@
       "status": "PASS",
       "evidence": [
         "qualification/stocks/PIT_ADVERSARIAL_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
       "note": "15/15 casos congelados (PIT-01..15), incluindo o obrigatório (PIT_STRICT declarado × HISTORICAL_ONLY efetivo), pela wheel no Linux e no windows-latest; nenhuma violação."
     },
@@ -386,7 +393,7 @@
       "status": "NOT_RUN",
       "evidence": [
         "qualification/stocks/NEGATIVE_CONTROLS_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/science/NEGATIVE_CONTROLS_SUMMARY.json"
+        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/science/NEGATIVE_CONTROLS_SUMMARY.json"
       ],
       "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. Diagnóstico com fixture sintética pela wheel: labels embaralhados 0/20 SUPPORTED, ranking aleatório 2/20, perturbação de universo 20/20 estável; critérios congelados atendidos na fixture."
     }

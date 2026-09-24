@@ -6,7 +6,7 @@ exige dado real no Linux primário para o SOAK; a execução abaixo usa a fixtur
 
 Perfil: `QUALIFICATION_PROFILE_STOCKS_V1.json` (números congelados em `FROZEN_PARAMETERS.soak_profile` antes da
 execução). Runtime suportado (wheels publicadas), GitHub Actions ubuntu-latest, cada chamada ao `stocks-research` num
-processo novo. Log bruto: `qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/soak.jsonl`.
+processo novo. Log bruto: `qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl`.
 
 | medida | valor |
 |---|---|
