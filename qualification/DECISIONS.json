@@ -115,6 +115,18 @@
       "question": "Emenda da D-9 e do núcleo (C11, C7.1, schema): o PC 2 do dono como Linux primário para dado real privado (Brasileirão), para E2E e SOAK da D-16 poderem fechar",
       "text": "Aprovado pelo dono em 2026-09-24 (sessão de coordenação do PC 2, resposta \"Aprovo a emenda\" à pergunta \"Aprova emendar a D-9 e o schema do núcleo para aceitar o PC 2 (Ubuntu/WSL2) como Linux primário, só para dado privado? Isso muda o núcleo e dispara requalificação (C14) nas 3 missões.\"; aplicada pelo próprio dono). Emenda a D-9: além do GitHub Actions e da VM na nuvem, o **PC 2 do dono** (Ubuntu 24.04 x86_64, WSL2, `~/predictors`, provisionado por `provision_linux_vm.sh`, com `PROVISION_RECEIPT.json` como prova do host) vale como Linux primário, **só** para dado real privado sem direito de redistribuição (D-11), hoje o Brasileirão. Núcleo v2.0 → v2.1 (C11, C7.1 regra 5) e schema com `where = owner_linux` (só `linux` + `primary`). C14 \"Núcleo (versão)\": crypto e stocks revalidam e reemitem a attestation com o novo `common_core_sha256`, sem refazer fases; brasileirao fecha E2E e SOAK no PC 2 com `where = owner_linux`.",
       "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-20",
+      "question": "C0.2 do núcleo fixava o sha256 do schema da v2.0; depois da D-19 (e do PR #26), toda missão nova abortaria no C0",
+      "text": "Aprovado e aplicado pelo dono em 2026-09-24. Núcleo v2.1 → v2.2: o C0.2 passa a conferir o schema pelo sha256 registrado em `MANIFEST.sha256` no `main`, e mudanças futuras no schema não exigem mais mudar o núcleo. O schema aceita `common_core_version` \"2.2\". Nenhum outro requisito mudou. C14 \"Núcleo (versão)\": crypto e stocks reemitem a attestation com o sha256 da v2.2, sem refazer fases; os prompts rev8 passam a citar a v2.2.",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-21",
+      "question": "Registro formal do que já foi aceito pelos merges da D-16 (PRs #17, #18 e #20)",
+      "text": "Registrado pelo dono em 2026-09-24. Aceitos pelo merge dos PRs, como já vale pela regra \"aprovar = merge\": (1) **ST-F007** (stocks): o rebalance congelado \"fim de mês\" não existe no handler compilado; a D-16 usou \"a cada 21 pregões\", declarado antes da execução. Aceito pelo merge do PR #20; a alternativa (fim de mês no stocks-predictor, rc3 e C14) fica para decisão futura. (2) **ST-F008** (stocks): limitações do painel real público (retorno só-preço, lacunas de eventos e identidade), aceitas como limitação declarada pelo mesmo merge. (3) **COTAHIST_A2026**: a D-16 do stocks usou o snapshot atual da B3 (sha256 4f2cf2aac1073446ccd827f5ba868fe5cf15d5cdc87d636178fe00ac06741768, fixado antes da execução), e não a cópia do pendrive (34b774681cbd201ef197fb98af8d431e4d7302e801f58b66e54036d2935dc4f4, até 09/09), como a D-16 permite (URL + sha256 fixados pela missão). (4) **crypto**: o run definitivo 35978221282 saiu da branch do kit (PR #17), aceito pelo merge dos PRs #17 e #18; a revalidação do PR #24 reproduziu o resultado.",
+      "status": "APPROVED"
     }
   ]
 }
