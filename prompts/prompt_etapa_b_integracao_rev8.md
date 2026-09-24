@@ -1,3 +1,6 @@
+> **SUBSTITUÍDO pela D-22 (núcleo v2.3).** A Etapa B virou três missões, uma por domínio: use
+> `prompt_etapa_b_comum_rev9.md` + `prompt_etapa_b_{crypto,stocks,brasileirao}_rev9.md`. Este arquivo fica como registro.
+
 # MISSÃO — ETAPA B: INTEGRAÇÃO CAIN × ECOSYSTEM × CRIPTO × BRASILEIRÃO × STOCKS (Rev 8 — enxuto)
 
 ```text
