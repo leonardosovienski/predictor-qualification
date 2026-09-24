@@ -10,11 +10,14 @@
 # Saída: OUT = só o que pode entrar na evidência (sem registros do dado); PRIV = saídas com registros (resultados
 # `show`, commands.log do real_env), nunca versionadas: só o sha256 delas vai para OUT (pc2_export.py).
 # Uso: pc2_d16_runtime.sh <br_commit> <br_wheel_url> <br_wheel_sha256> <out> <priv> <work vazio>
+# Ambiente opcional: BRQ_RUNTIME=<raiz do runtime da missão> (padrão ~/predictors/runtime/brasileirao);
+#                    BRQ_ONLY_REAL=1 roda só instalação, identidade, conformidade e os 20 pedidos reais (sem E2E e SOAK).
 set -uo pipefail
 COMMIT="$1"; WHEEL_URL="$2"; WHEEL_SHA="$3"; OUT="$4"; PRIV="$5"; W="$6"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 P="$HOME/predictors"
-R="$P/runtime/brasileirao"
+R="${BRQ_RUNTIME:-$P/runtime/brasileirao}"
+ONLY_REAL="${BRQ_ONLY_REAL:-0}"
 SRC_DATA="$P/data/d16/brasileirao/matches_source_copy.sqlite3"
 DATA_SHA=31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43
 AS_OF=2026-09-08T19:31:32Z
@@ -92,6 +95,7 @@ echo "[exit $?]" >> "$OUT/conformance.log"
     --dataset-sha256 "$DATA_SHA" --as-of "$AS_OF" --work "$W/r2" --out "$PRIV/real" ) > "$PRIV/real.log" 2>&1
 echo "[exit $?]" >> "$PRIV/real.log"
 
+if [ "$ONLY_REAL" != "1" ]; then
 # 6) E2E real: processo -> término -> processo novo relê o mesmo resultado; cadeia de provenance
 #    (pedido idêntico ao do windows-smoke: 2024 OU25 mercado, com client_ref)
 mkdir -p "$W/r2/req"
@@ -114,6 +118,9 @@ echo "[exit $?]" >> "$OUT/e2e_real.log"
 ( cd "$W/elsewhere" && "$PY" "$HERE/soak.py" --tests "$TREE/tests" --work "$W/soak" --log "$OUT/soak.jsonl" \
     --real-dataset "$COPY" --real-dataset-sha256 "$DATA_SHA" --real-as-of "$AS_OF" ) > "$OUT/soak.log" 2>&1
 echo "[exit $?]" >> "$OUT/soak.log"
+else
+  echo "BRQ_ONLY_REAL=1: E2E e SOAK não rodados nesta execução" >> "$ENV"
+fi
 
 # 8) dado real depois: fonte e cópia com o mesmo sha256
 { echo "# depois $(date -u +%FT%TZ)"; stat -c '%A %s %n' "$SRC_DATA" "$COPY"; sha256sum "$SRC_DATA" "$COPY"; } >> "$DATA" 2>&1
@@ -124,9 +131,11 @@ echo "[exit $?]" >> "$OUT/export.log"
 N="$OUT/evidence_numbers_pc2.json"
 {
   "$PY" "$HERE/evidence_numbers.py" junit "$OUT/conformance.junit.xml" --key pc2_conformance --out "$N"; echo "[exit $?]"
-  "$PY" "$HERE/evidence_numbers.py" e2e "$OUT/e2e_real/E2E_SUMMARY.json" --key pc2_real --out "$N"; echo "[exit $?]"
-  "$PY" "$HERE/evidence_numbers.py" soak "$OUT/soak.jsonl" --key pc2_real --out "$N"; echo "[exit $?]"
-  "$PY" "$HERE/evidence_numbers.py" metrics --results "$PRIV/real" --key pc2_real --out "$N"; echo "[exit $?]"
+  if [ "$ONLY_REAL" != "1" ]; then
+    "$PY" "$HERE/evidence_numbers.py" e2e "$OUT/e2e_real/E2E_SUMMARY.json" --key pc2_real --out "$N"; echo "[exit $?]"
+    "$PY" "$HERE/evidence_numbers.py" soak "$OUT/soak.jsonl" --key pc2_real --out "$N"; echo "[exit $?]"
+  fi
+  "$PY" "$HERE/evidence_numbers.py" metrics --results "$PRIV/real" --dataset "$COPY" --clv-diagnostic --key pc2_real --out "$N"; echo "[exit $?]"
 } > "$OUT/evidence_numbers.log" 2>&1
 "$PY" "$HERE/no_data_rows_check.py" --dataset "$COPY" --paths "$OUT" --out "$OUT/no_data_rows_check.json" > "$OUT/no_data_rows_check.log" 2>&1
 echo "[exit $?]" >> "$OUT/no_data_rows_check.log"
