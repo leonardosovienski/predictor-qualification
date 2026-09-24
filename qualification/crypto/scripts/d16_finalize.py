@@ -78,7 +78,7 @@ def main() -> None:
                  f"Perfil V1 com dados reais: {soak_summary['requests_with_result']} resultados, perdidos {len(soak_summary['lost'])}, "
                  f"violações {len(soak_summary['violations'])}, zero_tolerance_ok={soak_verdict}; execuções por classe de "
                  f"falha (mínimo {minimum}): {class_runs}."),
-        "CRYPTO_UNCOMFORTABLE_CASES": (cases["all_ok"] and soak_ok, ["e2e_cases/E2E_SUMMARY.json", "soak_real.jsonl"],
+        "CRYPTO_UNCOMFORTABLE_CASES": (cases["all_ok"] and soak_verdict, ["e2e_cases/E2E_SUMMARY.json", "soak_real.jsonl"],
                  "Casos A, B, C ×3 no runtime Linux (B com o vetor sintético congelado); A ×3 e C ×3 também sobre dados reais no soak."),
         "CRYPTO_ECONOMIC_METRICS": (bool(econ["separated_with_ci"]), ["science/SCIENCE_REAL.json"],
                  f"Dados reais, Linux: bruto {econ['gross_return_bps']} bps IC {econ['gross_ci_bps']}; líquido {econ['net_return_bps']} bps IC "
