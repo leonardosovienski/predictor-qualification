@@ -57,7 +57,7 @@ Nenhum código do `stocks-predictor`, `core-predictor` ou `predictor-ops` mudou:
 
 | Commit | O quê | Por quê |
 |---|---|---|
-| `a7be0cf` | `d16/verify_stage_a.py` + `RAW_LOGS/d16/stage-a/verify_stage_a.json` | passo 0: a Etapa A se sustenta (62/62: evidências dos 23 parciais no commit de emissão, 27 PASS, wheels baixadas com sha256 conferido) |
+| `a7be0cf` | `d16/verify_stage_a.py` + `RAW_LOGS/d16/stage-a/verify_stage_a.json` | passo 0: a Etapa A se sustenta (62/62: evidências dos 22 parciais no commit de emissão — número corrigido: o changelog dizia 23, o log bruto diz 22, 27 PASS, wheels baixadas com sha256 conferido) |
 | `1b8b885` | `d16/build_real_panel.py`, `d16/SOURCES.json`, `d16/PROTOCOL_REAL.json`, `d16/verify_prefilter.py`, `d16/real_env.py`, `d16/d16_soak.py`, `d16/d16_science.py`, `d16/d16_run.sh`, `.github/workflows/stocks-d16.yml`; `D16_RUNBOOK.md` §4; FINDINGS ST-F007/ST-F008; `RAW_LOGS/d16/suite-run35978266234` | construtor `dados reais públicos → stocks-pit-panel/1` e fixação de URL + sha256 das fontes antes da execução (D-16); suíte no alvo 61fc017 (1049 passed Linux e windows-latest) |
 | `5d1944c` | `build_real_panel.fetch`: download com retomada (Range/If-Range) | run 35981568362 parou no setup (falha fechada): a B3 cortava a transferência para o runner (`IncompleteRead`); defeito de kit |
 | `4f138da` | `RAW_LOGS/d16/run35983568296/`, `D16_EVIDENCE_NUMBERS.json`, `D16_REAL_DATA_REPORT.md`, `E2E_EVIDENCE/d16-*`, `GATES.json`, seções D-16 de `SOAK_REPORT.md` e `NEGATIVE_CONTROLS_REPORT.md`; `scripts/d16_finalize.py`, `scripts/d16_apply.py` | fechamento dos 4 gates pelos critérios congelados, números tirados dos logs brutos (C20) |
