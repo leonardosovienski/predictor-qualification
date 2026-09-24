@@ -67,3 +67,11 @@ Resultado: E2E, WINDOWS_SMOKE, SOAK e STOCKS_NEGATIVE_CONTROLS em PASS (run 3598
 `QUALIFIED` (vale com o merge do dono). Sonda `stocks:QUAL-PIT-MOM-001` no painel real: INCONCLUSIVE / NO_EDGE (ver
 `D16_REAL_DATA_REPORT.md`). Pendências P2 para o dono: ST-F007 (rebalance a cada 21 pregões × "fim de mês"), ST-F008
 (limitações do painel público).
+
+### D-16, depois do merge (branch `stocks/d16-dispatch-only-20260924`)
+
+| O quê | Por quê |
+|---|---|
+| `.github/workflows/stocks-d16.yml`: só `workflow_dispatch` (sem gatilho de push) | o push do merge refez a D-16 no main com o pin antigo; a resposta da B3 para ALOS tinha mudado e o build falhou fechado (run 36001349055). Fontes mutáveis exigem pin novo antes de cada execução, como no crypto-d16.yml |
+| `RAW_LOGS/d16/run36001349055-main/` | preservar a evidência do run que falhou (C20; não é evidência de gate) |
+| `D16_RUNBOOK.md` §6 | como rodar de novo (pin + dispatch) |

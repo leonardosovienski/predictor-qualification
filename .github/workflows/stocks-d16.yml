@@ -4,14 +4,13 @@
 # contra o sha256 fixado em qualification/stocks/d16/SOURCES.json antes da execução. C:\STOCKS\data e
 # DADOS_STOCKS.zip não entram. Nem os arquivos nem o painel são versionados ou publicados como
 # artefato (D-11): o artefato leva só logs, manifesto e resultados. A trava da D-16 está em d16_run.sh.
+# Só manual (como o crypto-d16.yml): as fontes são mutáveis (COTAHIST do ano corrente, API de eventos da B3,
+# CVM), então rodar de novo exige fixar de novo o SOURCES.json (build_real_panel.py pin) antes; um gatilho de
+# push refaria o run com o pin antigo e falharia fechado na conferência do sha256 (run 36001349055, no merge).
 name: Stocks D-16 (dados reais públicos B3/CVM)
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - .github/workflows/stocks-d16.yml
-      - qualification/stocks/d16/**
 
 permissions:
   contents: read

@@ -76,3 +76,16 @@ E2E, WINDOWS_SMOKE, SOAK e STOCKS_NEGATIVE_CONTROLS: **PASS** pelos critérios c
 `D16_EVIDENCE_NUMBERS.json`, tirados de `RAW_LOGS/d16/run35983568296/` por `scripts/d16_finalize.py`). Métricas
 econômicas reais e contaminação por eventos não ajustados: `D16_REAL_DATA_REPORT.md`. Run 35981568362 (anterior)
 parou no setup por download truncado da B3 (falha fechada; corrigido em 5d1944c) e não é evidência de gate.
+
+## 6. Depois do merge (#20, 3bc3558)
+
+O push do merge disparou o `stocks-d16.yml` no main (gatilho de caminho) — run 36001349055, logs em
+`RAW_LOGS/d16/run36001349055-main/`. Os 3 jobs pararam na conferência de hash, como projetado: a resposta oficial
+da B3 para `ALOS` mudou depois da fixação (um provento em dinheiro removido; `stockDividends` e `codeCVM`, as únicas
+partes usadas, iguais) e o sha256 bruto deixou de bater (`249aa657…` fixado × `6912fc90…` observado). Não é
+evidência de gate nem invalida o run 35983568296. O workflow passa a ser só manual (`workflow_dispatch`).
+
+Para rodar de novo: `python qualification/stocks/d16/build_real_panel.py pin <cache> qualification/stocks/d16/SOURCES.json`
+(fixa de novo URL + sha256 das fontes mutáveis e o sha256 esperado do painel), commit/PR, e
+`gh workflow run stocks-d16.yml --ref <branch>`. Um pin novo muda o snapshot (ex.: COTAHIST_A2026 com mais pregões),
+portanto é um ciclo novo de execução (C14), não uma repetição do run 35983568296.
