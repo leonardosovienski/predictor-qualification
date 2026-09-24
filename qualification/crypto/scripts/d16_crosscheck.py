@@ -1,7 +1,7 @@
 """Missão crypto, D-16: conferências da "Etapa A se sustenta?" e cruzamento dos dados, saída JSON bruta.
 
   attestations                      cada ATTESTATION_PARTIAL_*.json e QUALIFICATION_ATTESTATION*.json conferido no
-                                    commit em que foi gravado pela última vez: evidências dos gates, environments,
+                                    commit em que esse conteúdo entrou (segue renomeação): evidências dos gates, environments,
                                     vereditos compartilhados, findings_file e hashes de topo (C7.1 regra 3). O
                                     `attest.py check` só confere os gates, e só na árvore atual.
   wheels <dir> [--src <árvore>]     sha256 dos arquivos baixados das final_wheels (e do sdist do runtime_target)
@@ -41,13 +41,17 @@ def attestations() -> dict:
                 "qualification/crypto/QUALIFICATION_ATTESTATION*.json").stdout.decode().split()
     out = []
     for path in sorted(files):
-        commit = git("log", "-1", "--format=%H", "--", path).stdout.decode().strip()
+        # commit em que este conteúdo exato entrou no repo (segue renomeação, ex.: *_superseded_*.json)
+        oid = git("rev-parse", f"HEAD:{path}").stdout.decode().strip()
+        found = git("log", "--reverse", "--no-renames", "--diff-filter=AM", "--format=%H", "--name-only",
+                    f"--find-object={oid}").stdout.decode().split()
+        commit, origin = found[0], found[1]
 
         def blob(p: str) -> bytes | None:
             r = git("show", f"{commit}:{p}")
             return r.stdout if r.returncode == 0 else None
 
-        doc = json.loads(blob(path))
+        doc = json.loads(blob(origin))
         checks: list[tuple[str, str, str]] = []
         for gate, state in doc["gates"].items():
             checks += [(f"gate {gate}", e["file"], e["sha256"]) for e in state["evidence"]]
@@ -75,7 +79,7 @@ def attestations() -> dict:
         statuses: dict[str, int] = {}
         for state in doc["gates"].values():
             statuses[state["status"]] = statuses.get(state["status"], 0) + 1
-        out.append({"file": path, "commit": commit, "result": doc["result"], "gates": statuses,
+        out.append({"file": path, "commit": commit, "path_at_commit": origin, "result": doc["result"], "gates": statuses,
                     "counts": doc["counts"], "checked": len(checks), "problems": problems})
     return {"attestations": out, "with_problems": [a["file"] for a in out if a["problems"]]}
 
