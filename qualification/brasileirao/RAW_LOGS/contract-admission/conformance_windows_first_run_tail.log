@@ -1,0 +1,62 @@
+  
+  Traceback (most recent call last):
+    File "C:\QUALIFICACAO\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\threading.py", line 1044, in _bootstrap_inner
+      self.run()
+      ~~~~~~~~^^
+    File "C:\QUALIFICACAO\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\threading.py", line 1345, in run
+      self.function(*self.args, **self.kwargs)
+      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "C:\QUALIFICACAO\repos\brasileirao-predictor\tests\conformance\test_failure_recovery.py", line 189, in <lambda>
+      released = threading.Timer(4.0, lambda: (blocker.rollback(), blocker.close()))
+                                               ~~~~~~~~~~~~~~~~^^
+  sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 17472 and this is thread id 21932.
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================ slowest 15 durations =============================
+664.18s call     tests/conformance/test_temporal_suite.py::test_match_still_in_progress_is_not_information_for_the_next_kickoff
+316.85s call     tests/conformance/test_temporal_suite.py::test_handler_reads_only_the_captured_snapshot_not_the_live_database
+144.21s call     tests/conformance/test_temporal_suite.py::test_future_canary_never_reaches_any_artifact
+109.09s call     tests/conformance/test_failure_recovery.py::test_db_says_result_exists_but_file_is_gone
+78.69s call     tests/conformance/test_temporal_suite.py::test_every_prediction_uses_only_information_available_before_its_cutoff
+78.22s call     tests/conformance/test_temporal_suite.py::test_metamorphic_row_order_permutations_do_not_change_results
+69.38s call     tests/conformance/test_failure_recovery.py::test_backup_and_restore_into_a_new_root_reread_the_same_result
+64.26s call     tests/conformance/test_failure_recovery.py::test_out_of_order_requests_are_independent_and_deterministic
+63.71s call     tests/conformance/test_temporal_suite.py::test_result_of_game_a_does_not_affect_game_b_with_the_same_kickoff
+48.95s call     tests/conformance/test_temporal_suite.py::test_historical_prediction_is_the_same_after_running_a_future_date
+46.35s call     tests/conformance/test_failure_recovery.py::test_modified_result_and_modified_effect_fail_closed
+43.63s setup    tests/conformance/test_temporal_suite.py::test_future_canary_never_reaches_any_artifact
+42.76s call     tests/conformance/test_failure_recovery.py::test_database_lock_waits_and_then_completes_once
+41.89s call     tests/conformance/test_import_closure.py::test_runtime_import_of_the_circuit_loads_no_forbidden_module
+40.49s call     tests/conformance/test_failure_recovery.py::test_retry_budget_exhaustion_is_a_terminal_operational_failure
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-PROTECTED_HYPOTHESIS0]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-PROTECTED_HYPOTHESIS1]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ADMITTED]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HOLDOUT_SEALED0]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HOLDOUT_SEALED1]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SEASON_NOT_ALLOWED]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-WINDOW_OUTSIDE_SEASON]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-REFERENCE_UNAUTHORIZED_OR_UNKNOWN]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID0]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID1]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID2]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID3]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID4]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID5]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID6]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-REQUEST_TYPE_NOT_ALLOWED]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID8]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID9]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-PARAMETER_OUT_OF_BOUNDS]
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID10]
+FAILED tests/conformance/test_failure_recovery.py::test_ops_lock_held_by_another_run_is_retryable_never_a_second_effect
+FAILED tests/conformance/test_failure_recovery.py::test_database_lock_waits_and_then_completes_once
+FAILED tests/conformance/test_failure_recovery.py::test_concurrent_submissions_of_the_same_request_produce_one_effect
+FAILED tests/conformance/test_temporal_suite.py::test_duplicate_fixture_fails_closed
+24 failed, 64 passed, 1 warning in 2842.63s (0:47:22)
+
+[exited with code 0]

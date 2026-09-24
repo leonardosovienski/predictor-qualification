@@ -41,7 +41,9 @@
       "evidence": [
         "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json",
         "qualification/shared/STACK_BASELINE_V1.1.json"
-      ]
+      ],
+      "fix_commit": "5344b5f",
+      "note": "pins migrados para 4.2.2rc1; fecha com CI e cleanroom-final verdes"
     },
     {
       "id": "BR-F004",
@@ -54,7 +56,9 @@
         "qualification/brasileirao/RAW_LOGS/truth-map/probe_inprogress_leak_real.json",
         "qualification/brasileirao/scripts/probe_inprogress_leak.py",
         "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
-      ]
+      ],
+      "fix_commit": "abd232e, 8479ecf",
+      "note": "regressões test_result_availability_guard.py e test_walkforward_result_availability.py falham antes (RAW_LOGS/contract-admission/BR-F004/repro_*) e passam depois (after_fix_*); fecha com a suíte completa e o CI"
     },
     {
       "id": "BR-F005",
@@ -134,7 +138,9 @@
       "description": "ecosystem_plugin.health() devolve version 0.2.0 escrita no código, não a versão da distribuição instalada.",
       "evidence": [
         "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
-      ]
+      ],
+      "fix_commit": "39efa52",
+      "note": "plugin usa importlib.metadata; teste tests/test_ecosystem_plugin_version.py"
     },
     {
       "id": "BR-F012",
@@ -146,7 +152,9 @@
       "evidence": [
         "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json",
         "qualification/brasileirao/RAW_LOGS/truth-map/import_graph_e14f339.json"
-      ]
+      ],
+      "fix_commit": "39efa52",
+      "note": "circuito construído; fecha com cleanroom-final/E2E"
     },
     {
       "id": "BR-F013",
@@ -159,6 +167,18 @@
         "qualification/brasileirao/RAW_LOGS/baseline/ops_9831b0d_vs_31d3939.diffstat",
         "qualification/brasileirao/STACK_BASELINE.json"
       ]
+    },
+    {
+      "id": "BR-F014",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "contract-admission",
+      "title": "Circuito novo: submissões concorrentes do mesmo pedido corriam na materialização",
+      "description": "Na primeira execução da suíte de conformidade (Windows local), test_concurrent_submissions_of_the_same_request_produce_one_effect expôs que dois processos com o mesmo pedido materializavam as mesmas referências ao mesmo tempo; o segundo recebia PermissionError no arquivo somente-leitura recém-copiado pelo primeiro e marcava o experimento RECONCILIATION_REQUIRED. Correção no próprio código novo: lock exclusivo do SO por experimento (liberado se o processo morre); o concorrente recebe OPS_FAILED_RETRYABLE EXPERIMENT_BUSY sem mexer no estado. Fica OPEN até a suíte passar no runtime suportado.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/contract-admission/conformance_windows_first_run_tail.log"
+      ],
+      "fix_commit": "39efa52"
     }
   ]
 }

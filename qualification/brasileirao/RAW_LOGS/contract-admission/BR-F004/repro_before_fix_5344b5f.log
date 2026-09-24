@@ -1,0 +1,96 @@
+FFFF...                                                                  [100%]
+================================== FAILURES ===================================
+____ test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[dixon_coles] _____
+
+name = 'dixon_coles'
+
+    @pytest.mark.parametrize("name", ["dixon_coles", "elo_baseline", "serving", "h9_frozen"])
+    def test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste(name: str) -> None:
+        make = _factories()[name]
+        clean, leaky = make(), make()
+        clean._fit(_history(), HORIZON)
+        leaky._fit(_with(minutes_before_horizon=60), HORIZON)
+>       assert _state(leaky) == _state(clean), "jogo que começou 60 min antes do alvo vazou para o ajuste"
+E       AssertionError: jogo que começou 60 min antes do alvo vazou para o ajuste
+E       assert {'attack': {'...15828415, ...} == {'attack': {'...': -0.35, ...}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Differing items:
+E         {'attack': {'bahia': 0.5504540063943181, 'flamengo': 0.5487544519546728, 'gremio': 0.916514267913462, 'palmeiras': 0.9094100067380518, ...}} != {'attack': {'bahia': 0.6351108500935075, 'flamengo': 0.6642071749500572, 'gremio': 0.7739555174163745, 'palmeiras': 1.3859545070817376, ...}}
+E         {'defense': {'bahia': 0.536179693964494, 'flamengo': 0.5918410697406078, 'gremio': 0.8089981002315986, 'palmeiras': 0.4462595934465179, ...}} != {'defense': {'bahia': 0.12712223514341645, 'flamengo': 0.13926660979909075, 'gremio': 0...
+E         
+E         ...Full output truncated (5 lines hidden), use '-vv' to show
+
+tests\test_result_availability_guard.py:102: AssertionError
+____ test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[elo_baseline] ____
+
+name = 'elo_baseline'
+
+    @pytest.mark.parametrize("name", ["dixon_coles", "elo_baseline", "serving", "h9_frozen"])
+    def test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste(name: str) -> None:
+        make = _factories()[name]
+        clean, leaky = make(), make()
+        clean._fit(_history(), HORIZON)
+        leaky._fit(_with(minutes_before_horizon=60), HORIZON)
+>       assert _state(leaky) == _state(clean), "jogo que começou 60 min antes do alvo vazou para o ajuste"
+E       AssertionError: jogo que começou 60 min antes do alvo vazou para o ajuste
+E       assert ([('bahia', 1...9016393442623) == ([('bahia', 1...91473)], 0.25)
+E         
+E         At index 0 diff: [('bahia', 1484.3348089715064), ('flamengo', 1477.1281943369947), ('gremio', 1468.4011003971564), ('palmeiras', 1530.2141929439122), ('santos', 1515.463962481283), ('vitoria', 1524.4577408691473)] != [('bahia', 1484.3348089715064), ('flamengo', 1477.1281943369947), ('gremio', 1458.7959872228603), ('palmeiras', 1530.2141929439122), ('santos', 1525.0690756555791), ('vitoria', 1524.4577408691473)]
+E         Use -v to get more diff
+
+tests\test_result_availability_guard.py:102: AssertionError
+______ test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[serving] _______
+
+name = 'serving'
+
+    @pytest.mark.parametrize("name", ["dixon_coles", "elo_baseline", "serving", "h9_frozen"])
+    def test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste(name: str) -> None:
+        make = _factories()[name]
+        clean, leaky = make(), make()
+        clean._fit(_history(), HORIZON)
+        leaky._fit(_with(minutes_before_horizon=60), HORIZON)
+>       assert _state(leaky) == _state(clean), "jogo que começou 60 min antes do alvo vazou para o ajuste"
+E       AssertionError: jogo que começou 60 min antes do alvo vazou para o ajuste
+E       assert ((-0.62182941...44581753074)]) == ((-0.71991886...44581753074)])
+E         
+E         At index 0 diff: (-0.6218294136440372, 4.0, 0.298269778948737, -0.18117425008538957) != (-0.7199188601327042, 4.0, 0.007817130351886215, -0.30519357941104186)
+E         Use -v to get more diff
+
+tests\test_result_availability_guard.py:102: AssertionError
+_____ test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[h9_frozen] ______
+
+name = 'h9_frozen'
+
+    @pytest.mark.parametrize("name", ["dixon_coles", "elo_baseline", "serving", "h9_frozen"])
+    def test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste(name: str) -> None:
+        make = _factories()[name]
+        clean, leaky = make(), make()
+        clean._fit(_history(), HORIZON)
+        leaky._fit(_with(minutes_before_horizon=60), HORIZON)
+>       assert _state(leaky) == _state(clean), "jogo que começou 60 min antes do alvo vazou para o ajuste"
+E       AssertionError: jogo que começou 60 min antes do alvo vazou para o ajuste
+E       assert ((0.1, 0.3, 0...44581753074)]) == ((0.1, 0.3, 0...44581753074)])
+E         
+E         At index 1 diff: [('bahia', 1474.191806432236), ('flamengo', 1466.4308459876038), ('gremio', 1468.5552875741535), ('palmeiras', 1543.5722705347516), ('santos', 1515.9353312959477), ('vitoria', 1531.3144581753074)] != [('bahia', 1474.191806432236), ('flamengo', 1466.4308459876038), ('gremio', 1427.9835339441654), ('palmeiras', 1543.5722705347516), ('santos', 1556.5070849259357), ('vitoria', 1531.3144581753074)]
+E         Use -v to get more diff
+
+tests\test_result_availability_guard.py:102: AssertionError
+============================== warnings summary ===============================
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[dixon_coles]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[dixon_coles]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\.venv\Lib\site-packages\scipy\optimize\_numdiff.py:710: RuntimeWarning: invalid value encountered in subtract
+    df = [f_eval - f0 for f_eval in f_evals]
+
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[serving]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[serving]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\brasileirao_predictor\serving_evaluator.py:216: RuntimeWarning: fit_goal_model: parametro b=4.0000 cravado no bound [-1, 4] — verifique o formato do history (diff, hs, as)
+    self.params = model.fit_goal_model(hist_cal, sample_weights=weights)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[dixon_coles]
+FAILED tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[elo_baseline]
+FAILED tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[serving]
+FAILED tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[h9_frozen]
+4 failed, 3 passed, 4 warnings in 6.08s
