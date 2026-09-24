@@ -29,3 +29,10 @@ O pyright do CI cobre `brasileirao_predictor/research_runtime` (código novo): 0
 `brasileirao-runtime.yml` (Linux primário + windows-latest, só wheels publicadas):
 run [35963501898](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35963501898)
 sobre v0.3.0rc2 — `RAW_LOGS/cleanroom-final/run35963501898/` (ver `CLEANROOM_REPORT.md` §2).
+
+## Depois do merge (main)
+
+O dono mesclou #77 (`f07dea4`) e #78 (`e540f97`, árvore idêntica a `04b42c9`). No `main` `e540f97`:
+CI Pipeline [35965774563](https://github.com/leonardosovienski/brasileirao-predictor/actions/runs/35965774563)
+e publication validation [35965774552](https://github.com/leonardosovienski/brasileirao-predictor/actions/runs/35965774552):
+success (`RAW_LOGS/hosted-ci/br_main_35965774563.json`, `br_main_35965774552.json`).
