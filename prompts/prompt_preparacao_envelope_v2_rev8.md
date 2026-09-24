@@ -1,7 +1,7 @@
 # PREPARAR O ENVELOPE V2 (Rev 8 — enxuto)
 
-Núcleo: `qualification/COMMON_QUALIFICATION_CORE.md` v2.1, sha256 =
-`a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b`. Um único agente, sem subagentes. Tudo por PR; o dono aprova
+Núcleo: `qualification/COMMON_QUALIFICATION_CORE.md` v2.2, sha256 =
+`d681e423499e202c735ee1f110311a9721019ef11e21ae824f4791bada7c7d2c`. Um único agente, sem subagentes. Tudo por PR; o dono aprova
 fazendo merge. Você pode publicar releases pré-release (`rc`) dos pacotes do
 protocolo depois que o PR da especificação estiver no `main`.
 
