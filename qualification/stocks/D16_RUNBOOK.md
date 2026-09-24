@@ -4,8 +4,8 @@ Estado antes da D-16: 4 gates `NOT_RUN` com `BLOCKED: D-16 pendente` — `E2E`, 
 `STOCKS_NEGATIVE_CONTROLS` (regra congelada em `FROZEN_PARAMETERS.d16_dependency_rule`). Todos rodam hoje com a
 fixture sintética congelada como **diagnóstico** e passam; nada disso vale como PASS.
 
-Alvo congelado: `qualification/stocks/runtime_target.json` (stocks-predictor `9a6c09a`, wheel `v0.3.0rc1`
-`3cc4e04a…`; Core 3.2.1 e Ops 4.2.2rc1 pelo `uv.lock`).
+Alvo congelado: `qualification/stocks/runtime_target.json` (stocks-predictor `61fc017`, wheel `v0.3.0rc2`
+`92cb1131…`; Core 3.2.1 e Ops 4.2.2rc1 pelo `uv.lock`).
 
 ## 1. O que só o dono decide (entrada D-16 em `qualification/DECISIONS.json`, por PR + merge)
 

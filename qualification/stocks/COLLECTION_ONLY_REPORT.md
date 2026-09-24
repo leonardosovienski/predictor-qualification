@@ -10,10 +10,10 @@ matriz congelada (0 famílias READY) o resultado é `NOT_READY`, sem trial, com 
 
 ## Pelo entrypoint instalado
 
-* `COLLECTION_ONLY collected and never feeds a trial`: **True** (status `SUCCESS`) — `qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json`
+* `COLLECTION_ONLY collected and never feeds a trial`: **True** (status `SUCCESS`) — `qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json`
 * `NOT_READY family never becomes a trial (3x)`: **True** — motivos: {"B3_LENDING": "FAMILY_NOT_READY (NOT_READY, readiness='NOT_READY')", "CVM_VLMO": "FAMILY_NOT_READY (NOT_READY, readiness='NOT_READY')"}
 * soak (diagnóstico): família-não-pronta ['NOT_READY', 'NOT_READY', 'NOT_READY']; coletas ['COLLECTION_RECORDED', 'COLLECTION_RECORDED', 'COLLECTION_RECORDED', 'COLLECTION_RECORDED', 'COLLECTION_RECORDED'];
-  trials elegíveis = 0 — `qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/soak.jsonl`
+  trials elegíveis = 0 — `qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl`
 
 ## Vetores congelados
 

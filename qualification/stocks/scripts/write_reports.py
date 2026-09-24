@@ -17,9 +17,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 QC = Path(__file__).resolve().parents[1]
-RUN = QC / "RAW_LOGS" / "cleanroom-final" / "run35949779357"
+RUN = QC / "RAW_LOGS" / "cleanroom-final" / "run35954279991"
 LINUX, WINDOWS = RUN / "stocks-runtime-linux-primary", RUN / "stocks-runtime-windows-latest"
 BASE = QC / "RAW_LOGS" / "cleanroom-baseline" / "run35943720554"
+SUITE = QC / "RAW_LOGS" / "c14-rc2" / "suite-run35953426762"
 NUM = json.loads((QC / "EVIDENCE_NUMBERS.json").read_text(encoding="utf-8"))
 FROZEN = json.loads((QC / "FROZEN_PARAMETERS.json").read_text(encoding="utf-8"))
 
@@ -63,7 +64,7 @@ def core_identity() -> None:
             chain = r["lock_chain"].get(name, {})
             rows.append(f"| {label} | {name} | {info['version']} | `{info['sha256'].removeprefix('sha256=')}` | "
                         f"{chain.get('spec', '— (o próprio pacote)')} | "
-                        f"{('`' + chain['lock_sha256'] + '`') if chain else 'wheel da release v0.3.0rc1'} | "
+                        f"{('`' + chain['lock_sha256'] + '`') if chain else 'wheel da release v0.3.0rc2'} | "
                         f"{info['in_site_packages']} | {info['editable']} |")
     base = json.loads((BASE / "stocks-runtime-linux-primary" / "core_identity.json").read_text(encoding="utf-8"))
     base_rows = [f"| {p['name']} | {p['version']} | `{((p['direct_url'] or {}).get('archive_info') or {}).get('hash', '').removeprefix('sha256=')}` | {p['module_in_site_packages']} |"
@@ -86,7 +87,7 @@ Fonte: `{rel(BASE / 'stocks-runtime-linux-primary' / 'core_identity.json')}`.
 `predictor-ops` ausente (prompt §3 confirmado: nenhuma dependência nem import).
 `uv lock --check`: `{rel(BASE / 'stocks-runtime-linux-primary' / 'uv_lock_check.log')}`.
 
-## Depois de adicionar o Ops (final_commit `9a6c09a`, só wheels publicadas)
+## Depois de adicionar o Ops (final_commit `61fc017`, só wheels publicadas)
 
 Fontes: `{rel(LINUX / 'core_identity.json')}` e `{rel(WINDOWS / 'core_identity.json')}`;
 lock conferido por `uv lock --check` (`{rel(LINUX / 'uv_lock_check.log')}`) e instalação por
@@ -99,7 +100,7 @@ lock conferido por `uv lock --check` (`{rel(LINUX / 'uv_lock_check.log')}`) e in
 `tool.uv.sources`: Core `…/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl`,
 Ops `…/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl` (URL de release;
 nenhum pacote do stack vem de índice público, `vendor/` ou checkout). A wheel do Stocks vem da release
-`v0.3.0rc1` (asset conferido por sha256 antes da instalação, `{rel(LINUX / 'env.log')}`).
+`v0.3.0rc2` (asset conferido por sha256 antes da instalação, `{rel(LINUX / 'env.log')}`).
 
 **STOCKS_CORE_PIN:** range `>=3.2.1,<4` (D-7), fonte = release v3.2.1, lock = 3.2.1 `10ef42f3…`, wheel instalada =
 `10ef42f3…`, nos dois runtimes.
@@ -114,10 +115,10 @@ def cleanroom() -> None:
     write("CLEANROOM_REPORT.md", f"""# CLEANROOM_REPORT — missão stocks (C5; gate CLEANROOM_FINAL)
 
 Runtime suportado (C3.1): venv novo, dependências só do `uv.lock` exportado com `--require-hashes`, wheel do
-stocks-predictor **publicada** (`v0.3.0rc1`, sha256 `3cc4e04a…`, conferido antes de instalar), Core e Ops pelas
+stocks-predictor **publicada** (`v0.3.0rc2`, sha256 `92cb1131…`, conferido antes de instalar), Core e Ops pelas
 wheels das releases; árvore de testes = final_commit **sem** `stocks_predictor/` (o código só pode vir da wheel);
 execução a partir de um diretório fora de tudo. Script: `qualification/stocks/scripts/runtime_cleanroom.sh`,
-workflow `.github/workflows/stocks-runtime.yml`, run 35949779357.
+workflow `.github/workflows/stocks-runtime.yml`, run 35954279991.
 
 ## cleanroom-final (Linux primário e windows-latest)
 
@@ -130,8 +131,11 @@ workflow `.github/workflows/stocks-runtime.yml`, run 35949779357.
 
 A suíte legada importa módulos planos da pasta-fonte (ST-F004, P2): não valida wheel instalada, igual ao
 baseline. A validação da wheel pela suíte legada é feita no CI do repo (smoke da wheel fora do checkout, verde no
-final_commit) e pela suíte completa com instalação `uv sync --locked` (1049 passed no Linux e no windows-latest,
-`RAW_LOGS/contract-admission-ops-entrypoint/run35948598839`).
+final_commit) e pela suíte completa com instalação `uv sync --locked` no final_commit: Linux
+`{NUM['suites'][rel(SUITE / 'stocks-suite-linux-primary' / 'pytest.log')]['summary']}`, windows-latest
+`{NUM['suites'][rel(SUITE / 'stocks-suite-windows-latest' / 'pytest.log')]['summary']}` (`{rel(SUITE)}`).
+A rc1 (`9a6c09a`, `3cc4e04a…`, run 35949779357) teve o mesmo resultado; foi substituída pela rc2 depois dos
+dependabot #93/#94 (C14, ST-F006).
 
 ## cleanroom-baseline (diagnóstico, 4e98a67)
 
@@ -309,7 +313,7 @@ def readiness() -> None:
     doc = json.loads((LINUX / "science" / "external_intelligence_readiness.json").read_text(encoding="utf-8"))
     out = {
         "schema": "stocks/EXTERNAL_INTELLIGENCE_READINESS/1",
-        "source_matrix": "EXTERNAL_INTELLIGENCE_TRIAL_READINESS_MATRIX.json (blob do final_commit 9a6c09a = blob do baseline; conjunto protegido)",
+        "source_matrix": "EXTERNAL_INTELLIGENCE_TRIAL_READINESS_MATRIX.json (blob do final_commit 61fc017 = blob do baseline; conjunto protegido)",
         "classified_by": doc["classifier"],
         "raw_output": rel(LINUX / "science" / "external_intelligence_readiness.json"),
         "rules": {"eligibility": "só o campo readiness de eligible_families; o nome da chave não concede nada",
@@ -343,7 +347,7 @@ def failure_matrix() -> None:
                      "linux": [LX[t] for t in tests], "windows_latest": [WX.get(t) for t in tests],
                      "result": "PASS" if tests and all(LX[t] == "PASS" and WX.get(t) == "PASS" for t in tests) else "FAIL"})
     doc = {"schema": "stocks/FAILURE_MATRIX/1", "frozen_in": "FROZEN_PARAMETERS.failure_injection_points (antes da execução)",
-           "invariants": FROZEN["failure_invariants"], "runtime": "wheels publicadas (cleanroom-final run 35949779357)",
+           "invariants": FROZEN["failure_invariants"], "runtime": "wheels publicadas (cleanroom-final run 35954279991)",
            "evidence": [rel(LINUX / "conformance.junit.xml"), rel(WINDOWS / "conformance.junit.xml")],
            "soak_repetitions": rel(LINUX / "soak.jsonl"), "rows": rows,
            "all_pass": all(r["result"] == "PASS" for r in rows)}
