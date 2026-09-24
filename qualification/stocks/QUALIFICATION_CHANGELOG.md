@@ -49,3 +49,21 @@ Pré-release [`v0.3.0rc2`](https://github.com/leonardosovienski/stocks-predictor
 `b7a98bfedfd8e57d223e5e641cb2068e82c967aadf0798f6b74924e6e443a365` (build reprodutível, run 35953426669).
 Refeitos (C14): publish-candidates, cleanroom-final/e2e/conformidade/ciência/soak (run 35954279991), CI hospedado,
 segredos (run 35955382714), conjunto protegido. **final_commit:** `61fc017256ffea815ae96bbe02b847dccdb395cc`.
+
+## D-16 (2026-09-24, sessão da noite no PC 2) — branch `stocks/d16-20260924` do predictor-qualification
+
+Nenhum código do `stocks-predictor`, `core-predictor` ou `predictor-ops` mudou: alvo continua `61fc017` /
+`v0.3.0rc2` (`92cb1131…`), Core 3.2.1, Ops 4.2.2rc1. Nenhum parâmetro, vetor, perfil, seed ou critério congelado mudou (C15).
+
+| Commit | O quê | Por quê |
+|---|---|---|
+| `a7be0cf` | `d16/verify_stage_a.py` + `RAW_LOGS/d16/stage-a/verify_stage_a.json` | passo 0: a Etapa A se sustenta (62/62: evidências dos 23 parciais no commit de emissão, 27 PASS, wheels baixadas com sha256 conferido) |
+| `1b8b885` | `d16/build_real_panel.py`, `d16/SOURCES.json`, `d16/PROTOCOL_REAL.json`, `d16/verify_prefilter.py`, `d16/real_env.py`, `d16/d16_soak.py`, `d16/d16_science.py`, `d16/d16_run.sh`, `.github/workflows/stocks-d16.yml`; `D16_RUNBOOK.md` §4; FINDINGS ST-F007/ST-F008; `RAW_LOGS/d16/suite-run35978266234` | construtor `dados reais públicos → stocks-pit-panel/1` e fixação de URL + sha256 das fontes antes da execução (D-16); suíte no alvo 61fc017 (1049 passed Linux e windows-latest) |
+| `5d1944c` | `build_real_panel.fetch`: download com retomada (Range/If-Range) | run 35981568362 parou no setup (falha fechada): a B3 cortava a transferência para o runner (`IncompleteRead`); defeito de kit |
+| `4f138da` | `RAW_LOGS/d16/run35983568296/`, `D16_EVIDENCE_NUMBERS.json`, `D16_REAL_DATA_REPORT.md`, `E2E_EVIDENCE/d16-*`, `GATES.json`, seções D-16 de `SOAK_REPORT.md` e `NEGATIVE_CONTROLS_REPORT.md`; `scripts/d16_finalize.py`, `scripts/d16_apply.py` | fechamento dos 4 gates pelos critérios congelados, números tirados dos logs brutos (C20) |
+| (este) | `RAW_LOGS/secrets/run35986948802/`, `SECRETS_CLEAN` no `GATES.json` (nota corrigida: o log diz 10 commits varridos, não 7); `FROZEN_VECTORS.json` + `scripts/frozen_vectors.py`; `ATTESTATION_PARTIAL_d16.json`, `QUALIFICATION_ATTESTATION.json` | varredura de segredos sobre a árvore com os logs novos; o schema exige `frozen_vectors_sha256` numa attestation final e a missão stocks não tinha o manifesto: ele só registra a identidade (blob git + sha256) dos vetores de conformidade no final_commit 61fc017 — idênticos aos do final_commit da rc1 9a6c09a — e dos vetores reais da D-16; nenhum vetor mudou |
+
+Resultado: E2E, WINDOWS_SMOKE, SOAK e STOCKS_NEGATIVE_CONTROLS em PASS (run 35983568296); 31/31 gates PASS, P0 = P1 = 0 →
+`QUALIFIED` (vale com o merge do dono). Sonda `stocks:QUAL-PIT-MOM-001` no painel real: INCONCLUSIVE / NO_EDGE (ver
+`D16_REAL_DATA_REPORT.md`). Pendências P2 para o dono: ST-F007 (rebalance a cada 21 pregões × "fim de mês"), ST-F008
+(limitações do painel público).

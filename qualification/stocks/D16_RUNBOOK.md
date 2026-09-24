@@ -69,3 +69,10 @@ dispatch). Nenhum código do stocks-predictor mudou (alvo continua `61fc017` / `
   restituição de capital e bonificação em outra classe não ajustados; lista no `BUILD_MANIFEST.json`); API da B3
   sem alguns eventos antigos e vazia para raízes renomeadas; troca de ISIN = novo `security_id`; deslistagem não
   informada pelo COTAHIST (saída por inatividade); emissor desconhecido ⇒ fora do universo.
+
+## 5. Resultado (run 35983568296, commit 5d1944c)
+
+E2E, WINDOWS_SMOKE, SOAK e STOCKS_NEGATIVE_CONTROLS: **PASS** pelos critérios congelados (números em
+`D16_EVIDENCE_NUMBERS.json`, tirados de `RAW_LOGS/d16/run35983568296/` por `scripts/d16_finalize.py`). Métricas
+econômicas reais e contaminação por eventos não ajustados: `D16_REAL_DATA_REPORT.md`. Run 35981568362 (anterior)
+parou no setup por download truncado da B3 (falha fechada; corrigido em 5d1944c) e não é evidência de gate.
