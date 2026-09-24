@@ -55,3 +55,10 @@ def test_old_core_only_for_in_progress(doc: dict) -> None:
     assert not any("C7.1(6)" in p for p in attest.check(old))
     old["result"] = "NOT_QUALIFIED"
     assert any("C7.1(6)" in p for p in attest.check(old))
+
+
+def test_final_attestation_checks_the_contract_sha256(doc: dict) -> None:
+    final = copy.deepcopy(doc)
+    final["result"] = "NOT_QUALIFIED"
+    final["domain_contract_sha256"] = WRONG
+    assert any("C7.1(7)" in p for p in attest.check(final))
