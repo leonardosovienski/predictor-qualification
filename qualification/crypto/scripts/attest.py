@@ -29,7 +29,7 @@ QC = ROOT / "qualification" / "crypto"
 CORE = ROOT / "qualification" / "COMMON_QUALIFICATION_CORE.md"
 SCHEMA = ROOT / "qualification" / "ATTESTATION_SCHEMA.json"
 V1 = ROOT / "qualification" / "shared" / "STACK_BASELINE_V1.json"
-CORE_SHA = "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1"
+CORE_SHA = "a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b"  # núcleo v2.1 (D-19)
 OPEN = {"OPEN", "OPEN_AWAITING_VERDICT", "OPEN_BLOCKED"}
 
 
@@ -88,7 +88,7 @@ def build(result: str) -> dict:
         "supersedes_sha256": ledger.get("supersedes_sha256"),
         "common_baseline_id": ledger.get("common_baseline_id", "STACK_BASELINE_V1"),
         "common_baseline_sha256": sha(ROOT / "qualification" / "shared" / (ledger.get("common_baseline_id", "STACK_BASELINE_V1") + ".json")),
-        "common_core_version": "2.0",
+        "common_core_version": "2.1",
         "common_core_sha256": sha(CORE),
         "frozen_parameters_sha256": sha(QC / "FROZEN_PARAMETERS.json"),
         "protected_set_sha256": optional_sha("PROTECTED_SET.json"),
@@ -116,13 +116,24 @@ def check(doc: dict) -> list[str]:
     jsonschema.Draft202012Validator(schema).validate(doc)
     problems = []
     if doc["common_core_sha256"] != CORE_SHA:
-        problems.append("C7.1(6): common_core_sha256 diferente da v2.0")
+        problems.append("C7.1(6): common_core_sha256 diferente da v2.1")
     if doc["counts"] != counts():
         problems.append("C7.1(2): counts não bate com FINDINGS.json")
     for gate in doc["gates"].values():
         for ev in gate["evidence"]:
             if sha(ROOT / ev["file"]) != ev["sha256"]:
                 problems.append(f"C7.1(3): sha256 divergente {ev['file']}")
+    # CR-F021: a C7.1(3) vale para todo arquivo de evidência, não só os dos gates
+    for env in doc["environments"]:
+        for ev in env["evidence"]:
+            if sha(ROOT / ev["file"]) != ev["sha256"]:
+                problems.append(f"C7.1(3): sha256 divergente {ev['file']} (environment {env['where']})")
+    for v in doc["shared_dependency_verdicts"]:
+        if "verdict_file" in v and sha(ROOT / v["verdict_file"]) != v.get("verdict_sha256"):
+            problems.append(f"C7.1(3): verdict_sha256 divergente {v['verdict_file']}")
+    ff = doc["findings_file"]
+    if sha(ROOT / ff["file"]) != ff["sha256"]:
+        problems.append(f"C7.1(3): findings_file divergente {ff['file']}")
     all_pass = all(g["status"] == "PASS" for g in doc["gates"].values())
     blocking = any(v["blocking"] for v in doc["shared_dependency_verdicts"])
     qualified_ok = all_pass and doc["counts"]["P0"] == 0 and doc["counts"]["P1"] == 0 and not blocking

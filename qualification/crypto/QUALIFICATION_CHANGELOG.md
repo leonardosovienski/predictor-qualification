@@ -76,3 +76,14 @@ Runs do `crypto-d16.yml` (ubuntu-latest, Python 3.13):
 Conferências da sessão (`RAW_LOGS/d16-conferencia/`): as 28 attestations conferidas no próprio commit (10 parciais V1.0 com divergência histórica, **CR-F020**); wheels das releases × registrado × source `341d270`; dados de cada run × `.CHECKSUM` × cópia conferida do pendrive (45/45); varredura de segredos; suíte do `cripto-predictor` no PC 2 (`pc2-diagnostico/`, só diagnóstico). Lacuna do `attest.py check`: **CR-F021**.
 
 Resultado: **`QUALIFIED`**, com 31/31 gates `PASS`, P0 = P1 = 0 e P2 = 8 abertos. Attestation `QUALIFICATION_ATTESTATION.json` sha256 `565326d367a5d2d8d229392e68d49182009e3c25bbfa0671dc4662ca9e3a4c27`, com `supersedes_sha256 = eb3e79f4…`; a anterior foi preservada byte a byte como `QUALIFICATION_ATTESTATION_superseded_eb3e79f48c7d.json`. `QUALIFIED` não é edge nem autoriza capital (C22): com dados reais, o líquido foi −83 bps/semana, `INCONCLUSIVE`/`NO_EDGE`.
+
+## C14 "Núcleo (versão)" v2.0 → v2.1 (D-19, 2026-09-24)
+
+Núcleo v2.1 (PR #22) e schema com `common_core_version` 2.0|2.1 (PR #26). Nenhum requisito do crypto mudou (a D-19 só
+admite `owner_linux` para dado privado). Sem refazer fases:
+
+| Arquivo | O quê | Por quê | Prova |
+|---|---|---|---|
+| `scripts/attest.py` | `CORE_SHA` da v2.1 (`a3b4b7bb…`), `common_core_version` 2.1; `check()` confere também `environments[*].evidence`, `shared_dependency_verdicts[*].verdict_sha256` e `findings_file` | C7.1 regras 3 e 6; **CR-F021** (FIXED) | `RAW_LOGS/c14-nucleo-v2.1/cr-f021_check.log`: cópias adulteradas nos 3 campos são acusadas |
+| `QUALIFICATION_ATTESTATION.json` | reemitida: `QUALIFIED`, 31/31 PASS (mesmos estados), P0=P1=0, P2 8→7 | C7.1 regra 8 | `attest.py check` OK |
+| `QUALIFICATION_ATTESTATION_superseded_565326d367a5.json` | a anterior (v2.0), preservada byte a byte | C7.1 regra 8 | `supersedes_sha256` da nova |
