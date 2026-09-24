@@ -33,6 +33,7 @@ CORE = ROOT / "qualification" / "COMMON_QUALIFICATION_CORE.md"
 SCHEMA = ROOT / "qualification" / "ATTESTATION_SCHEMA.json"
 V1 = ROOT / "qualification" / "shared" / "STACK_BASELINE_V1.json"
 CORE_SHA = "a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b"  # núcleo v2.1 (D-19)
+CORE_SHA_V2_0 = "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1"  # parciais históricos
 OPEN = {"OPEN", "OPEN_AWAITING_VERDICT", "OPEN_BLOCKED"}
 SKIP_SCHEMA_OK = "--no-schema" in sys.argv
 
@@ -175,7 +176,8 @@ def main() -> None:
             # parciais antigos: schema + C7.1(6); counts e hashes valem no commit em que foram emitidos
             schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
             jsonschema.Draft202012Validator(schema).validate(doc)
-            problems = [] if doc["common_core_sha256"] == CORE_SHA else ["C7.1(6)"]
+            # registros históricos: valem no núcleo em que foram emitidos (v2.0 até a D-19, v2.1 depois)
+            problems = [] if doc["common_core_sha256"] in (CORE_SHA, CORE_SHA_V2_0) else ["C7.1(6)"]
             print("; ".join(problems) if problems else "OK (schema)")
             raise SystemExit(1 if problems else 0)
         problems = check(doc)
