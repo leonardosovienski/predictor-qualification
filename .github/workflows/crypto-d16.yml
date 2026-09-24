@@ -1,0 +1,33 @@
+# Missão crypto, D-16 no GitHub Actions (alternativa à máquina Linux dedicada).
+# Só manual (workflow_dispatch) e só roda se DECISIONS.json tiver D-16 APPROVED
+# (a trava está em d16_linux.sh). Dados reais baixados no job e conferidos pelo .CHECKSUM
+# publicado; não são versionados nem publicados como artefato (só MANIFEST com hashes).
+name: Crypto D-16 (dados reais no Linux primário)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  d16:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: D-16
+        shell: bash
+        run: bash qualification/crypto/scripts/d16_linux.sh "$RUNNER_TEMP/out" "$RUNNER_TEMP/data"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crypto-d16
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
