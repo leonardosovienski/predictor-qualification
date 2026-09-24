@@ -1,0 +1,44 @@
+# Missão stocks: runtime suportado (C3.1). Alvo (modo, commit, wheel, sha256) em
+# qualification/stocks/runtime_target.json. baseline = diagnóstico (wheel do commit);
+# final = só a wheel publicada + lock exportado (--require-hashes), fora do checkout.
+# Linux primário (D-9) e windows-latest (D-1). Sem segredos; só repos e releases públicos.
+name: Stocks runtime (cleanroom, e2e, conformance, soak)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/stocks/runtime_target.json
+      - .github/workflows/stocks-runtime.yml
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: linux-primary, os: ubuntu-latest, soak: 1}
+          - {label: windows-latest, os: windows-latest, soak: 0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Runtime suportado
+        shell: bash
+        run: bash qualification/stocks/scripts/runtime_cleanroom.sh "$RUNNER_TEMP/out/${{ matrix.label }}" "${{ matrix.soak }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stocks-runtime-${{ matrix.label }}
+          path: ${{ runner.temp }}/out/${{ matrix.label }}
+          if-no-files-found: error

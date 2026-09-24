@@ -1,0 +1,2720 @@
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE.EEEEFFFFFFFFFFFFFFFFFFFFFFFF.F........... [  6%]
+..........F.................................................. [ 12%]
+........................................................................ [ 19%]
+...................................................................... [ 26%]
+................................................................... [ 33%]
+........................................................................ [ 40%]
+.................................................................. [ 46%]
+........................................................................ [ 53%]
+........................................................................ [ 60%]
+.......................................................... [ 65%]
+..............................F....................... [ 71%]
+....................................................................................................................................... [ 84%]
+........................................................................ [ 91%]
+........................................................................ [ 98%]
+....................                                               [100%]
+==================================== ERRORS ====================================
+____ ERROR at setup of test_e2e_result_is_reread_identically_after_restart _____
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_e2e_result_is_reread_iden0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_______ ERROR at setup of test_idempotency_duplicate_retry_and_conflict ________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_idempotency_duplicate_ret0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+______ ERROR at setup of test_future_canary_fails_closed_and_never_leaks _______
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_future_canary_fails_close0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+____ ERROR at setup of test_temporal_integrity_as_of_mismatch_fails_closed _____
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_temporal_integrity_as_of_0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_authority_states_stay_separate[case_a-INCONCLUSIVE-INCONCLUSIVE-NO_EDGE] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_authority_states_stay_sep0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_authority_states_stay_separate[case_b-NO_EDGE-SUPPORTED-NO_EDGE] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_authority_states_stay_sep1')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_authority_states_stay_separate[insufficient-CLOSED_INSUFFICIENT_SAMPLE-INSUFFICIENT_SAMPLE-NOT_EVALUATED] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_authority_states_stay_sep2')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID0] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID1] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_1')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID2] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_2')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID3] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_3')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID4] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_4')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID5] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_5')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID6] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_6')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID7] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_7')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID8] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_8')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-REQUEST_TYPE_NOT_ALLOWED] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_9')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID9] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_10')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID10] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_11')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_CLOSED0] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_12')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_CLOSED1] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_13')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ACTIVE0] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_14')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ACTIVE1] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_15')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ADMITTED] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_16')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-REFERENCE_UNAUTHORIZED_OR_UNKNOWN] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_17')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-PARAMETER_OUT_OF_BOUNDS] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_18')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID11] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_19')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID12] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_admission_rejects_before_20')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_________ ERROR at setup of test_collector_outside_policy_is_rejected __________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_collector_outside_policy_0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_____ ERROR at setup of test_invalid_json_and_duplicate_keys_are_rejected ______
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_invalid_json_and_duplicat0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_duplicate_after_policy_change_returns_the_stored_result _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_duplicate_after_policy_ch0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_external_intelligence_not_ready_never_becomes_a_signal[matrix-20260921] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_external_intelligence_not0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_external_intelligence_not_ready_never_becomes_a_signal[counterfactual-vlmo-ready] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_external_intelligence_not1')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ ERROR at setup of test_collection_only_collects_persists_and_never_feeds_a_trial _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_collection_only_collects_0')
+
+    @pytest.fixture()
+    def env(tmp_path):
+>       return build(tmp_path)
+               ^^^^^^^^^^^^^^^
+
+tests/conformance/test_contract_conformance.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+=================================== FAILURES ===================================
+__ test_worker_dies_mid_effect_write_leaves_no_effect_and_retry_produces_one ___
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_worker_dies_mid_effect_wr0')
+
+    def test_worker_dies_mid_effect_write_leaves_no_effect_and_retry_produces_one(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_extra.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_____ test_disk_full_on_result_write_stores_nothing_and_retry_stores_once ______
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_disk_full_on_result_write0')
+
+    def test_disk_full_on_result_write_stores_nothing_and_retry_stores_once(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_extra.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+__________ test_db_lock_shorter_than_busy_timeout_waits_and_succeeds ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_db_lock_shorter_than_busy0')
+
+    def test_db_lock_shorter_than_busy_timeout_waits_and_succeeds(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_extra.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ test_db_lock_longer_than_busy_timeout_is_retryable_and_leaves_no_partial_state _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_db_lock_longer_than_busy_0')
+
+    def test_db_lock_longer_than_busy_timeout_is_retryable_and_leaves_no_partial_state(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_extra.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_________ test_out_of_order_redelivery_never_changes_the_newer_result __________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_out_of_order_redelivery_n0')
+
+    def test_out_of_order_redelivery_never_changes_the_newer_result(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_extra.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ test_process_death_at_each_point_recovers_exactly_once[before_admission_commit] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi0')
+point = 'before_admission_commit'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+___ test_process_death_at_each_point_recovers_exactly_once[after_admission] ____
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi1')
+point = 'after_admission'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ test_process_death_at_each_point_recovers_exactly_once[during_materialization] _
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi2')
+point = 'during_materialization'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+______ test_process_death_at_each_point_recovers_exactly_once[before_ops] ______
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi3')
+point = 'before_ops'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+______ test_process_death_at_each_point_recovers_exactly_once[after_ops] _______
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi4')
+point = 'after_ops'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ test_process_death_at_each_point_recovers_exactly_once[after_domain_effect] __
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi5')
+point = 'after_domain_effect'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_ test_process_death_at_each_point_recovers_exactly_once[during_result_write] __
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi6')
+point = 'during_result_write'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+__ test_process_death_at_each_point_recovers_exactly_once[after_result_write] __
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi7')
+point = 'after_result_write'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+__ test_process_death_at_each_point_recovers_exactly_once[after_result_store] __
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_process_death_at_each_poi8')
+point = 'after_result_store'
+
+    @pytest.mark.parametrize("point", PROCESS_DEATH_POINTS)
+    def test_process_death_at_each_point_recovers_exactly_once(tmp_path, point):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+___________ test_ops_worker_crash_is_not_a_result_and_retry_succeeds ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_ops_worker_crash_is_not_a0')
+
+    def test_ops_worker_crash_is_not_a_result_and_retry_succeeds(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+______________ test_ops_timeout_kills_worker_and_is_not_a_result _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_ops_timeout_kills_worker_0')
+
+    def test_ops_timeout_kills_worker_and_is_not_a_result(tmp_path):
+>       env = build(tmp_path, timeout_seconds=5)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+________ test_retry_budget_exhaustion_is_a_terminal_operational_failure ________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_retry_budget_exhaustion_i0')
+
+    def test_retry_budget_exhaustion_is_a_terminal_operational_failure(tmp_path):
+>       env = build(tmp_path, max_retries=1)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:116: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_________________ test_db_says_result_exists_but_file_is_gone __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_db_says_result_exists_but0')
+
+    def test_db_says_result_exists_but_file_is_gone(tmp_path):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:145: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/test_failure_recovery.py:134: in _completed
+    env = build(tmp_path)
+          ^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+__________________ test_file_exists_but_index_lost_the_result __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_file_exists_but_index_los0')
+
+    def test_file_exists_but_index_lost_the_result(tmp_path):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:155: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/test_failure_recovery.py:134: in _completed
+    env = build(tmp_path)
+          ^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+_____________ test_modified_result_and_modified_effect_fail_closed _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_modified_result_and_modif0')
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x7f4788e1f6f0>, _basetemp=PosixPath('/tmp/pytest-of-runner/pytest-0'), _retention_count=3, _retention_policy='all')
+
+    def test_modified_result_and_modified_effect_fail_closed(tmp_path, tmp_path_factory):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:165: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/test_failure_recovery.py:134: in _completed
+    env = build(tmp_path)
+          ^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+____________ test_wrong_hash_of_referenced_object_fails_before_ops _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_wrong_hash_of_referenced_0')
+
+    def test_wrong_hash_of_referenced_object_fails_before_ops(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+__________ test_reference_changed_after_materialization_fails_closed ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_reference_changed_after_m0')
+
+    def test_reference_changed_after_materialization_fails_closed(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+___________ test_reference_receipt_from_another_request_fails_closed ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_reference_receipt_from_an0')
+
+    def test_reference_receipt_from_another_request_fails_closed(tmp_path):
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:207: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+__________ test_result_metadata_inconsistent_with_index_fails_closed ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_result_metadata_inconsist0')
+
+    def test_result_metadata_inconsistent_with_index_fails_closed(tmp_path):
+>       env, path, work = _completed(tmp_path)
+                          ^^^^^^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:230: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/test_failure_recovery.py:134: in _completed
+    env = build(tmp_path)
+          ^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+________ test_host_process_killed_during_ops_job_recovers_exactly_once _________
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_host_process_killed_durin0')
+
+    def test_host_process_killed_during_ops_job_recovers_exactly_once(tmp_path):
+        """Crash of the process hosting predictor_ops while the worker runs (killed from outside).
+    
+        Windows: the Ops job object kills the worker with its host. Linux: the worker survives
+        as an orphan in its own session and may finish later; either way there must be one
+        logical effect, one result and no second success reported by Ops for another effect.
+        """
+        import subprocess
+        import sys
+        import time
+    
+>       env = build(tmp_path)
+              ^^^^^^^^^^^^^^^
+
+tests/conformance/test_failure_recovery.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+__ test_data_quality_problem_is_an_inconclusive_result_through_the_entrypoint __
+
+tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_data_quality_problem_is_a0')
+
+    def test_data_quality_problem_is_an_inconclusive_result_through_the_entrypoint(tmp_path):
+        raw = panel()
+        raw["dataset_version"] = "conformance-conflict-v1"
+        raw["bars"].append(dict(raw["bars"][100], close=raw["bars"][100]["close"] + 1))
+>       env = build(tmp_path, extra_objects={("dataset", "conflict"): raw})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/conformance/test_pit_adversarial.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/conformance/fixtures.py:207: in build
+    for (kind, name), value in sorted({**objects(), **(extra_objects or {})}.items()):
+                                         ^^^^^^^^^
+tests/conformance/fixtures.py:198: in objects
+    out[("dataset", name.replace("_", "-"))] = dataset_object(name)
+                                               ^^^^^^^^^^^^^^^^^^^^
+tests/conformance/fixtures.py:127: in dataset_object
+    return panel("insufficient", sessions=400)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'insufficient', sessions = 400, seed = 20260924
+
+    def panel(name: str = "positive", *, sessions: int = SESSIONS, seed: int = 20260924) -> dict:
+        """A deterministic stocks-pit-panel/1 object."""
+        cal = calendar(sessions)
+        rng = random.Random(seed)
+        securities, tickers, identities, bars = [], [], [], []
+        drifts = {f"S{i:02d}": -0.0015 + 0.0003 * i for i in range(1, 17)}
+        for i in range(1, 17):
+            sid = f"S{i:02d}"
+            listed = cal[0]
+            listing_at = _at(cal[0], "12:00:00")
+            delisted = delisting_at = None
+            if sid == "S13":  # IPO at session 200 (announced 5 sessions earlier); bars exist before it
+                listed, listing_at = cal[200], _at(cal[195])
+            if sid == "S14":  # delisted at session 400, known two sessions later
+>               delisted, delisting_at = cal[400], _at(cal[402])
+                                         ^^^^^^^^
+E               IndexError: list index out of range
+
+tests/conformance/fixtures.py:77: IndexError
+___________ OperationalEvidenceTests.test_current_complete_evidence ____________
+
+self = <tests.test_operational_evidence.OperationalEvidenceTests testMethod=test_current_complete_evidence>
+
+    def test_current_complete_evidence(self):
+>       self.assertEqual(evidence.verify()['real_rows'], 55986)
+                         ^^^^^^^^^^^^^^^^^
+
+tests/test_operational_evidence.py:13: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/verify_operational_evidence.py:128: in verify
+    current_hashes = _verify_current_code(root, current)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/tmp.Jbqd1Bj3B5/src')
+record = {'schema_version': 'current-operational-evidence/1', 'status': 'LOCAL_VALIDATED_CI_PENDING', 'generated_at': '2026-09-23T04:54:19.000000Z', 'code_text_hash_policy': 'UTF-8 file bytes with CRLF normalized to LF', ...}
+
+    def _verify_current_code(root: Path, record: dict) -> dict[str, str]:
+        hashes = _hashes(record)
+        if set(hashes) != code_paths(root):
+>           raise ValueError("current code population differs from operational evidence")
+E           ValueError: current code population differs from operational evidence
+
+tools/verify_operational_evidence.py:57: ValueError
+============================= slowest 15 durations =============================
+10.55s call     tests/test_h11_total_return.py::test_run_h11_does_not_mutate_shared_config
+7.16s call     tests/test_config.py::test_main_backtest_h_dispatcher_runs
+5.91s call     tests/test_rj_power_gate.py::test_specificity_false_positive_rate_near_nominal
+4.52s call     tests/test_rj_power_gate.py::test_sensitivity_detects_planted_effect
+4.26s call     tests/test_rj_smoke_synthetic.py::test_judge_run_all_families_end_to_end
+2.36s call     tests/test_rj_power.py::test_power_is_monotone_in_effect_size
+1.42s call     tests/test_rj_power.py::test_simulate_power_is_deterministic
+1.38s call     tests/test_h11_total_return.py::test_run_h11_smoke
+1.07s call     tests/test_backtest_m5.py::test_run_smoke
+0.99s call     tests/test_m0_genesis.py::test_stats_block_bootstrap_wider_than_iid_for_autocorrelated
+0.87s call     tests/test_net.py::test_with_retry_recovers_after_transient
+0.84s call     tests/test_h8_double_filter.py::test_run_h8_smoke
+0.78s call     tests/conformance/test_pit_adversarial.py::test_universe_is_deterministic_across_three_fresh_processes
+0.70s call     tests/test_h13_revenue_growth.py::test_run_h13_smoke
+0.63s call     tests/test_stats_pedagio.py::test_paired_resampling_preserves_cross_correlation
+=========================== short test summary info ============================
+FAILED tests/conformance/test_failure_extra.py::test_worker_dies_mid_effect_write_leaves_no_effect_and_retry_produces_one - IndexError: list index out of range
+FAILED tests/conformance/test_failure_extra.py::test_disk_full_on_result_write_stores_nothing_and_retry_stores_once - IndexError: list index out of range
+FAILED tests/conformance/test_failure_extra.py::test_db_lock_shorter_than_busy_timeout_waits_and_succeeds - IndexError: list index out of range
+FAILED tests/conformance/test_failure_extra.py::test_db_lock_longer_than_busy_timeout_is_retryable_and_leaves_no_partial_state - IndexError: list index out of range
+FAILED tests/conformance/test_failure_extra.py::test_out_of_order_redelivery_never_changes_the_newer_result - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_admission_commit] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_admission] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_materialization] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_ops] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_ops] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_domain_effect] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_result_write] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_write] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_store] - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_ops_worker_crash_is_not_a_result_and_retry_succeeds - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_ops_timeout_kills_worker_and_is_not_a_result - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_retry_budget_exhaustion_is_a_terminal_operational_failure - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_db_says_result_exists_but_file_is_gone - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_file_exists_but_index_lost_the_result - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_modified_result_and_modified_effect_fail_closed - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_wrong_hash_of_referenced_object_fails_before_ops - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_reference_changed_after_materialization_fails_closed - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_reference_receipt_from_another_request_fails_closed - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_result_metadata_inconsistent_with_index_fails_closed - IndexError: list index out of range
+FAILED tests/conformance/test_failure_recovery.py::test_host_process_killed_during_ops_job_recovers_exactly_once - IndexError: list index out of range
+FAILED tests/conformance/test_pit_adversarial.py::test_data_quality_problem_is_an_inconclusive_result_through_the_entrypoint - IndexError: list index out of range
+FAILED tests/test_operational_evidence.py::OperationalEvidenceTests::test_current_complete_evidence - ValueError: current code population differs from operational evidence
+ERROR tests/conformance/test_contract_conformance.py::test_e2e_result_is_reread_identically_after_restart - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_idempotency_duplicate_retry_and_conflict - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_future_canary_fails_closed_and_never_leaks - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_temporal_integrity_as_of_mismatch_fails_closed - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_authority_states_stay_separate[case_a-INCONCLUSIVE-INCONCLUSIVE-NO_EDGE] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_authority_states_stay_separate[case_b-NO_EDGE-SUPPORTED-NO_EDGE] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_authority_states_stay_separate[insufficient-CLOSED_INSUFFICIENT_SAMPLE-INSUFFICIENT_SAMPLE-NOT_EVALUATED] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID0] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID1] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID2] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID3] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID4] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID5] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID6] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID7] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID8] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-REQUEST_TYPE_NOT_ALLOWED] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID9] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID10] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_CLOSED0] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_CLOSED1] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ACTIVE0] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ACTIVE1] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ADMITTED] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-REFERENCE_UNAUTHORIZED_OR_UNKNOWN] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-PARAMETER_OUT_OF_BOUNDS] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID11] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID12] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_collector_outside_policy_is_rejected - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_invalid_json_and_duplicate_keys_are_rejected - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_duplicate_after_policy_change_returns_the_stored_result - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_external_intelligence_not_ready_never_becomes_a_signal[matrix-20260921] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_external_intelligence_not_ready_never_becomes_a_signal[counterfactual-vlmo-ready] - IndexError: list index out of range
+ERROR tests/conformance/test_contract_conformance.py::test_collection_only_collects_persists_and_never_feeds_a_trial - IndexError: list index out of range
+27 failed, 974 passed, 34 errors, 71 subtests passed in 78.78s (0:01:18)
+[exit 1]
