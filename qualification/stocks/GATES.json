@@ -1,5 +1,5 @@
 {
-  "note": "Estado corrente da missão stocks (STACK_BASELINE_V1.1, Ops 4.2.2rc1, stocks 0.3.0rc2 61fc017 após C14/ST-F006). Terminal BLOCKED (C7.3): 27 gates PASS, 4 NOT_RUN com 'BLOCKED: D-16 pendente' (E2E, WINDOWS_SMOKE, SOAK, STOCKS_NEGATIVE_CONTROLS), nenhum FAIL, P0=P1=0. Sem QUALIFICATION_ATTESTATION.json até a D-16. Parciais nunca reescritos (C8).",
+  "note": "Estado corrente da missão stocks (STACK_BASELINE_V1.1, Ops 4.2.2rc1, stocks 0.3.0rc2 61fc017) depois da D-16 (run 35983568296, dados reais públicos B3/CVM fixados em qualification/stocks/d16/SOURCES.json): 31 PASS, 0 FAIL, 0 NOT_RUN; P0/P1 abertos = 0; estado terminal QUALIFIED. Parciais nunca reescritos (C8).",
   "common_baseline_id": "STACK_BASELINE_V1.1",
   "supersedes_sha256": null,
   "domain_contract_sha256": "76fa8227dd83eb9a9e74697caa73e4d61c68d207f1df5f94135c76508192d66c",
@@ -59,7 +59,8 @@
     "c14-cleanroom-final",
     "c14-hosted-ci",
     "c14-contract-sign-off",
-    "c14-attestation"
+    "c14-attestation",
+    "d16"
   ],
   "environments": [
     {
@@ -67,11 +68,13 @@
       "python": "3.13",
       "role": "primary",
       "where": "github_actions",
-      "result": "NOT_RUN",
+      "result": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/env.log",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl"
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/env.log",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/core_identity.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/soak.jsonl",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-controls/science/NEGATIVE_CONTROLS_SUMMARY.json"
       ]
     },
     {
@@ -79,11 +82,12 @@
       "python": "3.13",
       "role": "secondary",
       "where": "github_actions",
-      "result": "NOT_RUN",
+      "result": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/env.log",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json"
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/env.log",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/core_identity.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/restart.jsonl"
       ]
     }
   ],
@@ -170,12 +174,20 @@
       "note": "CI de push/PR verde com uv sync --locked no baseline (stocks 4e98a67, core 5a08415, ops 9831b0d) e nos final_commits (stocks 61fc017 no SHA exato por workflow_dispatch e no PR #96); nenhum job pulado. O main 2a18513 falhou (ST-F006, corrigido em 61fc017)."
     },
     "E2E": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json"
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/e2e/outcome_file.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/e2e.log",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/core_identity.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/BUILD_MANIFEST.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/verify_prefilter.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/REAL_ENV.json",
+        "qualification/stocks/E2E_EVIDENCE/d16-linux-primary-real/E2E_SUMMARY.json",
+        "qualification/stocks/d16/SOURCES.json",
+        "qualification/stocks/D16_EVIDENCE_NUMBERS.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. Diagnóstico pela wheel com fixture sintética congelada: 24/24 checagens no Linux e 24/24 no windows-latest (processo → término → processo novo relê o mesmo resultado byte a byte)."
+      "note": "D-16, dado real público (run 35983568296, ubuntu-latest, só final wheels): painel stocks-pit-panel/1 sha256 5a5e410b6106… (fixado em SOURCES.json: True), fontes baixadas no job e conferidas (173/173), pré-filtro neutro em 50 rebalances; entrypoint stocks-research: 10/10 checagens (processo → término → processo novo relê o mesmo resultado; provenance contra admission, journal, Core, Ops, efeito); resultado INCONCLUSIVE (INCONCLUSIVE/NO_EDGE), capital_permission=False."
     },
     "IDEMPOTENCY": {
       "status": "PASS",
@@ -244,21 +256,31 @@
       "note": "81/81 blobs iguais entre truth-map (4e98a67) e final_commit (61fc017), 0 itens novos; 3698/3698 arquivos de dados imutáveis com o mesmo sha256 (re-hash somente leitura)."
     },
     "SOAK": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/soak.jsonl",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-primary/soak.log",
+        "qualification/stocks/QUALIFICATION_PROFILE_STOCKS_V1.json",
         "qualification/stocks/SOAK_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl",
-        "qualification/stocks/QUALIFICATION_PROFILE_STOCKS_V1.json"
+        "qualification/stocks/d16/SOURCES.json",
+        "qualification/stocks/D16_EVIDENCE_NUMBERS.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. Diagnóstico com fixture pela wheel no Linux: 73 chamadas, 17 falhas injetadas, 48 resultados, 0 perdidos/duplicados/violações PIT, 0 trials elegíveis, tolerância zero OK."
+      "note": "D-16, perfil congelado sobre o painel real (run 35983568296, Linux primário): 67 chamadas; 20 ciclos normais, 11 restarts, 5 duplicados, 3/4/3 por classe de falha (crash do Ops/admission/gravação), 3 timeouts, 3 família-não-pronta, 5 coletas COLLECTION_ONLY (CVM VLMO oficial), 0 trial elegível; perdidos 0, inesperados 0, violações PIT 0, contaminação de universo 0, máx. SUCCEEDED por job 1; tolerância zero OK."
     },
     "WINDOWS_SMOKE": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/e2e/E2E_SUMMARY.json",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/e2e/outcome_file.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/restart.jsonl",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/core_identity.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/BUILD_MANIFEST.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/conformance.junit.xml",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-windows-latest/env.log",
+        "qualification/stocks/d16/SOURCES.json",
+        "qualification/stocks/D16_EVIDENCE_NUMBERS.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. O E2E no windows-latest (D-1) também roda no Actions. Diagnóstico com as final wheels: E2E + restart + releitura 24/24, conformidade 87/87."
+      "note": "D-16 no windows-latest × py3.13 (run 35983568296, D-1), só final wheels e o mesmo painel real (sha256 igual ao Linux: True): E2E 10/10; restart em 5 pontos de morte do processo com tolerância zero (OK); conformidade 87/87; métricas iguais às do Linux: True."
     },
     "SHARED_DEPENDENCY_CLEAR": {
       "status": "PASS",
@@ -275,19 +297,23 @@
       "evidence": [
         "qualification/stocks/EVIDENCE_NUMBERS.json",
         "qualification/stocks/scripts/evidence_numbers.py",
-        "qualification/stocks/scripts/write_reports.py"
+        "qualification/stocks/scripts/write_reports.py",
+        "qualification/stocks/D16_EVIDENCE_NUMBERS.json",
+        "qualification/stocks/scripts/d16_finalize.py",
+        "qualification/stocks/scripts/d16_apply.py"
       ],
-      "note": "Todo número dos relatórios sai dos logs brutos (junit, pytest.log, soak.jsonl, E2E_SUMMARY, NEGATIVE_CONTROLS_SUMMARY, core_identity) por scripts versionados; nenhum log editado."
+      "note": "Todo número dos relatórios sai dos logs brutos (junit, pytest.log, soak.jsonl, E2E_SUMMARY, NEGATIVE_CONTROLS_SUMMARY, core_identity) por scripts versionados; nenhum log editado. D-16: números dos 4 gates e das métricas reais tirados dos logs brutos do run 35983568296 por scripts/d16_finalize.py (D16_EVIDENCE_NUMBERS.json)."
     },
     "SECRETS_CLEAN": {
       "status": "PASS",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/secrets/run35955382714/stocks-secrets/evidence_tree.log",
-        "qualification/stocks/RAW_LOGS/secrets/run35955382714/stocks-secrets/stocks_diff.log",
-        "qualification/stocks/RAW_LOGS/secrets/run35955382714/stocks-secrets/gitleaks_checksum.log",
+        "qualification/stocks/RAW_LOGS/secrets/run35986948802/stocks-secrets/evidence_tree.log",
+        "qualification/stocks/RAW_LOGS/secrets/run35986948802/stocks-secrets/stocks_diff.log",
+        "qualification/stocks/RAW_LOGS/secrets/run35986948802/stocks-secrets/gitleaks_checksum.log",
+        "qualification/stocks/RAW_LOGS/secrets/run35986948802/stocks-secrets/stocks_commits_scanned.txt",
         "qualification/stocks/RAW_LOGS/hosted-ci/run_stocks-predictor_35953418753_final_61fc017_dispatch.json"
       ],
-      "note": "gitleaks 8.24.3 (checksum conferido): árvore qualification/stocks e os 7 commits 4e98a67..61fc017 sem achados; job secrets do CI do repo (árvore inteira + controle sintético) verde no final_commit."
+      "note": "gitleaks 8.24.3 (checksum conferido), run 35986948802 no commit 4f138da (depois dos logs brutos da D-16): árvore qualification/stocks (~10,24 MB, inclui RAW_LOGS/d16) sem achados; stocks-predictor 4e98a67..61fc017 (10 commits varridos pelo gitleaks; 13 no intervalo contando 3 merges) sem achados. A nota anterior dizia \"7 commits\", o que não batia com o log (run 35955382714 também diz 10). Job secrets do CI do repo verde no final_commit."
     },
     "CAPITAL_FORBIDDEN": {
       "status": "PASS",
@@ -390,13 +416,19 @@
       "note": "15/15 casos congelados (PIT-01..15), incluindo o obrigatório (PIT_STRICT declarado × HISTORICAL_ONLY efetivo), pela wheel no Linux e no windows-latest; nenhuma violação."
     },
     "STOCKS_NEGATIVE_CONTROLS": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-controls/science/NEGATIVE_CONTROLS_SUMMARY.json",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-controls/science/negative_controls.jsonl",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-controls/science.log",
+        "qualification/stocks/RAW_LOGS/d16/run35983568296/stocks-d16-linux-controls/BUILD_MANIFEST.json",
         "qualification/stocks/NEGATIVE_CONTROLS_REPORT.md",
-        "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/science/NEGATIVE_CONTROLS_SUMMARY.json"
+        "qualification/stocks/d16/SOURCES.json",
+        "qualification/stocks/D16_EVIDENCE_NUMBERS.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. Diagnóstico com fixture sintética pela wheel: labels embaralhados 0/20 SUPPORTED, ranking aleatório 2/20, perturbação de universo 20/20 estável; critérios congelados atendidos na fixture."
+      "note": "D-16, painel real (run 35983568296), 81 execuções pelo entrypoint (referência + 4 controles × 20 seeds congeladas): SUPPORTED com labels embaralhados 0/20 (máx. 2), ranking aleatório 1/20 (máx. 2), ablação temporal IC inferior máx. -38 bps × referência -33 bps, perturbação do universo 20/20 no estado da referência (mín. 16); critérios congelados atendidos."
     }
   },
-  "terminal_state": "BLOCKED"
+  "terminal_state": "QUALIFIED",
+  "final_result": "QUALIFIED"
 }

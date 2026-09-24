@@ -1,0 +1,60 @@
+{
+ "schema": "stocks/D16_REAL_PROTOCOL/1",
+ "frozen_source": "qualification/stocks/FROZEN_PARAMETERS.json → research_circuit (real_protocol_when_d16, statistics, costs, baseline, minimum_sample_periods, minimum_price_pit_class, qualification_hypothesis) e negative_controls; nenhum valor novo além do mapeamento de rebalance abaixo",
+ "universe": {
+  "universe_id": "stocks:UNIVERSE-D16-REAL",
+  "top_n": 60,
+  "liquidity_lookback_sessions": 126,
+  "min_history_sessions": 252,
+  "rebalance_every_sessions": 21,
+  "identity": "SECURITY_ID_ISSUER_CNPJ_DEDUP"
+ },
+ "rebalance_mapping": {
+  "frozen": "real_protocol_when_d16.rebalance = \"fim de mês\" (config.yaml [H1-FROZEN] universe.rebalance_frequency = monthly)",
+  "compiled_handler": "stocks.handlers.pit_factor_backtest.v1 (61fc017) só aceita universe.rebalance_every_sessions (research_pit.rebalance_sessions: a cada N pregões depois do warmup); não há rebalance por fim de mês no código congelado",
+  "used": "rebalance_every_sessions = 21 (o mesmo valor do conformance_protocol congelado e da régua de 1 mês da H1: skip_days 21, block_length 21)",
+  "declared_before_execution": true,
+  "finding": "ST-F007 (P2): operacionalização do rebalance mensal; mudar exigiria código do stocks-predictor fora do contrato (C14) — decisão do dono"
+ },
+ "features": {"feature_version": "momentum-252-21-v1", "feature": "MOMENTUM_12_1", "lookback": 252, "skip": 21},
+ "model": {
+  "handler": "stocks.handlers.pit_factor_backtest.v1",
+  "model_version": "top-quintile-ew-v1",
+  "quantile": 0.2,
+  "take": "top",
+  "minimum_sample": 24,
+  "hypothesis_family": "stocks-qualification-momentum-12-1-pit",
+  "minimum_price_pit_class": "PIT_RECONSTRUCTED",
+  "external_intelligence_bindings": [],
+  "statistics": {"scheme": "stationary", "block_length": 3, "n_boot": 2000, "confidence": 0.95, "seed": 42},
+  "selection_path": {"family": "stocks-qualification-momentum-12-1-pit", "candidate_set": ["top-quintile-ew-v1"],
+                     "selection_metric": "predeclared", "selected_candidate": "top-quintile-ew-v1"}
+ },
+ "baseline": {"baseline_id": "stocks:BASELINE-EW-UNIVERSE", "method": "EQUAL_WEIGHT_UNIVERSE"},
+ "cost_model": {"b3_fee_pct": 0.0003, "spread_slippage_pct": 0.0015},
+ "request": {
+  "research_id": "stocks:RESEARCH-D16-REAL",
+  "hypothesis_id": "stocks:QUAL-PIT-MOM-001",
+  "collection_hypothesis_id": "stocks:QUAL-EI-COLLECTION-001",
+  "target": "NEXT_REBALANCE_RETURN",
+  "fee_bps": 3,
+  "slippage_bps": 15,
+  "max_securities": 5000,
+  "minimum_pit_class": "PIT_RECONSTRUCTED",
+  "collection_minimum_pit_class": "PIT_STRICT"
+ },
+ "policy": {
+  "policy_id": "stocks-d16-real",
+  "policy_version": 1,
+  "limits": {"max_pending_requests": 1000, "max_request_bytes": 16384, "max_parameter_bytes": 1024,
+             "max_concurrency": 1, "cpu_seconds": 3600, "memory_mb": 8192, "disk_mb": 20480,
+             "timeout_seconds": 1800, "max_retries": 2, "max_priority": "NORMAL"},
+  "hang_env_timeout_seconds": 240,
+  "note": "limites de operador do ambiente real (o Ops só aplica timeout_seconds); o ambiente de hang do soak usa timeout curto e maior que uma execução normal"
+ },
+ "negative_controls": {
+  "seeds": [101, 202, 303, 404, 505, 606, 707, 808, 909, 1010, 1111, 1212, 1313, 1414, 1515, 1616, 1717, 1818, 1919, 2020],
+  "kinds": ["SHUFFLED_LABELS", "TEMPORAL_ABLATION", "FEATURE_ABLATION", "UNIVERSE_PERTURBATION"],
+  "criteria": "FROZEN_PARAMETERS.json negative_controls.criteria (sem mudança)"
+ }
+}

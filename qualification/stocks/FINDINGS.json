@@ -82,6 +82,30 @@
         "qualification/stocks/RAW_LOGS/c14-rc2/ci_main_2a18513_failure.json"
       ],
       "fix_commit": "61fc017256ffea815ae96bbe02b847dccdb395cc"
+    },
+    {
+      "id": "ST-F007",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "d16",
+      "title": "Rebalance mensal congelado (\"fim de mês\") não existe no handler compilado; D-16 usa a cada 21 pregões",
+      "description": "FROZEN_PARAMETERS.research_circuit.real_protocol_when_d16 diz rebalance = \"fim de mês\" (config.yaml [H1-FROZEN] rebalance_frequency monthly). O handler stocks.handlers.pit_factor_backtest.v1 de 61fc017 só aceita universe.rebalance_every_sessions (research_pit.rebalance_sessions: a cada N pregões depois do warmup). Para rodar a D-16 sem mudar código do stocks-predictor (C14), o protocolo real usa rebalance_every_sessions = 21 (mesmo valor do conformance_protocol congelado e da régua de ~1 mês da H1), declarado em qualification/stocks/d16/PROTOCOL_REAL.json antes de qualquer execução com dado real. Não afeta PIT nem os gates operacionais; muda a data exata dos rebalances da sonda de qualificação (stocks:QUAL-PIT-MOM-001, que não é hipótese científica). Decisão do dono: aceitar a operacionalização ou exigir rebalance por fim de mês no stocks-predictor (C14: publish-candidates, cleanroom-final e fases que exercitam o código).",
+      "evidence": [
+        "qualification/stocks/d16/PROTOCOL_REAL.json",
+        "qualification/stocks/D16_RUNBOOK.md"
+      ]
+    },
+    {
+      "id": "ST-F008",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "d16",
+      "title": "Limitações do painel real público (B3/CVM) declaradas: retorno só-preço e lacunas de eventos/identidade",
+      "description": "O painel stocks-pit-panel/1 da D-16 (qualification/stocks/d16/build_real_panel.py) usa só fontes públicas por URL oficial + sha256. Limitações, todas declaradas antes da execução e listadas no BUILD_MANIFEST.json de cada run: (a) retorno só-preço como a rota (b) da H1: proventos em dinheiro/JCP, restituição de capital (ex.: CASH3 2024), cisões (ex.: PCAR3 2023-08-23) e bonificação paga em outra classe (ex.: CYRE3, RENT3, AXIA em dez/2025) não são ajustados; só desdobramento, grupamento e bonificação da mesma classe, pelos fatores oficiais da B3, entram como revisões PIT; (b) a API de eventos da B3 não traz alguns eventos antigos (ex.: desdobramento de CASH3 em 2021) e responde vazio para raízes renomeadas (ex.: MRFG, VIIA, ELET); (c) troca de ISIN vira novo security_id (ex.: VIIA3→BHIA3 no grupamento de dez/2023), sem continuidade de histórico; (d) códigos de negociação mal preenchidos na FCA por algumas companhias: identidade de reserva pelo codeCVM da B3 (mapa atual, não datado), e 4 ISIN seguem sem CNPJ (MRFG3 fica fora do universo); (e) o COTAHIST não informa deslistagem: saída do universo por inatividade (janela de liquidez) e retorno até a última barra. Nenhuma dessas limitações antecipa informação (available_at ≤ decisão em todo registro, checado pelo Core); elas tornam as métricas econômicas aproximadas. Decisão do dono: aceitar para a qualificação ou exigir fonte de eventos/proventos completa (ex.: base comprada, que não pode ir para o Actions público — D-11).",
+      "evidence": [
+        "qualification/stocks/d16/build_real_panel.py",
+        "qualification/stocks/D16_RUNBOOK.md"
+      ]
     }
   ]
 }
