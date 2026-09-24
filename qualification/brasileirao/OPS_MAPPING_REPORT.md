@@ -37,6 +37,25 @@
 O job de pesquisa é **pelo menos tão rígido** quanto a sombra em todos os campos (mais rígido em
 `provenance_mode`, `expected_artifact`, `economic_key`, `job_type` e `exit_statuses`).
 
-## 3. Prova em runtime
+## 3. Prova em runtime (Ops da wheel congelada 4.2.2rc1)
 
-Evidência: preenchida na fase `e2e`/`idempotency-failure` (ver §4).
+| O que | Veio do Ops? | Evidência |
+|---|---|---|
+| jobs file v3 aceito pelo `FileJobConfigSource` do Ops e executado por `python -m predictor_ops run` | sim (o executor só escreve o arquivo e chama o CLI) | `RAW_LOGS/ops-mapping/windows_local_real_e2e/ops-job.1.json` (comando = módulo da wheel, `provenance_mode strict`, `job_type FORECAST_GENERATION`, `capital_permission false`, `runtime.root` no estado de qualificação) |
+| `ops_run_id`, estado terminal, exit code, início/fim | sim: registro terminal escrito pelo `run_job` do Ops em `events.jsonl` | `…/events.jsonl` (`SUCCEEDED`, exit 0, `run_id`); o resultado autoritativo cita o mesmo `ops_run_id` (E2E real: check `ops_run_id_matches`) |
+| provenance da biblioteca | sim: `collect_provenance(strict=True)` verificou o RECORD da wheel instalada | `events.jsonl` → `library_provenance {kind: wheel, mode: strict, identity_status: VALIDATED}` |
+| heartbeat | sim | `…/heartbeat.json`, `heartbeat_at` no registro |
+| lock e idempotência econômica | sim: `economic_lock_id` = sha256 do `economic_key`; registro de idempotência `SUCCEEDED` | `…/idempotency_record.json`; reexecução do mesmo pedido: `SKIPPED economic_operation_already_claimed` (conformidade F05 `after_ops`) |
+| lock ocupado | sim: `SKIPPED lock_not_acquired` | conformidade F14 |
+| timeout | sim: o Ops mata a árvore do worker, `exit 124`, `termination.reason = timeout`, `run_status FAILED` | conformidade F11 (`test_ops_timeout_kills_the_worker_and_is_not_a_result`), Linux primário, windows-latest e Windows local |
+| crash do worker | sim: estado terminal FAILED | conformidade F10 |
+
+As mesmas checagens rodaram no E2E sintético do Linux primário e do windows-latest
+(`RAW_LOGS/cleanroom-final/run35963501898/*/e2e/E2E_SUMMARY.json`: 26/26 cada) e no E2E real do
+Windows local (`RAW_LOGS/windows-smoke/rc2/e2e_real/E2E_SUMMARY.json`: 25/25): `ops_single_success`,
+`ops_run_id_matches`, `ops_job_type_forecast_generation`, `ops_strict_wheel_provenance`,
+`ops_heartbeat_recorded`, `ops_economic_lock`, `jobs_file_v3_module_command`,
+`jobs_file_strict_no_capital`.
+
+Importar classe do Ops sem rodar o mecanismo não conta: o circuito não importa `JobConfig` nem
+`run_job` (só os testes usam `EconomicJobKey`/`economic_lock_id` para calcular onde fica o lock).

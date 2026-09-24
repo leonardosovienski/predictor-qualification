@@ -140,7 +140,7 @@ def pytestlog(paths: list[Path]) -> dict:
     pattern = re.compile(r"^=*\s*(.*\b(passed|failed)\b.* in [0-9.]+s.*?)\s*=*$")
     for path in paths:
         lines = [ln for ln in path.read_text(encoding="utf-8", errors="replace").splitlines() if pattern.match(ln.strip())]
-        out[path.as_posix()] = pattern.match(lines[-1].strip()).group(1) if lines else None
+        out[path.as_posix()] = [pattern.match(ln.strip()).group(1) for ln in lines]
     return out
 
 
@@ -152,7 +152,7 @@ def soak(path: Path) -> dict:
     return {
         "file": path.as_posix(),
         "process_calls": len(processes),
-        "by_fault": {f or "none": sum(1 for r in processes if r.get("fault") == f) for f in sorted({r.get("fault") or "" for r in processes})},
+        "by_fault": {f or "none": sum(1 for r in processes if (r.get("fault") or "") == f) for f in sorted({r.get("fault") or "" for r in processes})},
         "summary": {k: summary.get(k) for k in ("requests_with_result", "stored_results", "lost", "unexpected", "domain_effects",
                                                   "ops_success_per_job_max", "ops_jobs", "reread_mismatch", "reconcile_exit", "violations")},
         "zero_tolerance_ok": verdict.get("zero_tolerance_ok"),
