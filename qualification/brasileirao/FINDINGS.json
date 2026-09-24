@@ -42,6 +42,123 @@
         "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json",
         "qualification/shared/STACK_BASELINE_V1.1.json"
       ]
+    },
+    {
+      "id": "BR-F004",
+      "severity": "P0",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Motor de benchmark treina com jogo ainda em andamento (vazamento de futuro)",
+      "description": "evaluator.py:99 e serving_evaluator.py:178/286 filtram o histórico de ajuste por kickoff < horizonte (kickoff do alvo), não pela disponibilidade do resultado. Jogo que começou antes do alvo e ainda não terminou entra no ajuste dos parâmetros globais (a, b, alpha, rho) com o placar final. No snapshot real: 2 de 20 refits na cadência padrão do benchmark_predictor (retrain_every=100) e 381 de 1956 com retrain_every=1. backtest_walkforward.py tem a mesma classe: calibração e fração de 1T cortadas por DATA UTC (r[0] < first_date), então um jogo de 23:00Z do dia anterior entra no bloco que começa 00:30Z. Elo não é afetado (por time). Os relatórios protegidos (reports/benchmark_*) foram produzidos com este motor e ficam como estão (C15.1).",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/truth-map/probe_inprogress_leak_real.json",
+        "qualification/brasileirao/scripts/probe_inprogress_leak.py",
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ]
+    },
+    {
+      "id": "BR-F005",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Janelas de Elo/calibração ancoradas no último jogo do banco em scripts de pesquisa",
+      "description": "backtest_walkforward.py:118 e scripts ad-hoc (auditoria, calib_empate, calib_ou, confound, cosh_free, elasticidade, eval_walkforward, exp_a_calib, exp_f_rho, bootstrap_calibration_window) recortam a janela por rows[-1] (data do último jogo do banco): um dado futuro decide o recorte das previsões históricas. Sem efeito numérico hoje (dados desde 2021, janela de 6 anos). Os scripts ad-hoc não são referenciados por CI, testes nem entrypoint.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/truth-map/date_sites_e14f339.json"
+      ]
+    },
+    {
+      "id": "BR-F006",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Proveniência da sombra não identifica o dado usado na captura",
+      "description": "sombra_diaria.consumer_provenance grava o sha256 de uma cópia do banco ANTES do payload; o payload ingere (escreve) e só depois captura. O hash não descreve o dado lido pela captura (input_scope declara: payload may observe later commits). O PIT do pick está protegido (validate_pick exige predicted_at e odds_captured_at < kickoff). O circuito de pesquisa não herda isso: o handler lê só o snapshot com hash.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ],
+      "owner_action": "decidir se a sombra deve registrar também o hash do banco no momento da captura (mudança operacional, fora do circuito)"
+    },
+    {
+      "id": "BR-F007",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "bet_log.add_bet ignora kickoff sem fuso em vez de rejeitar",
+      "description": "bet_log.py:333-341: kickoff sem fuso gera TypeError na comparação e o código zera kickoff/late, registrando a aposta sem a checagem de aposta atrasada. O prompt diz que bet_log rejeita timestamp sem fuso; vale só para a banca (_timestamp). Fora do circuito de pesquisa.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ]
+    },
+    {
+      "id": "BR-F008",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Exemplos de agendador com caminhos inexistentes ou de checkout",
+      "description": "scheduler.prospective.example.json aponta scripts/collect_market_research.py, scripts/prospective_readiness.py e python -m src.bet_log (não existem); jobs.market-research.example.json roda .venv/Scripts/python.exe brasileirao_scripts/<script>.py (checkout, schema 1). Ambos são exemplos (activation example-only).",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ]
+    },
+    {
+      "id": "BR-F009",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Wheel publicada 0.2.0 difere do commit com a mesma versão",
+      "description": "A release v0.2.0 (2a862b4c…, tag 4dbd353) difere de e14f339 em 8 arquivos com a mesma versão 0.2.0 (C4). Resolve com release nova na fase publish-candidates.",
+      "evidence": [
+        "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
+      ]
+    },
+    {
+      "id": "BR-F010",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "baseline",
+      "title": "Teste de conformidade do pré-registro pulado por atestado de poder vencido",
+      "description": "tests/test_prereg_serving_vs_climatologia.py::test_registro_conforma_ao_schema_do_core faz pytest.skip quando data/trials.harness_attestation.json expira (expirou em 2026-09-19): pulado no CI de e14f339 e no Windows local. Renovar exige rodar attest_rps_power e alterar arquivo protegido; fora do escopo.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35824710652.log",
+        "qualification/brasileirao/RAW_LOGS/baseline/windows_suite_e14f339.log"
+      ],
+      "owner_action": "renovar o atestado (arquivo protegido) ou tornar o teste independente do relógio"
+    },
+    {
+      "id": "BR-F011",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Plugin reporta versão fixa 0.2.0",
+      "description": "ecosystem_plugin.health() devolve version 0.2.0 escrita no código, não a versão da distribuição instalada.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json"
+      ]
+    },
+    {
+      "id": "BR-F012",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Circuito de pesquisa da Etapa A não existe",
+      "description": "Nenhum entrypoint lê pedido de pesquisa em arquivo; não há admission, handler da allowlist, resultado com core/ops/domain facts nem releitura autoritativa (NOT_PRESENT). Construído na fase contract-admission.",
+      "evidence": [
+        "qualification/brasileirao/ARCHITECTURE_TRUTH_MAP.json",
+        "qualification/brasileirao/RAW_LOGS/truth-map/import_graph_e14f339.json"
+      ]
+    },
+    {
+      "id": "BR-F013",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "truth-map",
+      "title": "Ops no baseline: head do main (31d3939) ≠ commit da release 4.2.2rc1 (9831b0d)",
+      "description": "O STACK_BASELINE_V1.1 registra 9831b0d (branch do PR #26); o main do predictor-ops tem o squash 31d3939 com árvore idêntica (git diff --stat vazio). A wheel 4.2.2rc1 foi construída de 9831b0d. Sem efeito: a identidade usada é a wheel.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/baseline/ops_9831b0d_vs_31d3939.diffstat",
+        "qualification/brasileirao/STACK_BASELINE.json"
+      ]
     }
   ]
 }
