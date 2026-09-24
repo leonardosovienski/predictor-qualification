@@ -15,3 +15,65 @@ ruff check exit=0
 ruff format exit=0
 0 errors, 0 warnings, 0 informations
 pyright exit=0
+            self.stdout_thread = \
+                    threading.Thread(target=self._readerthread,
+                                     args=(self.stdout, self._stdout_buff))
+            self.stdout_thread.daemon = True
+            self.stdout_thread.start()
+        if self.stderr and not hasattr(self, "_stderr_buff"):
+            self._stderr_buff = []
+            self.stderr_thread = \
+                    threading.Thread(target=self._readerthread,
+                                     args=(self.stderr, self._stderr_buff))
+            self.stderr_thread.daemon = True
+            self.stderr_thread.start()
+    
+        # Start writer thread to send input to stdin, unless already
+        # started.  The thread writes input and closes stdin when done,
+        # or continues in the background on timeout.
+        if self.stdin and not hasattr(self, "_stdin_thread"):
+            self._stdin_thread = \
+                    threading.Thread(target=self._writerthread,
+                                     args=(input,))
+            self._stdin_thread.daemon = True
+            self._stdin_thread.start()
+    
+        # Wait for the writer thread, or time out.  If we time out, the
+        # thread remains writing and the fd left open in case the user
+        # calls communicate again.
+        if hasattr(self, "_stdin_thread"):
+            self._stdin_thread.join(self._remaining_time(endtime))
+            if self._stdin_thread.is_alive():
+                raise TimeoutExpired(self.args, orig_timeout)
+    
+        # Wait for the reader threads, or time out.  If we time out, the
+        # threads remain reading and the fds left open in case the user
+        # calls communicate again.
+        if self.stdout is not None:
+            self.stdout_thread.join(self._remaining_time(endtime))
+            if self.stdout_thread.is_alive():
+                raise TimeoutExpired(self.args, orig_timeout)
+        if self.stderr is not None:
+            self.stderr_thread.join(self._remaining_time(endtime))
+            if self.stderr_thread.is_alive():
+>               raise TimeoutExpired(self.args, orig_timeout)
+E               subprocess.TimeoutExpired: Command '['C:\\QUALIFICACAO\\repos\\brasileirao-predictor\\.venv\\Scripts\\brasileirao-research.exe', '--state', 'C:\\QUALIFICACAO\\runtime\\brasileirao\\t\\brq-ewr36_yk\\s', 'process', '--policy', 'C:\\QUALIFICACAO\\runtime\\brasileirao\\t\\brq-ewr36_yk\\policy.json', '--objects', 'C:\\QUALIFICACAO\\runtime\\brasileirao\\t\\brq-ewr36_yk\\obj', 'C:\\QUALIFICACAO\\runtime\\brasileirao\\t\\brq-ewr36_yk\\req\\REQ-ADM-14.json']' timed out after 600 seconds
+
+..\..\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\subprocess.py:1669: TimeoutExpired
+============================== warnings summary ===============================
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[dixon_coles]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[dixon_coles]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\.venv\Lib\site-packages\scipy\optimize\_numdiff.py:710: RuntimeWarning: invalid value encountered in subtract
+    df = [f_eval - f0 for f_eval in f_evals]
+
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[serving]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[serving]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\brasileirao_predictor\serving_evaluator.py:218: RuntimeWarning: fit_goal_model: parametro b=4.0000 cravado no bound [-1, 4] — verifique o formato do history (diff, hs, as)
+    self.params = model.fit_goal_model(hist_cal, sample_weights=weights)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID6]
+1 failed, 2305 passed, 1 skipped, 30 deselected, 4 warnings, 30 subtests passed in 2682.59s (0:44:42)
+pytest exit=1
+# git status after: 0 entries

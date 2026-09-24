@@ -191,6 +191,19 @@
         "qualification/brasileirao/RAW_LOGS/windows-smoke/real/result_2023-OU25-climatology.json",
         "qualification/brasileirao/EVIDENCE_NUMBERS.json"
       ]
+    },
+    {
+      "id": "BR-F016",
+      "severity": "P2",
+      "status": "ACCEPTED_LIMITATION",
+      "phase": "contract-admission",
+      "title": "Modern Standby do host Windows interrompe execuções longas (ambiental)",
+      "description": "Na suíte Windows de cff7a3a, test_admission_rejects_before_any_execution[SCHEMA_INVALID6] estourou o timeout de 600 s do harness com 1039 s de relógio; o log de energia mostra o host entrando em espera às 05:20:21Z e saindo às 05:37:36Z, exatamente durante o teste (a suíte começou às 05:18:57Z). Sozinho o teste passa 3/3. Mesma classe da CR-F018 do crypto. Mitigação: execuções locais longas sob keep_awake.ps1 (SetThreadExecutionState por processo, sem mudar configuração de energia).",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/contract-admission/windows_suite_cff7a3a.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/contract-admission/windows_power_events_506_507.log",
+        "qualification/brasileirao/RAW_LOGS/contract-admission/schema_invalid6_rerun_x3.log"
+      ]
     }
   ]
 }
