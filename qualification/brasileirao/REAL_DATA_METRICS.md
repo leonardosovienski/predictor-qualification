@@ -3,6 +3,14 @@
 **Diagnóstico, não gate e não autorização de capital (C22).** Nenhum gate do braço mede edge; estas
 métricas respondem "o modelo de serving congelado ganha dinheiro?" com o circuito qualificado.
 
+> **BR-F018 (P1, aberto, noite D-16 de 2026-09-24):** os números abaixo são do **Windows local**. O mesmo
+> circuito, com a mesma wheel, o mesmo lock e o mesmo snapshot (sha256 `31f30a4d…`), no **Linux do PC 2**
+> dá os mesmos estados em 20/20 pedidos, mas números diferentes (probabilidades até 0,6 p.p.; até 5 apostas
+> a mais ou a menos; ROI líquido 2021 O/U +1,16% → −0,05%; em 2022 o IC95 do ROI líquido fica inteiro
+> abaixo de zero no Linux, em 1X2 e O/U). O conjunto de informação é idêntico; a diferença nasce no refit
+> do modelo de gols, sensível ao último bit. Tabela do Linux no fim deste arquivo; análise em
+> `D16_PC2_REPORT.md`. A conclusão (sem edge demonstrável, `NO_EDGE`) vale nos dois.
+
 * Dados: cópia do snapshot preservado `matches__20260908T193132732597Z__787a29d9a12e.sqlite3`
   (sha256 da fonte `53fe7350…`, cópia `31f30a4d…`, capturada por `sqlite3.backup` só leitura),
   `as_of` 2026-09-08T19:31:32Z. Não versionado (D-11).
@@ -71,3 +79,48 @@ métricas respondem "o modelo de serving congelado ganha dinheiro?" com o circui
   negativo em todas as temporadas de 1X2 (−4,8% a −10,1%, IC95 abaixo de zero).
 * **Conclusão:** não há edge demonstrável no modelo de serving congelado. Estado econômico `NO_EDGE`
   onde avaliado; nenhuma recomendação de aposta sai daqui. `capital_permission = false`.
+
+## Linux do PC 2 (D-16, 2026-09-24) — mesmos pedidos, mesma wheel, mesmo snapshot
+
+Evidência bruta (a D-9 ainda não admite o PC 2 como Linux primário). Fonte:
+`RAW_LOGS/d16-pc2-20260924/d16/evidence_numbers_pc2.json` → `metrics.pc2_real` (tirado dos resultados
+`show` do PC 2, que carregam o dado e ficam só no PC 2 — sha256 em `d16/private_manifest.sha256` — por
+`scripts/evidence_numbers.py`; tabela por `scripts/render_metrics.py`, cópia em
+`d16/real_metrics_pc2_table.md`). Comparação campo a campo com o Windows:
+`d16/compare_real_windows_pc2.json` (métricas iguais em 4/20; estados iguais em 20/20).
+
+| Pedido (temporada-alvo-baseline) | Estado | n | Score modelo | Score baseline | Δ médio [IC95] | Apostas | ROI bruto/aposta [IC95] | ROI líquido/aposta [IC95] | Líquido após imposto (u) |
+|---|---|---|---|---|---|---|---|---|---|
+| 2021-1X2-climatology | INCONCLUSIVE | 250 | +0.2097 | +0.2139 | -0.0043 [-0.0109, +0.0027] | 121 | -0.0935 [-0.3449, +0.1719] | -0.1058 [-0.3539, +0.1561] | -12.80 |
+| 2021-1X2-market | REFUTED | 250 | +0.2097 | +0.1942 | +0.0154 [+0.0061, +0.0247] | 121 | -0.0935 [-0.3449, +0.1719] | -0.1058 [-0.3539, +0.1561] | -12.80 |
+| 2021-OU25-climatology | INCONCLUSIVE | 250 | +0.4732 | +0.4767 | -0.0035 [-0.0082, +0.0014] | 83 | +0.0088 [-0.1886, +0.2151] | -0.0005 [-0.1960, +0.2034] | -0.05 |
+| 2021-OU25-market | INCONCLUSIVE | 250 | +0.4732 | +0.4609 | +0.0123 [-0.0031, +0.0289] | 83 | +0.0088 [-0.1886, +0.2151] | -0.0005 [-0.1960, +0.2034] | -0.05 |
+| 2022-1X2-climatology | NO_EDGE | 380 | +0.2094 | +0.2234 | -0.0140 [-0.0213, -0.0068] | 177 | -0.2154 [-0.4198, -0.0108] | -0.2262 [-0.4277, -0.0242] | -40.04 |
+| 2022-1X2-market | INCONCLUSIVE | 380 | +0.2094 | +0.2034 | +0.0060 [-0.0006, +0.0133] | 177 | -0.2154 [-0.4198, -0.0108] | -0.2262 [-0.4277, -0.0242] | -40.04 |
+| 2022-OU25-climatology | INCONCLUSIVE | 380 | +0.4896 | +0.4938 | -0.0043 [-0.0093, +0.0004] | 151 | -0.1365 [-0.2917, +0.0061] | -0.1447 [-0.2982, -0.0034] | -21.84 |
+| 2022-OU25-market | INCONCLUSIVE | 379 | +0.4888 | +0.4816 | +0.0072 [-0.0062, +0.0204] | 151 | -0.1365 [-0.2917, +0.0061] | -0.1447 [-0.2982, -0.0034] | -21.84 |
+| 2023-1X2-climatology | INCONCLUSIVE | 380 | +0.2176 | +0.2243 | -0.0067 [-0.0150, +0.0018] | 176 | -0.1614 [-0.4016, +0.0927] | -0.1731 [-0.4093, +0.0772] | -30.46 |
+| 2023-1X2-market | REFUTED | 380 | +0.2176 | +0.2108 | +0.0068 [+0.0017, +0.0121] | 176 | -0.1614 [-0.4016, +0.0927] | -0.1731 [-0.4093, +0.0772] | -30.46 |
+| 2023-OU25-climatology | INCONCLUSIVE_DATA_QUALITY | 380 | — | — | — — | — | — — | — — | — |
+| 2023-OU25-market | INCONCLUSIVE_DATA_QUALITY | 249 | — | — | — — | — | — — | — — | — |
+| 2024-1X2-climatology | NO_EDGE | 380 | +0.2110 | +0.2213 | -0.0103 [-0.0175, -0.0027] | 167 | -0.1403 [-0.3598, +0.0962] | -0.1521 [-0.3684, +0.0813] | -25.41 |
+| 2024-1X2-market | REFUTED | 378 | +0.2111 | +0.1983 | +0.0128 [+0.0074, +0.0185] | 167 | -0.1403 [-0.3598, +0.0962] | -0.1521 [-0.3684, +0.0813] | -25.41 |
+| 2024-OU25-climatology | INCONCLUSIVE_DATA_QUALITY | 380 | — | — | — — | — | — — | — — | — |
+| 2024-OU25-market | INCONCLUSIVE_DATA_QUALITY | 246 | — | — | — — | — | — — | — — | — |
+| 2026-1X2-climatology | INCONCLUSIVE | 256 | +0.2096 | +0.2193 | -0.0098 [-0.0213, +0.0016] | 87 | -0.1360 [-0.3999, +0.1418] | -0.1471 [-0.4078, +0.1272] | -12.79 |
+| 2026-1X2-market | INCONCLUSIVE | 256 | +0.2096 | +0.2033 | +0.0063 [-0.0008, +0.0140] | 87 | -0.1360 [-0.3999, +0.1418] | -0.1471 [-0.4078, +0.1272] | -12.79 |
+| 2026-OU25-climatology | INCONCLUSIVE | 256 | +0.5039 | +0.5035 | +0.0004 [-0.0068, +0.0085] | 109 | -0.0399 [-0.2443, +0.1832] | -0.0499 [-0.2521, +0.1707] | -5.44 |
+| 2026-OU25-market | INCONCLUSIVE | 256 | +0.5039 | +0.5039 | +0.0000 [-0.0130, +0.0140] | 109 | -0.0399 [-0.2443, +0.1832] | -0.0499 [-0.2521, +0.1707] | -5.44 |
+
+| Diagnóstico abertura (temporada-alvo) | Apostas na abertura | CLV médio | IC95 (normal iid) | ROI líquido na abertura |
+|---|---|---|---|---|
+| 2021-1X2-climatology | 130 | -0.0879 | [-0.1146, -0.0612] | +0.0447 |
+| 2021-OU25-climatology | 87 | -0.0433 | [-0.0597, -0.0269] | -0.0393 |
+| 2022-1X2-climatology | 169 | -0.0840 | [-0.1071, -0.0610] | +0.0290 |
+| 2022-OU25-climatology | 139 | -0.0463 | [-0.0595, -0.0331] | -0.0916 |
+| 2023-1X2-climatology | 164 | -0.0548 | [-0.0721, -0.0374] | -0.1131 |
+| 2023-OU25-climatology | 58 | -0.0183 | [-0.0440, +0.0073] | -0.0449 |
+| 2024-1X2-climatology | 155 | -0.0485 | [-0.0691, -0.0278] | -0.1045 |
+| 2024-OU25-climatology | 39 | +0.0112 | [-0.0326, +0.0549] | -0.1226 |
+| 2026-1X2-climatology | 100 | -0.1011 | [-0.1259, -0.0762] | +0.0196 |
+| 2026-OU25-climatology | 90 | +0.0252 | [+0.0023, +0.0481] | -0.1480 |

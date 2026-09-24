@@ -44,3 +44,28 @@ versão (`04b42c9`) para o main, para versão do main = wheel publicada.
 - `RAW_LOGS/contract-admission/windows_suite_cff7a3a.log`: 1 teste perdido para o Modern Standby do host (BR-F016); o mesmo teste passa 3/3 sozinho.
 - Primeira execução da conformidade no Windows (`conformance_windows_first_run_tail.log`): o pipe guardou só o fim da saída; os detalhes foram reproduzidos teste a teste.
 - `RAW_LOGS/secrets/scan_evidence_and_br_diff.json`: a primeira varredura (251 arquivos, o mesmo único alerta revisado) foi sobrescrita por mim por uma segunda (298 arquivos, depois dos relatórios novos) antes do commit. Os parciais `contract-admission` a `soak` citam o sha256 da primeira e por isso não conferem (C7.1 regra 3) nesse item; não foram reescritos (C8). A attestation cita a varredura final, gravada em arquivo novo.
+
+## Noite D-16 no PC 2 (2026-09-24; branch `brasileirao/d16-20260924`)
+
+Nenhuma mudança no brasileirao-predictor, no core-predictor nem no predictor-ops (alvo congelado `04b42c9`
+/ 0.3.0rc2 intacto). Só o repositório de evidência mudou:
+
+| O quê | Por quê |
+|---|---|
+| `scripts/soak.py`: modo `--real-dataset/--real-dataset-sha256/--real-as-of` | o `SOAK_REPORT.md` mandava rodar o perfil com o dado real "sem mudar perfil nem vetores", mas o driver só aceitava o dataset sintético. O modo real mantém perfil, classes de falha, seeds, canário, comparadores, política e objetos JSON; troca só o dataset (cópia real + variantes derivadas; pares reais de mesmo kickoff). Caminho sintético inalterado |
+| `scripts/pc2_d16_runtime.sh` (novo) | análogo Linux do `windows_runtime.sh`/`runtime_cleanroom.sh` para o PC 2: dado copiado e conferido, runtime só com as final wheels, conformidade, `real_env.py`, E2E real, soak real, separação evidência × privado, números e varreduras |
+| `scripts/pc2_export.py` (novo) | tira do diretório privado só o que não carrega registros do dado; sha256 do resto |
+| `scripts/no_data_rows_check.py` (novo) | prova que a evidência não tem linhas do dado (D-11/D-16): marcadores da cópia em `ro&immutable`, saída só com contagens |
+| `scripts/pc2_suite.sh` (novo) | suíte completa no PC 2 (método do `ci.yml`, como o `win_suite.sh`) |
+| `scripts/stage_a_recheck.py` (novo) | reconferência independente da Etapa A (evidências × último parcial, hashes, vetores, lock, wheels) |
+| `scripts/compare_real_metrics.py`, `scripts/fit_sensitivity.py` (novos) | comparação Windows × Linux do dado real e diagnóstico da causa (BR-F018) |
+| `RAW_LOGS/d16-pc2-20260924/**` | saída bruta sem dado (C20; `-text` pelo `.gitattributes`) |
+| `FINDINGS.json`: BR-F018 (P1, aberto) | o número de um resultado depende do SO |
+| `GATES.json`: `BLOCKERS_ZERO` → `FAIL` (BR-F018); `E2E`/`SOAK` continuam `NOT_RUN` com a nota da D-16 e a evidência do PC 2 | |
+| `SOAK_REPORT.md`, `REAL_DATA_METRICS.md`, `D16_PC2_REPORT.md` (novo) | números do PC 2 (de `evidence_numbers_pc2.json`), BR-F018 e a emenda proposta da D-9/schema |
+| `ATTESTATION_PARTIAL_d16-pc2.json` (novo) | checkpoint (C8) com o estado depois da noite; nenhum parcial anterior reescrito |
+
+Regressão do `soak.py` no Actions: run 35980611463 (`279f3a6`) `success`; soak sintético idêntico ao da Etapa A
+(`RAW_LOGS/d16-pc2-20260924/actions-run35980611463/soak_regression.json`).
+
+Erros de método da noite: ver `D16_PC2_REPORT.md` §3.

@@ -1,0 +1,97 @@
+{
+ "allowed_competitions": [
+  "Brasileir\u00e3o S\u00e9rie A"
+ ],
+ "handlers": {
+  "WALKFORWARD_FORECAST_EVALUATION": "brasileirao.handlers.walkforward_forecast_evaluation.v1"
+ },
+ "hypotheses": {
+  "brasileirao:HQ-SERVING-BASELINE": {
+   "hypothesis_family": "brasileirao:serving-baseline",
+   "purpose": "walk-forward do modelo de serving congelado contra baseline, sem retunar"
+  }
+ },
+ "limits": {
+  "cpu_seconds": 3600,
+  "disk_mb": 4096,
+  "max_concurrency": 1,
+  "max_parameter_bytes": 32768,
+  "max_pending_requests": 100,
+  "max_priority": "NORMAL",
+  "max_request_bytes": 65536,
+  "max_retries": 2,
+  "memory_mb": 4096,
+  "timeout_seconds": 3600
+ },
+ "owner": "BRASILEIRAO_OPERATOR",
+ "policy_id": "brasileirao-research-real",
+ "policy_version": 1,
+ "protected_hypotheses": [
+  "brasileirao:H8",
+  "brasileirao:H9",
+  "brasileirao:H14",
+  "brasileirao:H15",
+  "brasileirao:A1"
+ ],
+ "registry": [
+  {
+   "content_hash": "9a22e56d73ebb28c63449b135692432a2828737973f0471ef4782b5c853872e4",
+   "kind": "model",
+   "name": "serving-baseline",
+   "revision_id": "serving-baseline-r1",
+   "version": "1"
+  },
+  {
+   "content_hash": "2e807c91ad11a87b2f1e072781cae6d6417178f9a879304f06b03dfa5f3d31de",
+   "kind": "features",
+   "name": "elo-home-advantage",
+   "revision_id": "elo-home-advantage-r1",
+   "version": "1"
+  },
+  {
+   "content_hash": "ccc436493352aad63715193fb150268b5b2417283d5151dcbc216ca653c69dc3",
+   "kind": "cost_model",
+   "name": "close-slippage-tax",
+   "revision_id": "close-slippage-tax-r1",
+   "version": "1"
+  },
+  {
+   "content_hash": "a046703607897d14435b4d918fb71b73c592d7a960938a76fbdcfcb54b8048b6",
+   "kind": "odds",
+   "name": "sofascore-close",
+   "revision_id": "sofascore-close-r1",
+   "version": "1"
+  },
+  {
+   "content_hash": "6f0b86a75e5d807e4469f5c799ecbe07fd07fc0a529b9376f55e886db389f0d9",
+   "kind": "baseline",
+   "name": "climatology",
+   "revision_id": "climatology-r1",
+   "version": "1"
+  },
+  {
+   "content_hash": "81c333072737470def67b462c961ea15cc4245faedabfeadffc8b76723835050",
+   "kind": "baseline",
+   "name": "market",
+   "revision_id": "market-r1",
+   "version": "1"
+  },
+  {
+   "content_hash": "227663b7578a66bdc773645fa78e9c8d35a0462d65585959a90eefbbdef70a96",
+   "kind": "dataset",
+   "name": "real-20260908",
+   "revision_id": "real-20260908-r1",
+   "version": "1"
+  }
+ ],
+ "requester_trust": "LOCAL_FILE_ONLY",
+ "schema_version": "BrasileiraoResearchAdmissionPolicyV1",
+ "season_policy": {
+  "2021": "DEVELOPMENT",
+  "2022": "DEVELOPMENT",
+  "2023": "DEVELOPMENT",
+  "2024": "VALIDATION",
+  "2025": "HOLDOUT_SEALED",
+  "2026": "EXPLORATORY"
+ }
+}

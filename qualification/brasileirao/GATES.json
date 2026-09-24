@@ -101,11 +101,13 @@
   ],
   "gates": {
     "BLOCKERS_ZERO": {
-      "status": "PASS",
+      "status": "FAIL",
       "evidence": [
-        "qualification/brasileirao/FINDINGS.json"
+        "qualification/brasileirao/FINDINGS.json",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/compare_real_windows_pc2.json",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/fit_sensitivity.json"
       ],
-      "note": "P0 = 0 e P1 = 0 abertos. Corrigidos na missão: BR-F004 (P0, vazamento de jogo em andamento nos motores de benchmark e no walk-forward), BR-F003, BR-F009, BR-F012, BR-F014, BR-F015 (P1). P2 abertos: BR-F002 (branches, fecha na limpeza final), BR-F005 a BR-F008, BR-F010."
+      "note": "P1 aberto: BR-F018 (resultado numérico depende do SO; achado na noite D-16 do PC 2, 2026-09-24). P0 = 0. Até a Etapa A: PASS (P0 = P1 = 0). Corrigidos na missão: BR-F004 (P0), BR-F003, BR-F009, BR-F012, BR-F014, BR-F015 (P1). P2 abertos: BR-F005 a BR-F008, BR-F010."
     },
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
@@ -168,9 +170,18 @@
       "evidence": [
         "qualification/brasileirao/E2E_EVIDENCE/linux-primary-synthetic/E2E_SUMMARY.json",
         "qualification/brasileirao/E2E_EVIDENCE/windows-latest-synthetic/E2E_SUMMARY.json",
-        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json"
+        "qualification/brasileirao/E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/e2e_real/E2E_SUMMARY.json",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/e2e_real/ops/events.jsonl",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/conformance.junit.xml",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/gate_tests_pc2.json",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/env.log",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/install.log",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/core_identity.json",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/dataset_sha256.log",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/real/runs.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico: E2E pela wheel no Linux e no windows-latest com vetores sintéticos 26/26 checagens cada; E2E com dado real no Windows local 25/25 (processo, término, processo novo relê o mesmo resultado; cadeia de provenance)."
+      "note": "BLOCKED: evidência bruta com dado real pronta no PC 2; aguarda emenda da D-9 e do schema (C14). Pelos critérios congelados o bruto teria sido PASS: no PC 2 (Ubuntu 24.04/WSL2, Python 3.13.15), venv limpo só com as final_wheels (lock com --require-hashes; wheel 70344f22 conferida), entrypoint brasileirao-research com pedido em arquivo sobre a cópia 31f30a4d (sha256 igual antes e depois, fonte e cópia): 20/20 pedidos reais exit 0 e E2E real 25/25 checagens (processo, término, processo novo relê o mesmo resultado; cadeia de provenance até o Ops e o Core); conformidade 89/89 e todos os gates verdes no mesmo runtime. Diagnóstico anterior: E2E sintético 26/26 no Linux e no windows-latest; E2E real 25/25 no Windows local."
     },
     "IDEMPOTENCY": {
       "status": "PASS",
@@ -250,9 +261,12 @@
       "evidence": [
         "qualification/brasileirao/SOAK_REPORT.md",
         "qualification/brasileirao/QUALIFICATION_PROFILE_BR_V1.json",
-        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/soak.jsonl"
+        "qualification/brasileirao/RAW_LOGS/cleanroom-final/run35963501898/brasileirao-runtime-linux-primary/soak.jsonl",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/soak.jsonl",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/evidence_numbers_pc2.json",
+        "qualification/brasileirao/RAW_LOGS/d16-pc2-20260924/d16/dataset_sha256.log"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico sintético no Linux (perfil BR_V1 congelado): 71 chamadas, 49 resultados, 0 perdidos, duplicados ou violações, reconcile limpo, tolerância zero ok."
+      "note": "BLOCKED: evidência bruta com dado real pronta no PC 2; aguarda emenda da D-9 e do schema (C14). Pelos critérios congelados o bruto teria sido PASS: perfil QUALIFICATION_PROFILE_BR_V1 inteiro pelo brasileirao-research da wheel, com a cópia real 31f30a4d como base e variantes derivadas dela (canário depois do cutoff, 5 permutações com as seeds congeladas; pares reais de mesmo kickoff): 71 chamadas de processo, 49 resultados = 49 guardados = 49 efeitos, 0 perdidos, 0 inesperados, 0 releituras divergentes, máximo 1 SUCCEEDED do Ops por job, reconcile limpo, 0 violações, tolerância zero ok. Diagnóstico anterior: soak sintético no Linux (Actions) com os mesmos números."
     },
     "WINDOWS_SMOKE": {
       "status": "PASS",
