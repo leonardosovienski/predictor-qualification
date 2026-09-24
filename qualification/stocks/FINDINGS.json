@@ -1,0 +1,36 @@
+{
+  "schema": "stocks/FINDINGS/1",
+  "severity_scale": "C6 (P0/P1/P2)",
+  "status_values": [
+    "OPEN",
+    "OPEN_BLOCKED",
+    "FIXED",
+    "CLOSED_NOT_A_DEFECT",
+    "ACCEPTED_BY_OWNER"
+  ],
+  "findings": [
+    {
+      "id": "ST-F001",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "baseline",
+      "title": "Runtime do Stocks quebra no Windows: ZoneInfo('America/Sao_Paulo') sem base IANA",
+      "description": "stocks_predictor/external_intelligence.py:36 cria SAO_PAULO = ZoneInfo('America/Sao_Paulo') no import. No Windows não há base de fusos do sistema e tzdata não é dependência (pyproject/uv.lock), então o import levanta ZoneInfoNotFoundError. stocks_predictor.operations importa external_intelligence: o entrypoint operacional (python -m stocks_predictor) e a coleta de External Intelligence não abrem no Windows. Reproduzido na suíte do baseline no windows-latest: 2 erros de coleta (tests/test_external_intelligence.py, tests/test_operational_store.py) e a suíte interrompida. Linux não afetado (tzdata do sistema).",
+      "evidence": [
+        "qualification/stocks/RAW_LOGS/baseline/run35942985460/stocks-suite-windows-latest/pytest.log"
+      ]
+    },
+    {
+      "id": "ST-F002",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "freeze-parameters",
+      "title": "Branches remotas antigas no stocks-predictor, uma com registro de qualificação dentro do repo de produto",
+      "description": "git ls-remote em 2026-09-24: além de main, 8 branches (claude/stocks-core-ops-qual-1kvivt, dependabot/github_actions/actions/checkout-7, dependabot/pip/hatchling-1.32.3, external-intelligence-cda-entrega, external-intelligence-v1, external-intelligence-v1-ci-validation, hygiene/HYG-009-core-range, hygiene/HYG-015-retire-v1-workflows). claude/stocks-core-ops-qual-1kvivt (4cc7557) gravou qualification/stocks/FINDINGS.json (ABORTED no C0) no repositório de produto, contra o C0 (nada é gravado em repo de produto). Duas são PRs abertas do dependabot (#93, #94). O agente não apaga branch com commits fora do main sem o dono.",
+      "evidence": [
+        "qualification/stocks/RAW_LOGS/freeze-parameters/ls_remote_stocks.log"
+      ],
+      "owner_action": "decidir o destino das branches não mescladas (ver relatório final)"
+    }
+  ]
+}

@@ -1,0 +1,243 @@
+{
+  "schema": "stocks/FROZEN_PARAMETERS/1",
+  "phase": "freeze-parameters",
+  "stage": "A",
+  "branch": "stocks",
+  "code": "STOCKS",
+  "envelope_version": "NONE",
+  "common_baseline": "STACK_BASELINE_V1.1",
+  "common_baseline_note": "D-17 (APPROVED): predictor-ops 4.2.2rc1 corrige a SHARED-005; a missão stocks usa Ops 4.2.2rc1 desde o início (C14 da D-17 aplicado antes de qualquer execução).",
+  "identity": {
+    "common_core_sha256": "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1",
+    "attestation_schema_sha256": "3594e35044626264a18270ee4e079e653e3b940f1e7a72d36f2b70972f5bf970",
+    "mission_prompt": "prompts/prompt_etapa_a_stocks_rev8.md",
+    "mission_prompt_sha256": "ae515983f18567af0f11f16660bf326e0fe93b78551876fd1ad3853e5ffea011",
+    "auditor_principles_sha256": "4f3bea0e709bb525da57de9ec29a886e8c08d30206970093e040ee6c361369f9",
+    "evidence_main_at_c0": "2e0c3b5fee136b1e79bbc200e0b41e84c416ae1c",
+    "decisions_json_sha256": "e510d75a774f2a417b395e099ab667e32afc61452e494ceee970f3c943b2be07",
+    "hygiene_json_sha256": "d6e3eeed8baa978cd828bebf0ef8539bb2af258104748600cd1d162cbd098701",
+    "stack_baseline_v1_1_sha256": "6e081ac5fed0d50bd2c6d8f874f8e04a02591ba7130e4862260de4a7fc0aa4e8"
+  },
+  "c0": {
+    "core_sha256_matches_prompt": true,
+    "schema_sha256_matches": true,
+    "hygiene_all_done": ["HYG-001", "HYG-002", "HYG-003", "HYG-004", "HYG-005", "HYG-006", "HYG-007", "HYG-008", "HYG-009", "HYG-010", "HYG-011", "HYG-012", "HYG-015"],
+    "hyg_009_on_stocks_main": "pyproject.toml: predictor-core>=3.2.1,<4 (4e98a67)",
+    "hyg_015_on_stocks_main": ".github/workflows/cain-export.yml: on: workflow_dispatch apenas (4e98a67)",
+    "present_on_main": ["qualification/DECISIONS.json", "qualification/HYGIENE.json", "qualification/shared/STACK_BASELINE_V1.json", "qualification/shared/STACK_BASELINE_V1.1.json", "qualification/shared/SHARED-002/CLEANROOM_REPORT.md", "qualification/shared/SHARED_ISSUES.json"],
+    "result": "PASS"
+  },
+  "repos": {
+    "stocks-predictor": {"role": "muda nesta missão", "clone": "C:\\STOCKS\\work\\qualification\\stocks-predictor", "baseline_head": "4e98a67b68c55888a4788663f3d5bf0899966cb4"},
+    "core-predictor": {"role": "congelado (só wheel publicada v3.2.1)", "baseline_head": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d", "wheel_url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl", "wheel_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"},
+    "predictor-ops": {"role": "congelado (só wheel publicada v4.2.2rc1, D-17)", "release_commit": "9831b0d5e727972b1d85ff48be14ffa58677898b", "wheel_url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl", "wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3"}
+  },
+  "decisions_cited": {
+    "D-1": "WINDOWS_SMOKE do Stocks no GitHub Actions windows-latest × py3.13; o Windows local não recebe instalação",
+    "D-5": "um agente por missão, sem subagentes",
+    "D-6": "conta do dono via gh; sem merge nem push em main",
+    "D-7": "predictor-core >=3.2.1,<4",
+    "D-9": "Linux primário = GitHub Actions ubuntu-latest × py3.13; VM na nuvem sob demanda; só cópias hash-verificadas dos dados",
+    "D-10": "cópia de trabalho da evidência em C:\\STOCKS\\work\\qualification\\",
+    "D-11": "repositório de evidência público; nada de segredo nem dado sem direito de redistribuição",
+    "D-12": "contrato aprovado por merge; Etapa B só nos adapter_paths",
+    "D-13": "integração V1 extinta; cain-research fora das dependências do domínio",
+    "D-15": "jobs de CI fora de lock saem do push/PR",
+    "D-17": "predictor-ops 4.2.2rc1 (SHARED-005 corrigida), STACK_BASELINE_V1.1 e C14 nas missões que usam o Ops",
+    "D-16": {
+      "status": "PENDENTE",
+      "evidence": "ausente de qualification/DECISIONS.json em 2e0c3b5fee136b1e79bbc200e0b41e84c416ae1c",
+      "owner_instruction": "o que depender de dados reais no Linux/Actions fica NOT_RUN com note 'BLOCKED: D-16 pendente'; fixture sintética serve como diagnóstico, nunca como PASS (mesmo padrão do crypto)"
+    }
+  },
+  "d16_dependency_rule": {
+    "note": "Interpretação congelada antes de qualquer execução, no mesmo padrão do crypto. Vale até D-16 ser decidida no main; decisão nova = C14 (refazer as fases afetadas).",
+    "real_data_required_for_pass": [
+      "E2E (Linux primário): o resultado precisa sair do dataset B3/CVM real, não de fixture",
+      "WINDOWS_SMOKE: é o E2E no windows-latest (D-1), também no GitHub Actions; sem runtime local do Stocks não há outra via para dado real",
+      "SOAK: perfil congelado sobre dado real no Linux primário",
+      "STOCKS_NEGATIVE_CONTROLS: controles só significam algo sobre o dado real"
+    ],
+    "code_property_gates_with_frozen_vectors": "Gates que provam propriedade do código com vetores adversariais congelados (ADMISSION, IDEMPOTENCY, RESTART_RECOVERY, FAILURE_INJECTION, FUTURE_CANARY, STOCKS_PIT_ADVERSARIAL, STOCKS_UNIVERSE_IDENTITY, TEMPORAL_INTEGRITY, STOCKS_EXTERNAL_INTELLIGENCE_AXES, STOCKS_COLLECTION_MODE, AUTHORITY_SEPARATION, PROVENANCE, CORE_PARTICIPATION, OPS_RUNTIME) usam fixtures sintéticas congeladas pelo runtime suportado — o prompt §4 permite fixture sintética congelada no CI; é o mesmo tratamento que o crypto deu a FUTURE_CANARY e CRYPTO_SPLIT_BRAIN_CORRUPTION.",
+    "linux_with_synthetic_fixture": "para os 4 gates acima, roda como DIAGNÓSTICO (para achar defeitos); nunca fecha gate",
+    "economic_metrics": "nenhuma métrica econômica real é medida sem D-16 (não há runtime do Stocks no Windows local, D-1/regra do repo); métricas de fixture não são métricas econômicas",
+    "real_data_source_when_d16": "a ser definido na D-16 (candidatos: séries COTAHIST públicas da B3 baixadas no host com sha256; C:\\STOCKS\\data e DADOS_STOCKS.zip* nunca saem desta máquina sem decisão do dono)"
+  },
+  "environments": {
+    "primary": {"os": "Linux", "python": "3.13", "host": "GitHub Actions ubuntu-latest (D-9)"},
+    "secondary": {"os": "Windows", "python": "3.13", "host": "GitHub Actions windows-latest (D-1)"},
+    "local_windows": "nenhuma instalação, nenhum venv; só git/gh e scripts stdlib do repositório de evidência (C:\\QUALIFICACAO\\tools\\python só executa scripts do repositório de evidência, nunca o stocks-predictor)"
+  },
+  "phases": [
+    "freeze-parameters", "baseline", "truth-map", "dependency-identity-baseline",
+    "cleanroom-baseline", "contract-admission-ops-entrypoint", "dependency-identity-final",
+    "publish-candidates", "cleanroom-final", "e2e", "pit-universe-canary-negative",
+    "idempotency-failure", "windows-smoke", "hosted-ci", "soak", "contract-sign-off",
+    "attestation"
+  ],
+  "suites_before_after_each_change": {
+    "workflow": ".github/workflows/stocks-suite.yml (repositório de evidência), alvo em qualification/stocks/suite_target.json",
+    "environments": ["ubuntu-latest × 3.13", "windows-latest × 3.13"],
+    "install": "uv sync --locked --all-extras",
+    "plus": "CI do próprio stocks-predictor (ci.yml, ubuntu 3.13/3.14) no PR e no main",
+    "raw_logs": "qualification/stocks/RAW_LOGS/<fase>/run<id>/<ambiente>/"
+  },
+  "shared_dependencies": {
+    "SHARED-003": {"wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3", "verdict": "test_only, blocking=false (missão crypto)", "file": "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json"},
+    "SHARED-004": {"wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3", "verdict": "test_only, blocking=false (missão crypto)", "file": "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json"},
+    "SHARED-005": {"wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3", "verdict": "resolvida na 4.2.2rc1 (D-17), não bloqueante para esta wheel", "file": "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json"},
+    "rule": "falha nova reproduzida em Core/Ops vai para SHARED_ISSUES.json (C13) e para o dono; nunca contornada no domínio"
+  },
+  "protected_set_initial": {
+    "identity": "hash do blob git no commit baseline 4e98a67b68c55888a4788663f3d5bf0899966cb4; fora do git, sha256",
+    "git_paths": [
+      "RESEARCH_FREEZE.md",
+      "experiments/BIG_WINNER_*/frozen_signals/**",
+      "experiments/BIG_WINNER_IMPROVEMENT_PROGRAM_V1/V2_FINAL_FREEZE.json",
+      "experiments/BIG_WINNER_IMPROVEMENT_PROGRAM_V1/V2_SELECTION_FREEZE.yaml",
+      "trials.json", "trials_v2.json", "trials.harness_attestation.json",
+      "EXTERNAL_INTELLIGENCE_TRIAL_READINESS_MATRIX.json",
+      "EXTERNAL_INTELLIGENCE_TRIAL_READINESS_PROTOCOL.json",
+      "research/session-20260907/deliverables/historical-protected-integrity.json",
+      "research/session-20260907/deliverables/real-integration-protected-integrity.json",
+      "research/session-20260907/scripts/verify_history_protected.py",
+      "research/session-20260907/scripts/verify_real_protected.py"
+    ],
+    "immutable_data_sha256": ["C:\\STOCKS\\DADOS_STOCKS.zip", "C:\\STOCKS\\DADOS_STOCKS.zip.001", "C:\\STOCKS\\DADOS_STOCKS.zip.002", "C:\\STOCKS\\data\\** (inclui CATALOG.json)"],
+    "plus": "tudo que esses documentos declarem congelado (resolvido em truth-map → PROTECTED_SET.json)",
+    "extra_checks": ["research/session-20260907/scripts/verify_history_protected.py", "research/session-20260907/scripts/verify_real_protected.py"]
+  },
+  "expected_scientific_state": {
+    "note": "Reconfirmar no truth-map; nenhuma hipótese é promovida nem reaberta nesta missão.",
+    "embargo_original": ["stocks:H7", "stocks:H9", "stocks:H10", "stocks:H12", "stocks:H13"],
+    "paused": ["stocks:H17", "stocks:H18", "stocks:H19"],
+    "stocks:H17": "INCONCLUSIVE_DATA_QUALITY",
+    "historical_ledger": "stocks:H1..H22 e predictor-rj são registro histórico; o circuito de pesquisa nunca abre trial nova para elas (admission: HYPOTHESIS_CLOSED)",
+    "capital_authorized": false
+  },
+  "external_intelligence": {
+    "source": "EXTERNAL_INTELLIGENCE_TRIAL_READINESS_MATRIX.json (21/09, blob no baseline)",
+    "eligibility_rule": "elegibilidade para trial vem SÓ do campo readiness; o nome da chave (eligible_families) não concede nada",
+    "effective_pit_rule": "o estado PIT efetivo é protocol_effective_PIT, nunca database_declared_PIT",
+    "families_expected_not_ready": ["B3_LENDING", "CVM_VLMO", "CVM_BUYBACK", "CVM_CDA"],
+    "support_only": ["CVM_ENTREGA", "CVM_FCA_IDENTITY"],
+    "ineligible": ["CVM_IPE_METADATA"],
+    "axes": ["ingestion", "pit_storage", "qa", "capacity", "continuous_collection", "trial_eligibility", "model_use", "contract_use"],
+    "axes_independent": "um eixo pronto não promove outro (coletado ≠ PIT_STRICT ≠ elegível)",
+    "modes": {"COLLECTION_ONLY": "coleta, valida, persiste e monitora; nunca alimenta trial, ranking, portfólio ou capital", "TRIAL_CONSUMPTION": "só família READY com todos os requisitos congelados E ligada ao protocolo; senão NOT_READY"},
+    "expected_ready_families": 0,
+    "expected_eligible_trials_while_none_ready": 0
+  },
+  "research_circuit": {
+    "domain_prefix": "stocks",
+    "request_schema": "stocks-research-request/1",
+    "result_schema": "stocks-research-result/1",
+    "requester_trust": "LOCAL_FILE_ONLY",
+    "entrypoint_script": "stocks-research",
+    "request_types": {"BACKTEST_PIT_FACTOR": "stocks.handlers.pit_factor_backtest.v1", "COLLECT_EXTERNAL_INTELLIGENCE": "stocks.handlers.external_collection.v1"},
+    "qualification_hypothesis": {"id": "stocks:QUAL-PIT-MOM-001", "family": "stocks-qualification-momentum-12-1-pit", "purpose": "sonda de qualificação do circuito; não é hipótese científica; reusa declaradamente o protocolo de momentum 12-1 da H1 sem reabri-la"},
+    "result_states": ["WATCH_NO_CAPITAL", "NO_EDGE", "INCONCLUSIVE", "REFUTED", "NOT_READY", "CLOSED_INSUFFICIENT_SAMPLE", "INCONCLUSIVE_DATA_QUALITY", "FAILED_OPERATIONAL", "COLLECTION_RECORDED"],
+    "success_states": "nenhum; WATCH_NO_CAPITAL é o máximo e nunca concede capital",
+    "pit_inequality": "todo registro usado numa decisão em t tem available_at ≤ t; todo registro do dataset tem available_at ≤ as_of (data_cutoff); available_at ≥ o instante do fato (sessão/efetivação)",
+    "minimum_price_pit_class": "PIT_RECONSTRUCTED",
+    "costs": {"source": "config.yaml execution (H1-FROZEN, reuso declarado)", "b3_fee_pct": 0.0003, "spread_slippage_pct": 0.0015, "one_way": "execution.one_way_cost", "turnover": "execution.equal_weight_turnover_cost"},
+    "baseline": "EW_UNIVERSE: carteira equiponderada do universo PIT em cada rebalance, mesmos custos de giro",
+    "statistics": {"module": "predictor_core.measurement.bootstrap.bootstrap_ci", "scheme": "stationary", "block_length": 3, "n_boot": 2000, "confidence": 0.95, "seed": 42, "statistic": "média por período"},
+    "scientific_rule": "SUPPORTED se IC95 do excesso BRUTO (estratégia − baseline) > 0; REFUTED se < 0; senão INCONCLUSIVE",
+    "economic_rule": "WATCH só se SUPPORTED e IC95 do excesso LÍQUIDO > 0; senão NO_EDGE",
+    "minimum_sample_periods": 24,
+    "conformance_protocol": {"universe_top_n": 10, "liquidity_lookback_sessions": 20, "min_history_sessions": 40, "momentum_lookback": 60, "momentum_skip": 5, "rebalance_every_sessions": 21, "quantile": 0.2, "take": "top"},
+    "real_protocol_when_d16": {"universe_top_n": 60, "liquidity_lookback_sessions": 126, "min_history_sessions": 252, "momentum_lookback": 252, "momentum_skip": 21, "rebalance": "fim de mês", "quantile": 0.2, "take": "top", "note": "valores [H1-FROZEN] de config.yaml, reuso declarado"}
+  },
+  "future_canary": {
+    "token": "FUTURE_CANARY_STOCKS_001",
+    "placement": ["barra com available_at depois do cutoff (dataset)", "barra de sessão ≤ t com available_at > t (dentro do walk-forward)", "evento de ticker/identidade com available_at > cutoff"],
+    "search_in": ["snapshot/objeto do dataset admitido", "features", "universo", "ranking", "entrada do modelo", "trial", "artefato (efeito)", "resultado", "outcome"],
+    "expected": "dataset com canário depois do cutoff → TEMPORAL_INTEGRITY_VIOLATION (LookaheadError do Core), sem trial nem resultado; canário antes de ficar disponível nunca muda universo/ranking/carteira; qualquer ocorrência antes do cutoff = P0"
+  },
+  "pit_adversarial_vectors": {
+    "expected_if_violated": "uma violação basta para FAIL",
+    "cases": [
+      {"id": "PIT-01", "case": "constituinte do futuro (listing_available_at > t)", "expected": "fora do universo em t"},
+      {"id": "PIT-02", "case": "ticker do futuro (evento de ticker efetivo ≤ t, available_at > t)", "expected": "em t vale o ticker anterior; identidade (security_id) inalterada"},
+      {"id": "PIT-03", "case": "delistado omitido", "expected": "presente no universo enquanto existia e a saída não era conhecida; retorno até a última barra e depois caixa"},
+      {"id": "PIT-04", "case": "IPO antes da listagem (barras antes de listed_on)", "expected": "barras anteriores à listagem ignoradas; fora do universo antes da listagem conhecida"},
+      {"id": "PIT-05", "case": "CNPJ/ticker futuro (evento de identidade com available_at > t)", "expected": "em t vale a identidade anterior"},
+      {"id": "PIT-06", "case": "documento CVM (identidade) com available_at posterior", "expected": "ignorado até available_at"},
+      {"id": "PIT-07", "case": "entrega atrasada (barra da sessão d disponível só em d+k)", "expected": "não usada em t < d+k"},
+      {"id": "PIT-08", "case": "backfill (barra antiga inserida depois)", "expected": "não usada antes de available_at"},
+      {"id": "PIT-09", "case": "republicação (mesma sessão, nova revisão)", "expected": "em t vale a última revisão com available_at ≤ t"},
+      {"id": "PIT-10", "case": "revisão da fonte (valor corrigido depois)", "expected": "decisão em t usa o valor conhecido em t"},
+      {"id": "PIT-11", "case": "first_seen/available_at corrompido (available_at antes do fato, ausente ou inválido)", "expected": "TEMPORAL_INTEGRITY_VIOLATION, sem trial"},
+      {"id": "PIT-12", "case": "HISTORICAL_ONLY promovido a PIT_STRICT (declarado × efetivo)", "expected": "vale o estado efetivo; nunca consumido para trial"},
+      {"id": "PIT-13", "case": "registro oficial duplicado", "expected": "idêntico: deduplicado sem efeito; divergente: INCONCLUSIVE_DATA_QUALITY"},
+      {"id": "PIT-14", "case": "conflito de identidade (mesmo security_id com dois CNPJ no mesmo instante; mesmo ticker em dois security_id)", "expected": "INCONCLUSIVE_DATA_QUALITY"},
+      {"id": "PIT-15", "case": "caso obrigatório: família com PIT_STRICT declarado e HISTORICAL_ONLY efetivo na matriz", "expected": "pipeline usa HISTORICAL_ONLY; TRIAL_CONSUMPTION → NOT_READY"}
+    ]
+  },
+  "universe_identity_checks": [
+    "mesma entrada + mesmo as_of = mesma lista e mesmo hash do universo (3 processos novos)",
+    "entradas/saídas só por eventos com available_at ≤ as_of",
+    "delistados presentes quando existiam",
+    "troca de ticker e de CNPJ preserva a identidade (security_id)"
+  ],
+  "negative_controls": {
+    "applicability": "sobre dado real (D-16); com fixture sintética = diagnóstico",
+    "seeds": [101, 202, 303, 404, 505, 606, 707, 808, 909, 1010, 1111, 1212, 1313, 1414, 1515, 1616, 1717, 1818, 1919, 2020],
+    "controls": {
+      "SHUFFLED_LABELS": "retornos futuros embaralhados entre ativos dentro de cada período (seed)",
+      "TEMPORAL_ABLATION": "sinal calculado com os dados deslocados para depois do rótulo não é permitido; ablação = sinal defasado em 1 rebalance (seed irrelevante)",
+      "FEATURE_ABLATION": "sinal de momentum substituído por ranking aleatório (seed)",
+      "UNIVERSE_PERTURBATION": "20% do universo PIT removido ao acaso em cada rebalance (seed)"
+    },
+    "criteria": {
+      "SHUFFLED_LABELS": "SUPPORTED em no máximo 2 de 20 seeds; mais que isso = investigar (P1 até causa)",
+      "FEATURE_ABLATION": "SUPPORTED em no máximo 2 de 20 seeds",
+      "TEMPORAL_ABLATION": "reportado; nunca melhora o IC inferior do excesso bruto em mais de 50% sem investigação",
+      "UNIVERSE_PERTURBATION": "estado científico igual ao não perturbado em ≥ 16 de 20 seeds; senão = resultado frágil (reportado)"
+    },
+    "never": "resultado estável com labels embaralhados é investigado, nunca comemorado"
+  },
+  "authority_cases": {
+    "min_cycles_each": 3,
+    "CASO_A": "Ops SUCCEEDED / Core INCONCLUSIVE / Stocks NO_EDGE",
+    "CASO_B": "excesso bruto > 0 / excesso líquido ≤ 0 → nunca WATCH",
+    "CASO_C": "Ops FAILED ou TIMEOUT → NOT_EVALUATED (ciência e economia), FAILED_OPERATIONAL depois do budget",
+    "never": "Ops ok ⇒ ciência ok ⇒ edge ⇒ capital"
+  },
+  "failure_injection_points": [
+    {"id": "F-ADM-1", "point": "before_admission_commit", "kind": "crash da admission (transação aberta)"},
+    {"id": "F-ADM-2", "point": "after_admission", "kind": "crash depois do commit da admission"},
+    {"id": "F-MAT-1", "point": "during_materialization", "kind": "crash da materialização"},
+    {"id": "F-OPS-1", "point": "before_ops", "kind": "crash do host antes do Ops"},
+    {"id": "F-OPS-2", "point": "ops_worker_crash", "kind": "crash do job do Ops (worker morre)"},
+    {"id": "F-OPS-3", "point": "ops_worker_slow + kill do host", "kind": "crash do host durante o job do Ops"},
+    {"id": "F-OPS-4", "point": "after_ops", "kind": "crash depois do Ops"},
+    {"id": "F-TMO-1", "point": "ops_worker_hang", "kind": "timeout do Ops (kill da árvore)"},
+    {"id": "F-ART-1", "point": "ops_worker_partial_effect", "kind": "crash na gravação do artefato (efeito parcial)"},
+    {"id": "F-ART-2", "point": "after_domain_effect", "kind": "crash depois do artefato"},
+    {"id": "F-RES-1", "point": "during_result_write", "kind": "crash na gravação do resultado (arquivo parcial)"},
+    {"id": "F-RES-2", "point": "after_result_write", "kind": "crash depois do arquivo, antes do índice"},
+    {"id": "F-RES-3", "point": "after_result_store", "kind": "crash depois do índice, antes do fechamento"},
+    {"id": "F-DUP-1", "kind": "pedido duplicado (mesmo idempotency_key e conteúdo, client_ref diferente)"},
+    {"id": "F-ORD-1", "kind": "pedido fora de ordem (reentrega de um pedido antigo depois de um novo)"},
+    {"id": "F-SCH-1", "kind": "versão de schema errada"},
+    {"id": "F-COR-1", "kind": "artefato corrompido (efeito, resultado, objeto de referência)"},
+    {"id": "F-LCK-1", "kind": "DB lock (outro processo segura lock exclusivo no SQLite de estado)"},
+    {"id": "F-DSK-1", "point": "disk_write_error", "kind": "falha de escrita em disco (ENOSPC na gravação do resultado)"}
+  ],
+  "failure_invariants": ["zero duplicata (1 efeito, 1 resultado por idempotency_key)", "zero perda (retry produz exatamente 1 resultado)", "zero mudança em congelado", "nunca reparo silencioso (divergência → RECONCILIATION_REQUIRED)"],
+  "idempotency": {
+    "idempotency_key": "request_id (client_ref fora da chave e do hash de conteúdo)",
+    "cases": ["retry", "restart", "duplicata", "reentrega do mesmo pedido lógico com client_ref diferente", "mesmo request_id com conteúdo diferente → CONFLICT"],
+    "counts": "experimentos, efeitos, execuções SUCCEEDED do Ops, trials e resultados antes/depois"
+  },
+  "soak_profile": {
+    "file": "QUALIFICATION_PROFILE_STOCKS_V1.json (congelado antes do soak)",
+    "normal_cycles": 20, "restarts": 5, "duplicates": 5, "runs_per_relevant_failure_class": 3,
+    "timeouts": 3, "family_not_ready": 3, "collection_only_valid": 5,
+    "eligible_trials_while_no_family_ready": 0
+  },
+  "capital_permission": false,
+  "training_started": false
+}
