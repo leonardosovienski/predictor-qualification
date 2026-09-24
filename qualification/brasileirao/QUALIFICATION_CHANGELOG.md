@@ -43,3 +43,4 @@ versão (`04b42c9`) para o main, para versão do main = wheel publicada.
 - `RAW_LOGS/publish-candidates/build_rc_cff7a3a_METHOD_ERROR_version_not_bumped.log`: build com a versão ainda 0.3.0rc1; nada publicado.
 - `RAW_LOGS/contract-admission/windows_suite_cff7a3a.log`: 1 teste perdido para o Modern Standby do host (BR-F016); o mesmo teste passa 3/3 sozinho.
 - Primeira execução da conformidade no Windows (`conformance_windows_first_run_tail.log`): o pipe guardou só o fim da saída; os detalhes foram reproduzidos teste a teste.
+- `RAW_LOGS/secrets/scan_evidence_and_br_diff.json`: a primeira varredura (251 arquivos, o mesmo único alerta revisado) foi sobrescrita por mim por uma segunda (298 arquivos, depois dos relatórios novos) antes do commit. Os parciais `contract-admission` a `soak` citam o sha256 da primeira e por isso não conferem (C7.1 regra 3) nesse item; não foram reescritos (C8). A attestation cita a varredura final, gravada em arquivo novo.
