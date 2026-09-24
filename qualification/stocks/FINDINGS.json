@@ -12,13 +12,17 @@
     {
       "id": "ST-F001",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "baseline",
       "title": "Runtime do Stocks quebra no Windows: ZoneInfo('America/Sao_Paulo') sem base IANA",
       "description": "stocks_predictor/external_intelligence.py:36 cria SAO_PAULO = ZoneInfo('America/Sao_Paulo') no import. No Windows não há base de fusos do sistema e tzdata não é dependência (pyproject/uv.lock), então o import levanta ZoneInfoNotFoundError. stocks_predictor.operations importa external_intelligence: o entrypoint operacional (python -m stocks_predictor) e a coleta de External Intelligence não abrem no Windows. Reproduzido na suíte do baseline no windows-latest: 2 erros de coleta (tests/test_external_intelligence.py, tests/test_operational_store.py) e a suíte interrompida. Linux não afetado (tzdata do sistema).",
       "evidence": [
-        "qualification/stocks/RAW_LOGS/baseline/run35942985460/stocks-suite-windows-latest/pytest.log"
-      ]
+        "qualification/stocks/RAW_LOGS/baseline/run35942985460/stocks-suite-windows-latest/pytest.log",
+        "qualification/stocks/RAW_LOGS/cleanroom-baseline/run35943720554/stocks-runtime-windows-latest/runtime_trace.log",
+        "qualification/stocks/RAW_LOGS/contract-admission-ops-entrypoint/run35944954371/stocks-suite-windows-latest/pytest.log"
+      ],
+      "fix_commit": "3e5045a (tzdata>=2025.2 em pyproject/uv.lock)",
+      "fix_proof": "Antes: coleta interrompida no windows-latest (RAW_LOGS/baseline/run35942985460) e `python -m stocks_predictor doctor --check` quebrado na wheel (RAW_LOGS/cleanroom-baseline/run35943720554/stocks-runtime-windows-latest/runtime_trace.log). Depois: suíte coleta tudo no windows-latest (RAW_LOGS/contract-admission-ops-entrypoint/run35944954371 e seguintes); regressão tests/test_timezone_runtime.py."
     },
     {
       "id": "ST-F002",
@@ -54,6 +58,18 @@
         "qualification/stocks/RAW_LOGS/cleanroom-baseline/run35943720554/stocks-runtime-linux-primary/full_suite.log",
         "qualification/stocks/RAW_LOGS/cleanroom-baseline/run35943720554/stocks-runtime-windows-latest/full_suite.log"
       ]
+    },
+    {
+      "id": "ST-F005",
+      "severity": "P2",
+      "status": "FIXED",
+      "phase": "contract-admission-ops-entrypoint",
+      "title": "Plugin informava versão fixa 0.2.0",
+      "description": "stocks_predictor/ecosystem_plugin.py devolvia health.version = '0.2.0' literal, independente da distribuição instalada. Corrigido para ler importlib.metadata.version('stocks-predictor'); teste tests/test_ecosystem_plugin.py::test_ecosystem_plugin_reports_the_installed_version.",
+      "evidence": [
+        "qualification/stocks/QUALIFICATION_CHANGELOG.md"
+      ],
+      "fix_commit": "9a6c09ae92991c8490be624f5693865bcbaeca26"
     }
   ]
 }
