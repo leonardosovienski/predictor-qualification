@@ -53,7 +53,8 @@ def main() -> int:
                      f"{lp}/BUILD_MANIFEST.json", f"{lp}/verify_prefilter.json", f"{lp}/REAL_ENV.json",
                      f"{REL}/E2E_EVIDENCE/d16-linux-primary-real/E2E_SUMMARY.json", *common_ev],
         "note": (f"D-16, dado real público (run {run_id}, ubuntu-latest, só final wheels): painel stocks-pit-panel/1 "
-                 f"sha256 {envs['linux-primary']['panel_sha256'][:12]}… = fixado em SOURCES.json, fontes baixadas no job e "
+                 f"sha256 {(envs['linux-primary']['panel_sha256'] or '?')[:12]}… (fixado em SOURCES.json: "
+                 f"{envs['linux-primary']['panel_matches_pin']}), fontes baixadas no job e "
                  f"conferidas ({envs['linux-primary']['sources_downloaded_in_job']}/{envs['linux-primary']['sources_total']}), "
                  f"pré-filtro neutro em {envs['linux-primary']['rebalances']} rebalances; entrypoint stocks-research: "
                  f"{e['checks_ok']}/{e['checks']} checagens (processo → término → processo novo relê o mesmo resultado; "
@@ -160,8 +161,10 @@ def main() -> int:
         "",
         "## Painel real",
         "",
-        f"* `{panel.get('dataset_version')}`, cutoff `{panel.get('data_cutoff')}`, sha256 `{numbers['expected_panel_sha256']}`"
-        f" (o mesmo nos 3 jobs: Linux, controles e windows-latest).",
+        f"* `{panel.get('dataset_version')}`, cutoff `{panel.get('data_cutoff')}`, sha256 fixado `{numbers['expected_panel_sha256']}`; "
+        "construído em cada job a partir das fontes baixadas: "
+        + ", ".join(f"{name} {'=' if env['panel_matches_pin'] else '≠'} fixado ({env['sources_downloaded_in_job']}/"
+                    f"{env['sources_total']} fontes baixadas e conferidas)" for name, env in envs.items()) + ".",
         f"* {panel.get('securities_kept')} ISIN no painel (de {panel.get('securities_total')} ações/units no COTAHIST da janela), "
         f"{(panel.get('counts') or {}).get('bars')} barras com revisões, {panel.get('corporate_adjustments')} eventos acionários "
         f"oficiais da B3 aplicados como revisões PIT; identidade: {panel.get('identity_sources')}; sem CNPJ: "
@@ -170,7 +173,11 @@ def main() -> int:
         "## Sonda `stocks:QUAL-PIT-MOM-001` (momentum 12-1, quintil superior, top 60 PIT; não é hipótese científica)",
         "",
         f"Estado: **{econ['result_state']}** (científico {econ['scientific_state']}, econômico {econ['economic_state']}); "
-        f"{m.get('periods')} períodos de rebalance ({econ['first_rebalance']} → {econ['last_rebalance']}, a cada 21 pregões — ST-F007).",
+        f"{m.get('periods')} períodos de carteira ({econ['first_rebalance']} → {econ['last_period_end']}, rebalance a cada 21 "
+        f"pregões — ST-F007); universo de {econ['universe_sizes']} ações e carteira de {econ['portfolio_sizes']} em todo período. "
+        f"Validação temporal do Core (`{(econ['temporal_validation'] or {}).get('method')}`): "
+        f"{(econ['temporal_validation'] or {}).get('status')} em {(econ['temporal_validation'] or {}).get('records')} registros, "
+        f"máx. available_at {(econ['temporal_validation'] or {}).get('max_available_at')} ≤ as_of.",
         "",
         "| Média por período | Bruto | Líquido |",
         "|---|--:|--:|",
@@ -186,7 +193,8 @@ def main() -> int:
         f"{cost.get('slippage_bps_per_side')} bps; custo médio por período: estratégia {bps(cost.get('strategy_mean_cost_bps'))}, "
         f"baseline {bps(cost.get('baseline_mean_cost_bps'))}. Drawdown máximo da estratégia (líquido): "
         f"{bps(m.get('strategy_max_drawdown_bps'))}; acerto do excesso líquido: {m.get('hit_rate_excess_net')}. "
-        f"Comparação com o baseline: {(econ.get('baseline_comparison') or {}).get('outcome')}.",
+        f"Campo `baseline_comparison.outcome` do resultado: {(econ.get('baseline_comparison') or {}).get('outcome')} "
+        "(é só o sinal da média do excesso líquido; não é teste estatístico — o que vale é o IC95 acima).",
         "",
         "Leitura: " + ("o IC95 do excesso bruto contém zero — sem evidência de edge (INCONCLUSIVE); nada disso concede capital "
                        "(capital_permission = false) nem vale fora deste painel, commit e janela (C22)."

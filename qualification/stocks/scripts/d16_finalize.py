@@ -106,6 +106,8 @@ def e2e(env_dir: Path) -> dict:
             "metrics": (result.get("domain_facts") or {}).get("metrics"), "costs": (result.get("domain_facts") or {}).get("costs"),
             "baseline_comparison": (result.get("domain_facts") or {}).get("baseline_comparison"),
             "trial_ids": (result.get("core_facts") or {}).get("trial_ids"),
+            "temporal_validation": (result.get("core_facts") or {}).get("temporal_validation"),
+            "last_period_end": ((result.get("domain_facts") or {}).get("last_universe") or {}).get("session"),
             "rebalances": (result.get("domain_facts") or {}).get("rebalances") or []}
 
 
@@ -139,8 +141,9 @@ def soak_counts(path: Path) -> dict:
     return counts
 
 
-def contamination(manifest: dict, rebalances: list[dict]) -> dict:
-    """Períodos de carteira/universo com evento corporativo NÃO ajustado dentro de (início, fim]."""
+def contamination(manifest: dict, rebalances: list[dict], last_end: str | None) -> dict:
+    """Períodos de carteira/universo com evento corporativo NÃO ajustado dentro de (início, fim].
+    `rebalances` traz o início de cada período; o fim do último é a última decisão (last_universe)."""
     events = [(j["security_id"], j["session"], "residual_jump_dismes_changed " + j["especi"])
               for j in manifest.get("residual_jumps", []) if j.get("dismes_changed")]
     for s in manifest.get("corporate_events_skipped", []):
@@ -151,14 +154,15 @@ def contamination(manifest: dict, rebalances: list[dict]) -> dict:
                 continue
             events.append((s["security_id"], (prior + timedelta(days=1)).isoformat(), "bonus_in_other_class " + s["label"]))
     hits_port, hits_uni = [], []
-    for start, end in zip(rebalances, rebalances[1:]):
+    ends = [r["session"] for r in rebalances[1:]] + ([last_end] if last_end else [])
+    for start, end in zip(rebalances, ends):
         for sid, day, why in events:
-            if start["session"] < day <= end["session"]:
+            if start["session"] < day <= end:
                 if sid in start["portfolio"]:
                     hits_port.append({"period_start": start["session"], "security_id": sid, "event_session": day, "why": why})
                 if sid in start["members"]:
                     hits_uni.append({"period_start": start["session"], "security_id": sid, "event_session": day, "why": why})
-    return {"periods": max(len(rebalances) - 1, 0), "unadjusted_events_considered": len(events),
+    return {"periods": len(ends), "unadjusted_events_considered": len(events),
             "portfolio_hits": hits_port, "universe_hits": hits_uni,
             "portfolio_periods_affected": len({h["period_start"] for h in hits_port}),
             "universe_periods_affected": len({h["period_start"] for h in hits_uni})}
@@ -214,7 +218,8 @@ def main() -> int:
 
     manifest = load(lp / "BUILD_MANIFEST.json") or {}
     numbers = {
-        "run_dir": run_dir.relative_to(ROOT).as_posix() if run_dir.is_absolute() else run_dir.as_posix(),
+        "run_dir": (run_dir.resolve().relative_to(ROOT).as_posix() if run_dir.resolve().is_relative_to(ROOT)
+                    else run_dir.as_posix()),
         "expected_panel_sha256": expected,
         "environments": envs,
         "gates": gates,
@@ -222,14 +227,18 @@ def main() -> int:
                      "result_state": e_l["result_state"], "scientific_state": e_l["scientific_state"],
                      "economic_state": e_l["economic_state"], "metrics": e_l["metrics"], "costs": e_l["costs"],
                      "baseline_comparison": e_l["baseline_comparison"], "trial_ids": e_l["trial_ids"],
+                     "temporal_validation": e_l["temporal_validation"],
                      "first_rebalance": e_l["rebalances"][0]["session"] if e_l["rebalances"] else None,
-                     "last_rebalance": e_l["rebalances"][-1]["session"] if e_l["rebalances"] else None},
+                     "last_period_start": e_l["rebalances"][-1]["session"] if e_l["rebalances"] else None,
+                     "last_period_end": e_l["last_period_end"],
+                     "universe_sizes": sorted({r["universe_size"] for r in e_l["rebalances"]}),
+                     "portfolio_sizes": sorted({len(r["portfolio"]) for r in e_l["rebalances"]})},
         "panel": {k: manifest.get(k) for k in ("dataset_version", "data_cutoff", "calendar", "counts", "securities_total",
                                               "securities_kept", "identity_sources")}
         | {"kept_without_identity": (manifest.get("identity") or {}).get("kept_without_identity"),
            "corporate_adjustments": len(manifest.get("corporate_adjustments", [])),
            "residual_jumps_kept": sum(1 for j in manifest.get("residual_jumps", []) if j.get("kept_in_panel"))},
-        "contamination": contamination(manifest, e_l["rebalances"]),
+        "contamination": contamination(manifest, e_l["rebalances"], e_l["last_period_end"]),
     }
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(numbers, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

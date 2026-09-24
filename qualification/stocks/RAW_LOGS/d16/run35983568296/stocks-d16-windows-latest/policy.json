@@ -1,0 +1,94 @@
+{
+ "schema_version": "StocksResearchAdmissionPolicyV1",
+ "policy_id": "stocks-d16-real",
+ "policy_version": 1,
+ "owner": "STOCKS_OPERATOR",
+ "requester_trust": "LOCAL_FILE_ONLY",
+ "handlers": {
+  "BACKTEST_PIT_FACTOR": "stocks.handlers.pit_factor_backtest.v1",
+  "COLLECT_EXTERNAL_INTELLIGENCE": "stocks.handlers.external_collection.v1"
+ },
+ "hypotheses": {
+  "stocks:QUAL-PIT-MOM-001": {
+   "hypothesis_family": "stocks-qualification-momentum-12-1-pit",
+   "purpose": "qualification probe on real B3/CVM data; not a scientific hypothesis"
+  },
+  "stocks:QUAL-EI-COLLECTION-001": {
+   "hypothesis_family": "stocks-ei-collection-only",
+   "purpose": "External Intelligence collection monitoring; never a trial"
+  }
+ },
+ "registry": [
+  {
+   "kind": "baseline",
+   "name": "ew-universe",
+   "version": "v1",
+   "revision_id": "baseline:ew-universe:d16-v1",
+   "content_hash": "d8abc667c88f909957ac2cc97f07b68654b68e390d8ea5eef1710b136e781e76"
+  },
+  {
+   "kind": "cost_model",
+   "name": "h1-frozen",
+   "version": "v1",
+   "revision_id": "cost_model:h1-frozen:d16-v1",
+   "content_hash": "032b6e618f46c80a52a16cc1ff8a89d07a402696a065375ae8f9b9576efb25cf"
+  },
+  {
+   "kind": "dataset",
+   "name": "b3-cvm-real",
+   "version": "v1",
+   "revision_id": "dataset:b3-cvm-real:d16-v1",
+   "content_hash": "5a5e410b6106acec2683915ed583cb2e9bc509bee5433f47aa9f74811872c7dd"
+  },
+  {
+   "kind": "features",
+   "name": "momentum-12-1",
+   "version": "v1",
+   "revision_id": "features:momentum-12-1:d16-v1",
+   "content_hash": "f04332fb458b8748a7a278ee1520383ce2e52ad7c948f6a9deb0e96ec42137e9"
+  },
+  {
+   "kind": "model",
+   "name": "quintile-real",
+   "version": "v1",
+   "revision_id": "model:quintile-real:d16-v1",
+   "content_hash": "f9d6fb4cff967e5f5f15211c5749fa235ed7804240945933b227ed128f20bc51"
+  },
+  {
+   "kind": "readiness",
+   "name": "matrix-20260921",
+   "version": "v1",
+   "revision_id": "readiness:matrix-20260921:d16-v1",
+   "content_hash": "21585fc1c8175d6e53d193866ec5b5608d212dfff05c8f3fad94a1dbcef9afb7"
+  },
+  {
+   "kind": "source",
+   "name": "vlmo-real",
+   "version": "v1",
+   "revision_id": "source:vlmo-real:d16-v1",
+   "content_hash": "f55b0c31ae04e8e092b57320bfcbb07298cbdfe860ab8a29489a161284d07a3a"
+  },
+  {
+   "kind": "universe",
+   "name": "real",
+   "version": "v1",
+   "revision_id": "universe:real:d16-v1",
+   "content_hash": "9f32f1491398c1a151892ad102ce89221fc91342971b0700a14882d94a9bee9a"
+  }
+ ],
+ "limits": {
+  "max_pending_requests": 1000,
+  "max_request_bytes": 16384,
+  "max_parameter_bytes": 1024,
+  "max_concurrency": 1,
+  "cpu_seconds": 3600,
+  "memory_mb": 8192,
+  "disk_mb": 20480,
+  "timeout_seconds": 1800,
+  "max_retries": 2,
+  "max_priority": "NORMAL"
+ },
+ "allowed_collectors": [
+  "cvm-vlmo"
+ ]
+}
