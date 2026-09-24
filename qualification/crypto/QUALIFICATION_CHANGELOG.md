@@ -58,3 +58,21 @@ PR: [cripto-predictor#126](https://github.com/leonardosovienski/cripto-predictor
 Releases pré-release: predictor-ops `v4.2.2rc1` (asset oficial do workflow Release, `0be70bfb…`), cripto-predictor `v1.2.0rc2` (`6e62f67f…`).
 
 Notas de método: o workflow Release do Ops substituiu, com o mesmo conteúdo e outros carimbos de data, os assets que enviei manualmente um minuto antes; o asset canônico é o do workflow (CORE_IDENTITY_REPORT §3); a suíte Windows de `341d270` perdeu 1 teste para o Modern Standby do host (CR-F018) e foi refeita (1664/1664); de novo um log em andamento (`windows_pytest_341d270_run2.log`) entrou num commit antes de terminar, e a versão final vem no commit seguinte.
+
+## D-16 — dados reais no Linux primário (2026-09-24, sessão da noite no PC 2)
+
+Nenhum código de produto mudou (`cripto-predictor`, `core-predictor` e `predictor-ops` intocados; alvo = `runtime_target.json`: cripto `341d270`, wheel `6e62f67f…`). Nenhum parâmetro, vetor, perfil ou limiar mudou.
+
+| Repo | Commit | O quê | Por quê | Prova |
+|---|---|---|---|---|
+| predictor-qualification | `c5d627a`, `8693f5d` ([PR #17](https://github.com/leonardosovienski/predictor-qualification/pull/17)) | kit: `soak.py` executa as 6 classes de falha do perfil (entram "host do Ops morto durante o job" e "corrupção do arquivo de resultado", como na `FAILURE_MATRIX`); `d16_finalize.py` exige ≥ 3 execuções de cada classe para `SOAK`; `evidence_numbers.py --d16`; runbook | **CR-F019** (P1): o soak executava 4 das 6 classes, e o finalize fecharia `SOAK` sem essa cobertura | `RAW_LOGS/d16-conferencia/finalize_ensaio_runs.log` (run 1 → SOAK FAIL; run 2 → PASS) |
+| predictor-qualification | `ec250a4` e o commit do fechamento | saídas brutas dos dois runs; `scripts/d16_crosscheck.py`; conferências (`RAW_LOGS/d16-conferencia/`); `d16_finalize.py`; `EVIDENCE_NUMBERS_D16.json`; CR-F019..F021; seções D-16 do `SOAK_REPORT` e do `SCIENTIFIC_INTEGRITY_REPORT`; parcial `d16` e attestation final | runbook §3 | `attest.py check` OK |
+
+Runs do `crypto-d16.yml` (ubuntu-latest, Python 3.13):
+
+- [35976569248](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35976569248): `main` 3983de1, kit antigo. Execução completa, mas o soak não cobre o perfil (CR-F019). Preservado em `RAW_LOGS/d16/35976569248/`; **não fecha gate**.
+- [35978221282](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35978221282): branch `cripto/d16-20260924` 8693f5d (kit corrigido). **Definitivo**: aceito pelo `d16_finalize.py` (D-16, commit e wheel conferidos).
+
+Conferências da sessão (`RAW_LOGS/d16-conferencia/`): as 28 attestations conferidas no próprio commit (10 parciais V1.0 com divergência histórica, **CR-F020**); wheels das releases × registrado × source `341d270`; dados de cada run × `.CHECKSUM` × cópia conferida do pendrive (45/45); varredura de segredos; suíte do `cripto-predictor` no PC 2 (`pc2-diagnostico/`, só diagnóstico). Lacuna do `attest.py check`: **CR-F021**.
+
+Resultado: **`QUALIFIED`**, com 31/31 gates `PASS`, P0 = P1 = 0 e P2 = 8 abertos. Attestation `QUALIFICATION_ATTESTATION.json` sha256 `565326d367a5d2d8d229392e68d49182009e3c25bbfa0671dc4662ca9e3a4c27`, com `supersedes_sha256 = eb3e79f4…`; a anterior foi preservada byte a byte como `QUALIFICATION_ATTESTATION_superseded_eb3e79f48c7d.json`. `QUALIFIED` não é edge nem autoriza capital (C22): com dados reais, o líquido foi −83 bps/semana, `INCONCLUSIVE`/`NO_EDGE`.

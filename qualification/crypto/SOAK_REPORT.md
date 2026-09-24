@@ -1,10 +1,34 @@
 # SOAK_REPORT — missão crypto (C10, gate `SOAK`)
 
-**Gate: `NOT_RUN` — BLOCKED: D-16 pendente.** O perfil congelado
-(`QUALIFICATION_PROFILE_CRYPTO_V1.json`) exige o runtime suportado no Linux primário. Pela
-regra congelada em `FROZEN_PARAMETERS.json` (`d16_dependency_rule`), o soak só vale com
-dados reais no Linux, e a D-16 ainda não foi decidida. A execução abaixo, com os vetores
-sintéticos da suíte de conformidade, é **diagnóstico** e não fecha o gate.
+**Gate: `PASS` pela D-16** (dados reais, Linux primário, run 35978221282; seção abaixo). As
+execuções anteriores com vetores sintéticos (V1.0 e V1.1) foram **diagnóstico** e não fecham o gate. O
+harness delas só cobria 4 das 6 classes de falha do perfil (CR-F019).
+
+## D-16: dados reais, Linux primário (fecha o gate)
+
+- Run: [predictor-qualification 35978221282](https://github.com/leonardosovienski/predictor-qualification/actions/runs/35978221282), job `d16` (ubuntu-latest, Python 3.13), disparado a partir da branch `cripto/d16-20260924` (kit corrigido, PR #17). O `d16_finalize.py` aceitou: D-16 `APPROVED`, commit `341d270` e wheel `6e62f67f…` do `runtime_target.json`, `where=github_actions`.
+- Runtime suportado: venv limpo, deps do lock com `--require-hashes`, wheel do Cripto conferida por sha256 (`core_identity.json`, `pip_freeze.txt`).
+- Dados: Binance data.vision (BTCUSDT UM, klines 1d + funding): 45 arquivos, 45 conferidos contra o `.CHECKSUM` publicado. Dataset in-sample `0d04cf7c11e8…` (52 observações semanais). Conferência cruzada com a cópia do pendrive em `RAW_LOGS/d16-conferencia/data_run35978221282_x_pendrive.log`.
+- Log bruto: `RAW_LOGS/d16/35978221282/soak_real.jsonl`. Números extraídos por `scripts/evidence_numbers.py --d16` para `EVIDENCE_NUMBERS_D16.json` (`d16.soak`).
+
+| Classe de falha do perfil (mínimo 3) | Executado |
+|---|---|
+| crash do worker (`ops_worker_crash`) | 3 |
+| timeout do Ops (`ops_worker_hang`, `--state` com timeout de 5 s) | 3 |
+| host do Ops morto durante o job (`ops_worker_slow` + kill externo) | 3 |
+| morte antes do commit da admission (`before_admission_commit`, inclui 1 restart) | 4 |
+| morte durante a gravação do resultado (`during_result_write`) | 3 |
+| corrupção (`research-result.json` alterado) | 3 (falha fechada em 3) |
+
+- chamadas ao entrypoint: **77** (sem falha injetada: 57; restarts em rodízio também em `after_admission` 1, `during_materialization` 1, `before_ops` 1, `after_ops` 1);
+- resultados armazenados: **43**, iguais aos 43 pedidos com resultado esperado; perdidos: **0**; inesperados: **0**;
+- efeitos de domínio: **43**; jobs do Ops: **43**; máximo de `SUCCEEDED` por job: **1**;
+- releitura por `show`: divergências **0**. Os resultados corrompidos de propósito continuam recusados (exit 5), sem reparo;
+- `reconcile`: exit 5, **6** achados, todos das corrupções injetadas (estranhos: 0; corrupções não acusadas: 0);
+- violações: **0**; `zero_tolerance_ok = true`.
+- Casos A/B/C: A ×3 sobre os dados reais no soak; C = crash e timeout acima. B ×3 no mesmo runtime Linux, com o vetor sintético congelado (`e2e_cases`: 20 checagens, `all_ok=true`), como congelado no `D16_RUNBOOK.md`.
+
+O run 35976569248 (a partir do `main`, kit antigo) está preservado em `RAW_LOGS/d16/35976569248/`. O soak dele não executou "host do Ops morto" nem "corrupção" (CR-F019), e ele não fecha gate.
 
 ## Execução diagnóstica (Linux primário, runtime suportado)
 
@@ -34,9 +58,8 @@ Tolerância zero, conferida no fim sobre o estado:
 
 ## O que falta
 
-Decidir a D-16 (dados reais no Linux/Actions ou numa VM). Com a decisão, o mesmo harness
-(`scripts/soak.py`) roda com o dataset real no runtime suportado Linux, sem mudar o perfil.
+Nada para o gate: a D-16 foi decidida e executada (seção D-16 acima).
 
 ## V1.1
 
-Mesmo perfil, mesmo diagnóstico sintético no Linux (run 35925914768): `zero_tolerance_ok = true` (`EVIDENCE_NUMBERS_V1.1.json`). O gate segue **NOT_RUN — BLOCKED: D-16 pendente**.
+Mesmo perfil, mesmo diagnóstico sintético no Linux (run 35925914768): `zero_tolerance_ok = true` (`EVIDENCE_NUMBERS_V1.1.json`). Na V1.1 o gate ficou **NOT_RUN — BLOCKED: D-16 pendente**; fechou depois pela D-16 (seção acima).

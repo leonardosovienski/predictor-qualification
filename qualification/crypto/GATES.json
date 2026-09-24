@@ -1,5 +1,5 @@
 {
-  "note": "Estado corrente da missão crypto. V1.1 (D-17): Ops 4.2.2rc1, cripto 1.2.0rc2 (341d270). BLOCKED por D-16: 5 gates NOT_RUN; sem FAIL; P0=P1=0. Parciais nunca reescritos (C8).",
+  "note": "D-16 executada (qualification/crypto/RAW_LOGS/d16/35978221282); gates fechados por d16_finalize.py a partir da evidência bruta.",
   "common_baseline_id": "STACK_BASELINE_V1.1",
   "supersedes_sha256": "eb3e79f48c7db10288060171c05c7379b08b2c7ab10b5b4b1c20cc70f75fe700",
   "domain_contract_sha256": "0831fe3db2b7ca41a26ff7665f93c07b0edda3c937ac4ce83fe0e96720a9eb55",
@@ -64,7 +64,8 @@
     "v1-1-science",
     "v1-1-windows-smoke",
     "v1-1-hosted-ci",
-    "v1-1-soak"
+    "v1-1-soak",
+    "d16"
   ],
   "environments": [
     {
@@ -72,11 +73,11 @@
       "python": "3.13",
       "role": "primary",
       "where": "github_actions",
-      "result": "NOT_RUN",
+      "result": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/env.log",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/soak.jsonl"
+        "qualification/crypto/RAW_LOGS/d16/35978221282/env.log",
+        "qualification/crypto/RAW_LOGS/d16/35978221282/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl"
       ]
     },
     {
@@ -116,7 +117,7 @@
       "evidence": [
         "qualification/crypto/FINDINGS.json"
       ],
-      "note": "P0=0, P1=0 abertos: os 9 P1 foram corrigidos com teste (CR-F009/SHARED-005 no predictor-ops 4.2.2rc1, D-17). Abertos só P2 (CR-F001, F010, F011, F016, F017, F018)."
+      "note": "P0=0, P1=0 abertos: os 10 P1 foram corrigidos com teste (CR-F009/SHARED-005 no predictor-ops 4.2.2rc1, D-17; CR-F019 no kit do soak da D-16, PR #17). Abertos só P2 (CR-F001, CR-F010, CR-F011, CR-F016, CR-F017, CR-F018, CR-F020, CR-F021)."
     },
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
@@ -172,12 +173,14 @@
       "note": "Baseline (cripto 5fd4e1b, core 5a08415, ops 7bd99eb) e final_commits (cripto 341d270 branch+tag, ops 9831b0d PR+tag+Release, core 5a08415) verdes; nenhum job pulado."
     },
     "E2E": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/crypto/E2E_EVIDENCE/v1.1/linux-primary-synthetic/E2E_SUMMARY.json",
-        "qualification/crypto/E2E_EVIDENCE/v1.1/windows-local-real/E2E_SUMMARY.json"
+        "qualification/crypto/RAW_LOGS/d16/35978221282/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/d16/35978221282/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/d16/35978221282/core_identity.json",
+        "qualification/crypto/RAW_LOGS/d16/35978221282/data_MANIFEST.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico: E2E pela wheel no Linux com vetores sintéticos 20/20 checagens; E2E real no Windows 10/10."
+      "note": "Linux primário, dados reais (D-16): 10 checagens de E2E/restart/releitura/provenance todas OK; conformidade 48 testes verdes."
     },
     "IDEMPOTENCY": {
       "status": "PASS",
@@ -242,12 +245,11 @@
       "note": "1382/1382 blobs iguais entre truth-map (5fd4e1b) e final_commit (341d270)."
     },
     "SOAK": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/crypto/SOAK_REPORT.md",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/soak.jsonl"
+        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico sintético no Linux: 65 chamadas, 40 resultados, 0 perdidos/duplicados/violações."
+      "note": "Perfil V1 com dados reais: 43 resultados, perdidos 0, violações 0, zero_tolerance_ok=True; execuções por classe de falha (mínimo 3): {'ops_worker_crash': 3, 'ops_worker_hang': 3, 'host_killed_during_ops_job': 3, 'before_admission_commit': 4, 'during_result_write': 3, 'result_file_corruption': 3}."
     },
     "WINDOWS_SMOKE": {
       "status": "PASS",
@@ -273,9 +275,10 @@
       "evidence": [
         "qualification/crypto/EVIDENCE_NUMBERS_V1.1.json",
         "qualification/crypto/scripts/evidence_numbers.py",
-        "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json"
+        "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json",
+        "qualification/crypto/EVIDENCE_NUMBERS_D16.json"
       ],
-      "note": "Números dos relatórios tirados dos logs brutos por scripts versionados (evidence_numbers.py, analyze_ops_failure.py)."
+      "note": "Números dos relatórios tirados dos logs brutos por scripts versionados (evidence_numbers.py, analyze_ops_failure.py). D-16: números da seção D-16 do SOAK_REPORT e do SCIENTIFIC_INTEGRITY_REPORT em EVIDENCE_NUMBERS_D16.json (evidence_numbers.py --d16 d16/35978221282)."
     },
     "SECRETS_CLEAN": {
       "status": "PASS",
@@ -284,9 +287,10 @@
         "qualification/crypto/RAW_LOGS/secrets/scan_evidence_rerun.log",
         "qualification/crypto/RAW_LOGS/v1.1/hosted-ci/jobs_cripto-predictor_35906112873.json",
         "qualification/crypto/RAW_LOGS/v1.1/secrets_scan_v1.1.log",
-        "qualification/crypto/RAW_LOGS/v1.1/secrets_scan_v1.1_diffs.log"
+        "qualification/crypto/RAW_LOGS/v1.1/secrets_scan_v1.1_diffs.log",
+        "qualification/crypto/RAW_LOGS/d16-conferencia/secrets_scan_d16.log"
       ],
-      "note": "scan_secrets.py no repo de evidência + busca por padrões de chave nos diffs cripto 5fd4e1b..341d270 e ops 7bd99eb..9831b0d: nenhum segredo. Únicos alertas = o marcador público do canário (\"token\": \"FUTURE_CANARY_CRYPTO_001\"), revisado: falso positivo. scan_secrets verde no CI do cripto em 341d270."
+      "note": "scan_secrets.py no repo de evidência + busca por padrões de chave nos diffs cripto 5fd4e1b..341d270 e ops 7bd99eb..9831b0d: nenhum segredo. Únicos alertas = o marcador público do canário (\"token\": \"FUTURE_CANARY_CRYPTO_001\"), revisado: falso positivo. scan_secrets verde no CI do cripto em 341d270. D-16: scan_secrets.py no repo de evidência com as saídas dos runs 35978221282/35976569248 e a conferência; alertas do cripto = o mesmo marcador público do canário (falso positivo); padrões do COMUM: 0 ocorrências nos arquivos alterados desde origin/main. O workflow crypto-d16 não usa segredo (repos e dados públicos)."
     },
     "CAPITAL_FORBIDDEN": {
       "status": "PASS",
@@ -358,28 +362,26 @@
       "note": "SHARED-003 test_only não bloqueante, causa demonstrada por A/B; o job real do Ops mata a árvore e trunca no Windows (3/3 local source, 3/3 local wheel, 6/6 windows-latest)."
     },
     "CRYPTO_UNCOMFORTABLE_CASES": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/crypto/E2E_EVIDENCE/v1.1/linux-primary-synthetic/E2E_SUMMARY.json",
-        "qualification/crypto/AUTHORITY_STATE_MATRIX.json"
+        "qualification/crypto/RAW_LOGS/d16/35978221282/e2e_cases/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Diagnóstico pela wheel no Linux: casos A, B e C 3× cada, todos conforme a matriz; caso A também com dado real no Windows."
+      "note": "Casos A, B, C ×3 no runtime Linux (B com o vetor sintético congelado); A ×3 e C ×3 também sobre dados reais no soak."
     },
     "CRYPTO_ECONOMIC_METRICS": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/crypto/SCIENTIFIC_INTEGRITY_REPORT.md",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/science/SCIENCE_REAL.json"
+        "qualification/crypto/RAW_LOGS/d16/35978221282/science/SCIENCE_REAL.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Windows real: bruto −45 bps (IC [−214,112]) e líquido −83 bps (IC [−253,76]) separados, custos congelados."
+      "note": "Dados reais, Linux: bruto -45 bps IC [-214, 112]; líquido -83 bps IC [-253, 76]; custos congelados; INCONCLUSIVE/NO_EDGE. Descritivo, sem edge nem capital."
     },
     "CRYPTO_NEGATIVE_CONTROLS": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
-        "qualification/crypto/SCIENTIFIC_INTEGRITY_REPORT.md",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/science/SCIENCE_REAL.json"
+        "qualification/crypto/RAW_LOGS/d16/35978221282/science/SCIENCE_REAL.json"
       ],
-      "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dados reais no Linux primário. Windows real: injeção de futuro 0 aceitos, ablação 0 aceitos, placebo SUPPORTED 3/100 (≤10)."
+      "note": "Injeção de futuro 0 aceitos; ablação 0; placebo SUPPORTED 3/100 (≤10); vazamentos do canário 0."
     },
     "CRYPTO_SPLIT_BRAIN_CORRUPTION": {
       "status": "PASS",
@@ -390,5 +392,6 @@
       ],
       "note": "DB sem FS, FS sem DB, artefato alterado, hash errado, conteúdo alterado após materializar, referência de outra pesquisa e metadata inconsistente: falha fechada (exit 5), sem reparo silencioso."
     }
-  }
+  },
+  "final_result": "QUALIFIED"
 }
