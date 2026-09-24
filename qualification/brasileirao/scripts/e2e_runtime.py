@@ -18,6 +18,7 @@ import argparse
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 import subprocess
 import sys
 from pathlib import Path
@@ -75,14 +76,14 @@ def main() -> int:
     check("duplicate_returns_same_result", dup.get("status") == "DUPLICATE" and dup.get("result_id") == first.get("result_id"))
 
     # --- provenance chain against primary sources
-    with sqlite3.connect(state / "admission.sqlite") as db:
+    with closing(sqlite3.connect(state / "admission.sqlite")) as db, db:
         receipt = db.execute(
             "SELECT admission_id, decision, policy_hash, content_hash FROM admissions WHERE request_id=? AND decision='ACCEPTED'",
             (request_id,),
         ).fetchone()
     check("admission_receipt", receipt is not None and receipt[0] == result.get("admission_id") and receipt[2] == result["provenance"]["admission_policy_hash"])
     check("request_content_hash", receipt is not None and receipt[3] == result["provenance"]["request_content_hash"])
-    with sqlite3.connect(state / "x" / "journal.sqlite") as db:
+    with closing(sqlite3.connect(state / "x" / "journal.sqlite")) as db, db:
         exp = db.execute("SELECT experiment_id, state, effect_hash, result_hash, ops_run_id, logical_hash FROM experiments WHERE request_id=?", (request_id,)).fetchone()
         transitions = [r[0] for r in db.execute("SELECT state FROM transitions WHERE experiment_id=? ORDER BY sequence", (exp[0],))]
     check("journal_completed", exp is not None and exp[1] == "COMPLETED", transitions=transitions)

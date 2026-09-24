@@ -84,8 +84,9 @@ def clv_diagnostic(results_dir: Path, dataset: Path) -> dict:
     Viés otimista possível: a abertura pode ser anterior a resultados que o modelo já viu."""
     conn = sqlite3.connect(f"file:{dataset.as_posix()}?mode=ro&immutable=1", uri=True)
     odds = {r[0]: r[1:] for r in conn.execute(
-        "SELECT event_id, odds_home, odds_draw, odds_away, odds_home_open, odds_draw_open, odds_away_open, "
-        "odds_over, odds_under, odds_over_open, odds_under_open FROM sofascore_matches")}
+        "SELECT s.event_id, s.odds_home, s.odds_draw, s.odds_away, s.odds_home_open, s.odds_draw_open, s.odds_away_open, "
+        "l.odd_a, l.odd_b, s.odds_over_open, s.odds_under_open FROM sofascore_matches s "
+        "LEFT JOIN odds_lines l ON l.event_id = s.event_id AND l.market = 'ou' AND l.line = 2.5")}
     labels = {r[0]: (r[1], r[2]) for r in conn.execute("SELECT event_id, home_score, away_score FROM matches WHERE home_score IS NOT NULL")}
     out = {}
     for path in sorted(results_dir.glob("result_*-climatology.json")):

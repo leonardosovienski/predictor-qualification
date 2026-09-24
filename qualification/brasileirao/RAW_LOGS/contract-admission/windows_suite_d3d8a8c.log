@@ -15,3 +15,65 @@ ruff check exit=0
 ruff format exit=0
 0 errors, 0 warnings, 0 informations
 pyright exit=0
+            with sqlite3.connect(lab.state / "results.sqlite") as db:
+                db.execute("DELETE FROM results")
+            code, lines, _ = lab.process(path)
+            assert code == 5 and lines[-1]["status"] == "RECONCILIATION_REQUIRED"
+            assert _results(lab) == 0  # no silent re-index
+            assert cli("--state", str(lab.state), "reconcile").returncode == 5
+        finally:
+>           lab.cleanup()
+
+tests\conformance\test_failure_recovery.py:285: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+..\..\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\tools\python\cpython-3.13.14-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\QUALIFICACAO\\runtime\\brasileirao\\t\\brq-l7gj9txk\\s\\results.sqlite'
+_exc = PermissionError(13, 'O arquivo já está sendo usado por outro processo')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] O arquivo já está sendo usado por outro processo: 'C:\\QUALIFICACAO\\runtime\\brasileirao\\t\\brq-l7gj9txk\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+============================== warnings summary ===============================
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[dixon_coles]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[dixon_coles]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\.venv\Lib\site-packages\scipy\optimize\_numdiff.py:710: RuntimeWarning: invalid value encountered in subtract
+    df = [f_eval - f0 for f_eval in f_evals]
+
+tests/test_result_availability_guard.py::test_jogo_em_andamento_no_horizonte_nao_entra_no_ajuste[serving]
+tests/test_result_availability_guard.py::test_resultado_disponivel_entra_no_ajuste[serving]
+  C:\QUALIFICACAO\repos\brasileirao-predictor\brasileirao_predictor\serving_evaluator.py:218: RuntimeWarning: fit_goal_model: parametro b=4.0000 cravado no bound [-1, 4] — verifique o formato do history (diff, hs, as)
+    self.params = model.fit_goal_model(hist_cal, sample_weights=weights)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/conformance/test_failure_recovery.py::test_file_exists_but_index_lost_the_result
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_admission_commit]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_admission]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_materialization]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_ops]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_ops]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_domain_effect]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_result_write]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_write]
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_store]
+ERROR tests/conformance/test_failure_recovery.py::test_ops_worker_crash_is_not_a_result_and_retry_succeeds
+ERROR tests/conformance/test_failure_recovery.py::test_slow_worker_still_produces_exactly_one_result
+ERROR tests/conformance/test_failure_recovery.py::test_ops_lock_held_by_another_run_is_retryable_never_a_second_effect
+ERROR tests/conformance/test_failure_recovery.py::test_database_lock_waits_and_then_completes_once
+ERROR tests/conformance/test_failure_recovery.py::test_concurrent_submissions_of_the_same_request_produce_one_effect
+ERROR tests/conformance/test_failure_recovery.py::test_reference_changed_after_materialization_fails_closed
+1 failed, 2304 passed, 1 skipped, 30 deselected, 4 warnings, 15 errors, 30 subtests passed in 1836.62s (0:30:36)
+pytest exit=1
+# git status after: 0 entries

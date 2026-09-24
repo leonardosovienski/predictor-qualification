@@ -53,7 +53,7 @@ export TMP="$BRQ_ROOT/tmp" TEMP="$BRQ_ROOT/tmp" TMPDIR="$BRQ_ROOT/tmp" BRASILEIR
 ( cd "$WORK/tree" && "$PY" -c "import brasileirao_predictor,brasileirao_scripts;print(brasileirao_predictor.__file__, brasileirao_scripts.__file__)" ) >> "$OUT/env.log" 2>&1
 ( cd "$WORK/tree" && "$PY" -m pytest -p no:cacheprovider -q -rA tests/conformance --junitxml="$OUT/conformance.junit.xml" ) > "$OUT/conformance.log" 2>&1
 echo "[exit $?]" >> "$OUT/conformance.log"
-( cd "$WORK/tree" && "$PY" -m pytest -p no:cacheprovider -q tests --junitxml="$OUT/full_suite.junit.xml" ) > "$OUT/full_suite.log" 2>&1
+( cd "$WORK/tree" && "$PY" -m pytest -p no:cacheprovider -q -rfE --continue-on-collection-errors tests --junitxml="$OUT/full_suite.junit.xml" ) > "$OUT/full_suite.log" 2>&1
 echo "[exit $?]" >> "$OUT/full_suite.log"
 
 # 5) E2E pelo entrypoint instalado: processo → término → processo novo relê o mesmo resultado

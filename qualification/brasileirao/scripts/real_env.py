@@ -33,7 +33,7 @@ BASELINES = {"climatology": {"schema": "brasileirao-baseline/1", "kind": "CLIMAT
 COST = {"schema": "brasileirao-cost-model/1", "edge_window": None, "stake": 1, "slippage_on_winnings": 0.02,
         "tax_on_annual_positive_net": 0.15, "min_bets": 30}
 FEATURES = {"schema": "brasileirao-features/1", "features": ["elo_diff_pre_match", "home_advantage"], "xg": False}
-ODDS = {"schema": "brasileirao-odds/1", "source": "sofascore_matches", "price": "close", "use": "ex post evaluation only"}
+ODDS = {"schema": "brasileirao-odds/1", "source": "sofascore_matches (1X2) + odds_lines ou 2.5 (O/U)", "price": "close", "use": "ex post evaluation only"}
 
 
 def sha(path: Path) -> str:

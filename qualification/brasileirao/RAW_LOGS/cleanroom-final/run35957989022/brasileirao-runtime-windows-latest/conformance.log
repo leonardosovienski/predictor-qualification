@@ -1,0 +1,1025 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\q\tmp.vMnm19qYz7\tree
+configfile: pytest.ini
+collected 88 items
+
+tests\conformance\test_contract_conformance.py ......................... [ 28%]
+....                                                                     [ 32%]
+tests\conformance\test_failure_recovery.py .E.E.E.E.E.E.E.E.E.E..E..E.E. [ 51%]
+E..F....E..                                                              [ 61%]
+tests\conformance\test_import_closure.py ......                          [ 68%]
+tests\conformance\test_temporal_suite.py ............................    [100%]
+
+=================================== ERRORS ====================================
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[before_admission_commit] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-gxicw3jr')
+onexc = <function Lab.cleanup.<locals>.writable at 0x00000208591E9E40>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-gxicw3jr\\s\\admission.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-gxicw3jr\\s\\admission.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-gxicw3jr\\s\\admission.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[after_admission] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-sd0hhatx')
+onexc = <function Lab.cleanup.<locals>.writable at 0x00000208591EBE20>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sd0hhatx\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sd0hhatx\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sd0hhatx\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[during_materialization] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-28vtrkea')
+onexc = <function Lab.cleanup.<locals>.writable at 0x00000208591EA200>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-28vtrkea\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-28vtrkea\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-28vtrkea\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[before_ops] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-k4e49uyb')
+onexc = <function Lab.cleanup.<locals>.writable at 0x0000020849B2FEC0>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k4e49uyb\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k4e49uyb\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k4e49uyb\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[after_ops] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-s9_lg53_')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939CE00>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-s9_lg53_\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-s9_lg53_\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-s9_lg53_\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[after_domain_effect] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-lif0js9i')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939D440>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-lif0js9i\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-lif0js9i\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-lif0js9i\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[during_result_write] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-dk414e2t')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939DA80>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-dk414e2t\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-dk414e2t\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-dk414e2t\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[after_result_write] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-k8v6o79l')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939C040>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k8v6o79l\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k8v6o79l\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k8v6o79l\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_process_death_at_each_point_recovers_exactly_once[after_result_store] _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-m_qavr8w')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939CEA0>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-m_qavr8w\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-m_qavr8w\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-m_qavr8w\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_ops_worker_crash_is_not_a_result_and_retry_succeeds _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-etk7tji0')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939D760>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-etk7tji0\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-etk7tji0\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-etk7tji0\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+___ ERROR at teardown of test_slow_worker_still_produces_exactly_one_result ___
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-ci9wq0xg')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939E3E0>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ci9wq0xg\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ci9wq0xg\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ci9wq0xg\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_ops_lock_held_by_another_run_is_retryable_never_a_second_effect _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-d2ncq2oi')
+onexc = <function Lab.cleanup.<locals>.writable at 0x000002085939DEE0>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-d2ncq2oi\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-d2ncq2oi\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-d2ncq2oi\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+____ ERROR at teardown of test_database_lock_waits_and_then_completes_once ____
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-ri7s8hdm')
+onexc = <function Lab.cleanup.<locals>.writable at 0x00000208594A1620>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ri7s8hdm\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ri7s8hdm\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ri7s8hdm\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_concurrent_submissions_of_the_same_request_produce_one_effect _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-_e9dno45')
+onexc = <function Lab.cleanup.<locals>.writable at 0x00000208594A1440>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-_e9dno45\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-_e9dno45\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-_e9dno45\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+_ ERROR at teardown of test_reference_changed_after_materialization_fails_closed _
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-h2bvd0k4')
+onexc = <function Lab.cleanup.<locals>.writable at 0x00000208594A2CA0>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-h2bvd0k4\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture
+    def lab():
+        value = standard_lab()
+        yield value
+>       value.cleanup()
+
+tests\conformance\test_failure_recovery.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-h2bvd0k4\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-h2bvd0k4\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+================================== FAILURES ===================================
+_________________ test_file_exists_but_index_lost_the_result __________________
+
+path = WindowsPath('C:/q/tmp.vMnm19qYz7/cr/t/brq-sjyuujeq')
+onexc = <function Lab.cleanup.<locals>.writable at 0x00000208594A1E40>
+
+    def _rmtree_unsafe(path, onexc):
+        def onerror(err):
+            if not isinstance(err, FileNotFoundError):
+                onexc(os.scandir, err.filename, err)
+        results = os.walk(path, topdown=False, onerror=onerror, followlinks=os._walk_symlinks_as_files)
+        for dirpath, dirnames, filenames in results:
+            for name in dirnames:
+                fullname = os.path.join(dirpath, name)
+                try:
+                    os.rmdir(fullname)
+                except FileNotFoundError:
+                    continue
+                except OSError as err:
+                    onexc(os.rmdir, fullname, err)
+            for name in filenames:
+                fullname = os.path.join(dirpath, name)
+                try:
+>                   os.unlink(fullname)
+E                   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sjyuujeq\\s\\results.sqlite'
+
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:625: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+    def test_file_exists_but_index_lost_the_result() -> None:
+        lab, path, _work = _completed("brasileirao:REQ-CORRUPT-002")
+        try:
+            with sqlite3.connect(lab.state / "results.sqlite") as db:
+                db.execute("DELETE FROM results")
+            code, lines, _ = lab.process(path)
+            assert code == 5 and lines[-1]["status"] == "RECONCILIATION_REQUIRED"
+            assert _results(lab) == 0  # no silent re-index
+            assert cli("--state", str(lab.state), "reconcile").returncode == 5
+        finally:
+>           lab.cleanup()
+
+tests\conformance\test_failure_recovery.py:285: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conformance\harness.py:140: in cleanup
+    shutil.rmtree(self.root, onexc=writable)
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:790: in rmtree
+    return _rmtree_unsafe(path, onexc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+D:\a\_temp\uv-python-dir\cpython-3.13-windows-x86_64-none\Lib\shutil.py:629: in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+function = <built-in function unlink>
+path = 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sjyuujeq\\s\\results.sqlite'
+_exc = PermissionError(13, 'The process cannot access the file because it is being used by another process')
+
+    def writable(function, path, _exc) -> None:  # operator objects are read-only on purpose
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+>       function(path)
+E       PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sjyuujeq\\s\\results.sqlite'
+
+tests\conformance\harness.py:138: PermissionError
+=================================== PASSES ====================================
+--- generated xml file: D:\a\_temp\out\windows-latest\conformance.junit.xml ---
+=========================== short test summary info ===========================
+PASSED tests/conformance/test_contract_conformance.py::test_e2e_file_request_to_result_and_reread_after_restart
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-PROTECTED_HYPOTHESIS0]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-PROTECTED_HYPOTHESIS1]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HYPOTHESIS_NOT_ADMITTED]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HOLDOUT_SEALED0]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-HOLDOUT_SEALED1]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SEASON_NOT_ALLOWED]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-WINDOW_OUTSIDE_SEASON]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-REFERENCE_UNAUTHORIZED_OR_UNKNOWN]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID0]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID1]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID2]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID3]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID4]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID5]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID6]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-REQUEST_TYPE_NOT_ALLOWED]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID7]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID8]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID9]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-PARAMETER_OUT_OF_BOUNDS]
+PASSED tests/conformance/test_contract_conformance.py::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID10]
+PASSED tests/conformance/test_contract_conformance.py::test_invalid_json_duplicate_keys_nan_and_oversize_are_rejected
+PASSED tests/conformance/test_contract_conformance.py::test_idempotency_duplicate_conflict_and_single_effect
+PASSED tests/conformance/test_contract_conformance.py::test_duplicate_after_policy_change_returns_the_stored_result
+PASSED tests/conformance/test_contract_conformance.py::test_authority_separation_invariants_are_enforced_by_the_contract
+PASSED tests/conformance/test_contract_conformance.py::test_forecast_only_for_future_events_makes_no_scientific_claim
+PASSED tests/conformance/test_contract_conformance.py::test_capital_is_forbidden_everywhere
+PASSED tests/conformance/test_contract_conformance.py::test_entrypoint_needs_no_checkout_or_project_root
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_admission_commit]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_admission]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_materialization]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_ops]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_ops]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_domain_effect]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_result_write]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_write]
+PASSED tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_store]
+PASSED tests/conformance/test_failure_recovery.py::test_ops_worker_crash_is_not_a_result_and_retry_succeeds
+PASSED tests/conformance/test_failure_recovery.py::test_ops_timeout_kills_the_worker_and_is_not_a_result
+PASSED tests/conformance/test_failure_recovery.py::test_slow_worker_still_produces_exactly_one_result
+PASSED tests/conformance/test_failure_recovery.py::test_retry_budget_exhaustion_is_a_terminal_operational_failure
+PASSED tests/conformance/test_failure_recovery.py::test_ops_lock_held_by_another_run_is_retryable_never_a_second_effect
+PASSED tests/conformance/test_failure_recovery.py::test_database_lock_waits_and_then_completes_once
+PASSED tests/conformance/test_failure_recovery.py::test_concurrent_submissions_of_the_same_request_produce_one_effect
+PASSED tests/conformance/test_failure_recovery.py::test_out_of_order_requests_are_independent_and_deterministic
+PASSED tests/conformance/test_failure_recovery.py::test_db_says_result_exists_but_file_is_gone
+PASSED tests/conformance/test_failure_recovery.py::test_modified_result_and_modified_effect_fail_closed
+PASSED tests/conformance/test_failure_recovery.py::test_corrupted_dataset_snapshot_in_the_object_store_fails_before_ops
+PASSED tests/conformance/test_failure_recovery.py::test_missing_reference_object_is_not_ready
+PASSED tests/conformance/test_failure_recovery.py::test_reference_changed_after_materialization_fails_closed
+PASSED tests/conformance/test_failure_recovery.py::test_backup_and_restore_into_a_new_root_reread_the_same_result
+PASSED tests/conformance/test_failure_recovery.py::test_fault_points_are_the_frozen_matrix
+PASSED tests/conformance/test_import_closure.py::test_entrypoints_include_the_research_circuit
+PASSED tests/conformance/test_import_closure.py::test_no_entrypoint_reaches_envelope_cain_or_adapter_paths
+PASSED tests/conformance/test_import_closure.py::test_research_circuit_components_are_reachable_from_the_entrypoint
+PASSED tests/conformance/test_import_closure.py::test_economic_decision_code_is_not_reachable_from_the_research_entrypoint
+PASSED tests/conformance/test_import_closure.py::test_nothing_outside_adapter_paths_imports_them
+PASSED tests/conformance/test_import_closure.py::test_runtime_import_of_the_circuit_loads_no_forbidden_module
+PASSED tests/conformance/test_temporal_suite.py::test_future_canary_never_reaches_any_artifact
+PASSED tests/conformance/test_temporal_suite.py::test_every_prediction_uses_only_information_available_before_its_cutoff
+PASSED tests/conformance/test_temporal_suite.py::test_handler_reads_only_the_captured_snapshot_not_the_live_database
+PASSED tests/conformance/test_temporal_suite.py::test_metamorphic_row_order_permutations_do_not_change_results
+PASSED tests/conformance/test_temporal_suite.py::test_postponed_and_rescheduled_match_is_ordered_by_its_real_kickoff
+PASSED tests/conformance/test_temporal_suite.py::test_duplicate_fixture_fails_closed
+PASSED tests/conformance/test_temporal_suite.py::test_result_of_game_a_does_not_affect_game_b_with_the_same_kickoff
+PASSED tests/conformance/test_temporal_suite.py::test_match_still_in_progress_is_not_information_for_the_next_kickoff
+PASSED tests/conformance/test_temporal_suite.py::test_venue_offsets_normalize_to_the_same_instants
+PASSED tests/conformance/test_temporal_suite.py::test_naive_kickoff_in_the_dataset_fails_closed
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2023-06-10T19:00:00-03:00-2023-06-10T22:00:00Z]
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2023-06-10T18:00:00-04:00-2023-06-10T22:00:00Z0]
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2023-06-10T18:00:00-04:00-2023-06-10T22:00:00Z1]
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2023-06-10T17:00:00-05:00-2023-06-10T22:00:00Z]
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2018-02-17T23:30:00-02:00-2018-02-18T01:30:00Z]
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2018-02-17T23:30:00-03:00-2018-02-18T02:30:00Z]
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2018-11-04T01:30:00-02:00-2018-11-04T03:30:00Z]
+PASSED tests/conformance/test_temporal_suite.py::test_explicit_offsets_are_normalized_never_guessed[2016-10-16T01:30:00-03:00-2016-10-16T04:30:00Z]
+PASSED tests/conformance/test_temporal_suite.py::test_ambiguous_nonexistent_or_naive_local_times_are_rejected[2018-02-17T23:30:00]
+PASSED tests/conformance/test_temporal_suite.py::test_ambiguous_nonexistent_or_naive_local_times_are_rejected[2018-11-04T00:30:00]
+PASSED tests/conformance/test_temporal_suite.py::test_ambiguous_nonexistent_or_naive_local_times_are_rejected[2024-05-01T19:00:00]
+PASSED tests/conformance/test_temporal_suite.py::test_ambiguous_nonexistent_or_naive_local_times_are_rejected[2024-05-01]
+PASSED tests/conformance/test_temporal_suite.py::test_ambiguous_nonexistent_or_naive_local_times_are_rejected[]
+PASSED tests/conformance/test_temporal_suite.py::test_capture_time_caches_are_never_read
+PASSED tests/conformance/test_temporal_suite.py::test_historical_prediction_is_the_same_after_running_a_future_date
+PASSED tests/conformance/test_temporal_suite.py::test_same_process_memo_does_not_leak_a_future_refit
+PASSED tests/conformance/test_temporal_suite.py::test_result_that_could_not_exist_at_capture_fails_closed
+PASSED tests/conformance/test_temporal_suite.py::test_data_cutoff_after_the_snapshot_as_of_is_refused
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_admission_commit] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-gxicw3jr\\s\\admission.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_admission] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sd0hhatx\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_materialization] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-28vtrkea\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[before_ops] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k4e49uyb\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_ops] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-s9_lg53_\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_domain_effect] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-lif0js9i\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[during_result_write] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-dk414e2t\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_write] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-k8v6o79l\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_process_death_at_each_point_recovers_exactly_once[after_result_store] - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-m_qavr8w\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_ops_worker_crash_is_not_a_result_and_retry_succeeds - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-etk7tji0\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_slow_worker_still_produces_exactly_one_result - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ci9wq0xg\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_ops_lock_held_by_another_run_is_retryable_never_a_second_effect - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-d2ncq2oi\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_database_lock_waits_and_then_completes_once - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-ri7s8hdm\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_concurrent_submissions_of_the_same_request_produce_one_effect - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-_e9dno45\\s\\results.sqlite'
+ERROR tests/conformance/test_failure_recovery.py::test_reference_changed_after_materialization_fails_closed - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-h2bvd0k4\\s\\results.sqlite'
+FAILED tests/conformance/test_failure_recovery.py::test_file_exists_but_index_lost_the_result - PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\q\\tmp.vMnm19qYz7\\cr\\t\\brq-sjyuujeq\\s\\results.sqlite'
+============= 1 failed, 87 passed, 15 errors in 455.74s (0:07:35) =============
+[exit 1]

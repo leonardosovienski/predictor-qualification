@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 import sys
 import time
 from pathlib import Path
@@ -168,7 +169,7 @@ def main() -> int:
         violations.append(f"FUTURE_CANARY found in {leaked[:5]}")
 
     # zero-tolerance checks
-    with sqlite3.connect(lab.state / "results.sqlite") as db:
+    with closing(sqlite3.connect(lab.state / "results.sqlite")) as db, db:
         rows = db.execute("SELECT request_id,result_id,content_hash,result FROM results").fetchall()
     stored = {r: res for r, res, _h, _b in rows}
     lost = [r for r, res in expected.items() if stored.get(r) != res]
