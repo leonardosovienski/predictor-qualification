@@ -1,5 +1,7 @@
 # SAME_KICKOFF_REPORT — missão brasileirao (gate `BR_SAME_KICKOFF_ISOLATION`)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. Teste verde nos 4 ambientes; soak com o dado real: 5 ciclos de mesmo kickoff com a mesma informação; corroboração real: jogo irmão idêntico e mudança vista só depois. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 Pergunta: o resultado do jogo A afeta a previsão do jogo B que começa no mesmo instante — por dado
 explícito ou por estado (Elo, refit, climatologia, cache)?
 

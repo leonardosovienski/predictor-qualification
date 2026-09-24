@@ -69,3 +69,30 @@ Regressão do `soak.py` no Actions: run 35980611463 (`279f3a6`) `success`; soak 
 (`RAW_LOGS/d16-pc2-20260924/actions-run35980611463/soak_regression.json`).
 
 Erros de método da noite: ver `D16_PC2_REPORT.md` §3.
+
+## Correção do BR-F018 e requalificação C14 (2026-09-24, sessão `brasileirao2`)
+
+### brasileirao-predictor
+
+| Commit | O quê | Por quê | Prova |
+|---|---|---|---|
+| `e0dab9a` (PR #79) | teste do pré-registro avisa (`ExpiredHarnessAttestationWarning`) em vez de pular com o atestado expirado | A-04; renovar o atestado altera artefato protegido | antes SKIPPED, depois PASSED + aviso |
+| `13c24c0` (PR #80) | `fit_goal_model`: gradiente analítico exato + raiz polida (Newton projetado) | **BR-F018** | testes novos falham no código antigo (3/5) e passam no novo; dado real entre SOs 20/20 |
+| `ed373c2`, `25cdf4d` | CI: jobs cross-OS ubuntu × windows; `core.longpaths` no Windows | exigência da missão; checkout falhava no Windows | run 36006495178 verde |
+| `827a227` | versão 0.3.0rc3 | release nova, nunca sobrescrever | — |
+
+**final_commit:** `25cdf4d9bb309d33f066fbc6a379f5d98c69f08a`. Pré-release `v0.3.0rc3`, wheel `403e6a022b10e2b6d05ef1828894bf3ad0b1d049301e3dfce9cf79dc262000ea`
+(build reprodutível no Linux do PC 2). A `v0.3.0rc2` continua publicada; deixa de ser final_wheel.
+
+### predictor-qualification
+
+- `scripts/attest.py` no núcleo v2.2 + CR-F021 (PR #38); `MANIFEST.sha256` dos prompts (PR #35).
+- Scripts novos: `pc2_build_rc.sh`, `pc2_windows_runtime.sh`, `pc2_kickoff_revert_proof.sh`, `compare_real_tolerance.py`,
+  `corroboration_summary.py`; `pc2_d16_runtime.sh` (`BRQ_RUNTIME`, `BRQ_ONLY_REAL`) e `pc2_export.py` (E2E opcional).
+- `BR_F018_FIX_PLAN.json` (tolerâncias declaradas antes de medir, `497715f`), `runtime_target.json` → rc3,
+  `FROZEN_VECTORS.json` regravado no `25cdf4d` (mesmos arquivos), contrato: bloco `implementation` → rc3.
+- `RAW_LOGS/c14-rc3-20260924/**`, `EVIDENCE_NUMBERS.json` (chaves `*_rc3`), `FINDINGS.json` (BR-F018 `FIXED`), `GATES.json`,
+  relatórios (bloco "Requalificação rc3"), `SOAK_REPORT.md`, `REAL_DATA_METRICS.md`, `BR_F018_REQUALIFICATION_REPORT.md`,
+  parciais `c14-*` e `QUALIFICATION_ATTESTATION.json`.
+
+Erros de método: ver `BR_F018_REQUALIFICATION_REPORT.md` §8.

@@ -1,0 +1,26 @@
+# 2026-09-24T15:46:01Z attestation final da requalificação (núcleo v2.2, where = owner_linux)
+[set exit 0]
+qualification/brasileirao/QUALIFICATION_ATTESTATION.json: OK  counts={'P0': 0, 'P1': 0, 'P2': 5}  result=QUALIFIED
+[final exit 0]
+$ attest.py check QUALIFICATION_ATTESTATION.json
+OK
+[check exit 0]
+$ stage_a_recheck.py --partial QUALIFICATION_ATTESTATION.json (reconferência independente)
+{"verdict": "DIVERGENCE", "problems": ["domain_contract_sha256: parcial e6f98ca28e50555f57c65adb030cc90ea9141249daebe44a333ca69970b1d824 != atual 1c75fc4507df8d48f1278e3c9475c627e8fce7cf25483395fe760e480cc752ec", "domain_contract_sha256 do GATES.json != contrato no main"], "gate_status_count": {"PASS": 32}, "evidence_files": 162}
+[recheck exit 1]
+# 2026-09-24T15:47:18Z ERRO DE MÉTODO: a attestation acima saiu com domain_contract_sha256 do contrato antigo (o attest.py copia o valor do GATES.json; o contrato mudou só no bloco implementation). Não commitada; preservada em c14/method_error_contract_sha/. attest.py ganha a checagem C7.1(7).
+$ attest.py check (com a checagem nova) na attestation errada
+C7.1(7): domain_contract_sha256 diferente do DOMAIN_RESEARCH_CONTRACT.json
+[check exit 1]
+[ledger domain_contract_sha256 = 1c75fc4507df8d48f1278e3c9475c627e8fce7cf25483395fe760e480cc752ec exit 0]
+qualification/brasileirao/QUALIFICATION_ATTESTATION.json: OK  counts={'P0': 0, 'P1': 0, 'P2': 5}  result=QUALIFIED
+[final exit 0]
+$ attest.py check QUALIFICATION_ATTESTATION.json
+OK
+[check exit 0]
+$ stage_a_recheck.py --partial QUALIFICATION_ATTESTATION.json
+{"verdict": "OK", "problems": [], "gate_status_count": {"PASS": 32}, "evidence_files": 162}
+[recheck exit 0]
+$ pytest test_attest_cr_f021.py
+......                                                                   [100%]
+6 passed in 0.13s

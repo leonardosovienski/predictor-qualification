@@ -1,5 +1,7 @@
 # TEMPORAL_INTEGRITY_REPORT — missão brasileirao (gate `TEMPORAL_INTEGRITY`)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. Testes temporais verdes nos 4 ambientes (`temporal-suite/gate_tests_rc3.json`); corroboração com o dado real pela rc3: 7/7 checagens (resumo sem dado); gap máximo −1800 s nos 20 pedidos reais; prova do revert do `a51a68d` refeita no `25cdf4d`. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 Regra (igual no contrato e em `FROZEN_PARAMETERS.json`):
 
 ```text

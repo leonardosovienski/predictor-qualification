@@ -1,5 +1,7 @@
 # CACHE_STATE_REPORT — missão brasileirao (gate `BR_CACHE_STATE`)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. Testes verdes nos 4 ambientes; corroboração real: `poisoned_caches_identical`. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 Exigência: previsão histórica em processo novo ≡ previsão histórica depois de rodar uma data futura
 (no mesmo processo e entre processos que compartilham estado).
 

@@ -1,5 +1,7 @@
 # METAMORPHIC_REPORT — missão brasileirao (gate `BR_METAMORPHIC`)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. 5 permutações congeladas verdes nos 4 ambientes; soak com o dado real: 5 permutações idênticas à referência; corroboração real: `permuted_identical`. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 Relação metamórfica: permutar a ordem física das linhas do dataset (mesmo conteúdo) não muda o
 resultado.
 

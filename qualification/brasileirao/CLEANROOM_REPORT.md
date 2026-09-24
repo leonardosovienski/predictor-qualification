@@ -1,5 +1,7 @@
 # CLEANROOM_REPORT — missão brasileirao (C5)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. Só wheels publicadas: conformidade 89/89 no Actions (linux e windows-latest, run 36010604163), no Linux primário do PC 2 (`owner_linux`, D-19) e no Windows local do PC 2; suíte completa pela wheel: 2327 casos, com os mesmos 46 da classe T (BR-F017) da rc2. Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 ## 1. cleanroom-baseline (diagnóstico do estado inicial)
 
 Os commits do baseline da missão são os do `STACK_BASELINE_V1.1`: brasileirao `e14f339`,

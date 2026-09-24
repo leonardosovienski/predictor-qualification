@@ -1,0 +1,149 @@
+usage: brasileirao-research [-h] [--state STATE]
+                            {process,run,show,reconcile,backup,restore,put-object,put-dataset} ...
+
+`brasileirao-research`: composition root of the Brasileirão research circuit
+(file requests).
+
+positional arguments:
+  {process,run,show,reconcile,backup,restore,put-object,put-dataset}
+
+options:
+  -h, --help            show this help message and exit
+  --state STATE
+
+{
+ "script": "brasileirao-research",
+ "argv": [
+  "--help"
+ ],
+ "exit": 0,
+ "origins": {
+  "predictor_core": "C:\\q\\tmp.VWBuVIJZOK\\venv\\Lib\\site-packages\\predictor_core\\__init__.py",
+  "predictor_ops": "C:\\q\\tmp.VWBuVIJZOK\\venv\\Lib\\site-packages\\predictor_ops\\__init__.py",
+  "brasileirao_predictor": "C:\\q\\tmp.VWBuVIJZOK\\venv\\Lib\\site-packages\\brasileirao_predictor\\__init__.py"
+ },
+ "research_components_loaded": [
+  "brasileirao_predictor.research_runtime",
+  "brasileirao_predictor.research_runtime.admission",
+  "brasileirao_predictor.research_runtime.contract",
+  "brasileirao_predictor.research_runtime.durable",
+  "brasileirao_predictor.research_runtime.execution",
+  "brasileirao_predictor.research_runtime.faults",
+  "brasileirao_predictor.research_runtime.results",
+  "brasileirao_predictor.research_runtime.runner"
+ ],
+ "modules": [
+  "brasileirao_predictor",
+  "brasileirao_predictor.research_runtime",
+  "brasileirao_predictor.research_runtime.admission",
+  "brasileirao_predictor.research_runtime.contract",
+  "brasileirao_predictor.research_runtime.durable",
+  "brasileirao_predictor.research_runtime.execution",
+  "brasileirao_predictor.research_runtime.faults",
+  "brasileirao_predictor.research_runtime.results",
+  "brasileirao_predictor.research_runtime.runner",
+  "predictor_core",
+  "predictor_core.contracts",
+  "predictor_core.contracts.trial_v2",
+  "predictor_ops",
+  "predictor_ops.models",
+  "predictor_ops.observability",
+  "predictor_ops.operations",
+  "predictor_ops.provenance",
+  "predictor_ops.redaction",
+  "predictor_ops.runner",
+  "predictor_ops.runtime"
+ ]
+}
+usage: brasileirao-predict [-h] [--neutral] [--date DATE]
+                           [--formal-context FORMAL_CONTEXT]
+                           [--team-aliases TEAM_ALIASES]
+                           [--team-catalog TEAM_CATALOG] [--fixtures N]
+                           [--rankings N] [--resumo] [--expand | --stats |
+                           --full | --json] [--corners] [--cards]
+                           [teams ...]
+
+Preditor de partidas internacionais
+
+positional arguments:
+  teams                 TIME_A TIME_B (em inglês, ex: Brazil)
+
+options:
+  -h, --help            show this help message and exit
+  --neutral             campo neutro
+  --date DATE           data UTC do jogo (YYYY-MM-DD)
+  --formal-context FORMAL_CONTEXT
+  --team-aliases TEAM_ALIASES
+  --team-catalog TEAM_CATALOG
+  --fixtures N          prevê os próximos N fixtures da base
+  --rankings N          top N do Elo
+  --resumo              modo lote: só a tabela resumo ao final, sem os blocos
+                        por jogo (--fixtures continua computando e registrando
+                        cada predição)
+  --expand              nível 1: gols esperados, edge detalhado, placar top-1
+  --stats               nível 2: Shin completo, placares top-5, parâmetros do
+                        modelo
+  --full                nível 3: dupla chance, draw no bet, handicap asiático
+  --json                saída estruturada (machine-output), ignora os outros
+                        níveis
+  --corners             injeta escanteios (SEM validação de CLV) sem precisar
+                        de --full
+  --cards               injeta cartões (SEM validação de CLV) sem precisar de
+                        --full
+
+{
+ "script": "brasileirao-predict",
+ "argv": [
+  "--help"
+ ],
+ "exit": 0,
+ "origins": {
+  "predictor_core": "C:\\q\\tmp.VWBuVIJZOK\\venv\\Lib\\site-packages\\predictor_core\\__init__.py",
+  "brasileirao_predictor": "C:\\q\\tmp.VWBuVIJZOK\\venv\\Lib\\site-packages\\brasileirao_predictor\\__init__.py"
+ },
+ "research_components_loaded": [],
+ "modules": [
+  "brasileirao_predictor",
+  "brasileirao_predictor.db",
+  "brasileirao_predictor.identity",
+  "brasileirao_predictor.ingest",
+  "brasileirao_predictor.model",
+  "brasileirao_predictor.net",
+  "brasileirao_predictor.obs",
+  "brasileirao_predictor.paths",
+  "brasileirao_predictor.predict",
+  "predictor_core",
+  "predictor_core.kernel",
+  "predictor_core.kernel.obs",
+  "predictor_core.kernel.timeindex"
+ ]
+}
+usage: brasileirao-shadow [-h] [--check]
+                          --task-name {brasileirao-sombra-manha,brasileirao-sombra-noite}
+
+Run the shadow routine with the operational envelope.
+
+options:
+  -h, --help            show this help message and exit
+  --check               Check distribution through Ops without running
+                        acquisition
+  --task-name {brasileirao-sombra-manha,brasileirao-sombra-noite}
+
+{
+ "script": "brasileirao-shadow",
+ "argv": [
+  "--help"
+ ],
+ "exit": 0,
+ "origins": {
+  "brasileirao_predictor": "C:\\q\\tmp.VWBuVIJZOK\\venv\\Lib\\site-packages\\brasileirao_predictor\\__init__.py",
+  "brasileirao_scripts": "C:\\q\\tmp.VWBuVIJZOK\\venv\\Lib\\site-packages\\brasileirao_scripts\\__init__.py"
+ },
+ "research_components_loaded": [],
+ "modules": [
+  "brasileirao_predictor",
+  "brasileirao_predictor.paths",
+  "brasileirao_scripts",
+  "brasileirao_scripts.sombra_diaria"
+ ]
+}

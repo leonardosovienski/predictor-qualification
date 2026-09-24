@@ -1,5 +1,7 @@
 # PROTECTED_ARTIFACT_REPORT — missão brasileirao (gate `PROTECTED_ARTIFACTS_UNCHANGED`, C15.1)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. 1877/1877 blobs iguais entre `truth-map` (`e14f339`) e o final_commit da rc3 (`25cdf4d`) (`c14/protected_check_25cdf4d.json`). Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 * Conjunto: `PROTECTED_SET.json`, fechado em `truth-map` no commit `e14f3394c1908fae6d2f25754e6ab3a6792dbf1e`
   **antes de qualquer mudança**: 1877 arquivos, identidade = blob git. Composição: as 172 linhas de
   `docs/open_source_research/OSR-20260911-01/PROTECTED_PATHS.txt` (H9, H14, H15, A1, coleta de odds,

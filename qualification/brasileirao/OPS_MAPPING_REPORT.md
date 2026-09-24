@@ -1,5 +1,7 @@
 # OPS_MAPPING_REPORT — missão brasileirao (gates `BR_OPS_REUSE`, `OPS_RUNTIME`)
 
+> **Requalificação rc3 (C14 do BR-F018, 2026-09-24):** final_commit `25cdf4d` / wheel 0.3.0rc3 `403e6a02…`. Mesmo mecanismo e mesma wheel do Ops (4.2.2rc1); E2E real 25/25 no Linux primário do PC 2 e no Windows local (jobs file v3, `strict`, `FORECAST_GENERATION`, heartbeat, lock econômico, 1 SUCCEEDED). Detalhes: `BR_F018_REQUALIFICATION_REPORT.md`; saída bruta: `RAW_LOGS/c14-rc3-20260924/`. O texto abaixo descreve a rc2 (Etapa A).
+
 ## 1. Mesmo mecanismo da sombra
 
 | | Sombra (`brasileirao_scripts/sombra_diaria.py`) | Pesquisa (`brasileirao_predictor/research_runtime/execution.py`) |
