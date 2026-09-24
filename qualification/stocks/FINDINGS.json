@@ -42,6 +42,18 @@
       "evidence": [
         "qualification/stocks/ARCHITECTURE_TRUTH_MAP.json"
       ]
+    },
+    {
+      "id": "ST-F004",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "cleanroom-baseline",
+      "title": "Suíte legada do Stocks só roda contra o checkout",
+      "description": "tests/conftest.py põe <repo>/stocks_predictor no sys.path e ~48 módulos de teste importam módulos planos (import adjust, db, universe...). Numa árvore sem a pasta-fonte, com a wheel instalada, a coleta para: 48 erros (Linux) e 50 (windows-latest) no cleanroom-baseline. A suíte legada não valida a wheel instalada; o CI do repo compensa com o smoke da wheel fora do checkout. A suíte de conformidade nova (tests/conformance) importa só stocks_predictor.* e roda contra a wheel.",
+      "evidence": [
+        "qualification/stocks/RAW_LOGS/cleanroom-baseline/run35943720554/stocks-runtime-linux-primary/full_suite.log",
+        "qualification/stocks/RAW_LOGS/cleanroom-baseline/run35943720554/stocks-runtime-windows-latest/full_suite.log"
+      ]
     }
   ]
 }

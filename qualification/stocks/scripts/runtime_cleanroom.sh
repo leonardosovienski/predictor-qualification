@@ -86,6 +86,9 @@ if [ "$MODE" = "final" ]; then
   ( cd "$WORK/elsewhere" && "$PY" "$HERE/e2e_runtime.py" --tests "$WORK/tree/tests" --work "$WORK/e2e" --out "$OUT/e2e" ) > "$OUT/e2e.log" 2>&1
   echo "[exit $?]" >> "$OUT/e2e.log"
   if [ "$SOAK" = "1" ]; then
+    ( cd "$WORK/elsewhere" && "$PY" "$HERE/science.py" --tests "$WORK/tree/tests" --work "$WORK/science" --out "$OUT/science" \
+        --matrix "$WORK/tree/EXTERNAL_INTELLIGENCE_TRIAL_READINESS_MATRIX.json" ) > "$OUT/science.log" 2>&1
+    echo "[exit $?]" >> "$OUT/science.log"
     ( cd "$WORK/elsewhere" && "$PY" "$HERE/soak.py" --tests "$WORK/tree/tests" --work "$WORK/soak" --log "$OUT/soak.jsonl" ) > "$OUT/soak.log" 2>&1
     echo "[exit $?]" >> "$OUT/soak.log"
   fi
