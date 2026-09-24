@@ -94,3 +94,31 @@ instante em que era válido. Renovar o atestado continua sendo decisão do dono.
   (segundo trecho mudou com o BR-F004); o revert não aconteceu e o teste passou. A prova válida reverte só o trecho de ordenação.
 - Os worktrees da sessão nasceram primeiro dentro dos clones compartilhados (caminho relativo com `git -C`); removidos limpos
   e recriados no lugar certo.
+- `c14/method_error_contract_sha/QUALIFICATION_ATTESTATION_METHOD_ERROR_contract_sha.json` (15:46:01Z): a primeira attestation
+  final saiu com o `domain_contract_sha256` do contrato anterior (`e6f98ca2…`; o `attest.py` copiava o valor do `GATES.json`),
+  não com o do contrato que foi para o `main` com ela (`1c75fc45…`). A reconferência independente (`stage_a_recheck.py`)
+  acusou antes do commit; a attestation válida foi gerada de novo (15:47:18Z) e o `attest.py` passou a conferir a C7.1(7)
+  (teste `test_final_attestation_checks_the_contract_sha256`).
+
+## 9. Revisão final (2026-09-24, depois do merge; diagnóstico, não muda gate)
+
+Saída bruta em `RAW_LOGS/c14-rc3-20260924/review-final/`, pelos scripts versionados `scripts/strict_audit.py` e
+`scripts/optimum_check.py`, no runtime da wheel rc3 do PC 2 e com a cópia do dado (sha256 `31f30a4d…` antes e depois).
+
+- **Comparação exata, sem tolerância** (`strict_audit_rc3.log`): rc3 Linux PC 2 × rc3 Windows PC 2, o resultado `show`
+  inteiro dos 20 pedidos: nenhum número não finito (NaN/inf) nos dois lados; os 24 campos que diferem são só IDs, instantes e
+  hashes de execução (`result_id`, `admission_id`, `ops_facts/*_at`, `effect_sha256`, `identity`, `references`,
+  `provenance/*`...); todo o conteúdo de domínio é bit a bit igual. Os mesmos 24 campos diferem entre duas execuções rc3 no
+  mesmo Linux. Isso cobre também uma lacuna latente do `compare_real_tolerance.py`: ele trataria NaN de um lado contra número
+  do outro como igual; não há NaN, então o 20/20 não depende disso. O comparador fica como está (é evidência atestada).
+- **O ótimo novo nunca é pior** (`optimum_check_real.json`): nos 62 refits mensais reais (2021-05 a 2026-09), na mesma `negll`,
+  o método da rc3 chega a um valor **menor** que o da rc2 em 62/62 (diferença de −3,7e-6 a −0,17; nenhum igual ou pior). No
+  ponto final da rc3 o gradiente projetado é ≤ 7,7e-14; no da rc2, mediana 1,17 e máximo 15,2: o L-BFGS-B com diferenças
+  finitas parava longe da raiz do gradiente, e era aí que o ruído de cada SO decidia o ponto de parada (máx. |Δθ| entre os
+  dois pontos: 2,94).
+- Os parciais `c14-*` foram gravados em sequência entre 15:43:13Z e 15:45:38Z, depois de as fases rodarem: cada
+  um tem o estado do ledger depois da fase dele (E2E, depois SOAK, e por último `BLOCKERS_ZERO` em `PASS`), mas o
+  `generated_at` é o da gravação, não o do fim da fase.
+- Fora do caminho qualificado: `xg_model.py`, `dixon_coles.py` (usado pelo `evaluator.py`) e `event_models.py` também usam
+  L-BFGS-B sem gradiente analítico. O worker de pesquisa (entrypoint do contrato) usa só `model.fit_goal_model`, corrigido e
+  provado acima; o `QUALIFIED` não cobre esses módulos (C22). Pista para o dono, não achado: não houve reprodução neles.

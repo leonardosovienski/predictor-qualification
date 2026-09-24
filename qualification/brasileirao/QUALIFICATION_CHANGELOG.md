@@ -70,6 +70,9 @@ Regressão do `soak.py` no Actions: run 35980611463 (`279f3a6`) `success`; soak 
 
 Erros de método da noite: ver `D16_PC2_REPORT.md` §3.
 
+Commits e PR (C6): `279f3a6` (evidência, scripts, relatórios, parcial) e `898bcb9` (regressão do Actions), no
+**PR #19** (merge `6794715`).
+
 ## Correção do BR-F018 e requalificação C14 (2026-09-24, sessão `brasileirao2`)
 
 ### brasileirao-predictor
@@ -96,3 +99,22 @@ Erros de método da noite: ver `D16_PC2_REPORT.md` §3.
   parciais `c14-*` e `QUALIFICATION_ATTESTATION.json`.
 
 Erros de método: ver `BR_F018_REQUALIFICATION_REPORT.md` §8.
+
+Commits e PRs (C6), na ordem de merge:
+
+| PR (merge) | Commits | O quê |
+|---|---|---|
+| #35 (`d301aba`) | `3275bdf` | `MANIFEST.sha256`: sha256 dos prompts depois do PR #34 |
+| #38 (`321aa95`) | `8cdd738` | `attest.py` no núcleo v2.2 (D-20) e CR-F021 |
+| #39 (`c8d94f6`) | `c3496a9`, `2141576` (plano de tolerâncias, recommit do `497715f`/`5eb62c9`), `b6e44ab`, `c1bb6ea` (kit), `db8aa85` (`runtime_target.json` → rc3), `7896fc9` (requalificação, E2E/SOAK, attestation), `09ffa09` (CI do `main` do brasileirao-predictor) | requalificação C14 da rc3 |
+| #40 (`f529e82`) | `497715f`, `5eb62c9` | põe no histórico do `main` o commit citado como prova de anterioridade das tolerâncias (conteúdo igual ao do #39) |
+
+### Revisão final (2026-09-24, depois do merge do #40; branch `brasileirao2/revisao-final-20260924`)
+
+Só acréscimos; nenhum arquivo citado pela attestation mudou (`attest.py check` continua OK).
+
+| O quê | Por quê |
+|---|---|
+| `scripts/strict_audit.py`, `scripts/optimum_check.py` (novos) e `RAW_LOGS/c14-rc3-20260924/review-final/**` | diagnóstico complementar do BR-F018: comparação exata sem tolerância dos 20 resultados reais entre os SOs, e o ótimo da rc3 contra o da rc2 nos 62 refits reais (`BR_F018_REQUALIFICATION_REPORT.md` §9) |
+| `BR_F018_REQUALIFICATION_REPORT.md` §8 e §9 | o terceiro erro de método (sha256 antigo do contrato na primeira attestation) estava preservado sem explicação; resultado da revisão |
+| este arquivo | commits e PRs que faltavam (C6) |
