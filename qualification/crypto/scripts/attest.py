@@ -29,7 +29,8 @@ QC = ROOT / "qualification" / "crypto"
 CORE = ROOT / "qualification" / "COMMON_QUALIFICATION_CORE.md"
 SCHEMA = ROOT / "qualification" / "ATTESTATION_SCHEMA.json"
 V1 = ROOT / "qualification" / "shared" / "STACK_BASELINE_V1.json"
-CORE_SHA = "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1"
+# núcleo v2.1 (D-19); o schema ainda fixa common_core_version = attestation_version = "2.0" (const)
+CORE_SHA = "a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b"
 OPEN = {"OPEN", "OPEN_AWAITING_VERDICT", "OPEN_BLOCKED"}
 
 
@@ -116,7 +117,7 @@ def check(doc: dict) -> list[str]:
     jsonschema.Draft202012Validator(schema).validate(doc)
     problems = []
     if doc["common_core_sha256"] != CORE_SHA:
-        problems.append("C7.1(6): common_core_sha256 diferente da v2.0")
+        problems.append("C7.1(6): common_core_sha256 diferente do núcleo vigente (v2.1)")
     if doc["counts"] != counts():
         problems.append("C7.1(2): counts não bate com FINDINGS.json")
     for gate in doc["gates"].values():

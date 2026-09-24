@@ -67,7 +67,11 @@
       "$ref": "#/$defs/sha256"
     },
     "common_core_version": {
-      "const": "2.0"
+      "enum": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
     },
     "common_core_sha256": {
       "$ref": "#/$defs/sha256"
@@ -223,7 +227,8 @@
             "enum": [
               "github_actions",
               "cloud_vm",
-              "local_windows"
+              "local_windows",
+              "owner_linux"
             ]
           },
           "result": {
@@ -233,6 +238,26 @@
             "type": "array",
             "items": {
               "$ref": "#/$defs/evidence"
+            }
+          }
+        },
+        "if": {
+          "properties": {
+            "where": {
+              "const": "owner_linux"
+            }
+          },
+          "required": [
+            "where"
+          ]
+        },
+        "then": {
+          "properties": {
+            "os": {
+              "const": "linux"
+            },
+            "role": {
+              "const": "primary"
             }
           }
         }

@@ -1,6 +1,14 @@
-# COMMON_QUALIFICATION_CORE — NÚCLEO COMUM DE QUALIFICAÇÃO (v2.0 — enxuto)
+# COMMON_QUALIFICATION_CORE — NÚCLEO COMUM DE QUALIFICAÇÃO (v2.2 — enxuto)
 
-**Supersedes:** v1.3. Nenhuma missão foi qualificada sob a v1.3 (a única
+**v2.2 (2026-09-24, D-20):** C0.2 confere o schema pelo sha256 registrado em
+`MANIFEST.sha256` (o texto fixava o schema da v2.0). Nenhum outro requisito mudou.
+
+**v2.1 (2026-09-24, D-19):** C11 e C7.1 admitem o Linux do dono (`owner_linux`) como
+ambiente primário **só** para dado real privado, sem direito de redistribuição. Nenhum
+outro requisito mudou. C14 "Núcleo (versão)": as attestations revalidam no novo schema
+e são reemitidas com o novo `common_core_sha256`, sem refazer fases.
+
+**Supersedes (v2.0):** v1.3. Nenhuma missão foi qualificada sob a v1.3 (a única
 execução terminou `ABORTED` no C0), então não há nada a revalidar.
 
 **Foco desta versão:** provar que o stack **funciona** e que os resultados são
@@ -33,8 +41,8 @@ Etapa B — integração (uma missão)
    igual ao do prompt da missão (64 caracteres). Diferente = aborta. Se a única
    diferença for CRLF, corrigir o checkout (`.gitattributes` com
    `qualification/** text eol=lf`) e recalcular.
-2. **Schema:** sha256 de `qualification/ATTESTATION_SCHEMA.json` =
-   `3594e35044626264a18270ee4e079e653e3b940f1e7a72d36f2b70972f5bf970`.
+2. **Schema:** sha256 de `qualification/ATTESTATION_SCHEMA.json` = o registrado
+   para ele em `MANIFEST.sha256` no `main` (`sha256sum -c MANIFEST.sha256` passa).
 3. **Arquivos no `main` do repositório de evidência:**
    `qualification/DECISIONS.json` e `qualification/HYGIENE.json`. Para as
    missões das Etapas A e B, todos os itens de `HYGIENE.json` em `DONE` e o
@@ -212,7 +220,8 @@ IN_PROGRESS` (este só em parciais).
 3. Todo arquivo de evidência existe e o sha256 confere no commit da attestation.
 4. Todo `final_wheels[*].sha256` confere com o asset da `url`, e as
    `final_wheels` cobrem todo pacote do stack instalado no runtime.
-5. `environments`: um Linux `primary` e um Windows `secondary` (C11).
+5. `environments`: um Linux `primary` e um Windows `secondary` (C11). `where =
+   owner_linux` só com a D-19 e só na missão cujo dado real é privado.
 6. `common_core_sha256` = sha256 desta versão.
 7. Etapa A: `domain_contract_sha256` = sha256 do contrato no `main`.
    Etapa B: uma `domain_attestations` por domínio, cada uma de uma attestation
@@ -316,7 +325,9 @@ vazamento de futuro. Saída `SOAK_REPORT.md`.
 
 ## C11. AMBIENTES
 
-**Primário:** Linux × Python 3.13 (GitHub Actions ou VM na nuvem, D-9) —
+**Primário:** Linux × Python 3.13 (GitHub Actions ou VM na nuvem, D-9; para
+dado real privado sem direito de redistribuição, também o Linux do dono,
+`owner_linux`, provisionado por `provision_linux_vm.sh`, D-19) —
 qualificação completa e soak. **Secundário:** Windows × Python 3.13 — E2E +
 restart. Crypto e Brasileirão: no Windows local (D-3). Stocks: job
 `windows-latest` no GitHub Actions (D-1; o Windows local do Stocks não recebe

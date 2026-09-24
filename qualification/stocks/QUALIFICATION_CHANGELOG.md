@@ -76,9 +76,15 @@ Resultado: E2E, WINDOWS_SMOKE, SOAK e STOCKS_NEGATIVE_CONTROLS em PASS (run 3598
 | `RAW_LOGS/d16/run36001349055-main/` | preservar a evidência do run que falhou (C20; não é evidência de gate) |
 | `D16_RUNBOOK.md` §6 | como rodar de novo (pin + dispatch) |
 
-### Reverificação (2026-09-24, depois do merge do #20 e do #21) — branch `stocks/d16-recheck-20260924`
+## C14 "Núcleo (versão)" v2.0 → v2.1 (D-19, 2026-09-24)
 
-| O quê | Por quê |
-|---|---|
-| `D16_RECHECK_20260924.md`, `RAW_LOGS/d16/recheck-20260924/` (`RECHECK_SUMMARY.json`, CIs, runtime, suíte, build rc, conjunto protegido, attestation, parciais, reexecução da D-16), `d16/verify_attestation.py`, `d16/recheck_summary.py` | pedido do dono de conferir e testar tudo de novo: CI de stocks/Core/Ops, runtime da Etapa A com as wheels publicadas, suíte, build reprodutível, C7.1 inteira na attestation do main e a D-16 reexecutada com pin novo (mesmo painel, mesmos resultados). Nada decidido nem alterado na attestation |
-| número corrigido acima: "22 parciais" (o changelog dizia 23) | C20: o log bruto do passo 0 diz 22 |
+Núcleo v2.1 (PR #22) e schema com `common_core_version` 2.0|2.1 (PR #26). Nenhum requisito do stocks mudou (a D-19 só
+admite `owner_linux` para dado privado). Sem refazer fases:
+
+| Arquivo | O quê | Por quê | Prova |
+|---|---|---|---|
+| `scripts/attest.py` | `CORE_SHA` da v2.1 (`a3b4b7bb…`), `common_core_version` 2.1; `check()` confere também `environments[*].evidence`, `shared_dependency_verdicts[*].verdict_sha256` e `findings_file` | C7.1 regras 3 e 6; mesmo buraco do CR-F021 do crypto | `RAW_LOGS/c14-nucleo-v2.1/cr-f021_check.log`: cópias adulteradas nos 3 campos são acusadas |
+| `QUALIFICATION_ATTESTATION.json` | reemitida: `QUALIFIED`, 31/31 PASS (mesmos estados), P0=P1=0, P2=5 | C7.1 regra 8 | `attest.py check` OK |
+| `QUALIFICATION_ATTESTATION_superseded_c95145a78a46.json` | a anterior (v2.0), preservada byte a byte | C7.1 regra 8 | `supersedes_sha256` da nova |
+
+`d16/verify_stage_a.py` continua conferindo o núcleo v2.0: é a verificação do passo 0 da D-16, feita no HEAD 3983de1, e fica como registro.
