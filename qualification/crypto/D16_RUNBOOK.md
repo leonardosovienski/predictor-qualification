@@ -65,7 +65,10 @@ Nenhum segredo é necessário: repositórios públicos e dados públicos.
    anterior (`eb3e79f4…`) é preservada byte a byte como
    `QUALIFICATION_ATTESTATION_superseded_<sha12>.json`, e a nova aponta para ela
    em `supersedes_sha256`.
-3. `python qualification/crypto/scripts/evidence_numbers.py --out EVIDENCE_NUMBERS_D16.json …` (apontando para a pasta d16) para os números do
+3. `python qualification/crypto/scripts/evidence_numbers.py --runtime-run run35925914768 --local v1.1/windows-local
+   --protected v1.1/protected_set_check_341d270.json --ops-summary ops-failure-v1.1/OPS_FAILURE_SUMMARY.json
+   --d16 d16/<id> --out EVIDENCE_NUMBERS_D16.json` (os argumentos V1.1 reproduzem `EVIDENCE_NUMBERS_V1.1.json`;
+   `--d16` acrescenta a seção da pasta d16) para os números do
    `SOAK_REPORT.md` e do `SCIENTIFIC_INTEGRITY_REPORT.md` (seção D-16, C20).
 4. `python qualification/crypto/scripts/attest.py final`, depois `attest.py check`.
 5. Varredura de segredos na evidência nova, `QUALIFICATION_CHANGELOG.md`, PR.
