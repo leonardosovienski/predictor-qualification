@@ -1,0 +1,47 @@
+{
+  "schema": "brasileirao/FINDINGS/1",
+  "severity_scale": "C6: P0 quebra o que dá dinheiro ou faz perder; P1 defeito real sem violação observada; P2 sem efeito em resultado ou operação",
+  "status_values": [
+    "OPEN",
+    "FIXED",
+    "NOT_A_DEFECT",
+    "ACCEPTED_LIMITATION"
+  ],
+  "findings": [
+    {
+      "id": "BR-F001",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "freeze-parameters",
+      "title": "Ponto de partida do prompt desatualizado",
+      "description": "O prompt (§3) diz main=34d73e2 e Ops 4.2.1. O main real do brasileirao-predictor em 2026-09-24 é e14f339 (merges de HYG-004 e HYG-015 por cima de 34d73e2). A missão segue o código (prompt §0).",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/freeze-parameters/ls_remote.log"
+      ]
+    },
+    {
+      "id": "BR-F002",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "freeze-parameters",
+      "title": "Branches remotas já mescladas no brasileirao-predictor",
+      "description": "fix/walkforward-row-contract-20260919 (a51a68d), hygiene/HYG-004-uv-locked (a2f8665) e hygiene/HYG-015-retire-v1-workflows (3de65fa) continuam no GitHub, todas já contidas em main. O dono pediu que ao final só reste main.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/freeze-parameters/ls_remote.log"
+      ],
+      "owner_action": "nenhuma: apagar ao fim da missão após conferir ancestralidade (pedido do dono)"
+    },
+    {
+      "id": "BR-F003",
+      "severity": "P1",
+      "status": "OPEN",
+      "phase": "freeze-parameters",
+      "title": "brasileirao-predictor consome predictor-ops 4.2.1 (SHARED-005 bloqueante)",
+      "description": "pyproject/uv.lock/CI do baseline apontam a wheel 4.2.1 (da4fa540…), bloqueante pela SHARED-005 (RESOLUTION_4.2.2rc1.json: consumidores da 4.2.1 continuam bloqueados até migrar). D-17 manda migrar para 4.2.2rc1.",
+      "evidence": [
+        "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json",
+        "qualification/shared/STACK_BASELINE_V1.1.json"
+      ]
+    }
+  ]
+}
