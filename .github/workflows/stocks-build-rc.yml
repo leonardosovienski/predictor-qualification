@@ -1,0 +1,49 @@
+# Missão stocks / publish-candidates: build reprodutível da rc do stocks-predictor no commit
+# de qualification/stocks/build_target.json, pelo próprio processo do repo
+# (tools/reproducible_build.py: duas builds, mesmos bytes, SOURCE_DATE_EPOCH = data do commit),
+# com as ferramentas de build instaladas por hash (tools/build-requirements.txt).
+# Nada é construído no Windows local (D-1). Nada é publicado aqui: a release é criada à parte.
+name: Stocks build rc
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/stocks/build_target.json
+      - .github/workflows/stocks-build-rc.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Build twice at the target commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT="$(python3 -c "import json;print(json.load(open('qualification/stocks/build_target.json'))['commit'])")"
+          OUT="$RUNNER_TEMP/out"; mkdir -p "$OUT"
+          git clone -q https://github.com/leonardosovienski/stocks-predictor.git "$RUNNER_TEMP/src"
+          cd "$RUNNER_TEMP/src" && git -c advice.detachedHead=false checkout -q "$COMMIT"
+          git rev-parse HEAD > "$OUT/head.txt"
+          uv sync --locked --all-extras --python 3.13 > "$OUT/uv_sync.log" 2>&1
+          uv pip install --python .venv/bin/python --require-hashes --no-deps --only-binary :all: -r tools/build-requirements.txt > "$OUT/build_tools.log" 2>&1
+          uv run --no-sync python tools/reproducible_build.py > "$OUT/reproducible_build.log" 2>&1
+          cp -r dist build-receipt.json "$OUT/"
+          sha256sum dist/* > "$OUT/SHA256SUMS"
+          python3 -m zipfile -l dist/*.whl > "$OUT/wheel_contents.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stocks-rc-build
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error

@@ -1,0 +1,91 @@
+.....F.................................................................. [  6%]
+............................................................. [ 12%]
+........................................................................ [ 19%]
+...................................................................... [ 26%]
+................................................................... [ 33%]
+........................................................................ [ 40%]
+.................................................................. [ 46%]
+........................................................................ [ 53%]
+........................................................................ [ 60%]
+.......................................................... [ 65%]
+..............................F....................... [ 71%]
+....................................................................................................................................... [ 84%]
+........................................................................ [ 91%]
+........................................................................ [ 98%]
+....................                                               [100%]
+=================================== FAILURES ===================================
+____ test_authority_states_stay_separate[case_b-NO_EDGE-SUPPORTED-NO_EDGE] _____
+
+env = {'root': PosixPath('/tmp/pytest-of-runner/pytest-0/test_authority_states_stay_sep1'), 'policy': PosixPath('/tmp/pytest...tates_stay_sep1/objects'), 'state': PosixPath('/tmp/pytest-of-runner/pytest-0/test_authority_states_stay_sep1/s'), ...}
+dataset = 'case_b', result_state = 'NO_EDGE', scientific = 'SUPPORTED'
+economic = 'NO_EDGE'
+
+    @pytest.mark.parametrize(
+        ("dataset", "result_state", "scientific", "economic"),
+        [
+            ("case_a", "INCONCLUSIVE", "INCONCLUSIVE", "NO_EDGE"),
+            ("case_b", "NO_EDGE", "SUPPORTED", "NO_EDGE"),
+            ("insufficient", "CLOSED_INSUFFICIENT_SAMPLE", "INSUFFICIENT_SAMPLE", "NOT_EVALUATED"),
+        ],
+    )
+    def test_authority_states_stay_separate(env, dataset, result_state, scientific, economic):
+        path = write_request(env, dataset, request(f"stocks:REQ-{dataset.upper().replace('_', '-')}", dataset=dataset))
+        code, lines = cli(env, "process", str(path))
+        outcome = _only(lines)
+        assert code == 0 and outcome["operational_state"] == "SUCCEEDED"
+        assert (outcome["result_state"], outcome["scientific_state"], outcome["economic_state"]) == (
+            result_state, scientific, economic)
+        stored = _result(outcome)
+        assert stored["capital_permission"] is False
+        if dataset == "case_b":
+            metrics = stored["domain_facts"]["metrics"]
+>           assert metrics["excess_gross_ci_bps"][0] > 0 and metrics["excess_net_bps"] <= 0
+E           assert (305 > 0 and 89 <= 0)
+
+tests/conformance/test_contract_conformance.py:165: AssertionError
+___________ OperationalEvidenceTests.test_current_complete_evidence ____________
+
+self = <tests.test_operational_evidence.OperationalEvidenceTests testMethod=test_current_complete_evidence>
+
+    def test_current_complete_evidence(self):
+>       self.assertEqual(evidence.verify()['real_rows'], 55986)
+                         ^^^^^^^^^^^^^^^^^
+
+tests/test_operational_evidence.py:13: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/verify_operational_evidence.py:128: in verify
+    current_hashes = _verify_current_code(root, current)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/tmp.4oAhLAMhk4/src')
+record = {'schema_version': 'current-operational-evidence/1', 'status': 'LOCAL_VALIDATED_CI_PENDING', 'generated_at': '2026-09-23T04:54:19.000000Z', 'code_text_hash_policy': 'UTF-8 file bytes with CRLF normalized to LF', ...}
+
+    def _verify_current_code(root: Path, record: dict) -> dict[str, str]:
+        hashes = _hashes(record)
+        if set(hashes) != code_paths(root):
+>           raise ValueError("current code population differs from operational evidence")
+E           ValueError: current code population differs from operational evidence
+
+tools/verify_operational_evidence.py:57: ValueError
+============================= slowest 15 durations =============================
+31.88s call     tests/conformance/test_failure_extra.py::test_db_lock_longer_than_busy_timeout_is_retryable_and_leaves_no_partial_state
+18.00s call     tests/test_h11_total_return.py::test_run_h11_does_not_mutate_shared_config
+14.11s call     tests/conformance/test_failure_recovery.py::test_host_process_killed_during_ops_job_recovers_exactly_once
+9.76s call     tests/test_config.py::test_main_backtest_h_dispatcher_runs
+8.54s call     tests/test_rj_power_gate.py::test_specificity_false_positive_rate_near_nominal
+6.41s call     tests/test_rj_power_gate.py::test_sensitivity_detects_planted_effect
+6.21s call     tests/test_rj_smoke_synthetic.py::test_judge_run_all_families_end_to_end
+6.17s call     tests/conformance/test_failure_recovery.py::test_ops_timeout_kills_worker_and_is_not_a_result
+4.64s call     tests/conformance/test_failure_extra.py::test_db_lock_shorter_than_busy_timeout_waits_and_succeeds
+3.38s call     tests/test_rj_power.py::test_power_is_monotone_in_effect_size
+2.39s call     tests/conformance/test_failure_recovery.py::test_modified_result_and_modified_effect_fail_closed
+2.13s call     tests/conformance/test_failure_extra.py::test_out_of_order_redelivery_never_changes_the_newer_result
+2.05s call     tests/test_rj_power.py::test_simulate_power_is_deterministic
+1.86s call     tests/test_h11_total_return.py::test_run_h11_smoke
+1.81s call     tests/conformance/test_failure_extra.py::test_worker_dies_mid_effect_write_leaves_no_effect_and_retry_produces_one
+=========================== short test summary info ============================
+FAILED tests/conformance/test_contract_conformance.py::test_authority_states_stay_separate[case_b-NO_EDGE-SUPPORTED-NO_EDGE] - assert (305 > 0 and 89 <= 0)
+FAILED tests/test_operational_evidence.py::OperationalEvidenceTests::test_current_complete_evidence - ValueError: current code population differs from operational evidence
+2 failed, 1033 passed, 71 subtests passed in 203.29s (0:03:23)
+[exit 1]

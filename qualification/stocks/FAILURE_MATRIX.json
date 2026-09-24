@@ -1,0 +1,320 @@
+{
+ "schema": "stocks/FAILURE_MATRIX/1",
+ "frozen_in": "FROZEN_PARAMETERS.failure_injection_points (antes da execução)",
+ "invariants": [
+  "zero duplicata (1 efeito, 1 resultado por idempotency_key)",
+  "zero perda (retry produz exatamente 1 resultado)",
+  "zero mudança em congelado",
+  "nunca reparo silencioso (divergência → RECONCILIATION_REQUIRED)"
+ ],
+ "runtime": "wheels publicadas (cleanroom-final run 35954279991)",
+ "evidence": [
+  "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/conformance.junit.xml",
+  "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-windows-latest/conformance.junit.xml"
+ ],
+ "soak_repetitions": "qualification/stocks/RAW_LOGS/cleanroom-final/run35954279991/stocks-runtime-linux-primary/soak.jsonl",
+ "rows": [
+  {
+   "id": "F-ADM-1",
+   "point": "before_admission_commit",
+   "kind": "crash da admission (transação aberta)",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[before_admission_commit]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-ADM-2",
+   "point": "after_admission",
+   "kind": "crash depois do commit da admission",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[after_admission]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-MAT-1",
+   "point": "during_materialization",
+   "kind": "crash da materialização",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[during_materialization]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-OPS-1",
+   "point": "before_ops",
+   "kind": "crash do host antes do Ops",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[before_ops]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-OPS-2",
+   "point": "ops_worker_crash",
+   "kind": "crash do job do Ops (worker morre)",
+   "tests": [
+    "test_failure_recovery::test_ops_worker_crash_is_not_a_result_and_retry_succeeds"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-OPS-3",
+   "point": "ops_worker_slow + kill do host",
+   "kind": "crash do host durante o job do Ops",
+   "tests": [
+    "test_failure_recovery::test_host_process_killed_during_ops_job_recovers_exactly_once"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-OPS-4",
+   "point": "after_ops",
+   "kind": "crash depois do Ops",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[after_ops]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-TMO-1",
+   "point": "ops_worker_hang",
+   "kind": "timeout do Ops (kill da árvore)",
+   "tests": [
+    "test_failure_recovery::test_ops_timeout_kills_worker_and_is_not_a_result"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-ART-1",
+   "point": "ops_worker_partial_effect",
+   "kind": "crash na gravação do artefato (efeito parcial)",
+   "tests": [
+    "test_failure_extra::test_worker_dies_mid_effect_write_leaves_no_effect_and_retry_produces_one"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-ART-2",
+   "point": "after_domain_effect",
+   "kind": "crash depois do artefato",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[after_domain_effect]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-RES-1",
+   "point": "during_result_write",
+   "kind": "crash na gravação do resultado (arquivo parcial)",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[during_result_write]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-RES-2",
+   "point": "after_result_write",
+   "kind": "crash depois do arquivo, antes do índice",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[after_result_write]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-RES-3",
+   "point": "after_result_store",
+   "kind": "crash depois do índice, antes do fechamento",
+   "tests": [
+    "test_failure_recovery::test_process_death_at_each_point_recovers_exactly_once[after_result_store]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-DUP-1",
+   "kind": "pedido duplicado (mesmo idempotency_key e conteúdo, client_ref diferente)",
+   "tests": [
+    "test_contract_conformance::test_idempotency_duplicate_retry_and_conflict"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-ORD-1",
+   "kind": "pedido fora de ordem (reentrega de um pedido antigo depois de um novo)",
+   "tests": [
+    "test_failure_extra::test_out_of_order_redelivery_never_changes_the_newer_result"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-SCH-1",
+   "kind": "versão de schema errada",
+   "tests": [
+    "test_contract_conformance::test_admission_rejects_before_any_execution[<lambda>-SCHEMA_INVALID8]"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-COR-1",
+   "kind": "artefato corrompido (efeito, resultado, objeto de referência)",
+   "tests": [
+    "test_failure_recovery::test_db_says_result_exists_but_file_is_gone",
+    "test_failure_recovery::test_file_exists_but_index_lost_the_result",
+    "test_failure_recovery::test_modified_result_and_modified_effect_fail_closed",
+    "test_failure_recovery::test_reference_changed_after_materialization_fails_closed",
+    "test_failure_recovery::test_reference_receipt_from_another_request_fails_closed",
+    "test_failure_recovery::test_result_metadata_inconsistent_with_index_fails_closed",
+    "test_failure_recovery::test_wrong_hash_of_referenced_object_fails_before_ops"
+   ],
+   "linux": [
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-LCK-1",
+   "kind": "DB lock (outro processo segura lock exclusivo no SQLite de estado)",
+   "tests": [
+    "test_failure_extra::test_db_lock_longer_than_busy_timeout_is_retryable_and_leaves_no_partial_state",
+    "test_failure_extra::test_db_lock_shorter_than_busy_timeout_waits_and_succeeds"
+   ],
+   "linux": [
+    "PASS",
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS",
+    "PASS"
+   ],
+   "result": "PASS"
+  },
+  {
+   "id": "F-DSK-1",
+   "point": "disk_write_error",
+   "kind": "falha de escrita em disco (ENOSPC na gravação do resultado)",
+   "tests": [
+    "test_failure_extra::test_disk_full_on_result_write_stores_nothing_and_retry_stores_once"
+   ],
+   "linux": [
+    "PASS"
+   ],
+   "windows_latest": [
+    "PASS"
+   ],
+   "result": "PASS"
+  }
+ ],
+ "all_pass": true
+}

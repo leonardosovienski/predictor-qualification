@@ -1,0 +1,44 @@
+# Missão stocks: suíte do stocks-predictor antes/depois de cada mudança (Linux primário e
+# windows-latest, D-1/D-9). Instalação só pelo lock (uv sync --locked). O alvo (commit do
+# stocks-predictor + rótulo) vem de qualification/stocks/suite_target.json.
+# Nada é instalado no Windows local (regra do repo; D-1). Sem segredos: repos públicos.
+name: Stocks suite (Linux + windows-latest)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - qualification/stocks/suite_target.json
+      - .github/workflows/stocks-suite.yml
+
+permissions:
+  contents: read
+
+jobs:
+  suite:
+    name: suite-${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: linux-primary, os: ubuntu-latest}
+          - {label: windows-latest, os: windows-latest}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Suite at target commit
+        shell: bash
+        run: bash qualification/stocks/scripts/suite.sh "$RUNNER_TEMP/out/${{ matrix.label }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stocks-suite-${{ matrix.label }}
+          path: ${{ runner.temp }}/out/${{ matrix.label }}
+          if-no-files-found: error

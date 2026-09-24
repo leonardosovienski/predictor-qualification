@@ -1,0 +1,537 @@
+{
+  "schema": "domain-research-contract/1",
+  "domain_prefix": "stocks",
+  "stage": "A",
+  "repo": "stocks-predictor",
+  "implementation": {
+    "contract_module": "stocks_predictor/research_contract.py",
+    "final_commit": "61fc017256ffea815ae96bbe02b847dccdb395cc",
+    "version": "0.3.0rc2",
+    "wheel": {
+      "url": "https://github.com/leonardosovienski/stocks-predictor/releases/download/v0.3.0rc2/stocks_predictor-0.3.0rc2-py3-none-any.whl",
+      "sha256": "92cb1131b4f0ba0b4572d26cb03a1647e239a17f37514c0db1598797119366a8"
+    },
+    "core": {
+      "version": "3.2.1",
+      "sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"
+    },
+    "ops": {
+      "version": "4.2.2rc1",
+      "sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3"
+    }
+  },
+  "requester_trust": "LOCAL_FILE_ONLY",
+  "entrypoint": {
+    "script": "stocks-research",
+    "target": "stocks_predictor.research_runner:main",
+    "source": "[project.scripts] do stocks-predictor",
+    "request_format": "um arquivo JSON UTF-8 por pedido (stocks-research-request/1), ≤ 256 KiB; chaves duplicadas e NaN/Infinity recusados",
+    "commands": {
+      "process": "stocks-research --state S process --policy P --objects O ARQ... (submete e executa cada arquivo, em ordem)",
+      "run": "processa todos os *.json de --inbox em ordem de nome",
+      "show": "relê o resultado autoritativo do ResultStore (nunca recalcula)",
+      "reconcile": "achados de integridade (somente leitura)",
+      "backup": "bundle de recuperação consistente (nunca altera a fonte)",
+      "restore": "restaura um bundle num diretório novo e vazio",
+      "put-object": "provisionamento de objeto de referência pelo operador"
+    },
+    "stdout": "uma linha JSON de outcome (stocks-research-outcome/1) por pedido; logs do Ops vão para stderr",
+    "exit_codes": {
+      "0": "RESULT ou DUPLICATE",
+      "2": "REJECTED ou CONFLICT",
+      "3": "NOT_READY, OPS_FAILED_RETRYABLE, STATE_BUSY_RETRYABLE (SQLite ocupado além do timeout), STORAGE_FAILED_RETRYABLE (escrita recusada pelo disco)",
+      "4": "TEMPORAL_INTEGRITY_VIOLATION",
+      "5": "RECONCILIATION_REQUIRED",
+      "1": "erro de configuração do operador (ex.: STATE_ROOT_TOO_LONG, policy inválida)"
+    },
+    "multiple_requests": "o exit code é o maior entre os pedidos"
+  },
+  "invalid_duplicate_conflict_behavior": {
+    "invalid": "REJECTED com reason_code; registrado em invalid_submissions; nunca entra no inbox",
+    "duplicate": "mesmo request_id e mesmo conteúdo (sem client_ref): DUPLICATE com o mesmo resultado autoritativo; client_ref da submissão devolvido",
+    "conflict": "mesmo request_id e conteúdo diferente: CONFLICT; pedido e resultado originais nunca sobrescritos"
+  },
+  "request_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "stocks-research-request/1",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema_version",
+      "request_id",
+      "request_type",
+      "research_id",
+      "hypothesis_id",
+      "references",
+      "as_of",
+      "pit",
+      "parameters",
+      "priority_hint"
+    ],
+    "properties": {
+      "schema_version": {
+        "const": "stocks-research-request/1"
+      },
+      "request_id": {
+        "$ref": "#/$defs/stocks_id"
+      },
+      "request_type": {
+        "enum": [
+          "BACKTEST_PIT_FACTOR",
+          "COLLECT_EXTERNAL_INTELLIGENCE"
+        ]
+      },
+      "research_id": {
+        "$ref": "#/$defs/stocks_id"
+      },
+      "hypothesis_id": {
+        "$ref": "#/$defs/stocks_id",
+        "description": "trial = (hypothesis_id, research_id, request); stocks:H<n> nunca é admitida"
+      },
+      "references": {
+        "description": "por request_type; cada uma resolve para (revision_id, sha256) no registry da policy",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "dataset",
+              "universe",
+              "features",
+              "model",
+              "baseline",
+              "cost_model",
+              "readiness"
+            ],
+            "properties": {
+              "dataset": {
+                "$ref": "#/$defs/ref"
+              },
+              "universe": {
+                "$ref": "#/$defs/ref"
+              },
+              "features": {
+                "$ref": "#/$defs/ref"
+              },
+              "model": {
+                "$ref": "#/$defs/ref"
+              },
+              "baseline": {
+                "$ref": "#/$defs/ref"
+              },
+              "cost_model": {
+                "$ref": "#/$defs/ref"
+              },
+              "readiness": {
+                "$ref": "#/$defs/ref"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "readiness"
+            ],
+            "properties": {
+              "source": {
+                "$ref": "#/$defs/ref"
+              },
+              "readiness": {
+                "$ref": "#/$defs/ref"
+              }
+            }
+          }
+        ]
+      },
+      "as_of": {
+        "type": "string",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+        "description": "cutoff PIT; igual ao data_cutoff do snapshot do dataset admitido"
+      },
+      "pit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "availability_rule",
+          "minimum_pit_class"
+        ],
+        "properties": {
+          "availability_rule": {
+            "const": "AVAILABLE_AT_LE_DECISION_TIME"
+          },
+          "minimum_pit_class": {
+            "enum": [
+              "PIT_STRICT",
+              "PIT_RECONSTRUCTED"
+            ]
+          }
+        }
+      },
+      "parameters": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "target",
+              "fee_bps",
+              "slippage_bps",
+              "max_securities",
+              "external_intelligence"
+            ],
+            "properties": {
+              "target": {
+                "enum": [
+                  "NEXT_REBALANCE_RETURN"
+                ],
+                "description": "alvo/horizonte: retorno até o próximo rebalance"
+              },
+              "fee_bps": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "slippage_bps": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "max_securities": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5000
+              },
+              "external_intelligence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode",
+                  "families"
+                ],
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "NONE",
+                      "COLLECTION_ONLY",
+                      "TRIAL_CONSUMPTION"
+                    ]
+                  },
+                  "families": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "enum": [
+                        "B3_LENDING",
+                        "CVM_VLMO",
+                        "CVM_BUYBACK",
+                        "CVM_CDA",
+                        "CVM_ENTREGA",
+                        "CVM_FCA_IDENTITY",
+                        "CVM_IPE_METADATA"
+                      ]
+                    }
+                  }
+                }
+              },
+              "negative_control": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "seed"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "SHUFFLED_LABELS",
+                      "TEMPORAL_ABLATION",
+                      "FEATURE_ABLATION",
+                      "UNIVERSE_PERTURBATION"
+                    ]
+                  },
+                  "seed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "collector",
+              "period",
+              "observed_at"
+            ],
+            "properties": {
+              "collector": {
+                "enum": [
+                  "cvm-vlmo",
+                  "cvm-buyback",
+                  "cvm-ipe",
+                  "cvm-fca-identity",
+                  "cvm-cda",
+                  "cvm-entrega"
+                ]
+              },
+              "period": {
+                "type": "string"
+              },
+              "observed_at": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "priority_hint": {
+        "enum": [
+          "LOW",
+          "NORMAL",
+          "HIGH"
+        ]
+      },
+      "client_ref": {
+        "description": "JSON opaco ≤ 1024 bytes canônicos; fora do idempotency_key e do hash de conteúdo; devolvido sem alteração"
+      }
+    },
+    "$defs": {
+      "stocks_id": {
+        "type": "string",
+        "pattern": "^stocks:[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+      },
+      "ref": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "version"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          }
+        }
+      }
+    },
+    "covers": {
+      "identidade do universo": "references.universe (top_n, janela de liquidez, histórico mínimo, rebalance, identidade SECURITY_ID_ISSUER_CNPJ_DEDUP)",
+      "as_of": "as_of",
+      "snapshot do dataset": "references.dataset (stocks-pit-panel/1 imutável, sha256)",
+      "fatores/features": "references.features",
+      "ranking/modelo e protocolo de seleção": "references.model (quantil, take, selection_path, estatística, minimum_sample)",
+      "alvo/horizonte": "parameters.target + universe.rebalance_every_sessions",
+      "baseline": "references.baseline (EQUAL_WEIGHT_UNIVERSE)",
+      "custos": "references.cost_model + parameters.fee_bps/slippage_bps (têm de bater)",
+      "trial": "hypothesis_id + research_id; trial_id atribuído pelo executor (stocks:TRIAL-…)",
+      "metadados PIT": "pit + as_of"
+    },
+    "never_in_request": [
+      "comando",
+      "módulo",
+      "path",
+      "URL",
+      "SQL",
+      "handler",
+      "budget final",
+      "prioridade final",
+      "permissão de capital"
+    ],
+    "no_cain_envelope_or_transport": true
+  },
+  "client_ref": {
+    "opaque": true,
+    "excluded_from": [
+      "idempotency_key",
+      "request_content_hash"
+    ],
+    "echoed_in": "outcome.client_ref da própria submissão"
+  },
+  "admission_policy": {
+    "id_field": "policy_id",
+    "version_field": "policy_version",
+    "sha256": "content_hash canônico da policy, gravado em cada recibo (policy_hash) e no resultado (provenance.admission_policy_hash)",
+    "schema": "StocksResearchAdmissionPolicyV1 (stocks_predictor/research_admission.py load_policy)",
+    "owner": "STOCKS_OPERATOR",
+    "decisions": [
+      "ACCEPTED",
+      "REJECTED",
+      "CONFLICT",
+      "REQUIRES_READMISSION"
+    ],
+    "reason_codes": [
+      "ADMITTED",
+      "REQUEST_SIZE_LIMIT",
+      "PARAMETER_SIZE_LIMIT",
+      "HYPOTHESIS_CLOSED",
+      "HYPOTHESIS_NOT_ACTIVE",
+      "HYPOTHESIS_NOT_ADMITTED",
+      "COLLECTOR_NOT_ALLOWED",
+      "HANDLER_NOT_ALLOWED",
+      "HANDLER_UNAVAILABLE",
+      "REFERENCE_UNAUTHORIZED_OR_UNKNOWN",
+      "PENDING_QUOTA",
+      "REQUEST_ID_CONTENT_CONFLICT",
+      "POLICY_CHANGED",
+      "RESOLUTION_CHANGED",
+      "SCHEMA_INVALID",
+      "REQUEST_TYPE_NOT_ALLOWED",
+      "PARAMETER_OUT_OF_BOUNDS"
+    ],
+    "decides": [
+      "tipo de pedido",
+      "handler (allowlist compilada)",
+      "budget (timeout, retries, recursos)",
+      "prioridade (limitada por max_priority)",
+      "referências (name/version → revision_id + sha256)",
+      "hipóteses admitidas (stocks:H1..H22 e qualquer stocks:H<n> nunca: HYPOTHESIS_CLOSED/NOT_ACTIVE)",
+      "coletores de External Intelligence permitidos"
+    ]
+  },
+  "handler_allowlist": {
+    "BACKTEST_PIT_FACTOR": "stocks.handlers.pit_factor_backtest.v1 → python -m stocks_predictor.research_worker, job real do predictor_ops (JobType SHADOW_DECISION, capital_permission=false)",
+    "COLLECT_EXTERNAL_INTELLIGENCE": "stocks.handlers.external_collection.v1 → python -m stocks_predictor.research_collect_worker, job real do predictor_ops (JobType MARKET_COLLECTION); COLLECTION_ONLY"
+  },
+  "adapter_api": {
+    "function": "stocks_predictor.research_runner.Circuit(state, policy, objects).submit_request(raw: bytes, *, source: str) -> outcome",
+    "reread": "Circuit(state).show(request_id) -> (exit_code, payload)",
+    "same_path_as_entrypoint": "Circuit.submit_file(path) = submit_request(path.read_bytes(), source=str(path)); main() usa submit_file"
+  },
+  "result_schema": {
+    "id": "stocks-research-result/1",
+    "validator": "stocks_predictor.research_contract.validate_result",
+    "top_level": [
+      "admission_id",
+      "as_of",
+      "capital_permission",
+      "core_facts",
+      "domain_facts",
+      "economic_state",
+      "experiment_id",
+      "hypothesis_id",
+      "operational_state",
+      "ops_facts",
+      "produced_at",
+      "provenance",
+      "request_id",
+      "request_type",
+      "research_id",
+      "result_id",
+      "result_state",
+      "schema_version",
+      "scientific_state",
+      "trial_eligible"
+    ],
+    "separated_facts": {
+      "core_facts": "identidade da wheel do Core; trial_ids do TrialRegistryV2; scientific_state_source = core_trial_registry; trial_row_hash; dataset_fingerprint (predictor_core dataset_fingerprint); temporal_validation (predictor_core.measurement.replay); estatísticas bootstrap_ci",
+      "ops_facts": "identidade da wheel do Ops; job_id; economic_lock_id; ops_run_id do SUCCEEDED; ops_run_ids e attempt_ids; retry_count; estado terminal; started/finished/heartbeat; ops_record_hash",
+      "domain_facts": "identidade do stocks-predictor; handler; identidades das referências; rebalances (sessão, decision_at, hash de identidade do universo, membros, carteira, exclusões PIT); último universo; painel; métricas estratégia/baseline bruto e líquido com IC; custos; comparação com a baseline; controle negativo; External Intelligence (modo, famílias, decisões, eixos, consumo=0)"
+    },
+    "distinct_states": {
+      "operational_state": [
+        "SUCCEEDED",
+        "FAILED",
+        "TIMEOUT",
+        "SKIPPED_ALREADY_SUCCEEDED"
+      ],
+      "scientific_state": [
+        "SUPPORTED",
+        "REFUTED",
+        "INCONCLUSIVE",
+        "INSUFFICIENT_SAMPLE",
+        "NOT_EVALUATED"
+      ],
+      "economic_state": [
+        "WATCH",
+        "NO_EDGE",
+        "NOT_EVALUATED"
+      ]
+    },
+    "invariants": [
+      "capital_permission == false sempre",
+      "operação falha ⇒ NOT_EVALUATED/NOT_EVALUATED/FAILED_OPERATIONAL",
+      "WATCH ⇒ SUPPORTED",
+      "WATCH_NO_CAPITAL ⇔ WATCH",
+      "NOT_READY/INCONCLUSIVE_DATA_QUALITY/COLLECTION_RECORDED ⇒ NOT_EVALUATED",
+      "coleta nunca carrega estado de pesquisa",
+      "trial_eligible ⇒ backtest com trial do Core que consumiu família READY"
+    ]
+  },
+  "result_states": [
+    "WATCH_NO_CAPITAL",
+    "NO_EDGE",
+    "INCONCLUSIVE",
+    "REFUTED",
+    "NOT_READY",
+    "CLOSED_INSUFFICIENT_SAMPLE",
+    "INCONCLUSIVE_DATA_QUALITY",
+    "FAILED_OPERATIONAL",
+    "COLLECTION_RECORDED"
+  ],
+  "result_states_note": "enum fechado; nenhum estado é sucesso nem capital; NOT_READY = família de External Intelligence não pronta/não ligada; COLLECTION_RECORDED = coleta COLLECTION_ONLY",
+  "id_fields": {
+    "request": "request_id (stocks:)",
+    "admission": "admission_id (stocks:ADM-…)",
+    "experiment": "experiment_id (stocks:EXP-…)",
+    "attempt": "ops_facts.attempt_ids (stocks:ATTEMPT-…)",
+    "ops_run": "ops_facts.ops_run_id (predictor_ops)",
+    "result": "result_id (stocks:RESULT-…)",
+    "trial": "core_facts.trial_ids (stocks:TRIAL-…)"
+  },
+  "temporal_contract": {
+    "cutoff": "as_of (UTC) = data_cutoff do snapshot",
+    "pit_inequality": "todo registro do snapshot: available_at ≤ as_of; toda decisão no rebalance s (decision_at = sT12:00:00Z, antes da abertura): só registros com available_at ≤ decision_at e fato anterior a s; barra: available_at ≥ fechamento da sessão (sT20:00:00Z)",
+    "enforced_by": "stocks_predictor.research_pit.Panel (visão PIT) + predictor_core.measurement.replay (LookaheadError) no worker",
+    "labels": "retorno do período medido com o dado conhecido em as_of; deslistado: último preço e depois caixa",
+    "effective_pit": "classe PIT por tipo de registro ≥ pit.minimum_pit_class; External Intelligence: estado efetivo da matriz (protocol_effective_PIT)"
+  },
+  "idempotency_key": "request_id (client_ref fora da chave e do hash de conteúdo)",
+  "authoritative_result_source": "ResultStore SQLite <state>/results.sqlite + arquivo imutável research-result.json conferido byte a byte; relido por `stocks-research show` após restart",
+  "adapter_paths": [
+    "stocks_predictor/adapters/"
+  ],
+  "adapter_entrypoints": [],
+  "adapter_rules": {
+    "1_disjoint": "stocks_predictor/adapters/ é disjunto do conjunto protegido, da suíte de conformidade e da closure do entrypoint (tests/conformance/test_import_closure.py)",
+    "2_no_import_from_outside": "nenhum módulo fora de adapters importa adapters (test_nothing_outside_adapter_paths_imports_them)",
+    "3_only_adapter_api": "o adapter chama o domínio só por Circuit.submit_request/show"
+  },
+  "conformance_suite": {
+    "path": "tests/conformance/",
+    "files": {
+      "tests/conformance/fixtures.py": "a84b7acc80df7dcec8363c22af8229e375baa153",
+      "tests/conformance/test_contract_conformance.py": "1051c81647223df48d148ce0eadf6552d6fea4ac",
+      "tests/conformance/test_failure_recovery.py": "71ba3271ce4770d20ca089c6f34baf3641acb1bd",
+      "tests/conformance/test_failure_extra.py": "7ada74a821024f923f6ea510bba45b5653520f0c",
+      "tests/conformance/test_pit_adversarial.py": "927605358adc1284e1fd30f95a5155d4bbe64113",
+      "tests/conformance/test_import_closure.py": "1076dd3021add58a8bd0c64fffe330f2930522a7",
+      "tests/conformance/conftest.py": "e5b91115869c563b6eb3cfb490cc841c1d330f16",
+      "tests/conformance/__init__.py": "163eccd0b0b428bdd38f4fe8cc695a621cb5f686"
+    },
+    "covers": [
+      "E2E",
+      "IDEMPOTENCY",
+      "FUTURE_CANARY",
+      "TEMPORAL_INTEGRITY",
+      "ADMISSION",
+      "AUTHORITY (casos A/B/C)",
+      "FAILURE_INJECTION/RESTART_RECOVERY",
+      "STOCKS_PIT_ADVERSARIAL (PIT-01..15)",
+      "STOCKS_UNIVERSE_IDENTITY",
+      "External Intelligence NOT_READY e COLLECTION_ONLY",
+      "regras de adapter_paths"
+    ],
+    "vectors": "sintéticos congelados (fixtures.py); não são evidência científica"
+  },
+  "capital_permission": false
+}
