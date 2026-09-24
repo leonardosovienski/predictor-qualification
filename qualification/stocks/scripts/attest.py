@@ -165,8 +165,7 @@ def main() -> None:
             schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
             jsonschema.Draft202012Validator(schema).validate(doc)
             problems = [] if doc["common_core_sha256"] == CORE_SHA else ["C7.1(6)"]
-            print("
-".join(problems) if problems else "OK (schema)")
+            print("; ".join(problems) if problems else "OK (schema)")
             raise SystemExit(1 if problems else 0)
         problems = check(doc)
         print("\n".join(problems) if problems else "OK")
