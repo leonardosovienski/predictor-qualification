@@ -1,8 +1,8 @@
 {
-  "note": "Estado corrente da missão stocks. Parciais nunca reescritos (C8).",
+  "note": "Estado corrente da missão stocks (STACK_BASELINE_V1.1, Ops 4.2.2rc1, stocks 0.3.0rc1 9a6c09a). Terminal BLOCKED (C7.3): 27 gates PASS, 4 NOT_RUN com 'BLOCKED: D-16 pendente' (E2E, WINDOWS_SMOKE, SOAK, STOCKS_NEGATIVE_CONTROLS), nenhum FAIL, P0=P1=0. Sem QUALIFICATION_ATTESTATION.json até a D-16; o último parcial (attestation, IN_PROGRESS) registra os bloqueios. Parciais nunca reescritos (C8).",
   "common_baseline_id": "STACK_BASELINE_V1.1",
   "supersedes_sha256": null,
-  "domain_contract_sha256": null,
+  "domain_contract_sha256": "fd505512bb94a981b3c813f4f367597de28a1fd3cbb6d5d803e5f4086cb8c5c3",
   "final_commits": [
     {
       "repo": "stocks-predictor",
@@ -52,7 +52,9 @@
     "idempotency-failure",
     "windows-smoke",
     "hosted-ci",
-    "soak"
+    "soak",
+    "contract-sign-off",
+    "attestation"
   ],
   "environments": [
     {
@@ -290,13 +292,13 @@
       "note": "capital_permission=false no contrato (validate_result recusa outro valor), no JobConfig do Ops (SHADOW_DECISION/MARKET_COLLECTION) e em todo resultado (E2E e soak); nenhum caminho concede capital."
     },
     "DOMAIN_CONTRACT": {
-      "status": "NOT_RUN",
+      "status": "PASS",
       "evidence": [
         "qualification/stocks/DOMAIN_RESEARCH_CONTRACT.json",
         "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-linux-primary/conformance.junit.xml",
         "qualification/stocks/RAW_LOGS/cleanroom-final/run35949779357/stocks-runtime-windows-latest/conformance.junit.xml"
       ],
-      "note": "Contrato completo (C24.1), regras de adapter_paths testadas (test_import_closure) e suíte de conformidade 87/87 no runtime suportado; falta a aprovação do dono pelo merge do contrato (fase contract-sign-off)."
+      "note": "Contrato completo (C24.1) aprovado pelo merge do dono (predictor-qualification #12, b24beb3, 2026-09-24T03:50:00Z); regras de adapter_paths testadas (test_import_closure); suíte de conformidade 87/87 no runtime suportado (Linux e windows-latest); stocks-predictor #95 mesclado (2a18513)."
     },
     "ADMISSION": {
       "status": "PASS",
@@ -388,5 +390,6 @@
       ],
       "note": "BLOCKED: D-16 pendente (FROZEN_PARAMETERS.d16_dependency_rule): exige dado real no Linux primário/Actions. Diagnóstico com fixture sintética pela wheel: labels embaralhados 0/20 SUPPORTED, ranking aleatório 2/20, perturbação de universo 20/20 estável; critérios congelados atendidos na fixture."
     }
-  }
+  },
+  "terminal_state": "BLOCKED"
 }
