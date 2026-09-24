@@ -95,3 +95,10 @@ Núcleo v2.2 (PR #30): o C0.2 passa a conferir o schema pelo `MANIFEST.sha256`. 
 `scripts/attest.py` com o sha256 da v2.2 (`d681e423…`) e `common_core_version` 2.2. O modo `--schema-only` (parciais históricos, CI) aceita os núcleos v2.0 e v2.1 em que eles foram emitidos.
 `QUALIFICATION_ATTESTATION.json` reemitida: **QUALIFIED**, 31/31 PASS (mesmos estados), P0=0 P1=0 P2=5; a anterior foi preservada como
 `QUALIFICATION_ATTESTATION_superseded_f7923a88b7be.json` (`supersedes_sha256`). `attest.py check` OK.
+
+### Verificação da attestation reemitida no núcleo v2.2 (branch `stocks/verify-attestation-v22-20260924`)
+
+| O quê | Por quê |
+|---|---|
+| `d16/verify_attestation.py`: regra 6 contra o sha256 do núcleo no próprio commit (não mais v2.0 fixo) + C0.2 (`MANIFEST.sha256` confere, com schema e núcleo) | a attestation foi reemitida na v2.1 (D-19) e na v2.2 (D-20); o verificador precisa seguir o núcleo do commit |
+| `RAW_LOGS/d16/recheck-20260924/verify_attestation_main_v22.json` | no main `d301aba`: `QUALIFICATION_ATTESTATION.json` `4896575f…` (v2.2, supersedes `f7923a88…` ← `c95145a7…`) passa schema, C7.1 (1)…(8) e C0.2 |
