@@ -29,13 +29,26 @@ QC = ROOT / "qualification" / "crypto"
 CORE = ROOT / "qualification" / "COMMON_QUALIFICATION_CORE.md"
 SCHEMA = ROOT / "qualification" / "ATTESTATION_SCHEMA.json"
 V1 = ROOT / "qualification" / "shared" / "STACK_BASELINE_V1.json"
-CORE_SHA = "d681e423499e202c735ee1f110311a9721019ef11e21ae824f4791bada7c7d2c"  # núcleo v2.2 (D-20)
-CORE_SHA_HIST = ("50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1", "a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b")  # v2.0 e v2.1: parciais históricos
+# C7.1 regra 6 (núcleo v2.3, D-22): a attestation vale no núcleo em que foi emitida, desde que seja uma versão
+# do núcleo no histórico do main. Versão nova do núcleo entra nesta tabela; sem isso, build() falha fechado.
+CORE_VERSIONS = {
+    "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1": "2.0",
+    "a3b4b7bbae9a4419b64b087fd6fd74b91e5a7ffa5860bfe962132b0ddb0a0c9b": "2.1",
+    "d681e423499e202c735ee1f110311a9721019ef11e21ae824f4791bada7c7d2c": "2.2",
+    "beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc": "2.3",
+}
 OPEN = {"OPEN", "OPEN_AWAITING_VERDICT", "OPEN_BLOCKED"}
 
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def core_version() -> str:
+    version = CORE_VERSIONS.get(sha(CORE))
+    if version is None:
+        raise SystemExit("C7.1(6): o núcleo vigente não está em CORE_VERSIONS; acrescente a versão nova (D-22)")
+    return version
 
 
 def rel(path: Path) -> str:
@@ -89,7 +102,7 @@ def build(result: str) -> dict:
         "supersedes_sha256": ledger.get("supersedes_sha256"),
         "common_baseline_id": ledger.get("common_baseline_id", "STACK_BASELINE_V1"),
         "common_baseline_sha256": sha(ROOT / "qualification" / "shared" / (ledger.get("common_baseline_id", "STACK_BASELINE_V1") + ".json")),
-        "common_core_version": "2.2",
+        "common_core_version": core_version(),
         "common_core_sha256": sha(CORE),
         "frozen_parameters_sha256": sha(QC / "FROZEN_PARAMETERS.json"),
         "protected_set_sha256": optional_sha("PROTECTED_SET.json"),
@@ -116,8 +129,8 @@ def check(doc: dict) -> list[str]:
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(doc)
     problems = []
-    if doc["common_core_sha256"] != CORE_SHA:
-        problems.append("C7.1(6): common_core_sha256 diferente do núcleo vigente (v2.2)")
+    if doc["common_core_sha256"] not in CORE_VERSIONS:
+        problems.append("C7.1(6): common_core_sha256 não é uma versão do núcleo no histórico do main")
     if doc["counts"] != counts():
         problems.append("C7.1(2): counts não bate com FINDINGS.json")
     for gate in doc["gates"].values():
