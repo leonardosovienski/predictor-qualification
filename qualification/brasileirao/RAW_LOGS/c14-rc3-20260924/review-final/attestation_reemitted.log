@@ -1,0 +1,21 @@
+# 2026-09-24T20:54:38Z reemissão da attestation final (C7.1(8)): SOAK_REPORT.md (81 -> 82 arquivos, textos datados), HOSTED_CI_REPORT.md e gate HOSTED_CI com o CI do main depois do merge do #80; nenhum gate, finding, contrato, alvo ou vetor muda
+anterior: QUALIFICATION_ATTESTATION.json sha256 094d9571c5e833a4779001c96f8fa390aaeec227bab9fe13e773c44c819a293c
+$ ledger.py gate HOSTED_CI PASS <nota + main> <evidências + 2 do main>
+[ledger gate exit 0 ] evidências: 7 -> 9
+git mv -> QUALIFICATION_ATTESTATION_superseded_094d9571c5e8.json (preservada byte a byte)
+[ledger set supersedes_sha256 exit 0]
+$ attest.py final
+qualification/brasileirao/QUALIFICATION_ATTESTATION.json: OK  counts={'P0': 0, 'P1': 0, 'P2': 5}  result=QUALIFIED
+[final exit 0]
+$ attest.py check QUALIFICATION_ATTESTATION.json
+OK
+[check exit 0]
+C7.1(8): supersedes_sha256 == sha256 da anterior: True | result QUALIFIED | generated_at 2026-09-24T20:54:38+00:00
+$ stage_a_recheck.py --partial QUALIFICATION_ATTESTATION.json
+{"verdict": "OK", "problems": [], "gate_status_count": {"PASS": 32}, "evidence_files": 164}
+[recheck exit 0]
+$ attest.py check na anterior (esperado: só as evidências que mudaram)
+C7.1(3): sha256 divergente qualification/brasileirao/HOSTED_CI_REPORT.md
+C7.1(3): sha256 divergente qualification/brasileirao/SOAK_REPORT.md
+[check anterior exit 1]
+nova: QUALIFICATION_ATTESTATION.json sha256 b16ecbbaa0177b8bce647cccb16b264e5e784b93b782e60499e206f1856e751d

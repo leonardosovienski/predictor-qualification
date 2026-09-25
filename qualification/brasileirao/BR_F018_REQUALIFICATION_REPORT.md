@@ -122,3 +122,15 @@ Saída bruta em `RAW_LOGS/c14-rc3-20260924/review-final/`, pelos scripts version
 - Fora do caminho qualificado: `xg_model.py`, `dixon_coles.py` (usado pelo `evaluator.py`) e `event_models.py` também usam
   L-BFGS-B sem gradiente analítico. O worker de pesquisa (entrypoint do contrato) usa só `model.fit_goal_model`, corrigido e
   provado acima; o `QUALIFIED` não cobre esses módulos (C22). Pista para o dono, não achado: não houve reprodução neles.
+
+## 10. Attestation reemitida (2026-09-24T20:54:38Z; C7.1(8))
+
+A conferência dos `.md` achou três problemas em relatórios citados pela attestation. No `SOAK_REPORT.md`, um número
+não batia com a fonte citada (81 em vez de 82 arquivos na varredura sem dado) e a seção da noite D-16 estava sem
+desfecho. No `HOSTED_CI_REPORT.md`, faltava o CI do `main` depois do merge do #80. Os três foram corrigidos, e a
+attestation foi reemitida:
+- a nova `QUALIFICATION_ATTESTATION.json` (`b16ecbba…`) aponta `supersedes_sha256` para a anterior;
+- a anterior está preservada byte a byte como `QUALIFICATION_ATTESTATION_superseded_094d9571c5e8.json`;
+- nenhum gate, achado, contrato, alvo ou vetor mudou: continua `QUALIFIED`, 32 `PASS`, P0 = P1 = 0;
+- o gate `HOSTED_CI` ganhou as 2 evidências do `main`.
+`attest.py check` OK e `stage_a_recheck.py` OK (164 evidências): `RAW_LOGS/c14-rc3-20260924/review-final/attestation_reemitted.log`.

@@ -1,5 +1,16 @@
 # D16_PC2_REPORT — missão brasileirao, noite de 2026-09-24 (D-16 no PC 2 + conferência geral)
 
+> **Desfecho (acrescentado depois):** este relatório é datado, e o que ele deixa em aberto foi resolvido no mesmo dia. O
+> dono fez merge do PR #19. A emenda da D-9 entrou como **D-19** (núcleo v2.1/v2.2, `where = owner_linux` no schema); a
+> linha proposta para o `CLAUDE.md` (§5) não foi aplicada. O dono escolheu corrigir o BR-F018 (§6, opção b): rc3
+> `25cdf4d`, `BR-F018` `FIXED`. `E2E` e `SOAK` foram fechados em `PASS` no `owner_linux`, e a attestation final é
+> `QUALIFIED`. Ver `BR_F018_REQUALIFICATION_REPORT.md`.
+>
+> **Errata do `SOAK_REPORT.md` (corrigida):** a seção "D-16 no PC 2" dizia "0 ocorrências de time, jogador ou
+> event_id em 81 arquivos", mas o `scan_final/no_data_rows_check.json` que ela cita diz **82** (o 81 é da primeira das
+> três varreduras de `scan_final/scan_final.log`). Os dois casos dão 0 ocorrências. O `SOAK_REPORT.md` foi corrigido, e a
+> attestation, que o cita como evidência, foi reemitida com `supersedes_sha256` apontando para a anterior (C7.1(8)).
+
 Sessão autônoma no PC 2 (Ubuntu 24.04.5 LTS no WSL2, x86_64). Autorização: D-16 (`APPROVED` no `main`,
 PR #16). Alvo congelado: brasileirao-predictor `04b42c9` / wheel 0.3.0rc2 `70344f22…`, predictor-core
 3.2.1 `10ef42f3…`, predictor-ops 4.2.2rc1 `0be70bfb…`. Toda a saída bruta está em

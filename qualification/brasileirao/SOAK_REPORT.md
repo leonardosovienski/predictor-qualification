@@ -68,7 +68,7 @@ reais + E2E real 25/25 + corroboração temporal (`TEMPORAL_INTEGRITY_REPORT.md`
 * Dado: `~/predictors/data/d16/brasileirao/matches_source_copy.sqlite3` (só leitura), copiado byte a
   byte para `~/predictors/runtime/brasileirao/data/`; sha256 `31f30a4d…` na fonte e na cópia, antes e
   depois (`RAW_LOGS/d16-pc2-20260924/d16/dataset_sha256.log`). Nada do dado entrou na evidência
-  (`scan_final/no_data_rows_check.json`: 0 ocorrências de time, jogador ou event_id em 81 arquivos).
+  (`scan_final/no_data_rows_check.json`: 0 ocorrências de time, jogador ou event_id em 82 arquivos).
 * Modo dado real do `soak.py` (mudança de kit desta noite): **o mesmo perfil, as mesmas classes de
   falha, as mesmas seeds (11, 23, 37, 41, 53), o mesmo canário `FUTURE_CANARY_BR_001`, os mesmos
   comparadores, a mesma política e os mesmos objetos JSON congelados de `tests/conformance/fixtures.py`**;
@@ -92,8 +92,10 @@ reais + E2E real 25/25 + corroboração temporal (`TEMPORAL_INTEGRITY_REPORT.md`
 | veredito de tolerância zero | `true` |
 
 * **Veredito bruto pelos critérios congelados: `PASS`** (perfil inteiro, tolerância zero sem exceção,
-  no runtime suportado, com o dado real). O gate continua `NOT_RUN` porque o PC 2 não é, hoje, um host
-  Linux primário admitido pela D-9 nem pelo `where` do schema (C14): emenda proposta em
-  `D16_PC2_REPORT.md`.
+  no runtime suportado, com o dado real). Naquela noite o gate ficou `NOT_RUN`, porque o PC 2 ainda não
+  era um host Linux primário admitido pela D-9 nem pelo `where` do schema (C14; emenda proposta em
+  `D16_PC2_REPORT.md`). A emenda entrou como D-19, e o gate foi fechado em `PASS` na requalificação rc3
+  (seção acima).
 * Achado da noite, independente do soak: **BR-F018 (P1)** — os números de um resultado (não os estados)
-  dependem do SO; ver `D16_PC2_REPORT.md` e `FINDINGS.json`.
+  dependiam do SO; ver `D16_PC2_REPORT.md` e `FINDINGS.json`. Corrigido na rc3 (`FIXED`;
+  `BR_F018_REQUALIFICATION_REPORT.md`).
