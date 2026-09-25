@@ -31,7 +31,9 @@ Núcleo obrigatório em toda sessão:
   `C:\Cripto\qualificacao\cripto-predictor`, `C:\STOCKS\work\qualification\stocks-predictor`.
 - Stocks: não criar venv nem instalar pacotes no Python do Windows; Python do
   Stocks roda no GitHub Actions.
-- Linux = GitHub Actions ou VM na nuvem (D-9). Nada de "equivalente local".
+- Linux = GitHub Actions ou VM na nuvem (D-9); para dado real privado sem direito
+  de redistribuição (D-11), também o Linux do dono (`owner_linux`, PC 2, D-19).
+  Fora disso, nada de "equivalente local".
 - **Repos públicos:** nunca escrever segredo (`.env`, `pipeline.env`, chaves de
   API, de exchange, de odds, tokens) em arquivo, log, commit, relatório ou CI.
 - Todo número em relatório vem de log bruto em `RAW_LOGS/` (C20).
