@@ -102,3 +102,16 @@ Núcleo v2.2 (PR #30): o C0.2 passa a conferir o schema pelo `MANIFEST.sha256`. 
 |---|---|
 | `d16/verify_attestation.py`: regra 6 contra o sha256 do núcleo no próprio commit (não mais v2.0 fixo) + C0.2 (`MANIFEST.sha256` confere, com schema e núcleo) | a attestation foi reemitida na v2.1 (D-19) e na v2.2 (D-20); o verificador precisa seguir o núcleo do commit |
 | `RAW_LOGS/d16/recheck-20260924/verify_attestation_main_v22.json` | no main `d301aba`: `QUALIFICATION_ATTESTATION.json` `4896575f…` (v2.2, supersedes `f7923a88…` ← `c95145a7…`) passa schema, C7.1 (1)…(8) e C0.2 |
+
+### D-21 nos achados: ST-F007 e ST-F008 aceitos pelo dono (branch `stocks/findings-d21-20260925`)
+
+A D-21 (registro formal do dono em 2026-09-24) aceitou a ST-F007 (rebalance "a cada 21 pregões" na D-16; fim de mês fica para
+decisão futura) e a ST-F008 (limitações declaradas do painel público). O `FINDINGS.json` ainda as marcava como `OPEN`, o que
+contradizia a decisão e mantinha `counts` P2 = 5 na attestation. Isso ficou registrado como pendência na reverificação de
+2026-09-24.
+
+| O quê | Por quê |
+|---|---|
+| `FINDINGS.json`: ST-F007 e ST-F008 → `ACCEPTED_BY_OWNER`, `decision: D-21` e nota na descrição | alinhar os achados à D-21 (vocabulário `status_values` do próprio arquivo) |
+| `QUALIFICATION_ATTESTATION.json` reemitida (`e0f2e28ddd0c…`): **QUALIFIED**, 31/31 PASS (mesmos estados), P0=0 P1=0 **P2=3**, núcleo v2.2; a anterior foi preservada como `QUALIFICATION_ATTESTATION_superseded_4896575fd15c.json` | C7.1 regra 2: `counts` tem de bater com o `FINDINGS.json`; nenhuma fase refeita e nenhum critério, gate ou parâmetro mudou |
+| `RAW_LOGS/findings-d21-20260925/{emit,check}.log` | saída bruta do `attest.py final` e do `attest.py check` (C20) |
