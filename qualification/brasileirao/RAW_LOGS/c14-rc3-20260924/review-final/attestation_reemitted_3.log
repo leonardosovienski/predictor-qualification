@@ -1,0 +1,18 @@
+# 2026-09-25T16:07:34Z terceira reemissão (C7.1(8)): a nota do gate BLOCKERS_ZERO listava BR-F010 como P2 aberto; agora BR-F010 FIXED e BR-F019 aberto. A attestation anterior (gerada 16:06:11Z nesta branch, antes de ver a nota) fica preservada; nenhum gate muda de estado
+anterior: QUALIFICATION_ATTESTATION.json sha256 efc566716dfcb9cc77f3111d6bae697667e2fae1e0aba0faeb5ab2656a391e35
+$ ledger.py gate BLOCKERS_ZERO PASS <nota atualizada> <mesmas evidências>
+[ledger gate exit 0 ] F015, BR-F018 (P1). BR-F010 (P2) FIXED pelo A-04. P2 abertos: BR-F005 a BR-F008 e BR-F019.
+-> QUALIFICATION_ATTESTATION_superseded_efc566716dfc.json (preservada byte a byte)
+[ledger set supersedes_sha256 exit 0]
+$ attest.py final
+qualification/brasileirao/QUALIFICATION_ATTESTATION.json: OK  counts={'P0': 0, 'P1': 0, 'P2': 5}  result=QUALIFIED
+[final exit 0]
+$ attest.py check QUALIFICATION_ATTESTATION.json
+OK
+[check exit 0]
+C7.1(8): supersedes == sha256 da anterior: True | result QUALIFIED | counts {'P0': 0, 'P1': 0, 'P2': 5}
+cadeia: efc566716dfc -> b16ecbbaa017 -> 094d9571c5e8
+$ stage_a_recheck.py --partial QUALIFICATION_ATTESTATION.json
+{"verdict": "OK", "problems": [], "gate_status_count": {"PASS": 32}, "evidence_files": 164}
+[recheck exit 0]
+nova: QUALIFICATION_ATTESTATION.json sha256 a4fa2fee25b65c39888d90cd947fc36ba63076eae536e5b676052470ed7521e4

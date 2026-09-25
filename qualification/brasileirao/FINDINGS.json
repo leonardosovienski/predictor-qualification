@@ -125,7 +125,7 @@
     {
       "id": "BR-F010",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "baseline",
       "title": "Teste de conformidade do pré-registro pulado por atestado de poder vencido",
       "description": "tests/test_prereg_serving_vs_climatologia.py::test_registro_conforma_ao_schema_do_core faz pytest.skip quando data/trials.harness_attestation.json expira (expirou em 2026-09-19): pulado no CI de e14f339 e no Windows local. Renovar exige rodar attest_rps_power e alterar arquivo protegido; fora do escopo.",
@@ -133,7 +133,8 @@
         "qualification/brasileirao/RAW_LOGS/baseline/hosted_ci/run_35824710652.log",
         "qualification/brasileirao/RAW_LOGS/baseline/windows_suite_e14f339.log"
       ],
-      "owner_action": "renovar o atestado (arquivo protegido) ou tornar o teste independente do relógio"
+      "owner_action": "renovar o atestado (arquivo protegido) ou tornar o teste independente do relógio",
+      "closed_by": "A-04 (brasileirao-predictor PR #79, commit e0dab9a, na rc3 25cdf4d): o teste não pula mais; com o atestado vencido, avisa (ExpiredHarnessAttestationWarning) e continua exercitando o registro com o atestado real no instante em que era válido (antes SKIPPED, depois PASSED + aviso). Renovar data/trials.harness_attestation.json continua decisão do dono: é artefato protegido (C15.1)."
     },
     {
       "id": "BR-F011",
@@ -251,6 +252,19 @@
       ],
       "fix_commit": "13c24c0 (brasileirao-predictor, PR #80; rc3 = 25cdf4d, wheel 403e6a02…)",
       "closed_by": "prova com dado real entre sistemas operacionais (critério declarado antes de medir, BR_F018_FIX_PLAN.json, commit 497715f): rc3 Linux PC 2 × rc3 Windows PC 2 = 20/20 pedidos dentro da tolerância e nenhuma diferença (0/26400 parâmetros, 0/79544 floats, 0/78344 discretos); antes, rc2 Windows × rc2 Linux = 0/20. Testes novos falham no código antigo (3/5) e passam no novo (5/5); CI ubuntu-latest × windows-latest (run 36006495178) com os vetores sintéticos congelados: parâmetros máx. |Δ| 7e-15, demais números idênticos; dado real, 1 ULP nos pesos: máx. 1,1e-16 (antes 1,6e-2)."
+    },
+    {
+      "id": "BR-F019",
+      "severity": "P2",
+      "status": "OPEN",
+      "phase": "review-final",
+      "title": "Outros ajustes com L-BFGS-B sem gradiente analítico também dependem do último bit (fora do caminho qualificado)",
+      "description": "Mesma classe do BR-F018, em módulos que o worker de pesquisa não usa. Com 1 ULP numa entrada contínua, pela wheel rc3: event_models.fit_event_model Poisson muda parâmetros em até 2,6e-7 (sintético) e 5,5e-8 / 1,9e-8 no dado real de escanteios / cartões, com probabilidades até 4,1e-7; a variante NB muda até 2,0e-4, mas nenhum chamador a usa; dixon_coles.fit_dixon_coles_parameters muda até 4,1e-6 e xg_model.fit até 1,2e-5 (sintético). Controle: fit_goal_model corrigido, 1,8e-15. Alcance: o fit_event_model Poisson roda no brasileirao-predict (--corners/--cards/--full, rotulado SEM VALIDAÇÃO) e em backtest_event, e a tela mostra porcentagem inteira; dixon_coles só nos scripts de benchmark (evaluator); xg_model só no cron do cache e no serving_evaluator, e o ensemble xG está desligado (config ensemble_xg.enabled: false). Sem efeito em resultado ou operação (C6: P2). Corrigir exige mudar o domínio fora dos adapter_paths (C24.4): decisão do dono.",
+      "evidence": [
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/review-final/other_optimizers_sensitivity.json",
+        "qualification/brasileirao/RAW_LOGS/c14-rc3-20260924/review-final/other_optimizers_sensitivity.log",
+        "qualification/brasileirao/scripts/other_optimizers_sensitivity.py"
+      ]
     }
   ]
 }

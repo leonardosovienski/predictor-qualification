@@ -121,7 +121,8 @@ Saída bruta em `RAW_LOGS/c14-rc3-20260924/review-final/`, pelos scripts version
   `generated_at` é o da gravação, não o do fim da fase.
 - Fora do caminho qualificado: `xg_model.py`, `dixon_coles.py` (usado pelo `evaluator.py`) e `event_models.py` também usam
   L-BFGS-B sem gradiente analítico. O worker de pesquisa (entrypoint do contrato) usa só `model.fit_goal_model`, corrigido e
-  provado acima; o `QUALIFIED` não cobre esses módulos (C22). Pista para o dono, não achado: não houve reprodução neles.
+  provado acima; o `QUALIFIED` não cobre esses módulos (C22). A pista foi investigada depois e virou o **BR-F019 (P2)**:
+  ver §11.
 
 ## 10. Attestation reemitida (2026-09-24T20:54:38Z; C7.1(8))
 
@@ -134,3 +135,35 @@ attestation foi reemitida:
 - nenhum gate, achado, contrato, alvo ou vetor mudou: continua `QUALIFIED`, 32 `PASS`, P0 = P1 = 0;
 - o gate `HOSTED_CI` ganhou as 2 evidências do `main`.
 `attest.py check` OK e `stage_a_recheck.py` OK (164 evidências): `RAW_LOGS/c14-rc3-20260924/review-final/attestation_reemitted.log`.
+
+## 11. A pista dos outros otimizadores (2026-09-25; BR-F019, P2) e o BR-F010
+
+`scripts/other_optimizers_sensitivity.py` → `RAW_LOGS/c14-rc3-20260924/review-final/other_optimizers_sensitivity.{json,log}`,
+pela wheel rc3 no PC 2 (dado real só para o `fit_event_model`, cópia `31f30a4d…` antes e depois). Em cada ajuste: a mesma
+entrada duas vezes e 1 ULP numa entrada contínua (`math.nextafter`).
+
+| Ajuste | Mesma entrada | 1 ULP: máx. \|Δ\| parâmetros / probabilidades | Onde roda |
+|---|---|---|---|
+| `model.fit_goal_model` (controle, corrigido no BR-F018) | — | 1,8e-15 | worker de pesquisa (qualificado) |
+| `event_models.fit_event_model` Poisson, dado real (escanteios / cartões) | igual | 5,5e-8 / 1,9e-8 — 4,1e-7 / 8,8e-8 | `brasileirao-predict --corners/--cards/--full` (rotulado SEM VALIDAÇÃO; tela em % inteiro) e `backtest_event` |
+| `event_models.fit_event_model` Poisson, sintético | igual | 2,6e-7 / 1,0e-7 | idem |
+| `event_models.fit_event_model` NB, sintético | igual | 2,0e-4 / 2,3e-4 | nenhum chamador usa a NB |
+| `dixon_coles.fit_dixon_coles_parameters`, sintético | igual | 4,1e-6 | só scripts de benchmark (`evaluator.py`) |
+| `xg_model.fit`, sintético | igual | 1,2e-5 | cron do cache e `serving_evaluator`; ensemble xG desligado (`ensemble_xg.enabled: false`) |
+
+É a mesma classe do BR-F018: com diferenças finitas, o ponto de parada depende do último bit. Mas nada disso chega ao
+resultado de pesquisa, à sombra diária ou a uma aposta, e o único uso na tela arredonda para porcentagem inteira. Por
+isso é **P2** (C6: defeito sem efeito em resultado ou operação), `OPEN`. Corrigir exige mudar o domínio fora dos
+`adapter_paths` (C24.4), então é decisão do dono.
+
+**BR-F010 → `FIXED`.** O achado dizia que o teste do pré-registro fazia `pytest.skip` com o atestado de poder vencido.
+Desde o A-04 (#79, `e0dab9a`, na rc3), o teste não pula mais: avisa e roda com o atestado real no instante em que era
+válido. Renovar o atestado continua decisão do dono (artefato protegido).
+
+A contagem de P2 abertos continua 5 (sai o BR-F010, entra o BR-F019), mas o `FINDINGS.json` mudou. Por isso a
+attestation foi reemitida de novo (C7.1(8)) às 16:06:11Z, gerando a `efc56671…`
+(`RAW_LOGS/c14-rc3-20260924/review-final/attestation_reemitted_2.log`). Depois disso, a nota do gate `BLOCKERS_ZERO`
+ainda listava o BR-F010 entre os P2 abertos. Corrigi a nota (`ledger.py gate`) e reemiti mais uma vez às 16:07:34Z
+(`attestation_reemitted_3.log`). A vigente é a `a4fa2fee…`, e a cadeia `supersedes_sha256` é
+`a4fa2fee → efc56671 → b16ecbba → 094d9571`, com todas preservadas byte a byte. Continua `QUALIFIED`, 32 `PASS`,
+P0 = P1 = 0, P2 = 5; `attest.py check` OK; `stage_a_recheck` OK (164 evidências).
