@@ -134,3 +134,14 @@ Para corrigir essas exceções, a attestation foi reemitida (C7.1(8)).
 | `SOAK_REPORT.md` (atestado): 81 → **82** arquivos; seção da noite D-16 com o desfecho | o número não batia com o `scan_final/no_data_rows_check.json` citado (o 81 era da 1ª de 3 varreduras); o texto dizia "o gate continua `NOT_RUN`" e BR-F018 sem desfecho |
 | `HOSTED_CI_REPORT.md` (atestado) e gate `HOSTED_CI` no `GATES.json` (`ledger.py gate`): CI do `main` depois do merge do #80 | os runs 36007774871 e 36007774725 (`d80a4ed`, árvore = `25cdf4d`, `success`) estavam em `RAW_LOGS` sem citação |
 | `QUALIFICATION_ATTESTATION_superseded_094d9571c5e8.json` (a anterior, preservada byte a byte) e `QUALIFICATION_ATTESTATION.json` nova (`b16ecbba…`, `supersedes_sha256` = `094d9571…`), `GATES.json` (`supersedes_sha256`) | C7.1(8). Continua `QUALIFIED`, 32 `PASS`, P0 = P1 = 0; `attest.py check` OK; `stage_a_recheck` OK (164 evidências). Log: `RAW_LOGS/c14-rc3-20260924/review-final/attestation_reemitted.log` |
+
+### Pista dos outros otimizadores e BR-F010 (2026-09-25; branch `brasileirao2/pista-otimizadores-20260925`, sobre o #43)
+
+| O quê | Por quê |
+|---|---|
+| `scripts/other_optimizers_sensitivity.py` (novo) e `RAW_LOGS/c14-rc3-20260924/review-final/other_optimizers_sensitivity.{json,log}` | investigar a pista da revisão final: `fit_event_model`, `fit_dixon_coles_parameters` e `xg_model.fit` também usam L-BFGS-B sem gradiente analítico (`BR_F018_REQUALIFICATION_REPORT.md` §11) |
+| `FINDINGS.json`: **BR-F019** (P2, `OPEN`) (`ledger.py finding`) | os três dependem do último bit (1 ULP → até 2,0e-4 na NB sem chamador, 1,2e-5 no xG, 4,1e-6 no Dixon-Coles, ≤ 4,1e-7 nas probabilidades de escanteios e cartões com o dado real), fora do caminho qualificado e sem efeito em resultado ou operação |
+| `FINDINGS.json`: **BR-F010** → `FIXED` (`ledger.py finding`) | o achado descrevia um teste que pulava com o atestado vencido; desde o A-04 (#79, na rc3) ele roda e avisa |
+| `GATES.json`: nota do gate `BLOCKERS_ZERO` (`ledger.py gate`) | listava o BR-F010 entre os P2 abertos; agora o BR-F010 aparece como `FIXED` e o BR-F019 como aberto |
+| `QUALIFICATION_ATTESTATION_superseded_b16ecbbaa017.json` (a do #43), `QUALIFICATION_ATTESTATION_superseded_efc566716dfc.json` (a intermediária, anterior à correção da nota) e `QUALIFICATION_ATTESTATION.json` vigente (`a4fa2fee…`) | C7.1(8), porque o `FINDINGS.json` e a nota mudaram. Cadeia `a4fa2fee → efc56671 → b16ecbba → 094d9571`, todas preservadas. Continua `QUALIFIED`, 32 `PASS`, P0 = P1 = 0, P2 = 5; `attest.py check` OK; `stage_a_recheck` OK (164 evidências). Logs: `review-final/attestation_reemitted_2.log` e `attestation_reemitted_3.log` |
+| `BR_F018_REQUALIFICATION_REPORT.md` §9 e §11, este arquivo | registro |

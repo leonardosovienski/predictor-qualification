@@ -1,0 +1,20 @@
+# 2026-09-25T16:06:11Z segunda reemissão da attestation final (C7.1(8)): FINDINGS.json com BR-F010 -> FIXED (A-04, rc3) e BR-F019 (P2, OPEN, outros otimizadores); nenhum gate, contrato, alvo ou vetor muda; P2 abertos continuam 5
+anterior: QUALIFICATION_ATTESTATION.json sha256 b16ecbbaa0177b8bce647cccb16b264e5e784b93b782e60499e206f1856e751d (a reemitida no PR #43)
+git mv -> QUALIFICATION_ATTESTATION_superseded_b16ecbbaa017.json (preservada byte a byte)
+[ledger set supersedes_sha256 exit 0]
+$ attest.py final
+qualification/brasileirao/QUALIFICATION_ATTESTATION.json: OK  counts={'P0': 0, 'P1': 0, 'P2': 5}  result=QUALIFIED
+[final exit 0]
+$ attest.py check QUALIFICATION_ATTESTATION.json
+OK
+[check exit 0]
+C7.1(8): supersedes_sha256 == sha256 da anterior: True | result QUALIFIED | counts {'P0': 0, 'P1': 0, 'P2': 5} | generated_at 2026-09-25T16:06:11+00:00
+cadeia: anterior aponta para 094d9571c5e8
+$ stage_a_recheck.py --partial QUALIFICATION_ATTESTATION.json
+{"verdict": "OK", "problems": [], "gate_status_count": {"PASS": 32}, "evidence_files": 164}
+[recheck exit 0]
+$ attest.py check na anterior (esperado: só o findings_file)
+C7.1(3): sha256 divergente qualification/brasileirao/FINDINGS.json
+C7.1(3): findings_file divergente qualification/brasileirao/FINDINGS.json
+[check anterior exit 1]
+nova: QUALIFICATION_ATTESTATION.json sha256 efc566716dfcb9cc77f3111d6bae697667e2fae1e0aba0faeb5ab2656a391e35
