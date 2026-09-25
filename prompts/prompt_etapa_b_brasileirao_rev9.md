@@ -52,4 +52,12 @@ nunca linhas de jogos, odds ou resultados do dado. Confira isso no `no_data_rows
 * As hipóteses que o loop do PR #50 encerrou sem melhora (dois ciclos no Brasileirão) e os achados do PR #51 entram na
   memória do domínio como vieram. Proposta equivalente vira `DUPLICATE` ou `BLOCK`, com receipt.
 * BR-F018 foi corrigido na rc3 (Windows e Linux 20/20 idênticos). Qualquer divergência nova entre sistemas operacionais é achado P1.
+* O **BR-F019 (P2, aberto)** já registra que `event_models.fit_event_model`, `dixon_coles.fit_dixon_coles_parameters` e
+  `xg_model.fit` também dependem do último bit. Os três ficam fora do worker de pesquisa, e o efeito medido é nulo no
+  resultado e na operação. Não é divergência nova. Se o adapter passar a usar algum deles, meça de novo e reclassifique
+  pela C6.
+* O teste do pré-registro emite `ExpiredHarnessAttestationWarning` (A-04; BR-F010 `FIXED`), e isso é esperado. Renovar
+  `data/trials.harness_attestation.json` é decisão do dono (artefato protegido, C15.1).
+* O `README.md` e o `docs/ESTADO_ATUAL.md` do `brasileirao-predictor` estão desatualizados, e o dono decidiu deixá-los
+  assim (2026-09-25). Não os atualize nesta missão: fora dos `adapter_paths`, isso quebraria a C24.3(a).
 * Resultado econômico da Etapa A: `NO_EDGE` (C22).
