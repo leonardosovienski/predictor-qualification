@@ -92,3 +92,14 @@ Núcleo v2.2 (PR #30): o C0.2 passa a conferir o schema pelo `MANIFEST.sha256`. 
 `scripts/attest.py` com o sha256 da v2.2 (`d681e423…`) e `common_core_version` 2.2. **CR-F021 → FIXED**: o `check()` confere também `environments[*].evidence`, `shared_dependency_verdicts[*].verdict_sha256` e `findings_file` (prova em `RAW_LOGS/c14-nucleo-v2.2/check.log`).
 `QUALIFICATION_ATTESTATION.json` reemitida: **QUALIFIED**, 31/31 PASS (mesmos estados), P0=0 P1=0 P2=7; a anterior foi preservada como
 `QUALIFICATION_ATTESTATION_superseded_ec22a085125a.json` (`supersedes_sha256`). `attest.py check` OK.
+
+## C14 "Núcleo (versão)" v2.2 → v2.3 (D-22, 2026-09-26)
+
+Núcleo v2.3 (PR #49): a Etapa B passa a ser três missões, uma por domínio (`integration-crypto` primeiro). A C7.1 regra 6 agora aceita, como `common_core_sha256`, qualquer versão do núcleo no histórico do `main`, sem reemissão.
+
+- Nenhum requisito do crypto mudou, nenhuma fase foi refeita e **não houve reemissão**.
+- `QUALIFICATION_ATTESTATION.json` foi revalidada no schema vigente (v2.2, `common_core_sha256 = d681e423…`): `attest.py check` OK.
+- Controle negativo: uma cópia com `common_core_sha256` fora do histórico foi recusada pela C7.1(6).
+- Prova em `RAW_LOGS/c14-nucleo-v2.3/check.log`.
+
+**Observação para o dono (P2):** o `check()` estendido pela CR-F021 compara os parciais históricos com o `FINDINGS.json` **atual**. Por isso os 29 `ATTESTATION_PARTIAL_*.json` falham na C7.1(3) (`findings_file`). Parcial é imutável (C8), e o `check` só vale para a attestation vigente. Se o dono quiser `check` de parciais, o `attest.py` precisa comparar com o `FINDINGS.json` do commit de cada parcial.
