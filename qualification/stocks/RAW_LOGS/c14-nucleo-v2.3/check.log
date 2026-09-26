@@ -1,0 +1,27 @@
+# 2026-09-26T05:26:03Z C14 "Núcleo (versão)" do núcleo v2.3 (D-22) no stocks: revalidar a attestation vigente no schema vigente, sem reemitir
+main: ec02315 | núcleo beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc (v2.3) | MANIFEST 13/13
+attestation vigente: QUALIFICATION_ATTESTATION.json sha256 e0f2e28ddd0c1887faaba3f409dacc3c49de9854eed38ba286ed3cc501f99c2e (emitida no núcleo 2.2 d681e423499e)
+verify_attestation.py (com a regra 6 da v2.3) sha256 cdff3cb2a3900fe226ecdc314b6c7cac5efcb2530958bbf94bfc9f081e82c3c2
+$ attest.py check QUALIFICATION_ATTESTATION.json
+OK
+[exit 0]
+$ verify_attestation.py . ec02315 (8 regras C7.1 + C0.2 + schema; baixa as final_wheels)
+[exit 0]
+all_ok True | schema=ok C7.1(1)=ok C7.1(2)=ok C7.1(3)=ok C7.1(4)=ok C7.1(5)=ok C7.1(6)=ok C0.2=ok C7.1(7)=ok C7.1(8)=ok capital_permission=false=ok
+regra 6: {'attestation_version': '2.2', 'table_version': '2.2', 'in_git_history': True, 'core_at_commit_in_table': True}
+# antes da correção, no mesmo main: verify_attestation.py exigia núcleo da attestation = núcleo do commit
+#   resultado: all_ok False, só C7.1(6) FAIL (d681e423 v2.2 != beaa5fee v2.3), saída bruta em verify_attestation_ec02315_antes.json; attest.py check já dava OK
+# regressão: o mesmo verificador no commit 6206b7b (attestation vigente emitida no núcleo v2.2, main no v2.2)
+[exit 0]
+all_ok True
+# controle negativo: cópia da attestation com common_core_sha256 fora do histórico (arquivo fora do repo)
+$ attest.py check <cópia>
+C7.1(6): common_core_sha256 não é uma versão do núcleo no histórico do main
+[exit 1]
+$ verify_attestation.core_rule(<cópias>) com o CORE_VERSIONS e o histórico git do main
+vigente (v2.2, sem reemissão): ok=True
+núcleo fora do histórico (000…): ok=False
+versão incoerente (sha v2.2, common_core_version 2.3): ok=False
+tabela sem a v2.3 (núcleo do commit desconhecido): ok=False
+histórico git do núcleo até ec02315: 4 versões; tabela: ['2.0', '2.1', '2.2', '2.3']
+[exit 0]

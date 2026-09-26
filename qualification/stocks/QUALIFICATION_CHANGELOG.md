@@ -115,3 +115,20 @@ contradizia a decisão e mantinha `counts` P2 = 5 na attestation. Isso ficou reg
 | `FINDINGS.json`: ST-F007 e ST-F008 → `ACCEPTED_BY_OWNER`, `decision: D-21` e nota na descrição | alinhar os achados à D-21 (vocabulário `status_values` do próprio arquivo) |
 | `QUALIFICATION_ATTESTATION.json` reemitida (`e0f2e28ddd0c…`): **QUALIFIED**, 31/31 PASS (mesmos estados), P0=0 P1=0 **P2=3**, núcleo v2.2; a anterior foi preservada como `QUALIFICATION_ATTESTATION_superseded_4896575fd15c.json` | C7.1 regra 2: `counts` tem de bater com o `FINDINGS.json`; nenhuma fase refeita e nenhum critério, gate ou parâmetro mudou |
 | `RAW_LOGS/findings-d21-20260925/{emit,check}.log` | saída bruta do `attest.py final` e do `attest.py check` (C20) |
+
+## C14 "Núcleo (versão)" v2.2 → v2.3 (D-22, 2026-09-26; branch `stocks/c14-nucleo-v2.3-20260926`)
+
+O núcleo v2.3 (`beaa5fee…`, PR #49, merge `95e8977`) divide a Etapa B em três missões, uma por domínio:
+`integration-crypto`, depois `integration-stocks`, depois `integration-brasileirao`. A C7.1 regra 6 passa a aceitar o
+núcleo vigente na emissão da attestation, desde que seja uma versão do histórico do `main`, sem reemissão. Nenhum
+requisito do stocks mudou. A attestation vigente foi **revalidada no schema vigente, sem reemissão**.
+
+| O quê | Resultado / por quê |
+|---|---|
+| `QUALIFICATION_ATTESTATION.json` vigente (`e0f2e28d…`, emitida no núcleo v2.2) | `attest.py check` OK no `main` `ec02315` (núcleo v2.3, MANIFEST 13/13). Nenhuma fase refeita, nenhuma reemissão. Continua `QUALIFIED`, 31/31 PASS, P0 = P1 = 0, P2 = 3 |
+| `d16/verify_attestation.py`: regra 6 da v2.3 | Antes, exigia núcleo da attestation = núcleo do commit, e no `main` v2.3 dava C7.1(6) FAIL (a única falha; saída bruta em `verify_attestation_ec02315_antes.json`). Agora confere o núcleo vigente na emissão por dois caminhos. (1) A tabela `CORE_VERSIONS` do `attest.py` no commit, lida por `ast` como fonte única: `common_core_version` precisa ser coerente e a tabela precisa conhecer o núcleo do commit. (2) As versões reais do núcleo no histórico git, sem depender da tabela. No `main` `ec02315`: `all_ok`, 11/11 checagens (baixa as `final_wheels`) |
+| Regressão | O mesmo verificador no `6206b7b` (`main` no núcleo v2.2) dá `all_ok` |
+| Controles negativos | Cópia com `common_core_sha256` fora do histórico: o `attest.py` recusa (C7.1(6)). O `core_rule` recusa: núcleo fora do histórico, versão incoerente (sha da v2.2 com `common_core_version` 2.3) e tabela sem o núcleo do commit |
+| Evidência | `RAW_LOGS/c14-nucleo-v2.3/check.log`, `verify_attestation_ec02315.json` e `verify_attestation_ec02315_antes.json` |
+
+O `d16/verify_stage_a.py` continua no núcleo v2.0, como registro do passo 0 da D-16 (ver acima).

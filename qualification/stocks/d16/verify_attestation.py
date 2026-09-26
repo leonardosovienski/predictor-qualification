@@ -5,11 +5,17 @@ final_wheels cobrem todo pacote do stack instalado no runtime — core_identity.
 Linux primary e um Windows secondary), 7 (domain_contract_sha256 = sha256 do contrato no commit) e 8
 (supersedes_sha256 aponta para a attestation anterior, se houver) + schema JSON 2020-12 (se jsonschema existir).
 
+Regra 6 (núcleo v2.3, D-22): vale o núcleo vigente quando a attestation foi emitida, desde que seja uma versão do
+núcleo no histórico do main. Conferida de dois jeitos: pela tabela CORE_VERSIONS do attest.py no commit (lida por
+ast, fonte única, com common_core_version coerente; a tabela precisa conhecer o núcleo do commit) e, sem depender da
+tabela, pelas versões reais de COMMON_QUALIFICATION_CORE.md no histórico git até o commit.
+
 Uso: python verify_attestation.py <repo de evidência> <commit> <saída.json>
 """
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import subprocess
@@ -20,6 +26,36 @@ from pathlib import Path
 CORE_SHA = "50e8f49859daae6dcdf17164781d1837d8b656796924c35060f8d35855ee36e1"
 STACK = {"predictor-core", "predictor-ops", "stocks-predictor"}
 ATT = "qualification/stocks/QUALIFICATION_ATTESTATION.json"
+
+
+CORE_PATH = "qualification/COMMON_QUALIFICATION_CORE.md"
+
+
+def core_versions(attest_source: bytes) -> dict[str, str]:
+    """sha256 → versão do núcleo, do CORE_VERSIONS do attest.py (sem importar: o attest.py importa jsonschema)."""
+    for node in ast.parse(attest_source.decode("utf-8")).body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "CORE_VERSIONS" for t in node.targets):
+            return ast.literal_eval(node.value)
+    return {}
+
+
+def core_history(repo: Path, commit: str) -> set[str]:
+    """sha256 de toda versão do núcleo no histórico git até ``commit``."""
+    log = subprocess.run(["git", "-C", str(repo), "log", "--format=%H", commit, "--", CORE_PATH],
+                         capture_output=True, text=True, check=True).stdout.split()
+    return {hashlib.sha256(subprocess.run(["git", "-C", str(repo), "show", f"{sha}:{CORE_PATH}"], capture_output=True,
+                                          check=True).stdout).hexdigest() for sha in log}
+
+
+def core_rule(doc: dict, core_now: str, versions: dict[str, str], history: set[str]) -> dict:
+    """C7.1 regra 6 do núcleo v2.3: detalhe da checagem, com ``ok``."""
+    emitted = doc["common_core_sha256"]
+    detail = {"attestation": emitted, "attestation_version": doc.get("common_core_version"),
+              "table_version": versions.get(emitted), "in_git_history": emitted in history,
+              "core_at_commit": core_now, "core_at_commit_in_table": core_now in versions}
+    detail["ok"] = (detail["in_git_history"] and detail["table_version"] is not None
+                    and detail["table_version"] == detail["attestation_version"] and detail["core_at_commit_in_table"])
+    return detail
 
 
 def main() -> int:
@@ -82,9 +118,11 @@ def main() -> int:
     envs = {(e["os"], e["role"]) for e in doc["environments"]}
     check("C7.1(5) Linux primary + Windows secondary", ("linux", "primary") in envs and ("windows", "secondary") in envs,
           environments=[(e["os"], e["role"], e["where"], e["result"]) for e in doc["environments"]])
-    core_now = hashlib.sha256(show("qualification/COMMON_QUALIFICATION_CORE.md")).hexdigest()
-    check("C7.1(6) common_core_sha256 = sha256 do núcleo no commit", doc["common_core_sha256"] == core_now,
-          attestation=doc["common_core_sha256"], core_at_commit=core_now, v2_0=CORE_SHA)
+    core_now = hashlib.sha256(show(CORE_PATH)).hexdigest()
+    rule6 = core_rule(doc, core_now, core_versions(show("qualification/stocks/scripts/attest.py") or b""),
+                      core_history(repo, commit))
+    check("C7.1(6) common_core_sha256 = núcleo vigente na emissão, versão do histórico do main (v2.3)",
+          rule6.pop("ok"), **rule6, v2_0=CORE_SHA)
     manifest = show("MANIFEST.sha256")
     if manifest is not None:  # C0.2 (v2.2): schema e núcleo pelo sha256 registrado no MANIFEST do commit
         listed = {}
