@@ -4,7 +4,9 @@ Sem rede e sem editar nada. Confere, a partir da árvore do repositório de evid
   * GATES.json: estado de cada gate e toda evidência citada (gates, environments, veredictos
     compartilhados) existe; sha256 atual = sha256 gravado no último ATTESTATION_PARTIAL (C7.1 regra 3);
   * hashes de identidade do último parcial (núcleo, baseline comum, FROZEN_PARAMETERS, PROTECTED_SET,
-    FROZEN_VECTORS, perfil do soak, FINDINGS) e domain_contract_sha256 = contrato no main;
+    FROZEN_VECTORS, perfil do soak, FINDINGS) e domain_contract_sha256 = contrato no main. O núcleo segue a
+    C7.1 regra 6 do núcleo v2.3: vale o núcleo vigente quando o parcial foi emitido, se for uma versão do
+    histórico (tabela CORE_VERSIONS do attest.py), com common_core_version coerente;
   * counts do parcial = achados abertos em FINDINGS.json (C7.1 regra 2);
   * FROZEN_VECTORS.json: blob git e sha256 de cada arquivo no commit final do brasileirao-predictor;
   * final_commits existem nos clones locais; runtime_target.json = final_wheels do GATES.json;
@@ -20,6 +22,7 @@ Exit 1 se houver divergência.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import subprocess
@@ -31,6 +34,15 @@ OPEN = {"OPEN", "OPEN_AWAITING_VERDICT", "OPEN_BLOCKED"}
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def core_versions() -> dict[str, str]:
+    """sha256 → versão do núcleo, lido do CORE_VERSIONS do attest.py (fonte única, sem importar o jsonschema)."""
+    tree = ast.parse((Path(__file__).resolve().parent / "attest.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "CORE_VERSIONS" for t in node.targets):
+            return ast.literal_eval(node.value)
+    raise SystemExit("CORE_VERSIONS ausente no attest.py")
 
 
 def git(repo: str, *args: str) -> subprocess.CompletedProcess:
@@ -118,9 +130,22 @@ def main() -> int:
         "domain_contract_sha256": qc / "DOMAIN_RESEARCH_CONTRACT.json",
     }
     id_rows = {}
+    versions = core_versions()
     for key, path in identity.items():
         actual = sha(path)
         id_rows[key] = {"partial": partial.get(key), "actual": actual, "match": actual == partial.get(key)}
+        if key == "common_core_sha256":
+            # C7.1 regra 6 (núcleo v2.3): vale o núcleo vigente na emissão, desde que seja do histórico
+            row = id_rows[key]
+            row["in_history"] = partial.get(key) in versions
+            row["version"] = versions.get(partial.get(key))
+            if actual not in versions:
+                problems.append(f"common_core_sha256: núcleo atual {actual} fora do CORE_VERSIONS do attest.py")
+            if not row["in_history"]:
+                problems.append(f"common_core_sha256: parcial {partial.get(key)} fora do histórico do núcleo")
+            elif partial.get("common_core_version") != row["version"]:
+                problems.append(f"common_core_version: parcial {partial.get('common_core_version')} != {row['version']}")
+            continue
         if actual != partial.get(key):
             problems.append(f"{key}: parcial {partial.get(key)} != atual {actual}")
     if ledger.get("domain_contract_sha256") != id_rows["domain_contract_sha256"]["actual"]:

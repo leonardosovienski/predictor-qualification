@@ -145,3 +145,17 @@ Para corrigir essas exceções, a attestation foi reemitida (C7.1(8)).
 | `GATES.json`: nota do gate `BLOCKERS_ZERO` (`ledger.py gate`) | listava o BR-F010 entre os P2 abertos; agora o BR-F010 aparece como `FIXED` e o BR-F019 como aberto |
 | `QUALIFICATION_ATTESTATION_superseded_b16ecbbaa017.json` (a do #43), `QUALIFICATION_ATTESTATION_superseded_efc566716dfc.json` (a intermediária, anterior à correção da nota) e `QUALIFICATION_ATTESTATION.json` vigente (`a4fa2fee…`) | C7.1(8), porque o `FINDINGS.json` e a nota mudaram. Cadeia `a4fa2fee → efc56671 → b16ecbba → 094d9571`, todas preservadas. Continua `QUALIFIED`, 32 `PASS`, P0 = P1 = 0, P2 = 5; `attest.py check` OK; `stage_a_recheck` OK (164 evidências). Logs: `review-final/attestation_reemitted_2.log` e `attestation_reemitted_3.log` |
 | `BR_F018_REQUALIFICATION_REPORT.md` §9 e §11, este arquivo | registro |
+
+PRs #46 (merge `5055029`, commit `5430a6f`) e #47 (prompt da Etapa B do Brasileirão, merge `a15b6b1`).
+
+## C14 "Núcleo (versão)": núcleo v2.3 (D-22), 2026-09-26; branch `brasileirao2/c14-nucleo-v2.3-20260926`
+
+O núcleo v2.3 (`beaa5fee…`, PR #49, merge `95e8977`) não muda nenhum requisito da Etapa A. Pela C14 e pela C7.1 regra 6
+novas, a attestation vigente é **revalidada no schema vigente, sem reemissão**, e registrada aqui.
+
+| O quê | Resultado / por quê |
+|---|---|
+| `QUALIFICATION_ATTESTATION.json` vigente (`a4fa2fee…`, emitida no núcleo v2.2) | `attest.py check` **OK** no `main` `a082dcc` (núcleo v2.3, MANIFEST 13/13); `test_attest_cr_f021.py` 7/7. Nenhuma fase refeita, nenhuma reemissão; continua `QUALIFIED` |
+| Controle negativo | uma cópia com `common_core_sha256` fora do histórico é recusada pelo `attest.py` (C7.1(6)) e pelo `stage_a_recheck.py` |
+| `scripts/stage_a_recheck.py`: o núcleo segue a C7.1 regra 6 da v2.3 | a reconferência independente exigia o núcleo **atual** e passou a acusar divergência com a v2.3. Agora aceita o núcleo vigente na emissão, se ele estiver no `CORE_VERSIONS` do `attest.py` (lido por `ast`, fonte única), e confere o `common_core_version`. Com isso: OK, 32 `PASS`, 164 evidências |
+| Evidência | `RAW_LOGS/c14-nucleo-v2.3/check.log` |
