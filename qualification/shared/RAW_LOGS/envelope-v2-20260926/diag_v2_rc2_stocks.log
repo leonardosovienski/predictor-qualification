@@ -1,0 +1,65 @@
+PASS registro == instalado: request_schema_id {}
+PASS registro == instalado: result_schema_id {}
+PASS registro == instalado: outcome_exit_codes {}
+PASS registro == instalado: result_states {}
+PASS registro == instalado: operational_states {}
+PASS registro == instalado: scientific_states {}
+PASS registro == instalado: economic_states {}
+PASS registro == instalado: OUTCOME_STATUSES {}
+PASS C24.3(d): payload_sha256 == hash canônico do vetor da Etapa A (sem client_ref) {}
+PASS C24.3(d): payload_sha256 == request_content_hash do domínio {}
+{"duration_ms": 310, "event": "job_finished", "job_id": "stocks-research-91c309411c95940063681d14", "level": "INFO", "run_id": "9776d04221e948c69ce094390f5de22e", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-26T05:34:47.083490Z"}
+PASS ep1 pedido: status {"status": "RESULT", "reason": null}
+PASS ep1 pedido: client_ref ecoado {}
+PASS ep1 pedido: episode_id ecoado {"episode": "stocks:episode-1"}
+PASS ep1 pedido: ida e volta canônica {}
+PASS ep1 pedido: payload == canonical(resultado do domínio) {}
+PASS ep1 pedido: payload_sha256 == show().result_sha256 {}
+PASS ep1 pedido: bytes relidos == payload {}
+PASS ep1 pedido: estados copiados sem tradução {"result_state": "WATCH_NO_CAPITAL", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "WATCH"}
+PASS ep1 pedido: capital_permission false {}
+PASS ep1 reenvio (mesmos bytes): status {"status": "DUPLICATE", "reason": null}
+PASS ep1 reenvio (mesmos bytes): client_ref ecoado {}
+PASS ep1 reenvio (mesmos bytes): episode_id ecoado {"episode": "stocks:episode-1"}
+PASS ep1 reenvio (mesmos bytes): ida e volta canônica {}
+PASS ep1 reenvio (mesmos bytes): payload == canonical(resultado do domínio) {}
+PASS ep1 reenvio (mesmos bytes): payload_sha256 == show().result_sha256 {}
+PASS ep1 reenvio (mesmos bytes): bytes relidos == payload {}
+PASS ep1 reenvio (mesmos bytes): estados copiados sem tradução {"result_state": "WATCH_NO_CAPITAL", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "WATCH"}
+PASS ep1 reenvio (mesmos bytes): capital_permission false {}
+PASS ep1 reenvio: mesmo payload {}
+PASS ep2 mesmo pedido: task_id novo {}
+PASS ep2 mesmo pedido: status {"status": "DUPLICATE", "reason": null}
+PASS ep2 mesmo pedido: client_ref ecoado {}
+PASS ep2 mesmo pedido: episode_id ecoado {"episode": "stocks:episode-2"}
+PASS ep2 mesmo pedido: ida e volta canônica {}
+PASS ep2 mesmo pedido: payload == canonical(resultado do domínio) {}
+PASS ep2 mesmo pedido: payload_sha256 == show().result_sha256 {}
+PASS ep2 mesmo pedido: bytes relidos == payload {}
+PASS ep2 mesmo pedido: estados copiados sem tradução {"result_state": "WATCH_NO_CAPITAL", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "WATCH"}
+PASS ep2 mesmo pedido: capital_permission false {}
+PASS ep2 mesmo pedido: mesmo result_id e payload (sem 2º efeito) {}
+PASS ep3 mesmo request_id, outro conteúdo: status {"status": "CONFLICT", "reason": "REQUEST_ID_CONTENT_CONFLICT"}
+PASS ep3 mesmo request_id, outro conteúdo: client_ref ecoado {}
+PASS ep3 mesmo request_id, outro conteúdo: episode_id ecoado {"episode": "stocks:episode-3"}
+PASS ep3 mesmo request_id, outro conteúdo: ida e volta canônica {}
+{"duration_ms": 209, "event": "job_finished", "job_id": "stocks-research-1509fb7f49b01e3a5ec6bfb5", "level": "INFO", "run_id": "2f36f8cf933344738494f99527a9c8dd", "run_status": "FAILED", "service": "predictor_ops", "timestamp": "2026-09-26T05:34:47.400420Z"}
+PASS ep4 canário do futuro: status {"status": "TEMPORAL_INTEGRITY_VIOLATION", "reason": "TEMPORAL: LookaheadError: replay: evento no índice 0 disponível em '2023-09-12T21:30:00Z' depois do cutoff '2023-09-09T00:00:00Z'"}
+PASS ep4 canário do futuro: client_ref ecoado {}
+PASS ep4 canário do futuro: episode_id ecoado {"episode": "stocks:episode-4"}
+PASS ep4 canário do futuro: ida e volta canônica {}
+PASS resultado marcado brasileirao rejeitado {"code": "DOMAIN_MISMATCH"}
+PASS resultado marcado crypto rejeitado {"code": "DOMAIN_MISMATCH"}
+PASS stocks busy: outcome real STATE_BUSY_RETRYABLE sem client_ref {"status": "STATE_BUSY_RETRYABLE", "exit_code": 3, "reason": "SQLITE_BUSY"}
+PASS stocks busy: representável na rc2 (RETRYABLE, client_ref nulo) {}
+{"duration_ms": 313, "event": "job_finished", "job_id": "stocks-research-ff25fa9912acefad49d82889", "level": "INFO", "run_id": "2a687e851ed04449bbb441c08c6dc07d", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-26T05:35:18.382318Z"}
+PASS stocks busy: reenvio da mesma task depois do lock: status {"status": "RESULT", "reason": null}
+PASS stocks busy: reenvio da mesma task depois do lock: client_ref ecoado {}
+PASS stocks busy: reenvio da mesma task depois do lock: episode_id ecoado {"episode": "stocks:episode-5"}
+PASS stocks busy: reenvio da mesma task depois do lock: ida e volta canônica {}
+PASS stocks busy: reenvio da mesma task depois do lock: payload == canonical(resultado do domínio) {}
+PASS stocks busy: reenvio da mesma task depois do lock: payload_sha256 == show().result_sha256 {}
+PASS stocks busy: reenvio da mesma task depois do lock: bytes relidos == payload {}
+PASS stocks busy: reenvio da mesma task depois do lock: estados copiados sem tradução {"result_state": "WATCH_NO_CAPITAL", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "WATCH"}
+PASS stocks busy: reenvio da mesma task depois do lock: capital_permission false {}
+RESULTADO: OK (61 checagens)
