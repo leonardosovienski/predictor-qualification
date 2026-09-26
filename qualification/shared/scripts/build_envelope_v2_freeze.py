@@ -8,7 +8,7 @@ Qualquer divergência aborta sem gravar. `--check` refaz tudo e compara com o ar
 
 Uso:
   python build_envelope_v2_freeze.py --ecosystem CLONE --commit SHA --tag TAG --wheel ARQ.whl
-      --qualification WORKTREE --raw RAW_LOGS/envelope-v2-20260926 --baseline STACK_BASELINE_V2.0.json
+      --qualification WORKTREE [--qualification-rev origin/main] --raw RAW_LOGS/envelope-v2-20260926 --baseline STACK_BASELINE_V2.0.json
       --raw-log LOG --out ENVELOPE_V2_FREEZE.json [--check]
 """
 
@@ -83,8 +83,9 @@ def parse_diag_log(path: Path) -> dict:
 
 def build(args: argparse.Namespace, r: v1.Runner) -> dict:
     eco, q, commit = str(args.ecosystem), str(args.qualification), args.commit
+    q_commit = r.git(q, "rev-parse", "--verify", f"{args.qualification_rev}^{{commit}}").strip()
     commit = r.git(eco, "rev-parse", "--verify", f"{commit}^{{commit}}").strip()
-    if v1.sha256_bytes(v1.blob_bytes(q, "HEAD", "qualification/COMMON_QUALIFICATION_CORE.md")) != CORE_SHA256:
+    if v1.sha256_bytes(v1.blob_bytes(q, q_commit, "qualification/COMMON_QUALIFICATION_CORE.md")) != CORE_SHA256:
         fail("núcleo diferente da v2.3")
     pyproject = tomllib.loads(v1.blob_bytes(eco, commit, f"{PKG}/pyproject.toml").decode("utf-8"))["project"]
     version = pyproject["version"]
@@ -124,8 +125,8 @@ def build(args: argparse.Namespace, r: v1.Runner) -> dict:
     contracts = []
     for mission in MISSIONS:
         path = f"qualification/{mission}/DOMAIN_RESEARCH_CONTRACT.json"
-        contract_sha = v1.sha256_bytes(v1.blob_bytes(q, "HEAD", path))
-        att_raw = v1.blob_bytes(q, "HEAD", f"qualification/{mission}/QUALIFICATION_ATTESTATION.json")
+        contract_sha = v1.sha256_bytes(v1.blob_bytes(q, q_commit, path))
+        att_raw = v1.blob_bytes(q, q_commit, f"qualification/{mission}/QUALIFICATION_ATTESTATION.json")
         att = json.loads(att_raw)
         entry = registry["domains"][mission]
         if entry["contract"]["sha256"] != contract_sha:
@@ -167,7 +168,7 @@ def build(args: argparse.Namespace, r: v1.Runner) -> dict:
         "common_core_sha256": CORE_SHA256,
         "decisions": ["D-4", "D-12", "D-14", "D-22"],
         "mission_prompt": "prompts/prompt_preparacao_envelope_v2_rev8.md",
-        "predictor_qualification_commit": r.git(q, "rev-parse", "HEAD").strip(),
+        "predictor_qualification_commit": q_commit,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "generator": "qualification/shared/scripts/build_envelope_v2_freeze.py",
         "protocol": {
@@ -222,6 +223,7 @@ def main() -> None:
         ap.add_argument(name, required=True, type=Path)
     ap.add_argument("--commit", required=True)
     ap.add_argument("--tag", required=True)
+    ap.add_argument("--qualification-rev", default="origin/main")
     ap.add_argument("--check", action="store_true")
     args = ap.parse_args()
     args.raw_log.parent.mkdir(parents=True, exist_ok=True)

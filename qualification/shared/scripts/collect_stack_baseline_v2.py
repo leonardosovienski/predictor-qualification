@@ -14,7 +14,7 @@ edição, para o log bruto; o JSON é derivado dessas saídas. Reaproveita as fu
 (`collect_stack_baseline.py`), que fica sem mudança.
 
 Uso:
-  python collect_stack_baseline_v2.py --repos ~/predictors/repos --qualification <worktree do main>
+  python collect_stack_baseline_v2.py --repos ~/predictors/repos --qualification <clone> [--qualification-rev origin/main]
       --ecosystem-commit SHA --cain-commit SHA --protocol-tag TAG --raw-log LOG --out FILE
 """
 
@@ -177,6 +177,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repos", required=True, type=Path)
     ap.add_argument("--qualification", required=True, type=Path)
+    ap.add_argument("--qualification-rev", default="origin/main")
     ap.add_argument("--ecosystem-commit", required=True)
     ap.add_argument("--cain-commit", required=True)
     ap.add_argument("--protocol-tag", required=True)
@@ -187,19 +188,19 @@ def main() -> None:
     args.raw_log.parent.mkdir(parents=True, exist_ok=True)
     r = v1.Runner(args.raw_log)
     q = str(args.qualification)
-    q_commit = r.git(q, "rev-parse", "HEAD").strip()
-    core_sha = v1.sha256_bytes(v1.blob_bytes(q, "HEAD", "qualification/COMMON_QUALIFICATION_CORE.md"))
+    q_commit = r.git(q, "rev-parse", "--verify", f"{args.qualification_rev}^{{commit}}").strip()
+    core_sha = v1.sha256_bytes(v1.blob_bytes(q, q_commit, "qualification/COMMON_QUALIFICATION_CORE.md"))
     if core_sha != CORE_SHA256:
         raise SystemExit(f"núcleo {core_sha} != v2.3 {CORE_SHA256}")
 
     missions, finals = {}, {}
     for mission in MISSIONS:
         att_path = f"qualification/{mission}/QUALIFICATION_ATTESTATION.json"
-        raw = v1.blob_bytes(q, "HEAD", att_path)
+        raw = v1.blob_bytes(q, q_commit, att_path)
         att = json.loads(raw)
         contract_path = f"qualification/{mission}/DOMAIN_RESEARCH_CONTRACT.json"
-        contract_sha = v1.sha256_bytes(v1.blob_bytes(q, "HEAD", contract_path))
-        target = json.loads(v1.blob_bytes(q, "HEAD", f"qualification/{mission}/runtime_target.json"))
+        contract_sha = v1.sha256_bytes(v1.blob_bytes(q, q_commit, contract_path))
+        target = json.loads(v1.blob_bytes(q, q_commit, f"qualification/{mission}/runtime_target.json"))
         if att["result"] != "QUALIFIED" or att["domain_contract_sha256"] != contract_sha:
             raise SystemExit(f"{mission}: attestation não QUALIFIED ou contrato divergente")
         commits = {c["repo"]: c["commit_sha"] for c in att["final_commits"]}
