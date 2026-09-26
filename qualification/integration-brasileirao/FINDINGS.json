@@ -1,0 +1,76 @@
+{
+  "schema": "integration-brasileirao/FINDINGS/1",
+  "severity_scale": "C6: P0 quebra o que dá dinheiro ou faz perder; P1 defeito real sem violação observada; P2 sem efeito em resultado ou operação",
+  "status_values": [
+    "OPEN",
+    "FIXED",
+    "NOT_A_DEFECT",
+    "ACCEPTED_LIMITATION"
+  ],
+  "c0": {
+    "state": "ABORTED",
+    "rule": "COMMON_QUALIFICATION_CORE.md v2.3, C0.4 e C7.3: pré-condição do prompt falhou → ABORTED, motivo aqui, nenhuma fase roda",
+    "checked_at": "2026-09-26T05:39:16Z",
+    "evidence_repo_ref": "origin/main 76a4cbe329f737c57d9eb86636f0e59a3d3823b9",
+    "common_core_sha256": "beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc",
+    "script": "qualification/integration-brasileirao/scripts/c0_preflight.sh (+ c0_preconditions.py)",
+    "raw_log": "qualification/integration-brasileirao/RAW_LOGS/c0/c0_preflight.log",
+    "raw_log_sha256": "1518ad77d42937cd0d6476ebf7472bbd1454776100d44e3ccdb9761e567d182e",
+    "failed": [
+      {
+        "check": "3.4/integration-stocks",
+        "requirement": "qualification/integration-stocks/QUALIFICATION_ATTESTATION.json com result = QUALIFIED no main",
+        "source": "prompts/prompt_etapa_b_brasileirao_rev9.md §1",
+        "observed": "o diretório qualification/integration-stocks/ não existe no main",
+        "missing": "missão integration-stocks QUALIFIED e mergeada"
+      },
+      {
+        "check": "3.4/integration-crypto",
+        "requirement": "integration-crypto QUALIFIED (consequência da anterior; ordem da D-22)",
+        "source": "prompts/prompt_etapa_b_brasileirao_rev9.md §1; DECISIONS.json D-22",
+        "observed": "o diretório qualification/integration-crypto/ não existe no main",
+        "missing": "missão integration-crypto QUALIFIED e mergeada"
+      },
+      {
+        "check": "comum1/ENVELOPE_V2_FREEZE",
+        "requirement": "qualification/shared/ENVELOPE_V2_FREEZE.json no main",
+        "source": "prompts/prompt_etapa_b_comum_rev9.md §1",
+        "observed": "ausente",
+        "missing": "preparação do envelope V2 congelada e mergeada"
+      },
+      {
+        "check": "comum1/STACK_BASELINE_V2.n",
+        "requirement": "qualification/shared/STACK_BASELINE_V2.<n>.json no main",
+        "source": "prompts/prompt_etapa_b_comum_rev9.md §1; núcleo C3",
+        "observed": "só STACK_BASELINE_V1.json e STACK_BASELINE_V1.1.json",
+        "missing": "STACK_BASELINE_V2.0 do congelamento do envelope V2"
+      }
+    ],
+    "passed": [
+      "3.1/C0.1-core-sha256",
+      "3.3/C0.2-manifest (13/13)",
+      "3.6/dado-sha256",
+      "3.2/D-16",
+      "3.2/D-19",
+      "3.2/D-22",
+      "comum1/etapaA-crypto",
+      "comum1/etapaA-brasileirao",
+      "comum1/etapaA-stocks",
+      "comum1/contrato-crypto",
+      "comum1/contrato-brasileirao",
+      "comum1/contrato-stocks",
+      "comum1/SHARED-003",
+      "comum1/SHARED-004",
+      "comum1/SHARED-005 (resolvido na Ops 4.2.2rc1, a do alvo do Brasileirão; a pilha da Etapa B ainda não existe)",
+      "C0.3/HYGIENE (13/13 DONE)",
+      "C0.3/baseline-comum",
+      "missao2/runtime_target (rc3)",
+      "missao2/contrato-prefixo",
+      "missao2/contrato-adapter_paths",
+      "missao2/contrato-adapter_entrypoints"
+    ],
+    "effect": "Nenhuma fase rodou. Nada mudou em cain, ecosystem-predictor, brasileirao-predictor, core-predictor ou predictor-ops. Nenhum dado do Brasileirão foi lido além do sha256 do arquivo.",
+    "resume": "Com as quatro pré-condições no main, uma sessão nova da missão refaz o C0 do zero e começa por freeze-parameters (C8). Este registro não é attestation nem parcial."
+  },
+  "findings": []
+}
