@@ -1,4 +1,9 @@
-# COMMON_QUALIFICATION_CORE — NÚCLEO COMUM DE QUALIFICAÇÃO (v2.2 — enxuto)
+# COMMON_QUALIFICATION_CORE — NÚCLEO COMUM DE QUALIFICAÇÃO (v2.3 — enxuto)
+
+**v2.3 (2026-09-24, D-22):** a Etapa B vira três missões, uma orquestração de pesquisa
+por domínio sobre o mesmo ecossistema (`integration-crypto` → `integration-stocks` →
+`integration-brasileirao`); e versão nova do núcleo que não muda requisito da missão
+não exige reemitir attestation (C7.1 regra 6, C14). Nenhum requisito da Etapa A mudou.
 
 **v2.2 (2026-09-24, D-20):** C0.2 confere o schema pelo sha256 registrado em
 `MANIFEST.sha256` (o texto fixava o schema da v2.0). Nenhum outro requisito mudou.
@@ -29,8 +34,11 @@ Etapa A — domínio × Core × Ops (três missões, sem CAIN e sem envelope)
 
 Preparação — envelope V2 desenhado a partir dos três contratos
 
-Etapa B — integração (uma missão)
-    integration   cain + ecosystem-predictor + os três domínios + Core + Ops
+Etapa B — integração (três missões, uma por domínio, nesta ordem; D-22)
+    integration-crypto        cain + ecosystem-predictor + cripto-predictor      + Core + Ops
+    integration-stocks        cain + ecosystem-predictor + stocks-predictor      + Core + Ops
+    integration-brasileirao   cain + ecosystem-predictor + brasileirao-predictor + Core + Ops
+    → uma orquestração de pesquisa por domínio sobre o mesmo ecossistema
 ```
 
 ---
@@ -76,7 +84,8 @@ qualification/shared/ENVELOPE_V2_FREEZE.json
 qualification/<branch>/...                          (artefatos da missão, C16)
 ```
 
-`<branch>` ∈ {`crypto`, `brasileirao`, `stocks`, `integration`}.
+`<branch>` ∈ {`crypto`, `brasileirao`, `stocks`, `integration-crypto`,
+`integration-stocks`, `integration-brasileirao`}.
 
 **Repositórios públicos:** nada de segredo (chaves de API, de exchange, de
 casas de aposta, tokens, `.env`, `pipeline.env`, HMAC) em arquivo, log, commit,
@@ -222,10 +231,12 @@ IN_PROGRESS` (este só em parciais).
    `final_wheels` cobrem todo pacote do stack instalado no runtime.
 5. `environments`: um Linux `primary` e um Windows `secondary` (C11). `where =
    owner_linux` só com a D-19 e só na missão cujo dado real é privado.
-6. `common_core_sha256` = sha256 desta versão.
+6. `common_core_sha256` = sha256 do núcleo vigente quando a attestation foi
+   emitida (uma versão deste arquivo no histórico do `main`). Versão nova do
+   núcleo que não muda requisito da missão não exige reemissão (C14).
 7. Etapa A: `domain_contract_sha256` = sha256 do contrato no `main`.
-   Etapa B: uma `domain_attestations` por domínio, cada uma de uma attestation
-   da Etapa A `QUALIFIED`, com revalidação C24.3 em `PASS`.
+   Etapa B: uma `domain_attestations`, a do domínio da missão, de uma
+   attestation da Etapa A `QUALIFIED`, com revalidação C24.3 em `PASS`.
 8. Attestation reemitida depois de C14 aponta `supersedes_sha256` para a
    anterior, que nunca é apagada.
 
@@ -301,8 +312,8 @@ novo baseline + C14.
 
 ## C9. N+1 DETERMINÍSTICO (Etapa B)
 
-O gate usa a DecisionPolicy (C12) sobre um conjunto congelado de resultados dos
-três domínios, com receipt de comando **sem LLM**: mesmo fixture + mesma policy
+O gate usa a DecisionPolicy (C12) sobre um conjunto congelado de resultados do
+domínio da missão e, para o isolamento, dos outros dois, com receipt de comando **sem LLM**: mesmo fixture + mesma policy
 + mesmo estado = mesmo receipt byte a byte em 3 processos novos. Caminho com LLM
 só entra no soak, nunca como prova.
 
@@ -315,7 +326,7 @@ suportado, no ambiente primário. Pisos (a missão pode aumentar):
 Etapa A:  ciclos normais ≥ 20 | restarts ≥ 5 | pedidos duplicados ≥ 5
           | execuções por classe de falha relevante ≥ 3
 Etapa B:  por domínio: ciclos ≥ 20 | duplicatas ≥ 5 | restarts do domínio ≥ 5
-          | restarts do CAIN ≥ 5 | ciclos intercalados entre domínios ≥ 5
+          | restarts do CAIN ≥ 5 | ciclos intercalados com outro domínio ≥ 5 (integrado ou por fixture V2 congelada)
           | classes de falha relevantes ≥ 3 | propostas de LLM ≥ 5
 ```
 
@@ -341,7 +352,9 @@ instalação). Não existe isenção: `WINDOWS_SMOKE` é `PASS`, `FAIL` ou `NOT_
   dataset, baseline ou resultado do domínio.
 * **DecisionPolicy:** determinística e versionada (id + hash); decide
   `ALLOW | BLOCK | ABSTAIN | REQUIRE_HUMAN | DUPLICATE | COOLDOWN` e emite receipt
-  (C9). Se não existir, é criada no `cain` pela missão `integration`.
+  (C9). Se não existir, é criada no `cain` pela missão `integration-crypto`
+  (framework genérico + configuração do domínio); as missões seguintes só
+  acrescentam a configuração e o adapter do seu domínio.
 * **Contenção:** ação fora da allowlist do domínio = bloqueada e registrada.
 
 ## C13. FALHAS EM DEPENDÊNCIA COMPARTILHADA
@@ -372,10 +385,10 @@ environmental | test_only | flaky | regression | bad_install | unresolved
 | Wheel de Core ou Ops | nas missões afetadas: baseline, C4, cleanroom-final, E2E, restart, falhas que tocam Core/Ops, soak, Windows |
 | Código do domínio X depois de `cleanroom-final` | publish-candidates, cleanroom-final e as fases que exercitam o código |
 | Domínio X fora dos `adapter_paths` durante a Etapa B | reabre a Etapa A de X (C24.4) |
-| Domínio X dentro dos `adapter_paths` na Etapa B | só C24.3 de X + fases da integração que usam X |
+| Domínio X dentro dos `adapter_paths` na Etapa B | só C24.3 de X + fases da integração de X |
 | Contrato de domínio | `DOMAIN_CONTRACT` de X + fases dependentes; congelamento do V2 revisto |
-| `cain`, `ecosystem-predictor` ou envelope V2 | fases da integração que os exercitam + C24.3 |
-| Núcleo (versão) | revalidar attestation no novo schema; refazer o que mudou de requisito |
+| `cain`, `ecosystem-predictor` ou envelope V2 | fases das integrações que os exercitam, inclusive as já `QUALIFIED` (E2E, N+1, isolamento, reemissão) + C24.3 |
+| Núcleo (versão) | revalidar as attestations no schema vigente e registrar no `QUALIFICATION_CHANGELOG.md`; reemitir e refazer só o que mudou de requisito para a missão |
 | Ambiente (SO/Python) | novo baseline + tudo naquele ambiente |
 | Parâmetro/vetor/perfil congelado | a fase inteira, como novo ciclo |
 
@@ -458,7 +471,9 @@ commits ou dados. Relatório que afirme mais que isso = P1.
 | `crypto` | A | `CRYPTO` | `NONE` | `STACK_BASELINE_V1[.n]` |
 | `brasileirao` | A | `BR` | `NONE` | `STACK_BASELINE_V1[.n]` |
 | `stocks` | A | `STOCKS` | `NONE` | `STACK_BASELINE_V1[.n]` |
-| `integration` | B | `INTEGRATION` | `V2` | `STACK_BASELINE_V2.n` |
+| `integration-crypto` | B | `INTEGRATION_CRYPTO` | `V2` | `STACK_BASELINE_V2.n` |
+| `integration-stocks` | B | `INTEGRATION_STOCKS` | `V2` | `STACK_BASELINE_V2.n` |
+| `integration-brasileirao` | B | `INTEGRATION_BR` | `V2` | `STACK_BASELINE_V2.n` |
 
 Fases: `^[a-z0-9_-]+$`.
 

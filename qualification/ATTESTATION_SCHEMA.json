@@ -47,7 +47,9 @@
         "crypto",
         "brasileirao",
         "stocks",
-        "integration"
+        "integration-crypto",
+        "integration-stocks",
+        "integration-brasileirao"
       ]
     },
     "envelope_version": {
@@ -70,7 +72,8 @@
       "enum": [
         "2.0",
         "2.1",
-        "2.2"
+        "2.2",
+        "2.3"
       ]
     },
     "common_core_sha256": {
@@ -577,7 +580,11 @@
       "then": {
         "properties": {
           "branch": {
-            "const": "integration"
+            "enum": [
+              "integration-crypto",
+              "integration-stocks",
+              "integration-brasileirao"
+            ]
           },
           "envelope_version": {
             "const": "V2"
@@ -652,32 +659,8 @@
       "then": {
         "properties": {
           "domain_attestations": {
-            "minItems": 3,
-            "maxItems": 3,
-            "prefixItems": [
-              {
-                "properties": {
-                  "branch": {
-                    "const": "crypto"
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "branch": {
-                    "const": "brasileirao"
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "branch": {
-                    "const": "stocks"
-                  }
-                }
-              }
-            ],
-            "items": false
+            "minItems": 1,
+            "maxItems": 1
           }
         }
       }
@@ -856,6 +839,81 @@
                   "BR_CACHE_STATE",
                   "BR_FUTURE_INJECTION"
                 ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "branch": {
+            "const": "integration-crypto"
+          }
+        },
+        "required": [
+          "branch"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_attestations": {
+            "items": {
+              "properties": {
+                "branch": {
+                  "const": "crypto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "branch": {
+            "const": "integration-stocks"
+          }
+        },
+        "required": [
+          "branch"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_attestations": {
+            "items": {
+              "properties": {
+                "branch": {
+                  "const": "stocks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "branch": {
+            "const": "integration-brasileirao"
+          }
+        },
+        "required": [
+          "branch"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_attestations": {
+            "items": {
+              "properties": {
+                "branch": {
+                  "const": "brasileirao"
+                }
               }
             }
           }
