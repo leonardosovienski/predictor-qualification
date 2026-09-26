@@ -1,0 +1,57 @@
+PASS registro == instalado: request_schema_id {}
+PASS registro == instalado: result_schema_id {}
+PASS registro == instalado: outcome_exit_codes {}
+PASS registro == instalado: result_states {}
+PASS registro == instalado: operational_states {}
+PASS registro == instalado: scientific_states {}
+PASS registro == instalado: economic_states {}
+PASS registro == instalado: OUTCOME_STATUSES {}
+PASS C24.3(d): payload_sha256 == hash canônico do vetor da Etapa A (sem client_ref) {}
+PASS C24.3(d): payload_sha256 == request_content_hash do domínio {}
+PASS ep1 pedido: status {"status": "RESULT", "reason": null}
+PASS ep1 pedido: client_ref ecoado {}
+PASS ep1 pedido: episode_id ecoado {"episode": "brasileirao:episode-1"}
+PASS ep1 pedido: ida e volta canônica {}
+PASS ep1 pedido: payload == canonical(resultado do domínio) {}
+PASS ep1 pedido: payload_sha256 == show().result_sha256 {}
+PASS ep1 pedido: bytes relidos == payload {}
+PASS ep1 pedido: estados copiados sem tradução {"result_state": "NO_EDGE", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "NOT_EVALUATED"}
+PASS ep1 pedido: capital_permission false {}
+PASS ep1 reenvio (mesmos bytes): status {"status": "DUPLICATE", "reason": null}
+PASS ep1 reenvio (mesmos bytes): client_ref ecoado {}
+PASS ep1 reenvio (mesmos bytes): episode_id ecoado {"episode": "brasileirao:episode-1"}
+PASS ep1 reenvio (mesmos bytes): ida e volta canônica {}
+PASS ep1 reenvio (mesmos bytes): payload == canonical(resultado do domínio) {}
+PASS ep1 reenvio (mesmos bytes): payload_sha256 == show().result_sha256 {}
+PASS ep1 reenvio (mesmos bytes): bytes relidos == payload {}
+PASS ep1 reenvio (mesmos bytes): estados copiados sem tradução {"result_state": "NO_EDGE", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "NOT_EVALUATED"}
+PASS ep1 reenvio (mesmos bytes): capital_permission false {}
+PASS ep1 reenvio: mesmo payload {}
+PASS ep2 mesmo pedido: task_id novo {}
+PASS ep2 mesmo pedido: status {"status": "DUPLICATE", "reason": null}
+PASS ep2 mesmo pedido: client_ref ecoado {}
+PASS ep2 mesmo pedido: episode_id ecoado {"episode": "brasileirao:episode-2"}
+PASS ep2 mesmo pedido: ida e volta canônica {}
+PASS ep2 mesmo pedido: payload == canonical(resultado do domínio) {}
+PASS ep2 mesmo pedido: payload_sha256 == show().result_sha256 {}
+PASS ep2 mesmo pedido: bytes relidos == payload {}
+PASS ep2 mesmo pedido: estados copiados sem tradução {"result_state": "NO_EDGE", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "NOT_EVALUATED"}
+PASS ep2 mesmo pedido: capital_permission false {}
+PASS ep2 mesmo pedido: mesmo result_id e payload (sem 2º efeito) {}
+PASS ep3 mesmo request_id, outro conteúdo: status {"status": "CONFLICT", "reason": "REQUEST_ID_CONTENT_CONFLICT"}
+PASS ep3 mesmo request_id, outro conteúdo: client_ref ecoado {}
+PASS ep3 mesmo request_id, outro conteúdo: episode_id ecoado {"episode": "brasileirao:episode-3"}
+PASS ep3 mesmo request_id, outro conteúdo: ida e volta canônica {}
+PASS ep4 canário do futuro: status {"status": "RESULT", "reason": null}
+PASS ep4 canário do futuro: client_ref ecoado {}
+PASS ep4 canário do futuro: episode_id ecoado {"episode": "brasileirao:episode-4"}
+PASS ep4 canário do futuro: ida e volta canônica {}
+PASS ep4 canário do futuro: payload == canonical(resultado do domínio) {}
+PASS ep4 canário do futuro: payload_sha256 == show().result_sha256 {}
+PASS ep4 canário do futuro: bytes relidos == payload {}
+PASS ep4 canário do futuro: estados copiados sem tradução {"result_state": "NO_EDGE", "operational_state": "SUCCEEDED", "scientific_state": "SUPPORTED", "economic_state": "NOT_EVALUATED"}
+PASS ep4 canário do futuro: capital_permission false {}
+PASS ep4 canário ausente do payload {}
+PASS resultado marcado crypto rejeitado {"code": "DOMAIN_MISMATCH"}
+PASS resultado marcado stocks rejeitado {"code": "DOMAIN_MISMATCH"}
+RESULTADO: OK (56 checagens)
