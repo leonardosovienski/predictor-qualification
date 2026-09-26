@@ -1,0 +1,20 @@
+# 2026-09-26T05:15:35Z C14 "Núcleo (versão)" do núcleo v2.3 (D-22) no brasileirao: revalidar a attestation vigente no schema vigente, sem reemitir
+main: a082dcc | núcleo beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc (v2.3) | MANIFEST 13/13
+attestation vigente: QUALIFICATION_ATTESTATION.json sha256 a4fa2fee25b65c39888d90cd947fc36ba63076eae536e5b676052470ed7521e4 (emitida no núcleo v2.2)
+$ attest.py check QUALIFICATION_ATTESTATION.json
+OK
+[exit 0]
+$ pytest scripts/test_attest_cr_f021.py
+7 passed in 0.20s
+[exit 0]
+$ stage_a_recheck.py --partial QUALIFICATION_ATTESTATION.json (com a C7.1 regra 6 da v2.3)
+{"verdict": "OK", "problems": [], "gate_status_count": {"PASS": 32}, "evidence_files": 164}
+[exit 0]
+identity common_core_sha256: {'partial': 'd681e423499e202c735ee1f110311a9721019ef11e21ae824f4791bada7c7d2c', 'actual': 'beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc', 'match': False, 'in_history': True, 'version': '2.2'}
+# controle negativo: cópia da attestation com common_core_sha256 fora do histórico (arquivo fora do repo)
+$ attest.py check <cópia>
+C7.1(6): common_core_sha256 não é uma versão do núcleo no histórico do main
+[exit 1]
+$ stage_a_recheck.py --partial <cópia>
+DIVERGENCE ['common_core_sha256: parcial 0000000000000000000000000000000000000000000000000000000000000000 fora do histórico do núcleo']
+[exit 1]
