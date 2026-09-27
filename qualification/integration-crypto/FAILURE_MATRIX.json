@@ -1,0 +1,42 @@
+{
+  "schema": "integration-crypto/FAILURE_MATRIX/1",
+  "frozen_before": "fases e2e, n-plus-1, isolation-ids-contradiction, idempotency-failure, windows-smoke e soak (nenhuma execução de gate antes deste arquivo)",
+  "source": "prompts/prompt_etapa_b_comum_rev9.md §8 (lista de pontos) + C10 (classes de falha) + FAILURE_MATRIX da Etapa A do cripto (falhas do domínio, reaproveitadas pela borda)",
+  "injection": "na borda, sem mocks de CAIN, Core, Ops ou domínio: morte real do processo (os._exit(86), sem cleanup) em pontos nomeados do CAIN e do consumidor do transporte; parada real de um lado enquanto o outro trabalha; arquivos de spool adulterados, duplicados, fora de ordem ou de outra versão/tarefa/domínio; falhas do domínio pelo ponto de injeção da Etapa A (CRIPTO_RESEARCH_FAULT).",
+  "switches": {
+    "cain": "variável CAIN_ORCHESTRATION_FAULT=<ponto> no processo `cain` (inativa sem a variável)",
+    "consumer": "variável PREDICTOR_RESEARCH_TRANSPORT_FAULT=<ponto> no processo `predictor-research-consumer` (inativa sem a variável)",
+    "domain": "variável CRIPTO_RESEARCH_FAULT=<ponto> no processo do consumidor (research_faults.py do cripto, Etapa A)"
+  },
+  "recovery_check_after_every_fault": [
+    "falha detectada (exit code 86 do ponto, ou rejeição com código estável)",
+    "reexecução do mesmo comando em processo novo recupera ou falha fechada",
+    "nada perdido: toda task ALLOW tem exatamente um resultado terminal ingerido ou continua pendente e visível",
+    "nada duplicado: 1 task por (domínio, episódio, conteúdo); 1 linha de inbox por (task_id, bytes do resultado); 1 experimento e 1 resultado autoritativo no domínio por request_id; 1 episódio por número",
+    "receipt da decisão igual byte a byte ao da execução sem falha, quando a decisão é refeita",
+    "memória do CAIN: `verify` da cadeia de hash sem erro; nenhum fato de outro domínio no cubo crypto"
+  ],
+  "points": [
+    {"id": "F01", "prompt": "antes do envio", "side": "cain", "fault": "after_outbox_commit", "kind": "process_death", "expected": "task gravada no outbox e ainda PENDING; spool sem arquivo; `dispatch` em processo novo grava 1 arquivo; o consumidor executa 1 vez"},
+    {"id": "F02", "prompt": "entre envio e ACK", "side": "cain", "fault": "after_spool_write_before_ack", "kind": "process_death", "expected": "arquivo da task no spool, outbox ainda PENDING; `dispatch` refaz a escrita com os mesmos bytes (no-op idempotente) e marca PUBLISHED; o domínio vê 1 pedido"},
+    {"id": "F03", "prompt": "durante a ingestão", "side": "cain", "fault": "after_inbox_commit_before_memory", "kind": "process_death", "expected": "resultado no inbox sem fato na memória; `ingest` em processo novo completa a memória sem segunda linha de inbox; 1 fato por resultado"},
+    {"id": "F04", "prompt": "depois da ingestão", "side": "cain", "fault": "after_memory_commit", "kind": "process_death", "expected": "reingestão responde DUPLICATE; nada novo no inbox nem na memória"},
+    {"id": "F05", "prompt": "durante a decisão", "side": "cain", "fault": "after_decision_before_episode_commit", "kind": "process_death", "expected": "nenhum episódio gravado; a mesma proposta em processo novo produz o mesmo receipt (bytes) e 1 episódio"},
+    {"id": "F06", "prompt": "CAIN fora", "side": "cain", "fault": "cain_stopped", "kind": "outage", "expected": "o consumidor processa todas as tasks já no spool; os resultados ficam no spool; o CAIN volta e ingere todos; nada perdido nem duplicado"},
+    {"id": "F07", "prompt": "consumidor fora", "side": "consumer", "fault": "consumer_stopped", "kind": "outage", "expected": "o CAIN despacha; as tasks esperam no spool; o consumidor volta e processa cada uma 1 vez"},
+    {"id": "F08", "prompt": "consumidor morre depois do domínio e antes do resultado V2", "side": "consumer", "fault": "after_domain_before_result_write", "kind": "process_death", "expected": "o domínio já tem o resultado autoritativo; o consumidor, em processo novo, reenvia a mesma task pelo adapter_api (DUPLICATE do domínio, mesmo result_id) e grava 1 resultado V2 com payload igual ao do show"},
+    {"id": "F09", "prompt": "resultado duplicado", "side": "spool", "fault": "duplicate_result_delivery", "kind": "delivery", "expected": "segunda entrega do mesmo arquivo de resultado: DUPLICATE no inbox; nenhum segundo fato, episódio ou decisão"},
+    {"id": "F10", "prompt": "resultado fora de ordem", "side": "spool", "fault": "out_of_order_results", "kind": "delivery", "expected": "resultado do episódio n+1 ingerido antes do n: os dois aceitos contra as tasks certas; a cadeia de episódios (previous_task_id) intacta; nenhuma decisão tomada com estado parcial fora do as_of"},
+    {"id": "F11", "prompt": "versão de schema errada", "side": "spool", "fault": "wrong_schema_version", "kind": "delivery", "expected": "task research-task/3 no spool ou resultado research-result/1: rejeitado com VERSION_UNSUPPORTED, registrado, nada executado nem ingerido"},
+    {"id": "F12", "prompt": "mesmo ID com payload diferente", "side": "spool", "fault": "same_id_different_payload", "kind": "delivery", "expected": "arquivo de task com o mesmo task_id e outros bytes: CONFLICT no spool (nada sobrescrito); resultado com o mesmo task_id e payload de domínio diferente do já ingerido: CONFLICT no inbox"},
+    {"id": "F13", "prompt": "envelope válido com task errada", "side": "spool", "fault": "valid_envelope_wrong_task", "kind": "delivery", "expected": "resultado V2 válido de outra task, de outro episódio ou de outro domínio (fixtures congeladas de stocks e brasileirao): rejeitado (TASK_NOT_FOUND, CORRELATION_MISMATCH ou DOMAIN_MISMATCH), registrado, nada ingerido"},
+    {"id": "F14", "prompt": "falha do Ops no domínio (retryable)", "side": "domain", "fault": "CRIPTO_RESEARCH_FAULT=ops_worker_crash", "kind": "domain_failure", "expected": "resultado V2 OPS_FAILED_RETRYABLE (classe RETRYABLE, sem payload); o CAIN registra e não conta como resultado científico; o reenvio da mesma task produz 1 RESULT"},
+    {"id": "F15", "prompt": "corrupção no domínio", "side": "domain", "fault": "arquivo de resultado autoritativo alterado entre execuções", "kind": "corruption", "expected": "resultado V2 RECONCILIATION_REQUIRED (classe REQUIRES_HUMAN); o CAIN para a pesquisa do domínio (REQUIRE_HUMAN) e nunca repara em silêncio"}
+  ],
+  "failure_classes_for_soak": {
+    "cain_process_death": ["F01", "F02", "F03", "F04", "F05"],
+    "consumer_process_death": ["F08"],
+    "delivery_anomaly": ["F09", "F10", "F11", "F12", "F13"],
+    "domain_retryable": ["F14"]
+  }
+}

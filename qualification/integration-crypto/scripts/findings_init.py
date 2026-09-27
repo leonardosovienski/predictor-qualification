@@ -1,0 +1,152 @@
+"""integration-crypto: FINDINGS.json inicial (C6), gerado com os sha256 das evidências citadas.
+
+Achados até o fim da fase baseline. Fases seguintes editam o arquivo (status) e acrescentam achados; este
+script só cria o arquivo se ele não existir (nunca sobrescreve).
+
+Uso: python findings_init.py <raiz do predictor-qualification>
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(sys.argv[1])
+M = "qualification/integration-crypto"
+
+
+def ev(rel: str) -> dict:
+    return {"file": rel, "sha256": hashlib.sha256((ROOT / rel).read_bytes()).hexdigest()}
+
+
+FINDINGS = [
+    {
+        "id": "IC-F001",
+        "severity": "P2",
+        "title": "main do cripto-predictor diverge do runtime qualificado e declara a mesma versão",
+        "description": "341d270 (v1.2.0rc2, runtime_target) não é ancestral do main; entrou por squash como 174573d (PR #127, "
+                       "mesma árvore 22dd6a86). O main (be116eb) tem mais 7 commits (#128–#134), sem mudança em "
+                       "GarimpoInvestimentos/adapters/, mas com 15 arquivos do pacote, testes e docs alterados, e o "
+                       "pyproject.toml do main ainda declara 1.2.0rc2 com código diferente da wheel publicada. Uma wheel "
+                       "construída do main teria o mesmo nome/versão e outros bytes.",
+        "classification": "C6 P2: sem efeito nesta missão, porque a base e o runtime são identificados por commit e "
+                          "sha256 (D-23); a ambiguidade de versão é risco fora do runtime qualificado. O PR do adapter "
+                          "(base main) repete a situação: o main pós-merge conterá #128–#134 + adapter e não será o "
+                          "commit qualificado (o final_commit é o da tag da nova pré-release).",
+        "evidence": [ev(f"{M}/RAW_LOGS/c0/c0_preflight.log")],
+        "status": "OPEN",
+        "owner_decision": "nenhuma exigida para esta missão (D-23); opcional: numerar o main com uma versão própria",
+    },
+    {
+        "id": "IC-F002",
+        "severity": "P2",
+        "title": "contrato do cripto permite um console script de adapter que o teste congelado proíbe",
+        "description": "DOMAIN_RESEARCH_CONTRACT.json (adapter_entrypoints.allowed_to_create_in_stage_b) permite "
+                       "cripto-research-adapter → GarimpoInvestimentos.adapters.<módulo>:main, mas "
+                       "tests/conformance/test_import_closure.py::test_no_entrypoint_reaches_envelope_cain_or_adapter_paths "
+                       "percorre todos os console_scripts e falha com ele (sonda de diagnóstico: 1 falha, 4 passam). A SPEC "
+                       "V2 congelada (§9) já resolve: sem console script no domínio, adapter carregado pelo consumidor.",
+        "classification": "C6 P2: inconsistência entre contrato e teste congelado, sem efeito (a missão não cria o script)",
+        "evidence": [ev(f"{M}/RAW_LOGS/diag-import-closure/probe_adapter_entrypoint.log")],
+        "status": "OPEN",
+        "owner_decision": "opcional, fora desta missão: emendar o contrato numa reabertura futura da Etapa A do cripto",
+    },
+    {
+        "id": "IC-F003",
+        "severity": "P2",
+        "title": "C24.3(a) permite dependência predictor-research-* no domínio, mas os testes do cripto a proíbem",
+        "description": "tests/test_shared_wheel_download_hashes.py::test_lock_pins_stack_wheels_by_release_url_and_sha256 "
+                       "e scripts/verify_installed_wheels.py (CI do cripto) exigem predictor-research-protocol e "
+                       "cain-research fora do uv.lock (texto 'Stage A'). O adapter é feito só com stdlib + adapter_api "
+                       "para o CI do domínio continuar verde (C24.3 f).",
+        "classification": "C6 P2: sem efeito; restrição de desenho registrada no FROZEN_PARAMETERS",
+        "evidence": [ev(f"{M}/RAW_LOGS/c0/c0_preflight.log")],
+        "status": "OPEN",
+        "owner_decision": "nenhuma exigida",
+    },
+    {
+        "id": "IC-F004",
+        "severity": "P1",
+        "title": "CI do ecosystem-predictor vermelho: atestados de harness do cripto vencidos e ainda ALIGNED",
+        "description": "Job quality do CI (run agendado 36317521235 em 49ffb16, 2026-09-27T12:00Z) falha em "
+                       "tests/test_ecosystem_drift.py::test_real_registry_has_current_hash_verified_target_harness: "
+                       "'cripto-predictor: atestado venceu em 2026-09-27T02:02:47Z e segue ALIGNED' (registries/"
+                       "harness_registry.json). Esta missão muda o ecosystem-predictor (transporte), então o run de push "
+                       "do final_commit dele vai falhar do mesmo jeito: HOSTED_CI não fecha enquanto isso não for decidido.",
+        "classification": "C6 P1: evidência do stack vencida que deixa um CI exigido vermelho (não é causado por esta missão)",
+        "evidence": [ev(f"{M}/RAW_LOGS/baseline/ecosystem-ci/run36317521235.json"),
+                     ev(f"{M}/RAW_LOGS/baseline/ecosystem-ci/run36317521235_failed.log")],
+        "status": "OPEN_AWAITING_OWNER",
+        "owner_decision": "escolher UMA: (a) renovar os dois atestados de harness do cripto (reexecutar o harness e "
+                          "atualizar registries/harness_registry.json com a nova validade), ou (b) reclassificar as duas "
+                          "entradas vencidas para status EXPIRED com reissue_required=true, como já foi feito com a entrada "
+                          "do brasileirao-predictor no mesmo arquivo. A missão não escolhe: é governança de evidência de "
+                          "outro domínio.",
+    },
+    {
+        "id": "IC-F005",
+        "severity": "P1",
+        "title": "`cain loop run/holdout` executa o avaliador do predictor direto do CAIN (PR #50)",
+        "description": "cain/loop/evaluator.py::run_stage roda `<python> <entrypoint>` do avaliador do predictor em "
+                       "subprocesso, alcançável do entrypoint `cain` (cli.py registra `loop`), pulando admission, Ops e "
+                       "Core. No runtime qualificado isso viola CAIN_CONTAINMENT (prompt comum §4).",
+        "classification": "C6 P1: caminho real no runtime do CAIN fora do circuito (sem violação observada nesta missão)",
+        "evidence": [],
+        "evidence_refs": ["cain@f343701937a7a798d66e11d2d8aa18e24395e215:src/cain/loop/evaluator.py",
+                          "cain@f343701937a7a798d66e11d2d8aa18e24395e215:src/cain/cli.py (register_loop)"],
+        "status": "OPEN",
+        "fix_plan": "opção (b) do prompt comum §4: `loop` sai do CLI `cain` e fica como ferramenta de laboratório "
+                    "(`python -m cain.loop`, fora de [project.scripts]), com teste de fecho de imports provando que "
+                    "nenhum console script alcança cain.loop.engine/evaluator",
+    },
+    {
+        "id": "IC-F006",
+        "severity": "P2",
+        "title": "`cain findings ingest-*` lê o registro do predictor em `origin/main` por padrão",
+        "description": "cain/findings/cli.py: `--commit` tem padrão origin/main. Para o cripto, o main contém #128–#134, "
+                       "que a D-23 exclui da memória do CAIN; toda leitura do registro do cripto tem de usar o SHA completo "
+                       "341d270e4d709150c581c3cd93f4518d483009eb.",
+        "classification": "C6 P2: a orquestração qualificada não usa esse comando; risco de operador",
+        "evidence": [],
+        "evidence_refs": ["cain@f343701937a7a798d66e11d2d8aa18e24395e215:src/cain/findings/cli.py"],
+        "status": "OPEN",
+        "fix_plan": "no cain: leitura de registro de predictor exige SHA completo de 40 hex (falha fechada)",
+    },
+    {
+        "id": "IC-F007",
+        "severity": "P2",
+        "title": "plugin cripto devolve version null no health() (A-06, herdado da Etapa A)",
+        "description": "Herdado/observado (prompt do cripto §5). O plugin fica fora dos adapter_paths e não muda; o "
+                       "adapter V2 declara a identidade (distribution, version pelo metadata instalado, module) no campo "
+                       "`adapter` de cada ResearchResultV2.",
+        "classification": "C6 P2",
+        "evidence": [],
+        "evidence_refs": ["prompts/prompt_etapa_b_crypto_rev9.md §5"],
+        "status": "OPEN",
+        "fix_plan": "resolvido no adapter (identidade no envelope); o health() do plugin continua registrado",
+    },
+]
+
+
+def main() -> int:
+    path = ROOT / M / "FINDINGS.json"
+    if path.exists():
+        raise SystemExit(f"{path} já existe; não sobrescrevo")
+    doc = {
+        "schema": "integration-crypto/FINDINGS/1",
+        "severity_scale": "C6: P0 quebra o que dá dinheiro ou faz perder; P1 defeito real sem violação observada; "
+                          "P2 sem efeito em resultado ou operação",
+        "status_values": ["OPEN", "OPEN_AWAITING_OWNER", "FIXED", "NOT_A_DEFECT", "ACCEPTED_LIMITATION"],
+        "open_statuses": ["OPEN", "OPEN_AWAITING_OWNER"],
+        "c0": {"state": "PASSED", "checks": 21, "log": ev(f"{M}/RAW_LOGS/c0/c0_preflight.log")},
+        "findings": FINDINGS,
+    }
+    path.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(path, {s: sum(1 for f in FINDINGS if f["severity"] == s) for s in ("P0", "P1", "P2")})
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

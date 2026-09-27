@@ -1,0 +1,75 @@
+run_at 2026-09-27T21:27:11Z host DESKTOP-EJPA2MT (PC 2, WSL) — DIAGNÓSTICO, não é gate
+fonte: git archive 341d270e4d709150c581c3cd93f4518d483009eb (cripto-predictor v1.2.0rc2) em /home/superleo13/predictors/runtime/integration-crypto/diag/import-closure/src; venv uv sync --locked --extra test
+python Python 3.14.7
+mudança de sonda (só nesta cópia de diagnóstico):
+33a34
+> cripto-research-adapter = "GarimpoInvestimentos.adapters.diag_probe:main"
+--- GarimpoInvestimentos/adapters/diag_probe.py
+"""Sonda de diagnóstico: um adapter mínimo com main(), como o contrato permite (cripto-research-adapter)."""
+from GarimpoInvestimentos.research_runner import Circuit  # adapter_api
+
+
+def main() -> int:
+    return 0 if Circuit else 1
+--- teste congelado tests/conformance/test_import_closure.py sha256 99b2de341bbfa6f295b565086f257a6abbaea609bbc2fca89ab434a6570dd81e
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-8.4.2, pluggy-1.6.0 -- /home/superleo13/predictors/runtime/integration-crypto/diag/import-closure/venv/bin/python
+rootdir: /home/superleo13/predictors/runtime/integration-crypto/diag/import-closure/src
+configfile: pyproject.toml
+plugins: anyio-4.14.2, cov-6.3.0
+collecting ... collected 5 items
+
+tests/conformance/test_import_closure.py::test_entrypoints_include_the_research_circuit PASSED [ 20%]
+tests/conformance/test_import_closure.py::test_no_entrypoint_reaches_envelope_cain_or_adapter_paths FAILED [ 40%]
+tests/conformance/test_import_closure.py::test_research_circuit_components_are_reachable_from_the_entrypoint PASSED [ 60%]
+tests/conformance/test_import_closure.py::test_nothing_outside_adapter_paths_imports_them PASSED [ 80%]
+tests/conformance/test_import_closure.py::test_runtime_import_of_the_circuit_loads_no_forbidden_module PASSED [100%]
+
+=================================== FAILURES ===================================
+__________ test_no_entrypoint_reaches_envelope_cain_or_adapter_paths ___________
+
+    def test_no_entrypoint_reaches_envelope_cain_or_adapter_paths():
+        edges = _graph()
+        report = {}
+        for label, root in _roots().items():
+            seen, external = _closure(root, edges)
+            report[label] = {
+                "forbidden": sorted(external & FORBIDDEN_TOP),
+                "adapters": sorted(m for m in seen if m == ADAPTERS or m.startswith(ADAPTERS + ".")),
+            }
+>       assert all(not v["forbidden"] and not v["adapters"] for v in report.values()), json.dumps(
+            report, indent=1
+        )
+E       AssertionError: {
+E          "console_scripts:cripto-predictor": {
+E           "forbidden": [],
+E           "adapters": []
+E          },
+E          "console_scripts:cripto-predictor-job": {
+E           "forbidden": [],
+E           "adapters": []
+E          },
+E          "console_scripts:cripto-research": {
+E           "forbidden": [],
+E           "adapters": []
+E          },
+E          "console_scripts:cripto-research-adapter": {
+E           "forbidden": [],
+E           "adapters": [
+E            "GarimpoInvestimentos.adapters",
+E            "GarimpoInvestimentos.adapters.diag_probe"
+E           ]
+E          },
+E          "predictor.plugins:cripto": {
+E           "forbidden": [],
+E           "adapters": []
+E          }
+E         }
+E       assert False
+E        +  where False = all(<generator object test_no_entrypoint_reaches_envelope_cain_or_adapter_paths.<locals>.<genexpr> at 0x793430142740>)
+
+tests/conformance/test_import_closure.py:121: AssertionError
+=========================== short test summary info ============================
+FAILED tests/conformance/test_import_closure.py::test_no_entrypoint_reaches_envelope_cain_or_adapter_paths
+========================= 1 failed, 4 passed in 0.66s ==========================
+pytest_exit=1
