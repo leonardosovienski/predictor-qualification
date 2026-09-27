@@ -1,0 +1,39 @@
+{"n": 1, "label": "propose 1", "at": "2026-09-27T23:01:16Z", "seconds": 0.129, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F13/proposals/1.json", "--as-of", "2026-09-27T23:01:16Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "dbad838e331196f2735fbe9201af183763c0f6394642f8af957033464a50114c", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "b75de0d034bd9c0c0b5eda8539a01c2d3792e68381467f06ed79a48d60d11502", "previous_task_id": null, "task_id": "crypto:TASK-8e96f32b5a612a048e939f19384c4c83"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch 1", "at": "2026-09-27T23:01:16Z", "seconds": 0.114, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F13/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-8e96f32b5a612a048e939f19384c4c83.json", "spool": "WRITTEN", "task_id": "crypto:TASK-8e96f32b5a612a048e939f19384c4c83"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer 1", "at": "2026-09-27T23:01:16Z", "seconds": 0.432, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "crypto", "--spool", "/home/runner/work/_temp/work/failures/F13/spool", "--ledger", "/home/runner/work/_temp/work/failures/F13/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F13/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-8e96f32b5a612a048e939f19384c4c83.6ddc86de37495a5d.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-8e96f32b5a612a048e939f19384c4c83"}
+--- stderr
+{"duration_ms": 206, "event": "job_finished", "job_id": "crypto-research-8a0aed214c5675be87256e41", "level": "INFO", "run_id": "1b370d2abb064522a16cd2688eda2c56", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-27T23:01:16.700696Z"}
+--- end
+{"n": 4, "label": "ingest 1", "at": "2026-09-27T23:01:16Z", "seconds": 0.119, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F13/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:52421f3292b64e11af050ad4d3071875", "file": "TASK-8e96f32b5a612a048e939f19384c4c83.6ddc86de37495a5d.json", "status": "RESULT", "task_id": "crypto:TASK-8e96f32b5a612a048e939f19384c4c83"}
+--- stderr
+--- end
+{"n": 5, "label": "tamper other-episode", "at": "2026-09-27T23:01:16Z", "seconds": 0.05, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/python", "-I", "/home/runner/work/_temp/work/failures/F13/tamper.py", "other-episode", "/home/runner/work/_temp/work/failures/F13/spool/crypto/tasks/TASK-8e96f32b5a612a048e939f19384c4c83.json", "/home/runner/work/_temp/work/failures/F13/spool/crypto/results/TASK-8e96f32b5a612a048e939f19384c4c83.6ddc86de37495a5d.json", "/home/runner/work/_temp/work/failures/F13/spool/crypto/results/other-episode.json"], "fault_env": {}, "exit": 0}
+--- stdout
+{"mode": "other-episode", "bytes": 6539}
+--- stderr
+--- end
+{"n": 6, "label": "ingest wrong tasks", "at": "2026-09-27T23:01:17Z", "seconds": 0.119, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F13/spool"], "fault_env": {}, "exit": 2}
+--- stdout
+{"action": "duplicate", "file": "TASK-8e96f32b5a612a048e939f19384c4c83.6ddc86de37495a5d.json"}
+{"action": "rejected", "code": "TASK_NOT_FOUND", "file": "crypto-h9.json", "reason": "crypto:TASK-45b3afb3f4c777ae5aa52020f98afc6a was not emitted by this CAIN"}
+{"action": "rejected", "code": "CORRELATION_MISMATCH", "file": "other-episode.json", "reason": "CORRELATION_MISMATCH: episode_id differs from the task"}
+{"action": "rejected", "code": "DOMAIN_MISMATCH", "file": "stocks.json", "reason": "result of domain stocks"}
+--- stderr
+--- end
+{"n": 7, "label": "nothing ingested", "at": "2026-09-27T23:01:17Z", "seconds": 0.115, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-27T23:01:16Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-8e96f32b5a612a048e939f19384c4c83"}, "proposal_id": "cain:FM-F13-1", "reason_code": "ALLOWED", "receipt_sha256": "dbad838e331196f2735fbe9201af183763c0f6394642f8af957033464a50114c", "source": "operator", "task_id": "crypto:TASK-8e96f32b5a612a048e939f19384c4c83"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:52421f3292b64e11af050ad4d3071875", "payload_sha256": "27a693b4d3e574793004ccc2c4cd50a94d17ebc45a0b79c60f77fc02429ffd60", "status": "RESULT", "task_id": "crypto:TASK-8e96f32b5a612a048e939f19384c4c83"}], "memory": {"broken_at": null, "entries": 1, "head": "1614b0dcd701fcfd7afccf5acc65ed74a736f1c00fd0c25c6b64d65d87f6b295", "head_recorded_at": "2026-09-27T23:01:16.845591Z", "projection": "consistent", "status": "intact"}, "rejections": [{"code": "TASK_NOT_FOUND", "file": "crypto-h9.json"}, {"code": "CORRELATION_MISMATCH", "file": "other-episode.json"}, {"code": "DOMAIN_MISMATCH", "file": "stocks.json"}]}
+--- stderr
+--- end

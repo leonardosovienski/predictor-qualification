@@ -126,8 +126,9 @@ def main() -> int:
     if llm_url and llm_model:
         cfg = work / "cain-llm.toml"
         cfg.write_text("\n".join(["[llm]", 'provider = "ollama"', f'model = "{llm_model}"', f'base_url = "{llm_url}"',
-                                  "temperature = 0.0", "seed = 42", "timeout = 600.0", "num_ctx = 4096",
-                                  "num_predict = 256", "think = false", ""]), encoding="utf-8")
+                                  "temperature = 0.0", "seed = 42", "timeout = 600.0", "num_ctx = 8192",
+                                  "num_predict = 256", "max_input_bytes = 16000", "think = false", ""]),
+                       encoding="utf-8")
         for i in range(1, minimums["llm_proposals"] + 2):
             out_file = props / f"llm-{i}.json"
             code, lines, _ = h.cain(f"llm proposal {i}", "explain", f"proximo experimento {i}", "--propose-for-domain",

@@ -21,9 +21,9 @@ $Forbidden = @("C:\Cripto\operacao", "C:\Cripto\pesquisa-20260909", "C:\Cripto\r
 foreach ($f in $Forbidden) { if ($Root.StartsWith($f, [StringComparison]::OrdinalIgnoreCase)) { throw "pasta proibida" } }
 New-Item -ItemType Directory -Force -Path "$Root\tools", "$Root\logs", "$Root\data", "$Root\wheels", "$Root\w" | Out-Null
 $Log = "$Root\logs\windows_smoke.log"
-function Say([string]$m) { $line = "$(Get-Date -Format o) $m"; Add-Content -Path $Log -Value $line -Encoding utf8; Write-Output $line }
+function Say([string]$m) { $line = "$(Get-Date -Format o) $m"; Add-Content -Path $Log -Value $line -Encoding utf8; Write-Host $line }
 function Sha([string]$p) { (Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLower() }
-Say "windows-smoke start host=$env:COMPUTERNAME (PC 2 do dono, Windows local secundário) os=$([Environment]::OSVersion.VersionString) root=$Root"
+Say "windows-smoke start host=$env:COMPUTERNAME (PC 2 do dono, Windows local secundario) os=$([Environment]::OSVersion.VersionString) root=$Root"
 # ---------------------------------------------------------------- 1. uv
 Copy-Item -LiteralPath "$ToolsSrc\uv-x86_64-pc-windows-msvc.zip", "$ToolsSrc\uv-x86_64-pc-windows-msvc.zip.sha256" -Destination "$Root\tools\" -Force
 $expected = (Get-Content "$Root\tools\uv-x86_64-pc-windows-msvc.zip.sha256").Split(" ")[0].Trim().ToLower()
@@ -69,7 +69,7 @@ foreach ($k in @("cripto", "transport", "protocol")) { & $conPy -m pip install -
 & $cainPy -m pip freeze | Set-Content -Encoding utf8 "$Root\logs\pip_freeze_cain.txt"
 & $conPy -m pip freeze | Set-Content -Encoding utf8 "$Root\logs\pip_freeze_consumer.txt"
 & $cainPy -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('GarimpoInvestimentos') is None else 1)"
-if ($LASTEXITCODE) { throw "venv do CAIN tem o domínio instalado" }
+if ($LASTEXITCODE) { throw "venv do CAIN tem o dominio instalado" }
 # ---------------------------------------------------------------- 4. dados (cópias públicas verificadas)
 $sums = @{}
 foreach ($line in (Get-Content "$DataSrc\SHA256SUMS.txt")) {
@@ -88,7 +88,7 @@ foreach ($f in Get-ChildItem -Recurse -File $cripto) {
   New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
   Copy-Item -LiteralPath $f.FullName -Destination $dest -Force
   $after = Sha $dest
-  if ($after -ne $want) { throw "cópia diverge: $rel" }
+  if ($after -ne $want) { throw "copia diverge: $rel" }
   Add-Content -Path "$Root\logs\data_copy.tsv" -Value "$rel`t$want`t$before`t$after" -Encoding utf8
   $copied++
 }
