@@ -133,6 +133,33 @@
    ],
    "status": "OPEN",
    "fix_plan": "resolvido no adapter (identidade no envelope); o health() do plugin continua registrado"
+  },
+  {
+   "id": "IC-F008",
+   "severity": "P1",
+   "title": "memória do CAIN guardaria o texto livre do domínio, que cita instante pós-cutoff (canário)",
+   "description": "No ensaio local, o cripto recusa o canário com TEMPORAL_INTEGRITY_VIOLATION e o `reason` diz em que instante (2026-09-07) um evento está disponível depois do cutoff. A primeira versão do CAIN copiava o `reason` para o fato da memória, que o retrieval e o modo LLM leem (FUTURE_CANARY).",
+   "classification": "C6 P1 no código da missão (vazamento de informação futura para o retrieval), sem violação observada em execução de gate: corrigido antes de qualquer gate",
+   "evidence": [],
+   "evidence_refs": [
+    "cain@a41fbb7fa84921689f1c723034fe3d5faa0b2d0c (correção + teste)"
+   ],
+   "status": "FIXED",
+   "fix": "a memória guarda só estados, IDs e hashes; o texto fica no inbox (auditoria); o E2E confere a ausência do token e dos instantes pós-cutoff na memória"
+  },
+  {
+   "id": "IC-F009",
+   "severity": "P2",
+   "title": "consumidor do transporte misturava logs do predictor_ops às linhas JSON do stdout",
+   "description": "predictor-research-transport 0.1.0rc1: logs JSON do predictor_ops saíam no stdout do predictor-research-consumer junto das linhas por task.",
+   "classification": "C6 P2 (contrato de saída do CLI; nenhum resultado afetado)",
+   "evidence": [],
+   "evidence_refs": [
+    "ecosystem-predictor@a19655f45f84842fea9f331429aa30d2c9ee4394",
+    "predictor-research-transport 0.1.0rc2 (sha256 35586373…)"
+   ],
+   "status": "FIXED",
+   "fix": "fd 1 e sys.stdout vão para o stderr enquanto o domínio trabalha; relatório num descritor próprio; teste novo"
   }
  ]
 }

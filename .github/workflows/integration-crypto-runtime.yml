@@ -1,8 +1,13 @@
 # Missão integration-crypto (Etapa B): runtime suportado no Linux primário (GitHub Actions ubuntu-latest × 3.13,
-# D-9 e D-16). Só manual. Instala só as wheels publicadas listadas em qualification/integration-crypto/
-# runtime_targets.json (C3.1) em venvs limpos, a partir dos uv.lock dos commits finais. Dados públicos da Binance
+# D-9 e D-16). Instala só as wheels publicadas listadas em qualification/integration-crypto/runtime_targets.json
+# (C3.1) em venvs limpos, a partir dos uv.lock dos commits finais (--require-hashes). Dados públicos da Binance
 # baixados no job e conferidos pelo .CHECKSUM publicado; não são versionados nem publicados como artefato (o
 # artefato leva logs, hashes, MANIFEST e resultados). Sem segredos: nenhuma chave, conta ou API da Binance.
+#
+# Disparo: manual (quando este arquivo estiver no main) ou push numa branch integration-crypto/runtime-<fases>-<n>
+# criada no mesmo commit da branch da missão (um workflow novo só pode ser disparado manualmente depois de estar no
+# main). <fases> = nomes separados por "+": cleanroom contract e2e n1 isolation failures soak.
+# Não entra no CI de push/PR do repositório: só roda nessas branches (D-15).
 name: integration-crypto runtime
 
 on:
@@ -12,6 +17,9 @@ on:
         description: "fases separadas por espaço: cleanroom contract e2e n1 isolation failures soak"
         required: true
         default: "cleanroom contract e2e n1 isolation failures"
+  push:
+    branches:
+      - "integration-crypto/runtime-*"
 
 permissions:
   contents: read
@@ -31,8 +39,14 @@ jobs:
       - name: fases
         shell: bash
         env:
-          PHASES: ${{ inputs.phases }}
-        run: bash qualification/integration-crypto/scripts/ci_runtime.sh "$PHASES" "$RUNNER_TEMP/work" "$RUNNER_TEMP/out"
+          INPUT_PHASES: ${{ inputs.phases }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -n "$INPUT_PHASES" ]; then PHASES="$INPUT_PHASES"; else
+            spec="${REF_NAME#integration-crypto/runtime-}"; spec="${spec%-*}"; PHASES="${spec//+/ }"
+          fi
+          echo "fases: $PHASES"
+          bash qualification/integration-crypto/scripts/ci_runtime.sh "$PHASES" "$RUNNER_TEMP/work" "$RUNNER_TEMP/out"
       - name: sem dados versionáveis no artefato
         if: always()
         shell: bash
