@@ -1,0 +1,119 @@
+{
+  "schema": "integration-stocks/FINDINGS/1",
+  "severity_scale": "C6: P0 quebra o que dá dinheiro ou faz perder; P1 defeito real sem violação observada; P2 sem efeito em resultado ou operação",
+  "status_values": [
+    "OPEN",
+    "FIXED",
+    "NOT_A_DEFECT",
+    "ACCEPTED_LIMITATION"
+  ],
+  "c0": {
+    "state": "ABORTED",
+    "rule": "COMMON_QUALIFICATION_CORE.md v2.3, C0.4 e C7.3: pré-condição do prompt falhou → ABORTED, motivo aqui, nenhuma fase roda. Prompt da sessão de 2026-09-27, regra única do pré-voo (4.1–4.7): não contornar, não implementar, registrar, PR só com este registro",
+    "checked_at": "2026-09-27T21:56:08Z",
+    "evidence_repo_ref": "origin/main 6a3b86dbc2f16d9671c83472291577601f205d03",
+    "common_core_sha256": "beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc",
+    "script": "qualification/integration-stocks/scripts/c0_preflight.sh (+ c0_preconditions.py)",
+    "python": "3.13.15 gerenciado (~/predictors/tools), WSL do PC 2 (diagnóstico, não owner_linux)",
+    "raw_log": "qualification/integration-stocks/RAW_LOGS/c0/c0_preflight.log",
+    "raw_log_sha256": "60f159b14f10353f9512639fa54db72891ada7986f777830e4bdfd6f20e80268",
+    "failed": [
+      {
+        "check": "4.5/missao1-integration-crypto-QUALIFIED",
+        "requirement": "qualification/integration-crypto/QUALIFICATION_ATTESTATION.json com result = QUALIFIED no main",
+        "source": "prompts/prompt_etapa_b_stocks_rev9.md §1; DECISIONS.json D-22 (ordem integration-crypto → integration-stocks → integration-brasileirao)",
+        "verification": "leitura do arquivo no snapshot git archive de origin/main 6a3b86d",
+        "observed": "o arquivo não existe; o diretório qualification/integration-crypto/ não existe no main",
+        "missing": "missão integration-crypto QUALIFIED e mergeada no main"
+      },
+      {
+        "check": "4.5/reuso-final_commit-cain",
+        "requirement": "final_commits[cain] da attestation QUALIFIED da integration-crypto (base do cain nesta missão)",
+        "source": "prompt da sessão 4.5 e 6.4; prompt_etapa_b_comum_rev9.md §2 (framework criado pela integration-crypto)",
+        "verification": "leitura de final_commits na attestation da integration-crypto",
+        "observed": "não verificável: attestation ausente",
+        "missing": "final_commit qualificado do cain"
+      },
+      {
+        "check": "4.5/reuso-final_commit-ecosystem-predictor",
+        "requirement": "final_commits[ecosystem-predictor] da attestation QUALIFIED da integration-crypto",
+        "source": "prompt da sessão 4.5 e 6.4",
+        "verification": "leitura de final_commits na attestation da integration-crypto",
+        "observed": "não verificável: attestation ausente",
+        "missing": "final_commit qualificado do ecosystem-predictor"
+      },
+      {
+        "check": "4.5/reuso-final_wheels-cain-ecosystem",
+        "requirement": "final_wheels de cain e ecosystem-predictor da integration-crypto, com asset baixado por URL e sha256 conferido",
+        "source": "prompt da sessão 4.5 e 6.4; núcleo C7.1 regra 4",
+        "verification": "leitura de final_wheels na attestation da integration-crypto; download e sha256 de cada asset",
+        "observed": "não verificável: attestation ausente; nenhum asset a baixar",
+        "missing": "final_wheels qualificadas de cain e ecosystem-predictor"
+      },
+      {
+        "check": "4.5/reuso-DECISION_POLICY_REPORT",
+        "requirement": "descrição do framework do CAIN em qualification/integration-crypto/DECISION_POLICY_REPORT.md",
+        "source": "prompt da sessão 4.5; núcleo C12 (a DecisionPolicy genérica é criada pela integration-crypto)",
+        "verification": "existência do arquivo no snapshot de origin/main 6a3b86d",
+        "observed": "ausente",
+        "missing": "framework do CAIN (DecisionPolicy genérica) qualificado e descrito"
+      }
+    ],
+    "passed": [
+      "4.1/C0.1-core-sha256",
+      "4.3/C0.2-manifest (13/13, snapshot git archive em ~/predictors/runtime/integration-stocks)",
+      "4.2/D-22",
+      "4.2/D-16",
+      "4.2/D-21",
+      "4.4/ENVELOPE_V2_FREEZE.json",
+      "4.4/STACK_BASELINE_V2.0.json",
+      "4.5/C0.3-DECISIONS",
+      "4.5/C0.3-HYGIENE-presente",
+      "4.5/C0.3-HYGIENE-DONE (13/13)",
+      "4.5/C0.3-baseline-comum",
+      "4.5/comum1-etapaA-crypto",
+      "4.5/comum1-etapaA-brasileirao",
+      "4.5/comum1-etapaA-stocks",
+      "4.5/comum1-contrato-crypto",
+      "4.5/comum1-contrato-brasileirao",
+      "4.5/comum1-contrato-stocks",
+      "4.5/comum1-SHARED-003 (test_only, não bloqueante; wheel da Ops 4.2.1, não usada)",
+      "4.5/comum1-SHARED-004 (test_only, não bloqueante; wheel da Ops 4.2.1, não usada)",
+      "4.5/comum1-SHARED-005 (resolvido na Ops 4.2.2rc1, a da pilha do Stocks; as wheels de cain/ecosystem não puderam ser conferidas, ver failed)",
+      "4.5/missao2-contrato-prefixo",
+      "4.5/missao2-contrato-adapter_paths",
+      "4.6a/runtime_target-commit",
+      "4.6a/runtime_target-wheel",
+      "4.6a/build_target-versao",
+      "4.6a/attestation-final_commit",
+      "4.6a/attestation-final_wheel",
+      "4.6b/baseline-base-commit",
+      "4.6b/baseline-wheel",
+      "4.6c/tag-commit (local e ls-remote)",
+      "4.6c/asset-sha256 (download por URL e digest da API)",
+      "4.6d/base-ancestral-do-main",
+      "4.6d/arvores (61fc017 e 36081a6 = bea6dce6adea5cc2c0d917b5e2265507ec64708d)",
+      "5.1/adapters-intocados-no-main",
+      "4.7/protocolo-tag",
+      "4.7/protocolo-wheel-sha256 (download por URL e digest da API)"
+    ],
+    "observations": {
+      "note": "Fatos registrados no log bruto (linhas OBS), sem efeito no estado. Conferem os fatos da decisão 5.1 do prompt da sessão; não viram achado aqui porque nenhuma fase rodou.",
+      "stocks_origin_main": "01c2212d64dac2836148beb315ff5b8ae49e7cf3",
+      "commits_base_to_main": 23,
+      "prs_after_pr96": [99, 101, 102, 104, 105, 106],
+      "files_changed_base_to_main": 80,
+      "package_paths_changed": "somente stocks_predictor/v2/",
+      "pyproject_uvlock_changed": false,
+      "version_on_main": "0.3.0rc2",
+      "scientific_state_at_base": false,
+      "adapters_at_base": ["stocks_predictor/adapters/__init__.py"],
+      "contract_adapter_entrypoints": [],
+      "next_free_decision": "D-24",
+      "integration_crypto_status": "em execução por outra sessão no PC 2 (predictor-qualification PR #57, aberto, 'integration-crypto: C0, parâmetros congelados e baseline (em andamento)')"
+    },
+    "effect": "Nenhuma fase rodou. Nenhuma decisão D-<n> foi criada (5.5 só vale depois de o pré-voo passar). Nada mudou em cain, ecosystem-predictor, stocks-predictor, core-predictor ou predictor-ops. Nenhum worktree de código foi criado. O COTAHIST_A2026.ZIP não foi lido. Nada foi instalado no Windows.",
+    "resume": "Com qualification/integration-crypto/QUALIFICATION_ATTESTATION.json result = QUALIFIED no main (e o DECISION_POLICY_REPORT.md dela), uma sessão nova da missão refaz o C0 do zero, cria a D-<n> (5.5) e começa por freeze-parameters (C8). Este registro não é attestation nem parcial."
+  },
+  "findings": []
+}
