@@ -67,11 +67,17 @@ def parse_build_log(path: Path) -> dict:
 def parse_suite_log(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     head = re.search(r"^commit=([0-9a-f]{40}) tree=([0-9a-f]{40})", text, re.M)
-    runs = re.findall(r"^== python (\S+)\n(\S+) (\S+)\n(\d+) passed(?:, (\d+) \w+)? in", text, re.M)
+    runs = []
+    # um bloco por Python: "== python X", linhas do uv, "<versão python> <versão do pacote>", resumo do pytest
+    for block in re.split(r"^== python ", text, flags=re.M)[1:]:
+        version = re.search(r"^(\d+\.\d+\.\d+) (\S+)$", block, re.M)
+        summary = re.search(r"^(\d+) passed(?:, (\d+) (\w+))? in ", block, re.M)
+        if not version or not summary:
+            fail(f"{path.name}: bloco de suíte sem versão ou resumo do pytest")
+        runs.append({"python": version[1], "package_version": version[2], "passed": int(summary[1]),
+                     "other": int(summary[2] or 0), "other_kind": summary[3]})
     return {"log": path.name, "log_sha256": sha(path.read_bytes()), "commit": head[1], "package_tree": head[2],
-            "runs": [{"python": full, "package_version": ver, "passed": int(n), "other": int(o or 0)}
-                     for _py, full, ver, n, o in runs],
-            "exit_ok": "SUITE_EXIT=0" in text}
+            "runs": runs, "exit_ok": "SUITE_EXIT=0" in text}
 
 
 def parse_diag_log(path: Path) -> dict:
@@ -145,8 +151,9 @@ def build(args: argparse.Namespace, r: v1.Runner) -> dict:
     if not release_build or not all(b["reproducible"] and set(b["outputs"]) == {digest} for b in release_build):
         fail("sem build 2× reproduzível do commit da release com o mesmo sha256 do asset")
     suites = [parse_suite_log(p) for p in sorted(raw.glob("suite_protocol_v2_*.log"))]
-    if not any(s["commit"] == commit and s["exit_ok"] and len(s["runs"]) == 4 for s in suites):
-        fail("sem suíte nos 4 Pythons no commit da release")
+    if not any(s["commit"] == commit and s["exit_ok"] and len(s["runs"]) == 4
+               and all(run["passed"] > 0 and run["other"] == 0 for run in s["runs"]) for s in suites):
+        fail("sem suíte verde (sem skip/falha) nos 4 Pythons no commit da release")
     diags = {m: parse_diag_log(raw / f"diag_v2_rc2_{m}.log") for m in MISSIONS}
     if any(d["result"] != "OK" or d["fail"] for d in diags.values()):
         fail("diagnóstico com falha")
