@@ -74,8 +74,14 @@ A orquestração nova é o caminho qualificado: proposta → política → task 
 
 ## 5. Evidência de execução
 
-Preenchida na attestation a partir de `EVIDENCE_NUMBERS.json`:
+Wheels publicadas, Linux primário (GitHub Actions). Chaves de `EVIDENCE_NUMBERS.json`:
 
-- testes unitários e de integração da política no `cleanroom-final`;
-- receipts do N+1;
-- decisões do E2E, do isolamento e do soak.
+- testes da política contra a wheel publicada: `runtime/run36357097067/cleanroom-final/cain.junit.xml:junit`;
+- N+1 (receipts byte a byte iguais em processos novos): `runtime/run36357097067/n-plus-1:checks_passed`,
+  `:checks_failed`, `:receipts`;
+- decisões do E2E: `runtime/run36357097067/e2e:decisions`;
+- isolamento, IDs com domínio e contradição: `runtime/run36357097067/isolation:checks_passed` e `:checks_failed`;
+- soak com propostas do LLM local pela mesma política: `runtime/run36357575208/soak:counters` (`decisions`,
+  `llm_proposals`).
+
+Tabelas por conferência em `CAIN_ROUNDTRIP_REPORT.md` e `SOAK_REPORT.md`, geradas por `scripts/render_reports.py`.

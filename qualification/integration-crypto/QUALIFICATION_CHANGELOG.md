@@ -16,3 +16,35 @@ arquivo de evidência + sha256 no `GATES.json` / attestation.
 | `STACK_BASELINE.json` + `scripts/mission_baseline.py`, `RAW_LOGS/baseline/` | baseline da missão com o coletor do STACK_BASELINE_V2.0, sem mudança: igual ao V2.0 em todos os repos e wheels | C3 (antes de qualquer mudança) | este PR |
 | `FINDINGS.json`, `GATES.json`, `scripts/attest.py`, `scripts/findings_init.py`, `ATTESTATION_PARTIAL_{freeze-parameters,baseline}.json` | achados IC-F001..IC-F007; ledger de gates; parciais validados no schema | C6, C7, C8 | este PR |
 | `tools/pyproject.toml`, `tools/uv.lock` | ambiente das ferramentas da missão: protocolo 2.0.0rc2 da release congelada (sha256 no lock) + jsonschema | venvs só de uv.lock | este PR |
+
+## 2026-09-27 — implementação, publish-candidates, runtime (Linux primário e Windows do PC 2)
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `ecosystem-predictor` `packages/research-transport` (novo), `registries/architecture_registry.json`, `tests/test_architecture_inventory.py` (11→12 pacotes), `.github/workflows/ci.yml` (matriz) | transporte V2: spool write-once + `predictor-research-consumer` + allowlist fixa de adapters; 0.1.0rc2 corrige o stdout do consumidor | SPEC V2 §9 e §12; C24.3 (d) | `0cb672b`, `a19655f`; ecosystem-predictor#30; pré-releases `predictor-research-transport-v0.1.0rc1` e `-v0.1.0rc2` |
+| `cripto-predictor` `GarimpoInvestimentos/adapters/research_v2.py` (novo) + versão `1.2.0rc3` (pyproject, `__version__`, linha do uv.lock) | adapter V2 só stdlib + adapter_api | prompt do cripto §3.4; 7.1 do prompt da sessão; testes congelados da Etapa A | `ee3d3d1`; cripto-predictor#135; pré-release `v1.2.0rc3` (final_commit = commit da tag) |
+| `cain` `src/cain/orchestration/*`, `tools/build_domain_config.py`, `src/cain/loop/{__main__,similarity}.py`, `cli.py`, `research/cli.py`, `findings/cli.py`, `.gitignore`, testes | framework de orquestração por domínio, DecisionPolicy + receipt, configuração do cripto de 341d270, cerco do loop do PR #50, SHA completo no PR #51, propostas por LLM auditadas | prompt comum §2–§8, prompt do cripto §3 | `1af5426`, `a41fbb7`, `8f50791`, `6b460af`; cain#57; pré-release `v0.4.13rc5` |
+| `predictor-qualification` `qualification/integration-crypto/` | vetores congelados, harness, workflow `integration-crypto-runtime.yml`, evidências, relatórios; `.gitattributes`: `RAW_LOGS/**` e `E2E_EVIDENCE/**` da missão como `-text` (logs do Windows com CRLF preservados byte a byte, como nas missões da Etapa A) | C8, C16, C20 | #57 (mergeado até `f0cb40f`), #61 |
+
+**WINDOWS_SMOKE no PC 2** (Windows local secundário do dono, `DESKTOP-EJPA2MT`):
+
+- Pasta `C:\Cripto\qualificacao\runtime\integration-crypto\`, criada e escrita só por PowerShell (D-23).
+- `uv` 0.12.18 extraído do zip conferido contra o `.sha256`, e Python 3.13.15 gerenciado, copiado de `C:\QUALIFICACAO\runtime\brasileirao2\tools\`.
+- venvs só dos `uv.lock` e das wheels publicadas.
+- 48 arquivos públicos de `~/predictors/data/d16/cripto/` com sha256 conferido antes e depois da cópia.
+- E2E com restart: evidência em `RAW_LOGS/windows-smoke/`, sha256 conferido na cópia.
+- A pasta não foi apagada.
+- A tentativa 1 falhou por defeito do próprio script (`Write-Output` dentro de função); o log foi preservado.
+
+## 2026-09-27 — soak, fechamento e attestation (sessão no PC 2)
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `RAW_LOGS/runtime/run36357313578/` | soak 1: todos os pisos menos o de propostas de LLM (0). O `num_ctx = 4096` do harness limitava a entrada do cliente LLM | C10; mantido como evidência | `2319ed0`, #61 |
+| `scripts/soak.py` | o `cain-llm.toml` do soak passa a `num_ctx = 8192` e `max_input_bytes = 16000`. Correção: a mensagem do `2319ed0` atribui o limite 3584 ao padrão do cain; ele vinha de `min(6500, 4096 - 256 - 256)` | configuração do modelo local, não parâmetro congelado; perfil, pisos e vetores iguais | `2319ed0`, #61 |
+| `RAW_LOGS/runtime/run36357575208/` | soak 2, run de push no commit `2319ed0`: tolerância zero e todos os pisos do perfil V1 (tabela no `SOAK_REPORT.md`) | gate `SOAK` | #61 |
+| `scripts/final_wheels_check.py`, `RAW_LOGS/final-wheels/` | as 8 `final_wheels` conferidas contra o asset da url e contra o instalado nos dois runs do Linux primário | C7.1 regra 4 | #61 |
+| `scripts/render_reports.py`, `scripts/update_gates.py`, relatórios `*_REPORT.md`, `EVIDENCE_NUMBERS.json` | relatórios gerados de `RAW_LOGS/`; o `SOAK_REPORT` lista o soak anterior; ledger dos gates fechado | C20, C7 | #61 |
+| `RAW_LOGS/protected/`, `RAW_LOGS/secrets/` | conjunto protegido igual; varredura de segredos refeita sobre todos os arquivos da missão, sem achados | C15.1, `SECRETS_CLEAN` | #61 |
+| `FINDINGS.json` | IC-F010 (P2, `ACCEPTED_LIMITATION`): parciais C8 não gravados fase a fase depois do cleanroom-baseline | C6 | #61 |
+| `ATTESTATION_PARTIAL_soak.json`, `QUALIFICATION_ATTESTATION.json` | attestation final **NOT_QUALIFIED**: `HOSTED_CI` FAIL e `BLOCKERS_ZERO` FAIL, os dois só pelo P1 IC-F004 (CI do ecosystem-predictor vermelho por atestados de harness do cripto vencidos, anterior à missão, decisão do dono pendente); os outros 28 gates PASS; WINDOWS_SMOKE no PC 2 cita a D-23 (no main) | C7.3 (gate FAIL ou P1 aberto ⇒ NOT_QUALIFIED) | #61 |
