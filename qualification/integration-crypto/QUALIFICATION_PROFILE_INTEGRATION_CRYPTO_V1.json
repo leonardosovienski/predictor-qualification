@@ -1,0 +1,56 @@
+{
+  "schema": "integration-crypto/QUALIFICATION_PROFILE/1",
+  "profile_id": "QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1",
+  "frozen_before": "fase soak (e antes de qualquer execução de gate da missão)",
+  "environment": "Linux primário: GitHub Actions ubuntu-latest × Python 3.13 (D-9, D-16). Runtime suportado: dois venvs limpos, só com as final_wheels (CAIN: cain-research + protocolo + transporte; consumidor: cripto-predictor + Core + Ops + protocolo + transporte), requisitos exportados dos uv.lock com --require-hashes, execução pelos entrypoints `cain` e `predictor-research-consumer`. Dados públicos da Binance data.vision baixados no job e conferidos pelo .CHECKSUM (build_real_dataset.py da Etapa A), nunca versionados. WSL do PC 2 só diagnóstico.",
+  "floors_source": "COMMON_QUALIFICATION_CORE.md C10 (Etapa B, por domínio) + prompt_etapa_b_comum_rev9.md §10",
+  "minimums": {
+    "cycles": 20,
+    "duplicates": 5,
+    "domain_restarts": 5,
+    "cain_restarts": 5,
+    "interleaved_cycles_other_domain": 5,
+    "relevant_failure_classes": 3,
+    "runs_per_failure_class": 3,
+    "llm_proposals": 5
+  },
+  "definitions": {
+    "cycle": "um episódio completo do domínio crypto: proposta → DecisionPolicy ALLOW → task V2 → spool → consumidor → adapter_api → circuito da Etapa A → resultado V2 → ingestão → memória do domínio → próxima decisão com receipt",
+    "duplicate": "reentrega da mesma task (mesmos bytes) ou de um resultado já ingerido, ou nova proposta com o mesmo conteúdo de pedido; nenhuma pode gerar segundo experimento, efeito, resultado, fato ou episódio",
+    "domain_restart": "o processo do consumidor (que hospeda o circuito do domínio) é morto num ponto nomeado ou parado, e volta em processo novo",
+    "cain_restart": "o processo `cain` é morto num ponto nomeado da orquestração, e o próximo comando roda em processo novo sobre o mesmo estado",
+    "interleaved_cycle_other_domain": "entre dois ciclos do crypto, fixtures V2 congeladas de stocks e brasileirao (FIXTURES_MANIFEST.json) entram no spool/inbox do crypto e propostas com domínio stocks/brasileirao chegam à orquestração do crypto; todas têm de ser recusadas sem efeito",
+    "llm_proposal": "proposta gerada por um modelo local (Ollama no runner) pelo modo de proposta do `cain research explain`; passa pela mesma DecisionPolicy; auditada (prompt, resposta, modelo e digest no log); não é prova de gate (C9)"
+  },
+  "plan": {
+    "cycles": "24 ciclos em rodízio de 3 hipóteses de qualificação admitidas pela policy de operador da missão (crypto:QUAL-SHADOW-REAL-001..003), pedidos distintos por placebo_seed, dataset real-in-sample",
+    "duplicates": "6: 2 reentregas de task, 2 reentregas de resultado, 2 repropostas do mesmo conteúdo",
+    "domain_restarts": "6: F08 × 3 e F07 × 3",
+    "cain_restarts": "6: F01, F02, F03, F04, F05 e F06, uma vez cada, mais os reinícios naturais (cada comando é um processo novo)",
+    "interleaved_cycles_other_domain": "6: 3 com fixtures de stocks e 3 com fixtures de brasileirao (tasks, resultados e propostas)",
+    "failure_classes": {"cain_process_death": 3, "consumer_process_death": 3, "delivery_anomaly": 3, "domain_retryable": 3},
+    "llm_proposals": "5 propostas pelo modelo local; se o modelo não estiver disponível no runner, o item fica NOT_RUN com o motivo e o SOAK não passa"
+  },
+  "zero_tolerance": [
+    "efeito duplicado",
+    "resultado perdido",
+    "provenance quebrada",
+    "ação não autorizada (fora da allowlist ou decisão não-ALLOW que gera task)",
+    "contaminação entre domínios (resultado de outro domínio aceito)",
+    "ID ambíguo aceito (ID sem domínio ou de outro domínio)",
+    "contradição decidida por maioria",
+    "corrupção silenciosa",
+    "vazamento de futuro (canário na memória ou no retrieval)",
+    "capital_permission true em qualquer lugar"
+  ],
+  "checks_at_end": [
+    "tasks ALLOW == arquivos de task no spool == pedidos distintos vistos pelo domínio",
+    "cada task terminal tem exatamente 1 linha de inbox por bytes de resultado; resultados RESULT/DUPLICATE têm payload_sha256 == result_sha256 do `cripto-research show`",
+    "1 experimento e 1 resultado autoritativo no domínio por request_id",
+    "episódios do crypto numerados 1..n sem lacuna; previous_task_id aponta para a última task anterior",
+    "memória: verify sem erro; fatos só no cubo crypto; nenhum FUTURE_CANARY_CRYPTO_001",
+    "nenhuma decisão ALLOW para crypto:H1..crypto:H9 nem para a família funding_oi_hmm_v3",
+    "budget, prioridade e escopo não aumentam depois de resultados negativos (NEGATIVE_RESULT_NEUTRALITY)"
+  ],
+  "harness": "qualification/integration-crypto/scripts/soak.py (criado na fase soak; lê este perfil, não o altera)"
+}
