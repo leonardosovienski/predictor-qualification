@@ -1,0 +1,57 @@
+{
+ "scenario": "F12",
+ "finished_at": "2026-09-27T23:01:16Z",
+ "checks": [
+  {
+   "check": "F12: same task, other domain payload: CONFLICT",
+   "ok": true,
+   "got": [
+    {
+     "action": "duplicate",
+     "file": "TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.c8619e8ef0dde105.json"
+    },
+    {
+     "action": "rejected",
+     "code": "CONFLICT",
+     "file": "other-payload.json",
+     "reason": "another domain payload was already ingested for this task"
+    }
+   ]
+  },
+  {
+   "check": "F12: spool file with other bytes under the same task_id: CONFLICT, nothing overwritten",
+   "ok": true,
+   "got": [
+    {
+     "detail": "CONFLICT: tasks/TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.json already has other bytes",
+     "error": "CONFLICT"
+    }
+   ]
+  },
+  {
+   "check": "F12: original kept",
+   "ok": true,
+   "got": {
+    "episodes": 1,
+    "allow": 1,
+    "inbox": 1,
+    "facts": 1,
+    "spool_tasks": 1,
+    "admissions": 1,
+    "experiments": 1,
+    "memory": "intact"
+   },
+   "want": {
+    "allow": 1,
+    "inbox": 1,
+    "facts": 1,
+    "spool_tasks": 1,
+    "admissions": 1,
+    "experiments": 1,
+    "memory": "intact"
+   }
+  }
+ ],
+ "passed": 3,
+ "failed": 0
+}

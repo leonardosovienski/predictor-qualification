@@ -15,6 +15,16 @@ errors="0" (números do junit) |
 Conclusão do diagnóstico: o domínio instalado da release é compatível com a presença do protocolo V2 no mesmo venv
 (o fecho de imports continua limpo: nenhum console script do cripto alcança `research_protocol` ou `adapters/`).
 
-## cleanroom-final
+## cleanroom-final (gate CLEANROOM_FINAL; C24.3 c)
 
-(fase `cleanroom-final`, depois de `publish-candidates`.)
+GitHub Actions ubuntu-latest × Python 3.13, run `run36357097067`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-crypto/RAW_LOGS/runtime/run36357097067/cleanroom-final/cleanroom_final.log` (sha256 `7dcdabfecbb9bf06…`).
+
+| Suíte (instalada da wheel) | testes | falhas | erros | pulados |
+|---|--:|--:|--:|--:|
+| conformance | 48 | 0 | 0 | 0 |
+| transport | 13 | 0 | 0 | 0 |
+| cain | 54 | 0 | 0 | 0 |
+
+- `conformance`: a suíte de conformidade congelada da Etapa A do cripto (`tests/conformance` do commit final), contra o `cripto-predictor` 1.2.0rc3 instalado com o protocolo e o transporte no mesmo venv (C24.3 c).
+- `transport`: testes do `predictor-research-transport` 0.1.0rc2 contra a wheel instalada.
+- `cain`: política, orquestração, cerco do loop e SHA completo, contra o `cain-research` 0.4.13rc5 instalado.

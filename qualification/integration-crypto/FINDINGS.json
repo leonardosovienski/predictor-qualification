@@ -99,14 +99,19 @@
     {
      "file": "qualification/integration-crypto/RAW_LOGS/truth-map/truth_map.log",
      "sha256": "5fe8aa8d25ab0389ce674eba72bbb7081b3b40319e2ad82968637607d4f6e6bf"
+    },
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/runtime/run36357097067/cleanroom-final/cain.junit.xml",
+     "sha256": "639030bb562b5d0765c8237cb7b9b2833333c6dbf843c225cea0eca458760441"
     }
    ],
    "evidence_refs": [
     "cain@f343701937a7a798d66e11d2d8aa18e24395e215:src/cain/loop/evaluator.py",
     "cain@f343701937a7a798d66e11d2d8aa18e24395e215:src/cain/cli.py (register_loop)"
    ],
-   "status": "OPEN",
-   "fix_plan": "opção (b) do prompt comum §4: `loop` sai do CLI `cain` e fica como ferramenta de laboratório (`python -m cain.loop`, fora de [project.scripts]), com teste de fecho de imports provando que nenhum console script alcança cain.loop.engine/evaluator"
+   "status": "FIXED",
+   "fix_plan": "opção (b) do prompt comum §4: `loop` sai do CLI `cain` e fica como ferramenta de laboratório (`python -m cain.loop`, fora de [project.scripts]), com teste de fecho de imports provando que nenhum console script alcança cain.loop.engine/evaluator",
+   "fix": "cain v0.4.13rc5 (6b460af): `loop` fora do console script `cain` (python -m cain.loop), similaridade em cain.loop.similarity; tests/unit/test_loop_fenced.py verde contra a wheel publicada no cleanroom-final"
   },
   {
    "id": "IC-F006",
@@ -114,12 +119,18 @@
    "title": "`cain findings ingest-*` lê o registro do predictor em `origin/main` por padrão",
    "description": "cain/findings/cli.py: `--commit` tem padrão origin/main. Para o cripto, o main contém #128–#134, que a D-23 exclui da memória do CAIN; toda leitura do registro do cripto tem de usar o SHA completo 341d270e4d709150c581c3cd93f4518d483009eb.",
    "classification": "C6 P2: a orquestração qualificada não usa esse comando; risco de operador",
-   "evidence": [],
+   "evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/runtime/run36357097067/cleanroom-final/cain.junit.xml",
+     "sha256": "639030bb562b5d0765c8237cb7b9b2833333c6dbf843c225cea0eca458760441"
+    }
+   ],
    "evidence_refs": [
     "cain@f343701937a7a798d66e11d2d8aa18e24395e215:src/cain/findings/cli.py"
    ],
-   "status": "OPEN",
-   "fix_plan": "no cain: leitura de registro de predictor exige SHA completo de 40 hex (falha fechada)"
+   "status": "FIXED",
+   "fix_plan": "no cain: leitura de registro de predictor exige SHA completo de 40 hex (falha fechada)",
+   "fix": "cain v0.4.13rc5: `cain findings ingest-*` do cripto exige SHA de 40 hex; tests/unit/test_findings_pinned_sha.py verde contra a wheel publicada"
   },
   {
    "id": "IC-F007",
@@ -127,12 +138,59 @@
    "title": "plugin cripto devolve version null no health() (A-06, herdado da Etapa A)",
    "description": "Herdado/observado (prompt do cripto §5). O plugin fica fora dos adapter_paths e não muda; o adapter V2 declara a identidade (distribution, version pelo metadata instalado, module) no campo `adapter` de cada ResearchResultV2.",
    "classification": "C6 P2",
-   "evidence": [],
+   "evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/runtime/run36357097067/e2e/SUMMARY.json",
+     "sha256": "a7f2cc58e7d35f34ce7db5fc3fc91c9071077fcb7901c3f2933bfcdcd5e8af55"
+    }
+   ],
    "evidence_refs": [
     "prompts/prompt_etapa_b_crypto_rev9.md §5"
    ],
-   "status": "OPEN",
-   "fix_plan": "resolvido no adapter (identidade no envelope); o health() do plugin continua registrado"
+   "status": "FIXED",
+   "fix_plan": "resolvido no adapter (identidade no envelope); o health() do plugin continua registrado",
+   "fix": "resolvido no adapter, como o prompt do cripto §5 permite: todo ResearchResultV2 traz `adapter` com distribution, versão instalada (1.2.0rc3) e módulo; o health() do plugin, fora dos adapter_paths, não muda"
+  },
+  {
+   "id": "IC-F008",
+   "severity": "P1",
+   "title": "memória do CAIN guardaria o texto livre do domínio, que cita instante pós-cutoff (canário)",
+   "description": "No ensaio local, o cripto recusa o canário com TEMPORAL_INTEGRITY_VIOLATION e o `reason` diz em que instante (2026-09-07) um evento está disponível depois do cutoff. A primeira versão do CAIN copiava o `reason` para o fato da memória, que o retrieval e o modo LLM leem (FUTURE_CANARY).",
+   "classification": "C6 P1 no código da missão (vazamento de informação futura para o retrieval), sem violação observada em execução de gate: corrigido antes de qualquer gate",
+   "evidence": [],
+   "evidence_refs": [
+    "cain@a41fbb7fa84921689f1c723034fe3d5faa0b2d0c (correção + teste)"
+   ],
+   "status": "FIXED",
+   "fix": "a memória guarda só estados, IDs e hashes; o texto fica no inbox (auditoria); o E2E confere a ausência do token e dos instantes pós-cutoff na memória"
+  },
+  {
+   "id": "IC-F009",
+   "severity": "P2",
+   "title": "consumidor do transporte misturava logs do predictor_ops às linhas JSON do stdout",
+   "description": "predictor-research-transport 0.1.0rc1: logs JSON do predictor_ops saíam no stdout do predictor-research-consumer junto das linhas por task.",
+   "classification": "C6 P2 (contrato de saída do CLI; nenhum resultado afetado)",
+   "evidence": [],
+   "evidence_refs": [
+    "ecosystem-predictor@a19655f45f84842fea9f331429aa30d2c9ee4394",
+    "predictor-research-transport 0.1.0rc2 (sha256 35586373…)"
+   ],
+   "status": "FIXED",
+   "fix": "fd 1 e sys.stdout vão para o stderr enquanto o domínio trabalha; relatório num descritor próprio; teste novo"
+  },
+  {
+   "id": "IC-F010",
+   "severity": "P2",
+   "title": "checkpoints C8 não gravados fase a fase depois de cleanroom-baseline",
+   "description": "Existem ATTESTATION_PARTIAL_ só de freeze-parameters, baseline, truth-map e cleanroom-baseline. As fases envelope-v2 a hosted-ci e soak foram registradas em GATES.json (phases_completed) e no log da sessão, mas sem o parcial de cada uma no momento da fase. Parciais retroativos com o estado de agora não representariam o checkpoint e não foram criados.",
+   "classification": "C6 P2 (desvio de processo; nenhum resultado, gate ou evidência afetados; a sessão não foi retomada)",
+   "evidence": [],
+   "evidence_refs": [
+    "qualification/integration-crypto/GATES.json (phases_completed)",
+    "~/predictors/logs/noite/integration-crypto.md (PC 2)"
+   ],
+   "status": "ACCEPTED_LIMITATION",
+   "fix": "parcial ATTESTATION_PARTIAL_soak.json com o estado do fim da fase soak; a attestation final cobre todas as fases"
   }
  ]
 }
