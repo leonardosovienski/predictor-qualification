@@ -6,8 +6,8 @@ Gate `ENVELOPE_V2_CONFORMANCE` (prompt comum §6.1). Os números estão em `EVID
 
 - `predictor-research-protocol` **2.0.0rc2** (`ENVELOPE_V2_FREEZE.json`): wheel `34a1e412…`, conferida por URL + sha256 no pré-voo (`RAW_LOGS/c0/c0_preflight.log`).
 - Consumidores V2 criados nesta missão, todos pinando essa wheel pelo `uv.lock`:
-  - `cain` 0.4.13rc5;
-  - `predictor-research-transport` 0.1.0rc2.
+  - `cain` 0.4.13rc6;
+  - `predictor-research-transport` 0.1.0rc3 (mesmo código do 0.1.0rc2, republicado de um commit com CI verde; IC-F004).
 - `packages/research-protocol` não mudou.
 
 ## Adapter do cripto (só em `GarimpoInvestimentos/adapters/`)

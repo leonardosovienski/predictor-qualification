@@ -76,12 +76,12 @@ A orquestração nova é o caminho qualificado: proposta → política → task 
 
 Wheels publicadas, Linux primário (GitHub Actions). Chaves de `EVIDENCE_NUMBERS.json`:
 
-- testes da política contra a wheel publicada: `runtime/run36357097067/cleanroom-final/cain.junit.xml:junit`;
-- N+1 (receipts byte a byte iguais em processos novos): `runtime/run36357097067/n-plus-1:checks_passed`,
+- testes da política contra a wheel publicada: `runtime/run36360075557/cleanroom-final/cain.junit.xml:junit`;
+- N+1 (receipts byte a byte iguais em processos novos): `runtime/run36360075557/n-plus-1:checks_passed`,
   `:checks_failed`, `:receipts`;
-- decisões do E2E: `runtime/run36357097067/e2e:decisions`;
-- isolamento, IDs com domínio e contradição: `runtime/run36357097067/isolation:checks_passed` e `:checks_failed`;
-- soak com propostas do LLM local pela mesma política: `runtime/run36357575208/soak:counters` (`decisions`,
+- decisões do E2E: `runtime/run36360075557/e2e:decisions`;
+- isolamento, IDs com domínio e contradição: `runtime/run36360075557/isolation:checks_passed` e `:checks_failed`;
+- soak com propostas do LLM local pela mesma política: `runtime/run36360088636/soak:counters` (`decisions`,
   `llm_proposals`).
 
 Tabelas por conferência em `CAIN_ROUNDTRIP_REPORT.md` e `SOAK_REPORT.md`, geradas por `scripts/render_reports.py`.

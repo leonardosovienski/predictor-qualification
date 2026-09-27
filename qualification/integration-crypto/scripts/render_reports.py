@@ -3,7 +3,9 @@
 Nenhum número é digitado: cada tabela vem de um arquivo de RAW_LOGS/ (citado com sha256). Gera:
   CORE_IDENTITY_REPORT.md, CAIN_ROUNDTRIP_REPORT.md, CONTRACT_REVALIDATION_REPORT.md, HOSTED_CI_REPORT.md,
   PROTECTED_ARTIFACT_REPORT.md, SOAK_REPORT.md e a seção cleanroom-final do CLEANROOM_REPORT.md.
-Uso: python render_reports.py <qualification/integration-crypto> <run do runtime> <run do soak>
+Uso: python render_reports.py <qualification/integration-crypto> <run do runtime> <run do soak> [sufixo]
+  sufixo (ex.: -c14): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
+  diretórios da reemissão; os raw logs da attestation anterior ficam como estão.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ def sha(path: Path) -> str:
 
 def main() -> int:
     m, run, soak = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+    sfx = sys.argv[4] if len(sys.argv) > 4 else ""
     root = m.parent.parent
     raw = m / "RAW_LOGS"
     nums = json.loads((m / "EVIDENCE_NUMBERS.json").read_text(encoding="utf-8"))["numbers"]
@@ -34,7 +37,7 @@ def main() -> int:
     rt = raw / "runtime" / run
     sk = raw / "runtime" / soak
     # ---------------------------------------------------------------- CORE_IDENTITY
-    ci = json.loads((raw / "core-identity" / "core_identity.json").read_text(encoding="utf-8"))
+    ci = json.loads((raw / f"core-identity{sfx}" / "core_identity.json").read_text(encoding="utf-8"))
     rows = "\n".join(f"| {c['check']} | {'OK' if c['ok'] else 'FALHA'} |" for c in ci["checks"])
     (m / "CORE_IDENTITY_REPORT.md").write_text(
         "# integration-crypto — CORE_IDENTITY_REPORT\n\n"
@@ -69,7 +72,7 @@ def main() -> int:
         return json.loads((rt / rel / "SUMMARY.json").read_text(encoding="utf-8"))
 
     e2e, n1, iso, contract = summary("e2e"), summary("n-plus-1"), summary("isolation"), summary("contract-revalidation")
-    win = json.loads((raw / "windows-smoke" / "e2e" / "SUMMARY.json").read_text(encoding="utf-8"))
+    win = json.loads((raw / f"windows-smoke{sfx}" / "e2e" / "SUMMARY.json").read_text(encoding="utf-8"))
     fm = json.loads((rt / "failure-matrix" / "FAILURE_MATRIX_RESULTS.json").read_text(encoding="utf-8"))["points"]
     receipts = "\n".join(f"| {r['candidate']} | {r['decision']} | {r['reason_code']} | {r['rule']} | `{r['receipt_sha256'][:16]}…` |"
                          for r in n1["receipts"])
@@ -105,14 +108,14 @@ def main() -> int:
         "qualificada não chama esse comando: a configuração do domínio já vem da base congelada.\n",
         encoding="utf-8")
     # ---------------------------------------------------------------- CONTRACT_REVALIDATION
-    static = json.loads((raw / "contract-revalidation" / "static_checks.json").read_text(encoding="utf-8"))
+    static = json.loads((raw / f"contract-revalidation{sfx}" / "static_checks.json").read_text(encoding="utf-8"))
     srows = "\n".join(f"| {c['check']} | {'OK' if c['ok'] else 'FALHA'} |" for c in static["checks"])
     (m / "CONTRACT_REVALIDATION_REPORT.md").write_text(
         "# integration-crypto — CONTRACT_REVALIDATION_REPORT\n\n"
         "Gate `DOMAIN_CONTRACTS_PRESERVED` e `domain_attestations[0].revalidation` (C24.3), domínio crypto, entre o "
         f"final_commit da Etapa A (`{static['stage_a_final_commit']}`) e o desta missão (`{static['final_commit']}`, "
         "tag v1.2.0rc3).\n\n"
-        f"Parte estática ({cite(raw / 'contract-revalidation' / 'static_checks.json')}):\n\n"
+        f"Parte estática ({cite(raw / f'contract-revalidation{sfx}' / 'static_checks.json')}):\n\n"
         "| Conferência | Resultado |\n|---|---|\n" + srows + "\n\n"
         f"(c) suíte de conformidade verde com as wheels da integração: {junit['conformance']['tests']} testes, "
         f"{junit['conformance']['failures']} falhas ({cite(rt / 'cleanroom-final' / 'conformance.junit.xml')}).\n\n"
@@ -122,8 +125,10 @@ def main() -> int:
         encoding="utf-8")
     # ---------------------------------------------------------------- HOSTED_CI
     lines = []
-    for role in ("baseline", "final"):
-        for s in json.loads((raw / "hosted-ci" / role / "HOSTED_CI_SUMMARY.json").read_text(encoding="utf-8")):
+    final_ok = True
+    for role, folder in (("baseline", "baseline"), ("final", f"final{sfx}")):
+        for s in json.loads((raw / "hosted-ci" / folder / "HOSTED_CI_SUMMARY.json").read_text(encoding="utf-8")):
+            final_ok = final_ok and (role != "final" or s["ok"])
             runs = "; ".join(f"[{wf} {r['id']}]({r['url']}) {r['conclusion']}" for wf, r in s["runs"].items())
             lines.append(f"| {s['repo'].split('/')[1]} | {role} | `{s['commit'][:12]}` | {'verde' if s['ok'] else 'VERMELHO'} | {runs} | {s['non_success_jobs'] or ''} |")
     (m / "HOSTED_CI_REPORT.md").write_text(
@@ -132,19 +137,20 @@ def main() -> int:
         "`scripts/hosted_ci.py`. Para cada workflow vale o run mais recente naquele SHA; os JSON brutos de todos os runs "
         "estão em `RAW_LOGS/hosted-ci/`. Core e Ops não mudaram: o CI deles é o da Etapa A (HERDADO).\n\n"
         "| Repo | Papel | Commit | Estado | Runs | Jobs não verdes |\n|---|---|---|---|---|---|\n" + "\n".join(lines) + "\n\n"
-        "**ecosystem-predictor vermelho só pelo IC-F004.** O job `quality` falha em "
-        "`test_real_registry_has_current_hash_verified_target_harness`: dois atestados de harness do cripto venceram em "
-        "2026-09-27T02:02Z e continuam `ALIGNED`. É anterior a esta missão. No commit base, o run de push do main de "
-        "2026-09-26 foi verde; um run posterior no mesmo SHA (tag do protocolo, 2026-09-27T21:02Z) já saiu vermelho. "
-        "Depende de decisão do dono (FINDINGS IC-F004).\n",
+        + (("Todos os final_commits verdes. O ecosystem-predictor da base (`49ffb16`) teve um run posterior vermelho "
+            "só pelo IC-F004 (atestados de harness do cripto vencidos em 2026-09-27T02:02Z e ainda `ALIGNED`), anterior "
+            "a esta missão; o final_commit do ecosystem (`61f3ac4`) traz a reemissão genuína do harness (`61d3430`) e o "
+            "run de push dele é verde. A attestation anterior (NOT_QUALIFIED) registrou o vermelho em `a19655f`.\n")
+           if final_ok else
+           "**Há final_commit com job não verde:** ver a tabela e os JSON brutos.\n"),
         encoding="utf-8")
     # ---------------------------------------------------------------- PROTECTED
-    prot = json.loads((raw / "protected" / "protected_check.json").read_text(encoding="utf-8"))
+    prot = json.loads((raw / f"protected{sfx}" / "protected_check.json").read_text(encoding="utf-8"))
     prow = "\n".join(f"| {d} | {v['repo']} | `{v['commit'][:12]}` | {v['items']} | {len(v['changed'])} |" for d, v in prot["domains"].items())
     (m / "PROTECTED_ARTIFACT_REPORT.md").write_text(
         "# integration-crypto — PROTECTED_ARTIFACT_REPORT\n\n"
         "Gate `PROTECTED_ARTIFACTS_UNCHANGED` (C15.1). O conjunto veio do PROTECTED_SET.json de `truth-map` e foi "
-        f"reconferido por `scripts/protected_check.py` ({cite(raw / 'protected' / 'protected_check.json')}).\n\n"
+        f"reconferido por `scripts/protected_check.py` ({cite(raw / f'protected{sfx}' / 'protected_check.json')}).\n\n"
         "| Domínio | Repo | Commit conferido | Itens | Alterados |\n|---|---|---|--:|--:|\n" + prow + "\n\n"
         f"Artefatos compartilhados conferidos por sha256: {len(prot['shared'])}; alterados: "
         f"{sum(not s['ok'] for s in prot['shared'])}. Total de itens: {prot['items_total']}; tudo igual: "

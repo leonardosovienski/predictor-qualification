@@ -1,6 +1,6 @@
 # integration-crypto — SOAK_REPORT
 
-Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36357575208`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36357575208/soak/SUMMARY.json` (sha256 `1c666f2f7b00f2d6…`); comandos brutos em `RAW_LOGS/runtime/run36357575208/soak/commands.log`.
+Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36360088636`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36360088636/soak/SUMMARY.json` (sha256 `c6e35a3a68c43050…`); comandos brutos em `RAW_LOGS/runtime/run36360088636/soak/commands.log`.
 
 Resultado: **43 conferências OK, 0 falhas**.
 
@@ -66,6 +66,7 @@ Execuções por classe de falha: {"cain_process_death": 10, "delivery_anomaly": 
 Execuções anteriores do soak, mantidas como evidência (não descartadas):
 
 - `run36357313578`: 40 OK, 1 falhas — `floor llm_proposals >= 5` (obtido: 0). Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36357313578/soak/SUMMARY.json` (sha256 `0a89a8a02ae4ad14…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36357313578/soak/commands.log` (sha256 `62402be054cae991…`) (bytes de entrada, limite): [(4487, 3584)].
+- `run36357575208`: 43 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36357575208/soak/SUMMARY.json` (sha256 `1c666f2f7b00f2d6…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36357575208/soak/commands.log` (sha256 `b7f785e5441e881b…`) (bytes de entrada, limite): nenhuma.
 
 A falha anterior foi de configuração do harness, não do produto: o `cain-llm.toml` do soak declarava `num_ctx = 4096`, e o orçamento de entrada do cliente LLM do cain é `min(max_input_bytes, num_ctx - num_predict - 256)` = min(6500, 4096 - 256 - 256), menor que o pedido de proposta com contexto (números da recusa acima, lidos do log). Cada proposta saiu `LLM_PROPOSAL_FAILED` (fail closed, nenhuma task emitida). O harness passou a declarar `num_ctx = 8192` e `max_input_bytes = 16000` (`scripts/soak.py`, commit `2319ed0`, cuja mensagem atribui o 3584 ao padrão do cain por engano: o padrão de `max_input_bytes` é 6500, e o limite vinha do `num_ctx` do harness). Perfil, pisos, parâmetros congelados e vetores não mudaram.
 
