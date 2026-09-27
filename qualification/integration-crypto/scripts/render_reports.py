@@ -50,6 +50,7 @@ def main() -> int:
     # ---------------------------------------------------------------- CLEANROOM (final)
     report = (m / "CLEANROOM_REPORT.md").read_text(encoding="utf-8")
     head = report.split("## cleanroom-final")[0]
+    targets = json.loads((m / "runtime_targets.json").read_text(encoding="utf-8"))
     junit = {name: n(f"runtime/{run}/cleanroom-final/{name}.junit.xml:junit") for name in ("conformance", "transport", "cain")}
     lines = "\n".join(f"| {name} | {v['tests']} | {v['failures']} | {v['errors']} | {v['skipped']} |" for name, v in junit.items())
     (m / "CLEANROOM_REPORT.md").write_text(
@@ -59,9 +60,9 @@ def main() -> int:
         f"{cite(rt / 'cleanroom-final' / 'cleanroom_final.log')}.\n\n"
         "| Suíte (instalada da wheel) | testes | falhas | erros | pulados |\n|---|--:|--:|--:|--:|\n" + lines + "\n\n"
         "- `conformance`: a suíte de conformidade congelada da Etapa A do cripto (`tests/conformance` do commit final), "
-        "contra o `cripto-predictor` 1.2.0rc3 instalado com o protocolo e o transporte no mesmo venv (C24.3 c).\n"
-        "- `transport`: testes do `predictor-research-transport` 0.1.0rc2 contra a wheel instalada.\n"
-        "- `cain`: política, orquestração, cerco do loop e SHA completo, contra o `cain-research` 0.4.13rc5 instalado.\n",
+        f"contra o `cripto-predictor` {targets['cripto']['version']} instalado com o protocolo e o transporte no mesmo venv (C24.3 c).\n"
+        f"- `transport`: testes do `predictor-research-transport` {targets['transport']['version']} contra a wheel instalada.\n"
+        f"- `cain`: política, orquestração, cerco do loop e SHA completo, contra o `cain-research` {targets['cain']['version']} instalado.\n",
         encoding="utf-8")
     # ---------------------------------------------------------------- CAIN_ROUNDTRIP
     def summary(rel: str) -> dict:

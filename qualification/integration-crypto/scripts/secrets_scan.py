@@ -27,8 +27,8 @@ PATTERNS = {
     "secret_assignment": re.compile(r"(?i)\b(api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"][A-Za-z0-9/+_\-]{16,}['\"]"),
 }
 DIFFS = {
-    "cain": ("f343701937a7a798d66e11d2d8aa18e24395e215", "6b460afd5f19e8a1739a09a9eaabab1dbe98084f"),
-    "ecosystem-predictor": ("49ffb16380d2e91eb7e4a2a936e63ba779c29033", "a19655f45f84842fea9f331429aa30d2c9ee4394"),
+    "cain": ("f343701937a7a798d66e11d2d8aa18e24395e215", "10744a9f149610d7741431c28c1e78c681c41165"),
+    "ecosystem-predictor": ("49ffb16380d2e91eb7e4a2a936e63ba779c29033", "61f3ac42160489ffbd872b05881a9b58b5bc0fcf"),
     "cripto-predictor": ("341d270e4d709150c581c3cd93f4518d483009eb", "ee3d3d17de0b76cf731808243ffa838a0f5ee8cc"),
 }
 
