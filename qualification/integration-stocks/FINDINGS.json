@@ -113,7 +113,25 @@
       "integration_crypto_status": "em execução por outra sessão no PC 2 (predictor-qualification PR #57, aberto, 'integration-crypto: C0, parâmetros congelados e baseline (em andamento)')"
     },
     "effect": "Nenhuma fase rodou. Nenhuma decisão D-<n> foi criada (5.5 só vale depois de o pré-voo passar). Nada mudou em cain, ecosystem-predictor, stocks-predictor, core-predictor ou predictor-ops. Nenhum worktree de código foi criado. O COTAHIST_A2026.ZIP não foi lido. Nada foi instalado no Windows.",
-    "resume": "Com qualification/integration-crypto/QUALIFICATION_ATTESTATION.json result = QUALIFIED no main (e o DECISION_POLICY_REPORT.md dela), uma sessão nova da missão refaz o C0 do zero, cria a D-<n> (5.5) e começa por freeze-parameters (C8). Este registro não é attestation nem parcial."
+    "resume": "Com qualification/integration-crypto/QUALIFICATION_ATTESTATION.json result = QUALIFIED no main (e o DECISION_POLICY_REPORT.md dela), uma sessão nova da missão refaz o C0 do zero, cria a D-<n> (5.5) e começa por freeze-parameters (C8). Este registro não é attestation nem parcial.",
+    "rechecks": [
+      {
+        "reason": "origin/main mudou (merges dos PRs #57, parcial da integration-crypto, e #58, este registro); o prompt manda refazer 4.1–4.7 antes de cada commit",
+        "checked_at": "2026-09-27T22:00:21Z",
+        "evidence_repo_ref": "origin/main d4c3094dea943a15bca1484ea825236ca0f63f02",
+        "raw_log": "qualification/integration-stocks/RAW_LOGS/c0/c0_preflight_d4c3094.log",
+        "raw_log_sha256": "54f5b7aaf6cb7e4840338e3d25f221149d462a03d7ce5809e8574c2d5ff3ce08",
+        "state": "ABORTED",
+        "failed": [
+          "4.5/missao1-integration-crypto-QUALIFIED",
+          "4.5/reuso-final_commit-cain",
+          "4.5/reuso-final_commit-ecosystem-predictor",
+          "4.5/reuso-final_wheels-cain-ecosystem",
+          "4.5/reuso-DECISION_POLICY_REPORT"
+        ],
+        "observed": "qualification/integration-crypto/ existe, mas sem QUALIFICATION_ATTESTATION.json e sem DECISION_POLICY_REPORT.md; o último parcial (ATTESTATION_PARTIAL_cleanroom-baseline.json) tem result = IN_PROGRESS, com 4 fases concluídas (freeze-parameters, baseline, truth-map, cleanroom-baseline); GATES.json tem final_commits e final_wheels vazios. Os demais itens de 4.1–4.7 continuam passando, com o mesmo resultado."
+      }
+    ]
   },
   "findings": []
 }
