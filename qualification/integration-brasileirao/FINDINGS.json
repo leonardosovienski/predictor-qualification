@@ -72,5 +72,105 @@
     "effect": "Nenhuma fase rodou. Nada mudou em cain, ecosystem-predictor, brasileirao-predictor, core-predictor ou predictor-ops. Nenhum dado do Brasileirão foi lido além do sha256 do arquivo.",
     "resume": "Com as quatro pré-condições no main, uma sessão nova da missão refaz o C0 do zero e começa por freeze-parameters (C8). Este registro não é attestation nem parcial."
   },
-  "findings": []
+  "findings": [],
+  "c0_rechecks": [
+    {
+      "state": "ABORTED",
+      "rule": "COMMON_QUALIFICATION_CORE.md v2.3, C0.4 e C7.3: pré-condição do prompt falhou → ABORTED, motivo aqui, nenhuma fase roda. Prompt da sessão de 2026-09-27, regra única do pré-voo (4.1–4.8): não contornar, não implementar, registrar, PR só com este registro",
+      "checked_at": "2026-09-27T22:05:12Z",
+      "evidence_repo_ref": "origin/main 788b00101a1a67439e509bc0e74ee5024eeb8488",
+      "common_core_sha256": "beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc",
+      "scripts": [
+        "qualification/integration-brasileirao/scripts/c0_preflight.sh (+ c0_preconditions.py), sem mudança desde #53",
+        "qualification/integration-brasileirao/scripts/c0_stage_b_base.sh (novo: itens 4.4–4.8 do prompt da sessão)"
+      ],
+      "python": "3.13.15 gerenciado (~/predictors/tools), WSL do PC 2",
+      "raw_logs": [
+        {
+          "path": "qualification/integration-brasileirao/RAW_LOGS/c0-20260927/c0_preflight_788b001.log",
+          "sha256": "457735ad1892bdd31920d0157fca1253128bb2ac5bb32bad95a8eba41a69a12b"
+        },
+        {
+          "path": "qualification/integration-brasileirao/RAW_LOGS/c0-20260927/c0_stage_b_base_788b001.log",
+          "sha256": "4ce08a5e4c537ef89665abce4dc7f54b840f362f52b725472de765a30099d26d"
+        }
+      ],
+      "failed_check_ids": [
+        "3.4/integration-crypto",
+        "3.4/integration-stocks",
+        "4.5/integration-crypto-attestation",
+        "4.5/integration-stocks-attestation"
+      ],
+      "failed": [
+        {
+          "check": "4.5/integration-stocks-QUALIFIED",
+          "requirement": "qualification/integration-stocks/QUALIFICATION_ATTESTATION.json com result = QUALIFIED no main",
+          "source": "prompts/prompt_etapa_b_brasileirao_rev9.md §1; DECISIONS.json D-22",
+          "verification": "leitura do arquivo no snapshot git archive de origin/main 788b001 (c0_preconditions.py e c0_stage_b_base.sh)",
+          "observed": "o arquivo não existe; qualification/integration-stocks/ tem só o registro de C0 ABORTED (PRs #58 e #59: integration-crypto não QUALIFIED), 0 parciais",
+          "missing": "missão integration-stocks QUALIFIED e mergeada no main"
+        },
+        {
+          "check": "4.5/integration-crypto-QUALIFIED",
+          "requirement": "integration-crypto QUALIFIED (exigida pela integration-stocks; ordem da D-22)",
+          "source": "prompts/prompt_etapa_b_brasileirao_rev9.md §1; prompts/prompt_etapa_b_stocks_rev9.md §1; DECISIONS.json D-22",
+          "verification": "leitura do arquivo no snapshot git archive de origin/main 788b001",
+          "observed": "o arquivo não existe; a missão está em andamento no main (4 parciais: freeze-parameters, baseline, truth-map, cleanroom-baseline; c0.state = PASSED)",
+          "missing": "missão integration-crypto QUALIFIED e mergeada no main"
+        },
+        {
+          "check": "4.5/reuso-final_commits-final_wheels-cain-ecosystem",
+          "requirement": "final_commits e final_wheels de cain e ecosystem-predictor da integration-stocks QUALIFIED, com assets baixados e sha256 conferidos; descrição do framework do CAIN",
+          "source": "prompt da sessão 4.5 e 7.4",
+          "verification": "leitura de final_commits/final_wheels na attestation da integration-stocks",
+          "observed": "não verificável: attestation ausente; nenhum asset a baixar",
+          "missing": "base qualificada de cain e ecosystem-predictor"
+        }
+      ],
+      "passed": [
+        "3.1/C0.1-core-sha256",
+        "3.2/D-16",
+        "3.2/D-19",
+        "3.2/D-22",
+        "3.3/C0.2-manifest",
+        "3.6/dado-sha256",
+        "4.4/ENVELOPE_V2_FREEZE.json",
+        "4.4/STACK_BASELINE_V2.0.json",
+        "4.6a/attestation-etapaA",
+        "4.6a/runtime_target",
+        "4.6b/STACK_BASELINE_V2.0",
+        "4.6c/asset-wheel",
+        "4.6c/tag-v0.3.0rc3",
+        "4.6d/arvore-25cdf4d=d80a4ed",
+        "4.6d/base-ancestral-do-main",
+        "4.7/PROVISION_RECEIPT",
+        "4.8/protocolo-V2-wheel",
+        "C0.3/HYGIENE",
+        "C0.3/baseline-comum",
+        "comum1/ENVELOPE_V2_FREEZE",
+        "comum1/SHARED-003",
+        "comum1/SHARED-004",
+        "comum1/SHARED-005",
+        "comum1/STACK_BASELINE_V2.n",
+        "comum1/contrato-brasileirao",
+        "comum1/contrato-crypto",
+        "comum1/contrato-stocks",
+        "comum1/etapaA-brasileirao",
+        "comum1/etapaA-crypto",
+        "comum1/etapaA-stocks",
+        "missao2/contrato-adapter_entrypoints",
+        "missao2/contrato-adapter_paths",
+        "missao2/contrato-prefixo",
+        "missao2/runtime_target"
+      ],
+      "observations": {
+        "brasileirao_predictor_main": "d80a4edee94ca0219ec308911d56628499792885 (não avançou; árvore 88b1efa6167655b21b9603c144a423755ef8fb46 = árvore de 25cdf4d)",
+        "stack_baseline_v2_0_brasileirao": "commit 25cdf4d, wheel 403e6a02…, Core 3.2.1 (10ef42f3…), Ops 4.2.2rc1 (0be70bfb…): SHARED-005 resolvido nesta Ops",
+        "protocol_v2_wheel": "predictor_research_protocol-2.0.0rc2, 28722 bytes, sha256 34a1e412… = ENVELOPE_V2_FREEZE.json"
+      },
+      "effect": "Nenhuma fase rodou. Nenhuma decisão D-<n> foi registrada (5.4 do prompt só depois do pré-voo passar). Nada mudou em cain, ecosystem-predictor, brasileirao-predictor, core-predictor ou predictor-ops. Nada foi criado no Windows. O dado do Brasileirão só foi aberto para o sha256 e pelo no_data_rows_check (que não imprime registros).",
+      "relation_to_previous": "O C0 ABORTED de 2026-09-26 (campo c0) continua como histórico. Este é um novo C0, também ABORTED; nenhum dos dois é parcial nem attestation.",
+      "resume": "Com integration-crypto e integration-stocks QUALIFIED no main, uma sessão nova refaz o C0 do zero."
+    }
+  ]
 }
