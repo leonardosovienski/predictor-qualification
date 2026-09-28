@@ -1,0 +1,89 @@
+{
+ "scenario": "F08",
+ "finished_at": "2026-09-28T14:43:42Z",
+ "checks": [
+  {
+   "check": "F08: consumer died after the domain, before the V2 result (86)",
+   "ok": true
+  },
+  {
+   "check": "F08: resent through the adapter_api, domain answered DUPLICATE",
+   "ok": true,
+   "got": [
+    {
+     "action": "delivered",
+     "attempt": 2,
+     "class": "TERMINAL_RESULT",
+     "episode_id": "stocks:episode-1",
+     "result_file": "stocks/results/TASK-30bd4f94c994343726232bad2ca19052.5704c1b38840fa54.json",
+     "result_write": "WRITTEN",
+     "status": "DUPLICATE",
+     "task_id": "stocks:TASK-30bd4f94c994343726232bad2ca19052"
+    }
+   ]
+  },
+  {
+   "check": "stocks:REQ-IS-FM-F08-1: payload byte-identical to `stocks-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "362a2ae3195a6d2e206a87551c084363ab5438b42d12c7379e783af8da4bd753",
+   "show_sha256": "362a2ae3195a6d2e206a87551c084363ab5438b42d12c7379e783af8da4bd753"
+  },
+  {
+   "check": "stocks:REQ-IS-FM-F08-1: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "7cb9267fa2ffcc599177a1aa4f03d757e98284b5afaaeb17d748a670b664d825"
+  },
+  {
+   "check": "stocks:REQ-IS-FM-F08-1: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "stocks:REQ-IS-FM-F08-1: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "stocks:REQ-IS-FM-F08-1: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "stocks:REQ-IS-FM-F08-1: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "stocks-predictor",
+    "module": "stocks_predictor.adapters.research_v2",
+    "version": "0.3.0rc3"
+   }
+  },
+  {
+   "check": "stocks:REQ-IS-FM-F08-1: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "F08: one domain result",
+   "ok": true,
+   "got": {
+    "episodes": 1,
+    "allow": 1,
+    "inbox": 1,
+    "facts": 1,
+    "spool_tasks": 1,
+    "admissions": 1,
+    "experiments": 1,
+    "memory": "intact"
+   },
+   "want": {
+    "allow": 1,
+    "inbox": 1,
+    "facts": 1,
+    "spool_tasks": 1,
+    "admissions": 1,
+    "experiments": 1,
+    "memory": "intact"
+   }
+  }
+ ],
+ "passed": 10,
+ "failed": 0
+}

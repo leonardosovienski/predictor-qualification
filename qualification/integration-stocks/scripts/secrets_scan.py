@@ -6,6 +6,8 @@ padrões de token/chave (GitHub, AWS, chaves privadas PEM, Slack, Google, OpenAI
 valor). O relatório lista só o arquivo, a linha e o nome do padrão, nunca o valor. Complementa, sem substituir, os
 scanners dos CIs (gitleaks do ecosystem, scan_secrets.py do cripto).
 Adaptado de qualification/integration-crypto/scripts/secrets_scan.py (mesma lógica; missão integration-stocks).
+Os commits finais vêm de runtime_targets.json (ciclo 2: cain 0.4.13rc11 e transporte 0.1.0rc5); as bases são as do
+baseline da missão.
 Uso: python secrets_scan.py <clones> <checkout predictor-qualification> <out.json>
 """
 
@@ -27,10 +29,11 @@ PATTERNS = {
     "llm_api_key": re.compile(r"\b(sk-ant-[A-Za-z0-9_\-]{20,}|sk-[A-Za-z0-9]{40,})"),
     "secret_assignment": re.compile(r"(?i)\b(api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"][A-Za-z0-9/+_\-]{16,}['\"]"),
 }
+TARGETS = json.loads((Path(__file__).resolve().parents[1] / "runtime_targets.json").read_text(encoding="utf-8"))
 DIFFS = {
-    "cain": ("10744a9f149610d7741431c28c1e78c681c41165", "deccaaa0a0e2cb2b5f292614659eb4bf2e943e50"),
-    "ecosystem-predictor": ("61f3ac42160489ffbd872b05881a9b58b5bc0fcf", "1304b206239d1488fa6a8757364d7571d6c8cf81"),
-    "stocks-predictor": ("61fc017256ffea815ae96bbe02b847dccdb395cc", "6f857b232eaa63f3fccda6a16f92dbfc8983ab3b"),
+    "cain": ("10744a9f149610d7741431c28c1e78c681c41165", TARGETS["cain"]["commit"]),
+    "ecosystem-predictor": ("61f3ac42160489ffbd872b05881a9b58b5bc0fcf", TARGETS["transport"]["commit"]),
+    "stocks-predictor": ("61fc017256ffea815ae96bbe02b847dccdb395cc", TARGETS["stocks"]["commit"]),
 }
 
 

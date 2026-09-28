@@ -8,9 +8,12 @@
 #      acrescentado a stocks_predictor/trials_gate.py.
 # Mesmos comandos e flags do .github/workflows/ci.yml do commit. Usa o gitleaks 8.24.3 oficial já presente em
 # ~/predictors/tools/secscan/, com o tar conferido contra o gitleaks_sums.txt da release.
-# Uso: tree_scan_local.sh <clone do stocks-predictor> <commit> <dir de trabalho fora do checkout> <out_dir>
+# Ciclo 2: os passos que usavam o python3 do sistema (contar achados, anexar e conferir o token) passam a usar o Python gerenciado em $PY
+# (regra "só Python gerenciado"; o desvio da reemissão 1 está registrado no log da missão).
+# Uso: PY=<python gerenciado> tree_scan_local.sh <clone do stocks-predictor> <commit> <dir de trabalho fora do checkout> <out_dir>
 set -uo pipefail
 CLONE=$1 COMMIT=$2 WORK=$3 OUT=$4
+PY=${PY:?defina PY com um Python gerenciado}
 SEC=$HOME/predictors/tools/secscan
 TAR=gitleaks_8.24.3_linux_x64.tar.gz
 mkdir -p "$OUT"
@@ -29,9 +32,9 @@ echo "=== passo 1: árvore completa do commit"
 "$GL" detect --no-git --config "$WORK/tree/.gitleaks.toml" --source "$WORK/tree" --redact --exit-code=2 \
   --report-format=sarif --report-path="$OUT/stocks-current-tree.sarif" 2>&1 | grep -v "^\s*$"
 rc1=${PIPESTATUS[0]}
-echo "passo1_exit $rc1 achados=$(python3 -c "import json;print(len(json.load(open('$OUT/stocks-current-tree.sarif'))['runs'][0]['results']))")"
+echo "passo1_exit $rc1 achados=$("$PY" -c "import json;print(len(json.load(open('$OUT/stocks-current-tree.sarif'))['runs'][0]['results']))")"
 echo "=== passo 2: controle (token sintético em stocks_predictor/trials_gate.py)"
-python3 - "$WORK/tree/stocks_predictor/trials_gate.py" <<'PY'
+"$PY" - "$WORK/tree/stocks_predictor/trials_gate.py" <<'PY'
 import secrets
 import sys
 with open(sys.argv[1], "a", encoding="utf-8") as stream:
@@ -40,7 +43,7 @@ PY
 "$GL" detect --no-git --config "$WORK/tree/.gitleaks.toml" --source "$WORK/tree" --redact --exit-code=2 \
   --report-format=sarif --report-path="$OUT/stocks-scan-control.sarif" 2>&1 | grep -v "^\s*$"
 rc2=${PIPESTATUS[0]}
-python3 - "$OUT/stocks-scan-control.sarif" <<'PY'
+"$PY" - "$OUT/stocks-scan-control.sarif" <<'PY'
 import json
 import sys
 findings = json.load(open(sys.argv[1]))["runs"][0]["results"]

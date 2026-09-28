@@ -132,3 +132,23 @@ Decisão no chat da sessão, numa pergunta com opções: **"(a) Encadeada (Recom
 | `FINDINGS.json`, `scripts/owner_decision_is_f008.py` | IS-F008 → `ACCEPTED_LIMITATION`, com as palavras do dono e o texto da opção |
 | `scripts/protected_check.py` | Para os 4 itens, segue os ponteiros (`cycle.supersedes` nos congelados; `supersedes_sha256` + `_superseded_<sha12>` nas attestations) até `MAX_HOPS`. `all_unchanged` continua sendo a letra da C15.1; o gate usa `all_unchanged_or_chained`. Teste a seco no checkout deste commit: 3387 itens, os 4 encadeados (a attestation da integration-crypto em 2 saltos), nenhum outro alterado. A conferência que vale como evidência é a da fase protected do ciclo 2 |
 | `RAW_LOGS/c0/c0_preflight_30c02c7.log` | Pré-voo 4.1–4.7 no main novo |
+
+## 2026-09-28 — ciclo 2: run na cain 0.4.13rc11 e decisão do dono de seguir para a rc12
+
+- **Run 36435997297** (push em `integration-stocks/runtime-…-c2`, commit `e1cf15a`; artefatos em `RAW_LOGS/runtime/run36435997297/` e `-windows/`). Rodou com o cain 0.4.13rc11 (`3b65ffe`), o transporte 0.1.0rc5 e o stocks rc3. Todas as fases terminaram com exit 0:
+  - cleanroom-final;
+  - C24.3 (d) 11/0;
+  - e2e 55/0;
+  - N+1 63/0, integrado 64/0;
+  - isolamento 28/0; contradição 9/0;
+  - F01–F15 sem falha;
+  - soak 43/0 com `qwen2.5:0.5b`: 5 propostas de LLM, uma por hipótese `QUAL-LLM-CTRL`, sementes 9001–9005. O modelo errou 1 das 6 tentativas.
+  - Windows: e2e + restart verde.
+- **Conferências feitas na rc11** (stocks-predictor `6f857b2`, que não muda):
+  - `RAW_LOGS/hosted-ci/final-c2/`: aceite do dono IS-F004/IS-F005 (b) reconferido 9/0. A varredura local da árvore agora usa um Python gerenciado, e `tree_scan_local.sh` corrige o desvio da reemissão 1: PASS, controle detectado.
+  - `RAW_LOGS/contract-revalidation-c2/`: C24.3 estático 12/0. A 1ª execução, chamada sem o arquivo do aceite, fica preservada como `*_run1_sem_aceite.*`.
+- **Regressão da rc11 no cripto.** A sessão cripto achou que, com `result_metrics`, o contexto do LLM do cripto passava do orçamento do provider. A correção é o cain#75 (só `llm.py`), mergeado pelo dono, e sai na rc12. O stocks não é atingido.
+- **Decisão do dono** no chat, pergunta com opções: **"Seguir para a rc12 (Recomendado)"**. A integration-stocks fecha a attestation na mesma release das outras duas integrações, com C14 de novo: run e conferências refeitos na rc12.
+  - Não há novo ciclo de congelados: a política (`policy.py`, sha256 `aff2f5fc…`) e o `stocks.json` são byte a byte os da rc11.
+  - O `FROZEN_PARAMETERS.json` do ciclo 2 cita a rc11 como a release planejada; o `runtime_targets.json` fixa a rc12.
+  - O run da rc11 fica preservado como evidência.
