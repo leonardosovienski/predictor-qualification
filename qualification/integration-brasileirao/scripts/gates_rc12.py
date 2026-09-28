@@ -1,4 +1,6 @@
-"""integration-brasileirao: ledger GATES.json das fases de runtime na cain v0.4.13rc12 (fonte única para attest.py).
+"""integration-brasileirao: ledger GATES.json das fases de runtime (fonte única para attest.py); o sufixo rc<N> das
+fases e das pastas de conferência vem da versão do cain em runtime_targets.json (rc12 na primeira emissão, rc13 na
+reemissão), para que as evidências de uma emissão nunca sejam sobrescritas pela seguinte.
 
 Cada gate recebe status, evidências e nota; o status é CALCULADO das evidências (SUMMARY.json com 0 falhas, os
 arquivos de conferência, as contagens do FINDINGS.json), nunca digitado. O SOAK é PASS só se a única conferência que
@@ -22,8 +24,8 @@ M = "qualification/integration-brasileirao"
 # `git rev-parse <tag>^{commit}` nos clones; o 5a08415 do STACK_BASELINE é o main do core, não a tag da wheel
 CORE_OPS = {"core-predictor": "7bb212cfa06333886e11e849b209c5aab801c04b",
             "predictor-ops": "9831b0d5e727972b1d85ff48be14ffa58677898b"}
-PHASES = ["cleanroom-final-rc12", "contract-revalidation-rc12", "e2e-rc12", "n-plus-1-rc12",
-          "isolation-ids-contradiction", "idempotency-failure", "windows-smoke", "hosted-ci", "soak"]
+PHASES = ["cleanroom-final", "contract-revalidation", "e2e", "n-plus-1", "isolation-ids-contradiction",
+          "idempotency-failure", "windows-smoke", "hosted-ci", "soak"]
 
 
 def main() -> int:
@@ -31,6 +33,7 @@ def main() -> int:
     root = q.parents[1]
     r, w = f"{M}/RAW_LOGS/runtime/{run}", f"{M}/RAW_LOGS/runtime/{run}-windows"
     targets = json.loads((q / "runtime_targets.json").read_text(encoding="utf-8"))
+    suf = "rc" + targets["cain"]["version"].split("rc")[-1]
     findings = {f["id"]: f for f in json.loads((q / "FINDINGS.json").read_text(encoding="utf-8"))["findings"]}
 
     def load(rel):
@@ -51,12 +54,12 @@ def main() -> int:
     fm_ok = all(p["failed"] == 0 for p in load(fm)["points"]) and len(load(fm)["points"]) == 16
     fm_points = {p: f"{r}/failure-matrix/{p}/SUMMARY.json" for p in [f"F{i:02d}" for i in range(1, 17)]}
     junits = [f"{r}/cleanroom-final/{n}.junit.xml" for n in ("conformance", "transport", "cain")]
-    core = f"{M}/RAW_LOGS/core-identity/core_identity.json"
-    hosted = f"{M}/RAW_LOGS/hosted-ci/final-rc12/HOSTED_CI_SUMMARY.json"
+    core = f"{M}/RAW_LOGS/core-identity-{suf}/core_identity.json" if suf != "rc12" else f"{M}/RAW_LOGS/core-identity/core_identity.json"
+    hosted = f"{M}/RAW_LOGS/hosted-ci/final-{suf}/HOSTED_CI_SUMMARY.json"
     acc = f"{r}/contract-revalidation/ib_f005_acceptance.json"
     static = f"{r}/contract-revalidation/static.json"
-    prot = f"{M}/RAW_LOGS/protected/protected_check.json"
-    secrets = f"{M}/RAW_LOGS/secrets/secrets_scan.json"
+    prot = f"{M}/RAW_LOGS/protected-{suf}/protected_check.json" if suf != "rc12" else f"{M}/RAW_LOGS/protected/protected_check.json"
+    secrets = f"{M}/RAW_LOGS/secrets-{suf}/secrets_scan.json" if suf != "rc12" else f"{M}/RAW_LOGS/secrets/secrets_scan.json"
     env_log = f"{r}/runtime_env.log"
     soak = load(s["soak"])
     soak_failed = [c["check"] for c in soak["checks"] if not c["ok"]]
@@ -171,7 +174,7 @@ def main() -> int:
                                 "evidence": [static, acc, s["d"], junits[0]]}
     g["shared_dependency_verdicts"] = []
     g["runtime_run"] = run
-    for p in PHASES + ["attestation"]:
+    for p in [f"{x}-{suf}" for x in PHASES] + [f"attestation-{suf}" if suf != "rc12" else "attestation"]:
         if p not in g["phases_completed"]:
             g["phases_completed"].append(p)
     # C7.1 (1): QUALIFIED só com todos os gates PASS, P0 = P1 = 0, revalidação do domínio PASS e nenhum veredito bloqueante

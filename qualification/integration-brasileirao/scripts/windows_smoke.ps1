@@ -16,31 +16,34 @@
 # Uso: powershell -NoProfile -ExecutionPolicy Bypass -File windows_smoke.ps1 -StageSrc <UNC do stage> -Back <UNC>
 #   StageSrc: \\wsl.localhost\Ubuntu-24.04\home\superleo13\predictors\runtime\integration-brasileirao\priv\<run>\windows-stage
 #   Back:     \\wsl.localhost\Ubuntu-24.04\home\superleo13\predictors\runtime\integration-brasileirao\priv\<run>\windows-back
-param([Parameter(Mandatory = $true)][string]$StageSrc, [Parameter(Mandatory = $true)][string]$Back)
+param([Parameter(Mandatory = $true)][string]$StageSrc, [Parameter(Mandatory = $true)][string]$Back,
+      [Parameter(Mandatory = $true)][string]$RunName)
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$Root = "C:\QUALIFICACAO\runtime\integration-brasileirao"
+# uma subpasta por run (nada de execucoes anteriores e apagado); uv e Python gerenciados compartilhados em tools\
+$Base = "C:\QUALIFICACAO\runtime\integration-brasileirao"
+$Tools = "$Base\tools"
+if ($RunName -notmatch "^[A-Za-z0-9._-]+$") { throw "RunName invalido" }
+$Root = "$Base\runs\$RunName"
+if (Test-Path $Root) { throw "$Root ja existe: cada run tem a sua pasta" }
 $DataSrc = "\\wsl.localhost\Ubuntu-24.04\home\superleo13\predictors\runtime\integration-brasileirao\data\matches_source_copy.sqlite3"
 $DataSha = "31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43"
-foreach ($d in @("logs", "stage", "data", "wheels", "w", "out", "repo")) {
-  if (Test-Path "$Root\$d") { throw "$Root\$d ja existe: rode numa pasta limpa (exceto tools)" }
-}
 New-Item -ItemType Directory -Force -Path "$Root\logs", "$Root\stage", "$Root\data", "$Root\wheels", "$Root\w", "$Root\out" | Out-Null
 $Log = "$Root\logs\windows_smoke.log"
 function Say([string]$m) { $line = "$(Get-Date -Format o) $m"; Add-Content -Path $Log -Value $line -Encoding utf8; Write-Host $line }
 function Sha([string]$p) { (Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLower() }
 Say "windows-smoke start host=$env:COMPUTERNAME (PC 2 do dono, Windows local secundario) os=$([Environment]::OSVersion.VersionString) root=$Root"
 # ---------------------------------------------------------------- 1. uv e Python gerenciados (tools\)
-$expected = (Get-Content "$Root\tools\uv-x86_64-pc-windows-msvc.zip.sha256").Split(" ")[0].Trim().ToLower()
-$got = Sha "$Root\tools\uv-x86_64-pc-windows-msvc.zip"
+$expected = (Get-Content "$Tools\uv-x86_64-pc-windows-msvc.zip.sha256").Split(" ")[0].Trim().ToLower()
+$got = Sha "$Tools\uv-x86_64-pc-windows-msvc.zip"
 if ($got -ne $expected) { throw "uv zip sha256 $got != $expected" }
-$uvExe = "$Root\tools\uv\uv.exe"
-$env:UV_PYTHON_INSTALL_DIR = "$Root\tools\python"
-$env:UV_CACHE_DIR = "$Root\tools\uv-cache"
+$uvExe = "$Tools\uv\uv.exe"
+$env:UV_PYTHON_INSTALL_DIR = "$Tools\python"
+$env:UV_CACHE_DIR = "$Tools\uv-cache"
 $env:UV_PYTHON_PREFERENCE = "only-managed"
 $env:UV_PYTHON_DOWNLOADS = "never"
 $py = (& $uvExe python find 3.13).Trim()
-if (-not $py.StartsWith("$Root\tools\python", [StringComparison]::OrdinalIgnoreCase)) { throw "python fora da pasta: $py" }
+if (-not $py.StartsWith("$Tools\python", [StringComparison]::OrdinalIgnoreCase)) { throw "python fora da pasta: $py" }
 Say "uv zip sha256 OK $got; uv=$(& $uvExe --version) python=$py version=$(& $py --version 2>&1)"
 # ---------------------------------------------------------------- 2. stage conferido
 Copy-Item -Recurse -Path "$StageSrc\*" -Destination "$Root\stage\"
@@ -119,7 +122,7 @@ foreach ($dir in @("data", "w")) {
   }
 }
 foreach ($dir in @("data", "w")) { Remove-Item -Recurse -Force -LiteralPath "$Root\$dir" }
-$left = @(Get-ChildItem -Recurse -File -Force "$Root" | Where-Object { $_.Extension -in @(".sqlite", ".sqlite3", ".db") -and -not $_.FullName.StartsWith("$Root\tools") -and -not $_.FullName.StartsWith("$Root\venv-") })
+$left = @(Get-ChildItem -Recurse -File -Force "$Root" | Where-Object { $_.Extension -in @(".sqlite", ".sqlite3", ".db") -and -not $_.FullName.StartsWith("$Tools") -and -not $_.FullName.StartsWith("$Root\venv-") })
 Say "dado real transferido ao WSL e conferido (bytes e sha256): $moved arquivos; bancos restantes no Windows fora de tools/venv: $($left.Count)"
 if ($left.Count) { throw "banco restante no Windows: $($left | ForEach-Object FullName)" }
 Say "windows-smoke end"

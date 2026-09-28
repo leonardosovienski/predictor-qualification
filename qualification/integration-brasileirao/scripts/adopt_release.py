@@ -6,8 +6,9 @@
       a byte, o que o tools/build_domain_config.py do commit da release gera a partir do <pin> (<regenerado.json>);
       3 sealed_scopes (R16); QUAL-SOAK-001..024 proponíveis com o tipo único; sem proposal_overlays nem result_metrics
       (chaves opcionais que o Brasileirão não declara);
-  python adopt_release.py record <qualification/integration-brasileirao> <tag> <commit> <wheel url> <wheel sha256>
-      grava o cain de runtime_targets.json (só o bloco do cain muda).
+  python adopt_release.py record <qualification/integration-brasileirao> <cain|transport> <tag> <commit> <wheel url>
+      <wheel sha256> <nota>
+      grava o bloco do pacote em runtime_targets.json (só esse bloco muda).
 """
 
 from __future__ import annotations
@@ -67,23 +68,25 @@ def check(root: Path, wheel: Path, wheel_sha: str, regenerated: Path, pin: str, 
     return 0 if doc["failed"] == 0 else 1
 
 
-def record(q: Path, tag: str, commit: str, url: str, wheel_sha: str) -> int:
+REPOS = {"cain": "leonardosovienski/cain", "transport": "leonardosovienski/ecosystem-predictor"}
+
+
+def record(q: Path, key: str, tag: str, commit: str, url: str, wheel_sha: str, note: str) -> int:
+    """Replace the block of ``key`` (cain or transport) in runtime_targets.json; the other blocks keep their bytes."""
     path = q / "runtime_targets.json"
     text = path.read_text(encoding="utf-8")
-    block = re.search(r' "cain": \{.*?\},\n', text, re.S)
-    assert block and text.count(' "cain": {') == 1
-    version = tag.removeprefix("v")
-    new = (f' "cain": {{"repo": "leonardosovienski/cain", "version": "{version}", "tag": "{tag}",\n'
-           f'          "commit": "{commit}",\n'
-           f'          "url": "{url}",\n'
-           f'          "sha256": "{wheel_sha}",\n'
-           '          "note": "release da Etapa B com a configuração do ciclo 4 desta missão (cain#71), a correção do '
-           'LLM para pedido sem parameters (cain#72, IB-F006) e o contexto do LLM dentro do orçamento do provider '
-           '(cain#75, rc12); rc11 (3b65ffe, 297b806d…) adotada e trocada antes das fases de cenário; ciclo 3 usou a '
-           'v0.4.13rc10 (fb0e1dc, 752de98d…); ciclo 1 a v0.4.13rc9 (3e515fd, política v1)"},\n')
+    block = re.search(rf' "{key}": \{{.*?\}},\n', text, re.S)
+    assert block and text.count(f' "{key}": {{') == 1
+    version = tag.rsplit("-v", 1)[-1].removeprefix("v")
+    pad = " " * (len(key) + 5)
+    new = (f' "{key}": {{"repo": "{REPOS[key]}", "version": "{version}", "tag": "{tag}",\n'
+           f'{pad}"commit": "{commit}",\n'
+           f'{pad}"url": "{url}",\n'
+           f'{pad}"sha256": "{wheel_sha}",\n'
+           f'{pad}"note": {json.dumps(note, ensure_ascii=False)}}},\n')
     path.write_text(text[:block.start()] + new + text[block.end():], encoding="utf-8")
     json.loads(path.read_text(encoding="utf-8"))
-    print("runtime_targets.json cain ->", tag, commit[:12])
+    print(f"runtime_targets.json {key} ->", tag, commit[:12])
     return 0
 
 
@@ -92,4 +95,4 @@ if __name__ == "__main__":
     if mode == "check":
         raise SystemExit(check(Path(sys.argv[2]), Path(sys.argv[3]), sys.argv[4], Path(sys.argv[5]), sys.argv[6],
                                Path(sys.argv[7])))
-    raise SystemExit(record(Path(sys.argv[2]), *sys.argv[3:7]))
+    raise SystemExit(record(Path(sys.argv[2]), *sys.argv[3:9]))

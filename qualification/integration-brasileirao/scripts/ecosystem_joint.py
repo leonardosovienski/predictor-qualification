@@ -397,21 +397,24 @@ def main() -> int:
             rest = list(statuses)
             if "RESULT" in rest:
                 rest.remove("RESULT")
-            lock_rows[d].append({"rep": i, "allow": True, "exits": exits, "experiments": experiments,
-                                 "statuses": statuses, "loser_published": rest[0] if rest else "none",
-                                 "died": any(e != 0 for e in exits) or "PermissionError" in text,
+            busy = sum(l.get("action") == "busy" and l.get("code") == "CONSUMER_BUSY" for r in runs for l in r[1])
+            # transport ≥ 0.1.0rc6 (ecosystem-predictor#36): one consumer per domain; the loser exits 6 with one
+            # "busy" line and publishes nothing. Exit 6 with that line is not a death.
+            lock_rows[d].append({"rep": i, "allow": True, "exits": sorted(exits), "busy": busy,
+                                 "experiments": experiments, "statuses": statuses,
+                                 "loser_published": rest[0] if rest else "none",
+                                 "died": any(e not in (0, 6) for e in exits) or "PermissionError" in text,
                                  "permission_error": "PermissionError" in text})
 
         def good(r):
-            terminal = [s for s in r.get("statuses", []) if s in ("RESULT", "DUPLICATE")]
-            return (r["allow"] and r["exits"] == [0, 0] and not r["permission_error"] and r["experiments"] == 1
-                    and terminal.count("RESULT") == 1
-                    and set(r["statuses"]) <= {"RESULT", "DUPLICATE", "OPS_FAILED_RETRYABLE"})
+            # exactly one delivery (RESULT) and one busy consumer that published nothing, one experiment
+            return (r["allow"] and r["exits"] == [0, 6] and r["busy"] == 1 and not r["permission_error"]
+                    and r["experiments"] == 1 and r["statuses"] == ["RESULT"])
 
         rows = lock_rows[d]
-        h.check(f"13: {d}: {reps} races of two consumers on the same spool/ledger/state: no process dies (exit 0, no "
-                "PermissionError), exactly one experiment and exactly one RESULT per task (an extra non-terminal "
-                "OPS_FAILED_RETRYABLE of the loser is recorded, not counted as a failure)",
+        h.check(f"13: {d}: {reps} races of two consumers on the same spool/ledger/state: one delivers (exit 0, one "
+                "RESULT), the other is busy (exit 6, CONSUMER_BUSY) and publishes nothing; one experiment per task; no "
+                "death, no PermissionError",
                 len(rows) == reps and all(good(r) for r in rows), reps=len(rows),
                 failures=[r for r in rows if not good(r)],
                 loser_published={s: sum(r.get("loser_published") == s for r in rows)
