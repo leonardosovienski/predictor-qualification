@@ -21,7 +21,7 @@ Fora de `stocks_predictor/adapters/` só entram:
 - C24.3(a): a linha `version` do `pyproject.toml` e a linha da versão do projeto no `uv.lock` (pré-release);
 - **autorizados pela D-24 (4)** (decisão do dono, resposta ao conflito C19 entre a regra local R8 e C24.3(a)): arquivos NOVOS em `tests/adapters/`, os dois recibos R8 novos (só `.json`) em `docs/engineering/2026-09-27-integration-stocks/evidence/` e o selo `docs/engineering/current-operational-evidence.json`.
 
-Parte estática (`qualification/integration-stocks/RAW_LOGS/contract-revalidation-r1/static_checks.json` (sha256 `bc8600e5a421b85e…`)):
+Parte estática (`qualification/integration-stocks/RAW_LOGS/contract-revalidation-rc12/static_checks.json` (sha256 `5622b293b41ba528…`)):
 
 | Conferência | Resultado |
 |---|---|
@@ -38,8 +38,8 @@ Parte estática (`qualification/integration-stocks/RAW_LOGS/contract-revalidatio
 | (e) every protected item of the stocks domain has the same blob at the final commit | OK |
 | (f) CI of the domain on the exact final commit: green push run (prompt 9.3) or the workflow_dispatch run accepted by the owner (IS-F004/IS-F005 b) | OK |
 
-(c) suíte de conformidade verde com as wheels da integração: 87 testes, 0 falhas (`qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/conformance.junit.xml` (sha256 `44c607b48cd6f79e…`)).
+(c) suíte de conformidade verde com as wheels da integração: 87 testes, 0 falhas (`qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/cleanroom-final/conformance.junit.xml` (sha256 `eb1bbdf05d2d053f…`)).
 
-(d) vetor congelado da Etapa A pelo adapter: 11 conferências OK, 0 falhas (`qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/contract-revalidation/SUMMARY.json` (sha256 `390e243d9dca7ca3…`)): hash canônico sem `client_ref` igual ao do vetor (`ef6472aa058a1fbb…`, o mesmo conferido contra o resultado real da Etapa A), `client_ref` devolvido igual, payload byte-idêntico ao `show` (adapter_api).
+(d) vetor congelado da Etapa A pelo adapter: 11 conferências OK, 0 falhas (`qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/contract-revalidation/SUMMARY.json` (sha256 `39f6dff90a32fb66…`)): hash canônico sem `client_ref` igual ao do vetor (`ef6472aa058a1fbb…`, o mesmo conferido contra o resultado real da Etapa A), `client_ref` devolvido igual, payload byte-idêntico ao `show` (adapter_api).
 
 (f) CI do domínio: ver `HOSTED_CI_REPORT.md` (IS-F004, IS-F005 e a decisão do dono, quando houver).

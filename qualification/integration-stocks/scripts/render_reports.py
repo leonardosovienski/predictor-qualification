@@ -4,9 +4,11 @@ Adaptado de qualification/integration-crypto/scripts/render_reports.py. Nenhum n
 um arquivo de RAW_LOGS/ (citado com sha256). Gera CORE_IDENTITY_REPORT.md, CLEANROOM_REPORT.md,
 CAIN_ROUNDTRIP_REPORT.md, CONTRACT_REVALIDATION_REPORT.md, HOSTED_CI_REPORT.md, PROTECTED_ARTIFACT_REPORT.md,
 SOAK_REPORT.md, ENVELOPE_V2_CONFORMANCE_REPORT.md e DECISION_POLICY_REPORT.md.
+Ciclo 2: a política é a v2 do cain (rule_order e configuração lidas do FROZEN_PARAMETERS.json), o conjunto protegido
+mostra as cadeias do IS-F008 e o soak descreve as hipóteses só para o LLM.
 Uso: python render_reports.py <qualification/integration-stocks> <run do Linux> <run do Windows> <coleta do hosted-ci>
      [<dir da parte estática do C24.3 em RAW_LOGS, padrão contract-revalidation>
-      [<dir do protected_check em RAW_LOGS, padrão protected>]]
+      [<dir do protected_check em RAW_LOGS, padrão protected> [<dir do core_identity em RAW_LOGS, padrão core-identity>]]]
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ def main() -> int:
     m, run, win, hosted = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
     static_dir = sys.argv[5] if len(sys.argv) > 5 else "contract-revalidation"
     protected_dir = sys.argv[6] if len(sys.argv) > 6 else "protected"
+    core_dir = sys.argv[7] if len(sys.argv) > 7 else "core-identity"
     root = m.parent.parent
     raw = m / "RAW_LOGS"
     rt, wt = raw / "runtime" / run, raw / "runtime" / win
@@ -45,12 +48,12 @@ def main() -> int:
 
     targets = load(m / "runtime_targets.json")
     # ---------------------------------------------------------------- CORE_IDENTITY
-    ci = load(raw / "core-identity" / "core_identity.json")
+    ci = load(raw / core_dir / "core_identity.json")
     rows = "\n".join(f"| {c['check']} | {'OK' if c['ok'] else 'FALHA'} |" for c in ci["checks"])
     (m / "CORE_IDENTITY_REPORT.md").write_text(
         "# integration-stocks — CORE_IDENTITY_REPORT\n\n"
         "Gates `LOCK_INTEGRITY` e `CORE_IDENTITY` (C4). Gerado por `scripts/render_reports.py`.\n\n"
-        f"Fonte: {cite(raw / 'core-identity' / 'core_identity.json')}, produzido por `scripts/core_identity.py` a partir dos "
+        f"Fonte: {cite(raw / core_dir / 'core_identity.json')}, produzido por `scripts/core_identity.py` a partir dos "
         f"`uv.lock` dos commits finais (git show, SHA completo) e dos logs do run `{run}`.\n\n"
         f"Resultado: **{ci['passed']} conferências OK, {ci['failed']} falhas**.\n\n"
         "| Conferência | Resultado |\n|---|---|\n" + rows + "\n\n"
@@ -131,7 +134,7 @@ def main() -> int:
         "- O CAIN nunca lê banco de domínio: ele só lê o spool (envelopes V2) e a própria memória. O venv do CAIN não tem "
         "domínio instalado, e nenhum console script do `cain` alcança um pacote de domínio (`test_loop_fenced.py`).\n"
         "- O CAIN nunca executa código de avaliação fora do circuito: o loop do PR #50 continua fora do runtime qualificado "
-        "(framework da integration-crypto, sem mudança).\n"
+        "(`python -m cain.loop`, ferramenta de laboratório; nenhum console script o alcança).\n"
         "- PR #51 (`cain findings ingest-*`): leitura de arquivo versionado por `git show` num commit fixado, só leitura. A "
         "orquestração qualificada do Stocks não chama esse comando: a configuração do domínio vem de 61fc017 (SHA completo) "
         "pelo `tools/build_domain_config.py` e fica empacotada (`data/stocks.json`).\n", encoding="utf-8")
@@ -215,11 +218,19 @@ def main() -> int:
         "## stocks-predictor\n\n" + stocks_text, encoding="utf-8")
     # ---------------------------------------------------------------- PROTECTED
     prot = load(raw / protected_dir / "protected_check.json")
-    f006 = {x["id"]: x for x in load(m / "FINDINGS.json")["findings"]}.get("IS-F006", {})
-    f006_text = ("Conflito entre a C14 congelada (`FROZEN_PARAMETERS.c14_integration_crypto`) e a C15.1 (IS-F006): "
-                 + (f"decidido pelo dono em {f006['owner_decision_taken']['date']} (\"{f006['owner_decision_taken']['words']}\": "
-                    f"{f006['owner_decision_taken']['option_text']}). O gate aceita o item só com a supersessão conferida."
-                    if f006.get("status") == "ACCEPTED_LIMITATION" else "decisão do dono pendente."))
+    f008 = {x["id"]: x for x in load(m / "FINDINGS.json")["findings"]}.get("IS-F008", {})
+    f008_text = ("Conflito entre a C14 (novo ciclo) e a C15.1 (IS-F008): "
+                 + (f"decidido pelo dono em {f008['owner_decision_taken']['date']} (\"{f008['owner_decision_taken']['words']}\": "
+                    f"{f008['owner_decision_taken']['option_text']})"
+                    if f008.get("status") == "ACCEPTED_LIMITATION" else "decisão do dono pendente."))
+
+    def chain_text(s: dict) -> str:
+        if "chain" not in s:
+            return ""
+        hops = " → ".join(f"`{h['file']}` (ponteiro `{h['pointer_sha256'][:16]}…`, arquivo "
+                          f"`{(h['file_sha256'] or 'ausente')[:16]}…`)" for h in s["chain"]["hops"])
+        return (f" Cadeia: {hops}; chega ao sha256 protegido com cada salto conferido: "
+                f"**{'sim' if s['chain']['ok'] else 'NÃO'}**.")
     prow = "\n".join(f"| {d} | {v['repo']} | `{v['commit'][:12]}` | {v['items']} | {len(v['changed'])} |" for d, v in prot["domains"].items())
     (m / "PROTECTED_ARTIFACT_REPORT.md").write_text(
         "# integration-stocks — PROTECTED_ARTIFACT_REPORT\n\n"
@@ -227,14 +238,11 @@ def main() -> int:
         f"reconferido por `scripts/protected_check.py` ({cite(raw / protected_dir / 'protected_check.json')}).\n\n"
         "| Domínio | Repo | Commit conferido | Itens | Alterados |\n|---|---|---|--:|--:|\n" + prow + "\n\n"
         f"Artefatos compartilhados conferidos por sha256: {len(prot['shared'])}; alterados: "
-        f"{sum(not s['ok'] for s in prot['shared'])}. Total de itens: {prot['items_total']}; tudo igual: "
-        f"{'sim' if prot['all_unchanged'] else 'NÃO'}.\n"
-        + "".join(f"\n- `{s['path']}`: esperado `{s['expected'][:16]}…`, atual `{s['current'][:16]}…`."
-                  + (f" Reemissão: os bytes esperados estão em `{s['supersession']['superseded_file']}` (sha256 "
-                     f"`{(s['supersession']['superseded_file_sha256'] or 'ausente')[:16]}…`) e o `supersedes_sha256` "
-                     f"da attestation atual é `{(s['supersession']['current_supersedes_sha256'] or 'nulo')[:16]}…`. "
-                     + f006_text if "supersession" in s else "") + "\n"
-                  for s in prot["shared"] if not s["ok"]), encoding="utf-8")
+        f"{sum(not s['ok'] for s in prot['shared'])}. Total de itens: {prot['items_total']}; tudo igual (a letra da "
+        f"C15.1): {'sim' if prot['all_unchanged'] else 'NÃO'}; tudo igual ou encadeado: "
+        f"{'sim' if prot.get('all_unchanged_or_chained') else 'NÃO'}.\n\n" + f008_text + "\n"
+        + "".join(f"\n- `{s['path']}`: esperado `{s['expected'][:16]}…`, atual `{s['current'][:16]}…`." + chain_text(s)
+                  + "\n" for s in prot["shared"] if not s["ok"]), encoding="utf-8")
     # ---------------------------------------------------------------- SOAK
     soak = load(rt / "soak" / "SUMMARY.json")
     profile = load(m / "QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json")
@@ -245,6 +253,7 @@ def main() -> int:
     floors = "\n".join(f"| {k} | {v} | {c.get(k, '-')} |" for k, v in profile["minimums"].items())
     zero = "\n".join(f"| {x['check']} | {'OK' if x['ok'] else 'FALHA'} |" for x in soak["checks"])
     llm = sorted((rt / "soak").glob("llm-*.audit.json"), key=lambda a: int(re.search(r"llm-(\d+)", a.name).group(1)))
+    llm_cfg = load(m / "FROZEN_PARAMETERS.json")["decision_policy"]["stocks_config"]["llm_hypotheses"]
     # decisão de cada proposta: a saída do comando "propose llm <i>" no commands.log do soak
     soak_log = (rt / "soak" / "commands.log").read_text(encoding="utf-8")
     decided = {int(i): json.loads(out) for i, out in re.findall(
@@ -269,8 +278,9 @@ def main() -> int:
         "| Conferência (tolerância zero e fim) | Resultado |\n|---|---|\n" + zero + "\n\n"
         "## Propostas de LLM (auditadas; não são gate, C9)\n\n"
         "Modelo local (Ollama no runner). Cada proposta passa pela mesma DecisionPolicy (`cain research propose "
-        "--proposal`); a decisão e a task vêm da saída desse comando no `commands.log`. Limite conhecido antes do "
-        "congelamento (IS-F003): o framework grava `parameters.placebo_seed`, que o `request_schema` do Stocks recusa.\n\n"
+        "--proposal`); a decisão e a task vêm da saída desse comando no `commands.log`. Hipóteses só para o LLM (ciclo 2, "
+        f"`FROZEN_PARAMETERS.json` → `stocks_config.llm_hypotheses`): {', '.join(llm_cfg['hypotheses'])}. "
+        f"{llm_cfg['experiment']}.\n\n"
         "| Proposta | Hipótese escolhida | Modelo | Digest | Decisão | Task |\n|---|---|---|---|---|---|\n"
         + "\n".join(llm_rows) + "\n", encoding="utf-8")
     # ---------------------------------------------------------------- ENVELOPE_V2_CONFORMANCE
@@ -295,7 +305,8 @@ def main() -> int:
     cfg_rows = "\n".join(f"| {r['candidate']} | {r['decision']} | {r['reason_code']} | {r['rule']} |" for r in n1f["receipts"])
     # configuração do Stocks: lida do FROZEN_PARAMETERS.json congelado (nenhum valor digitado aqui)
     frozen = m / "FROZEN_PARAMETERS.json"
-    sc = load(frozen)["decision_policy"]["stocks_config"]
+    dp = load(frozen)["decision_policy"]
+    sc = dp["stocks_config"]
     closed = sorted(sc["closed_hypotheses"], key=lambda h: int(h.split(":H")[1]))
     closed_by_state = {}
     for h in closed:
@@ -310,25 +321,29 @@ def main() -> int:
         + "; ".join(f"{k} {', '.join(v)}" for k, v in closed_by_state.items()) + ";\n"
         f"- famílias congeladas ({len(sc['frozen_families'])}): {', '.join(sc['frozen_families'])};\n"
         f"- hipóteses propostas pela missão: {', '.join(sc['proposable_hypotheses'])};\n"
+        "- sobreposição de parâmetros no molde do LLM (`proposal_overlays`): "
+        + "; ".join(f"{h} {json.dumps(o, sort_keys=True)}" for h, o in sc.get("proposal_overlays", {}).items()) + ";\n"
         f"- custos: fee {sc['costs']['fee_bps']} bps + slippage {sc['costs']['slippage_bps']} bps ({sc['costs']['source']});\n"
         f"- prioridade máxima {sc['max_priority_hint']}; budget {json.dumps(sc['budget'])}; cooldown "
         f"{json.dumps({k: v for k, v in sc['cooldown'].items() if k != 'negative_result_states'})};\n"
         + "".join(f"- {k}: {v}\n" for k, v in sc["known_cautions"].items()))
     (m / "DECISION_POLICY_REPORT.md").write_text(
         "# integration-stocks — DECISION_POLICY_REPORT\n\n"
-        "Gate `DECISION_POLICY` (C12). Framework da integration-crypto **sem mudança** (regras R01–R14, receipt "
-        "`cain-decision-receipt/1`, ver `qualification/integration-crypto/DECISION_POLICY_REPORT.md`); esta missão "
-        f"acrescenta só a configuração do Stocks, empacotada no `cain-research` {targets['cain']['version']} "
-        "(`src/cain/orchestration/data/stocks.json`).\n\n"
+        f"Gate `DECISION_POLICY` (C12). Política `{dp['id']}` versão {dp['version']} do `cain-research` "
+        f"{targets['cain']['version']} (`{dp['policy_module']['path']}`, sha256 `{dp['policy_module']['sha256'][:16]}…`, "
+        f"conferido em `{dp['policy_module']['cain_commit'][:12]}`), receipt `cain-decision-receipt/1`; configuração do "
+        "Stocks empacotada em `src/cain/orchestration/data/stocks.json`.\n\n"
+        "## Regras, na ordem de avaliação (FROZEN_PARAMETERS.json → decision_policy.rule_order)\n\n"
+        + "\n".join(f"{i}. {r}" for i, r in enumerate(dp["rule_order"], start=1)) + "\n\n"
         "## Configuração do Stocks (FROZEN_PARAMETERS.json → decision_policy.stocks_config)\n\n" + cfg_text + "\n"
         "## Decisões do N+1 (receipt em 3 processos novos, byte a byte)\n\n"
         f"Fonte: {cite(rt / 'n-plus-1' / 'frozen' / 'SUMMARY.json')}.\n\n"
         "| Candidata | Decisão | Motivo | Regra |\n|---|---|---|---|\n" + cfg_rows + "\n\n"
-        "## Limites do framework genérico para o Stocks (achados antes do congelamento; framework não mudado)\n\n"
-        "- IS-F002: R06 compara custos em todo pedido; a coleta não tem custos ⇒ `BLOCK COST_MODEL_MISMATCH` "
-        "(candidata 17-collection). O CAIN desta missão não propõe coleta.\n"
-        "- IS-F003: o caminho de LLM grava `placebo_seed` (parâmetro do cripto) ⇒ `BLOCK SCHEMA_INVALID` (candidata "
-        "18-llm-shape e propostas do soak).\n", encoding="utf-8")
+        "## Limites do framework achados antes dos congelados (FROZEN_PARAMETERS.json → stocks_config)\n\n"
+        + "".join(f"- {x['id']}: {x['fact']} Estado: {x.get('cycle2_status', x['decision'])}\n"
+                  for x in sc["framework_limits_found_before_freeze"])
+        + "".join(f"- {x['id']}: {x['fact']} Decisão: {x['decision']}\n"
+                  for x in sc.get("framework_limits_found_before_cycle2", [])), encoding="utf-8")
     print("relatórios gerados")
     return 0
 

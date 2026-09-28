@@ -10,6 +10,11 @@ reemite"). HOSTED_CI e C24.3 (f) passam a ler a conferência mecânica dessa dec
 diretórios com sufixo -r1, e os raw logs citados pela attestation anterior não mudam. A attestation anterior fica
 preservada em QUALIFICATION_ATTESTATION_superseded_<sha12>.json (SUPERSEDED).
 
+Ciclo 2 (C14; decisões do dono de 2026-09-28: "Aprovo o ciclo novo", "Hipóteses para o LLM", IS-F008 "(a) Encadeada" e
+"Seguir para a rc12"): as constantes abaixo apontam para as evidências do ciclo 2 (run na cain 0.4.13rc12, diretórios
+-c2/-rc12); as do ciclo 1 ficam no histórico do git e em GATES.json → cycle1_evidence. PROTECTED_ARTIFACTS_UNCHANGED
+aplica a decisão do IS-F008: cada item alterado só passa encadeado salto a salto até o sha256 protegido.
+
 Uso: python update_gates.py <fase>   (aplica, cumulativamente, todas as fases até ela, na ordem de PHASES)
 """
 
@@ -21,16 +26,22 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 M = "qualification/integration-stocks"
-RUN = "run36365355063"
+RUN = "run36440479456"  # ciclo 2: run do runtime na cain 0.4.13rc12 (ciclo 1: run36365355063)
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
 W = f"{M}/RAW_LOGS/runtime/{RUN}-windows"
 FM = f"{R}/failure-matrix"
-HOSTED = f"{M}/RAW_LOGS/hosted-ci/final-r1"
-STATIC = f"{M}/RAW_LOGS/contract-revalidation-r1/static_checks.json"
+HOSTED = f"{M}/RAW_LOGS/hosted-ci/final-rc12"  # ciclo 1: hosted-ci/final-r1
+STATIC = f"{M}/RAW_LOGS/contract-revalidation-rc12/static_checks.json"
 ACCEPTANCE = f"{HOSTED}/stocks_dispatch_acceptance.json"
-PREFLIGHT = f"{M}/RAW_LOGS/c0/c0_preflight_81f539c.log"
-SECRETS = f"{M}/RAW_LOGS/secrets-r1/secrets_scan.json"
-SUPERSEDED = "QUALIFICATION_ATTESTATION_superseded_a441c88dfbbe.json"
+PREFLIGHT = f"{M}/RAW_LOGS/c0/c0_preflight_8817b7c.log"
+SECRETS = f"{M}/RAW_LOGS/secrets-c2/secrets_scan.json"
+PROTECTED = f"{M}/RAW_LOGS/protected-c2/protected_check.json"  # ciclo 1: protected-r1
+# o main recebeu, depois da base da branch, o ciclo 3 da integration-crypto (congelados e attestation): a mesma
+# conferência roda também num snapshot do main (git archive), para valer no estado depois do merge
+PROTECTED_MAIN = f"{M}/RAW_LOGS/protected-c2/protected_check_main_8817b7c.json"
+CORE = f"{M}/RAW_LOGS/core-identity-c2/core_identity.json"  # ciclo 1: core-identity
+SUPERSEDED = "QUALIFICATION_ATTESTATION_superseded_12411b51d527.json"  # a attestation da reemissão 1 do ciclo 1
+TARGETS = __import__("json").load(open(f"{M}/runtime_targets.json", encoding="utf-8"))
 
 
 def p(status, ev, note):
@@ -46,10 +57,10 @@ def cleanroom_final(g, gates):
         {"os": "linux", "python": python_of(f"{R}/env/runtime_env.log"), "role": "primary", "where": "github_actions",
          "result": "PASS", "evidence": [f"{R}/run.json", f"{R}/ci_runtime.log", f"{R}/env/runtime_env.log",
                                         f"{R}/e2e/SUMMARY.json"]}]
-    gates["LOCK_INTEGRITY"] = p("PASS", [f"{M}/RAW_LOGS/core-identity/core_identity.json", f"{R}/env/runtime_env.log",
+    gates["LOCK_INTEGRITY"] = p("PASS", [CORE, f"{R}/env/runtime_env.log",
                                          f"{M}/CORE_IDENTITY_REPORT.md"],
                                 "runtimes só de uv.lock --require-hashes + wheels publicadas conferidas por sha256")
-    gates["CORE_IDENTITY"] = p("PASS", [f"{M}/RAW_LOGS/core-identity/core_identity.json",
+    gates["CORE_IDENTITY"] = p("PASS", [CORE,
                                         f"{R}/cleanroom-final/cleanroom_final.log", f"{M}/CORE_IDENTITY_REPORT.md"],
                                "pyproject ↔ uv.sources ↔ uv.lock ↔ wheel ↔ instalado ↔ site-packages; Core 3.2.1 e "
                                "Ops 4.2.2rc1 os mesmos da Etapa A do Stocks")
@@ -93,29 +104,33 @@ def contract_revalidation(g, gates):
     gates["DOMAIN_CONTRACTS_PRESERVED"] = p(status, ev + ([ACCEPTANCE] if via and via != "push" else [])
                                             + [f"{M}/CONTRACT_REVALIDATION_REPORT.md"], note)
     g["domain_revalidation"] = {"status": status, "evidence": ev}
-    prot = json.load(open(f"{M}/RAW_LOGS/protected-r1/protected_check.json", encoding="utf-8"))
-    changed = [c for d in prot["domains"].values() for c in d["changed"]] + [s["path"] for s in prot["shared"]
-                                                                             if not s["ok"]]
+    prot = json.load(open(PROTECTED, encoding="utf-8"))
+    domain_changed = [c for d in prot["domains"].values() for c in d["changed"]]
+    changed = domain_changed + [s["path"] for s in prot["shared"] if not s["ok"]]
     note = (f"conjunto protegido do truth-map ({prot['items_total']} itens) igual no final_commit do stocks e no "
             "checkout do predictor-qualification")
     status = "PASS"
     if changed:
-        # decisão do dono sobre IS-F006 (opção a): vale só para attestation reemitida com a supersessão conferida
-        f006 = {x["id"]: x for x in json.load(open(f"{M}/FINDINGS.json", encoding="utf-8"))["findings"]}["IS-F006"]
-        decided = f006["status"] == "ACCEPTED_LIMITATION" and "owner_decision_taken" in f006
-        chained = {s["path"] for s in prot["shared"] if not s["ok"] and "supersession" in s
-                   and s["supersession"]["superseded_file_sha256"] == s["expected"]
-                   and s["supersession"]["current_supersedes_sha256"] == s["expected"]}
-        accepted = decided and set(changed) <= chained
+        # decisão do dono sobre IS-F008 (opção a): só itens encadeados salto a salto até o sha256 protegido
+        f008 = {x["id"]: x for x in json.load(open(f"{M}/FINDINGS.json", encoding="utf-8"))["findings"]}["IS-F008"]
+        decided = f008["status"] == "ACCEPTED_LIMITATION" and "owner_decision_taken" in f008
+        main = json.load(open(PROTECTED_MAIN, encoding="utf-8"))
+        main_changed = [c for d in main["domains"].values() for c in d["changed"]] + [
+            s["path"] for s in main["shared"] if not s["ok"]]
+        accepted = (decided and not domain_changed and prot.get("all_unchanged_or_chained") is True
+                    and set(changed) <= set(prot.get("chained_items", []))
+                    and main.get("all_unchanged_or_chained") is True
+                    and set(main_changed) <= set(main.get("chained_items", [])))
         status = "PASS" if accepted else "FAIL"
         note = (f"{prot['items_total'] - len(changed)} de {prot['items_total']} itens iguais; alterados: "
-                + ", ".join(changed) + ". A attestation da integration-crypto foi reemitida pela C14 prevista em "
-                "FROZEN_PARAMETERS.c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ "
-                "e encadeados por supersedes_sha256 (conferido no protected_check.json); "
-                + ("aceito pela decisão do dono sobre IS-F006 (opção a)" if accepted else
-                   "FAIL pela letra da C15.1" + ("" if decided else ", decisão do dono pendente (IS-F006)")))
+                + ", ".join(changed) + ". Cada um com os bytes protegidos preservados e encadeados salto a salto "
+                "(cycle.supersedes nos congelados, supersedes_sha256 nas attestations; conferido no "
+                "protected_check.json da branch e no do snapshot do main 8817b7c, que já tem o ciclo 3 da "
+                "integration-crypto); "
+                + ("aceito pela decisão do dono sobre IS-F008 (opção a)" if accepted else
+                   "FAIL pela letra da C15.1" + ("" if decided else ", decisão do dono pendente (IS-F008)")))
     gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p(status,
-                                               [f"{M}/RAW_LOGS/protected-r1/protected_check.json",
+                                               [PROTECTED, PROTECTED_MAIN,
                                                 f"{M}/PROTECTED_SET.json", f"{M}/FINDINGS.json",
                                                 f"{M}/PROTECTED_ARTIFACT_REPORT.md"], note)
 
@@ -137,7 +152,8 @@ def n_plus_1(g, gates):
     gates["DECISION_POLICY"] = p("PASS", [f"{R}/cleanroom-final/cain.junit.xml", f"{R}/n-plus-1/frozen/SUMMARY.json",
                                           f"{M}/DECISION_POLICY_REPORT.md"],
                                  "determinística, versionada (código + configuração do stocks), receipt sem LLM; "
-                                 "limites do framework registrados em IS-F002 e IS-F003 (P2)")
+                                 "política v2 (R01–R17, policy.py com os bytes congelados) e configuração do stocks do "
+                                 "ciclo 2; IS-F002 e IS-F003 corrigidos no cain#62 (17-collection ALLOW no N+1)")
     gates["CAPITAL_FORBIDDEN"] = p("PASS", [f"{R}/e2e/SUMMARY.json", f"{R}/n-plus-1/frozen/SUMMARY.json",
                                             f"{M}/DECISION_POLICY_REPORT.md"],
                                    "nenhum caminho concede capital; receipts e resultados com capital_permission=false")
@@ -192,7 +208,7 @@ def hosted_ci(g, gates):
     hosted = json.load(open(f"{HOSTED}/HOSTED_CI_SUMMARY.json", encoding="utf-8"))
     finals = {s["repo"].split("/")[1]: s["ok"] for s in hosted if s["role"] == "final"}
     others = all(ok for repo, ok in finals.items() if repo != "stocks-predictor")
-    ev = [f"{M}/RAW_LOGS/hosted-ci/collection-1/HOSTED_CI_SUMMARY.json", f"{HOSTED}/HOSTED_CI_SUMMARY.json",
+    ev = [f"{HOSTED}/HOSTED_CI_SUMMARY.json",
           f"{HOSTED}/stocks-predictor_run36363108348.json", f"{HOSTED}/stocks-predictor_run35953418753.json",
           f"{HOSTED}/stocks-predictor_run36363108348_secrets_job.log", f"{HOSTED}/secrets_job_steps.json",
           f"{HOSTED}/tree_scan_local.log", f"{M}/HOSTED_CI_REPORT.md"]
@@ -203,7 +219,8 @@ def hosted_ci(g, gates):
         tree_ok = "RESULTADO PASS" in open(f"{HOSTED}/tree_scan_local.log", encoding="utf-8").read()
         gates["HOSTED_CI"] = p(
             "PASS" if others else "FAIL", [ACCEPTANCE] + ev,
-            "cain deccaaa e ecosystem 1304b20: run de push verde no SHA exato"
+            f"cain {TARGETS['cain']['commit'][:7]} e ecosystem {TARGETS['transport']['commit'][:7]}: run de push verde "
+            "no SHA exato"
             + ("" if others else " (NÃO: ver resumo)")
             + "; stocks-predictor 6f857b2: run workflow_dispatch 36363108348 no SHA exato aceito pelo dono "
             "(\"aceita o run workflow_dispatch (b) e reemite\", IS-F004/IS-F005 ACCEPTED_LIMITATION), conferido: Quality "
@@ -214,7 +231,8 @@ def hosted_ci(g, gates):
     else:
         gates["HOSTED_CI"] = p("NOT_RUN" if others else "FAIL", ev,
                                ("BLOCKED: " if others else "")
-                               + "cain deccaaa e ecosystem 1304b20 com run de push verde no SHA exato"
+                               + f"cain {TARGETS['cain']['commit'][:7]} e ecosystem "
+                               f"{TARGETS['transport']['commit'][:7]} com run de push verde no SHA exato"
                                + ("" if others else " (NÃO: ver resumo)")
                                + "; stocks-predictor 6f857b2 sem run de push (ci.yml só em main: IS-F004) e o run "
                                "workflow_dispatch 36363108348 no SHA exato com Quality 3.13/3.14 verdes e o job secrets "
@@ -225,7 +243,8 @@ def hosted_ci(g, gates):
 def soak(g, gates):
     gates["SOAK"] = p("PASS", [f"{R}/run.json", f"{R}/soak/SUMMARY.json", f"{R}/soak/commands.log",
                                f"{M}/QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json", f"{M}/SOAK_REPORT.md"],
-                      "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais")
+                      "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais; "
+                      "propostas de LLM das hipóteses só para o LLM do ciclo 2")
 
 
 def attestation(g, gates):
@@ -264,10 +283,11 @@ def main():
     if target not in names:
         raise SystemExit(f"fase desconhecida: {target}")
     g = json.load(open(f"{M}/GATES.json", encoding="utf-8"))
+    suffix = "-c2" if g.get("cycle", {}).get("number") == 2 else ""  # ciclo 2: as fases refeitas entram com -c2
     for name, apply in PHASES[: names.index(target) + 1]:
         apply(g, g["gates"])
-        if name != "attestation" and name not in g["phases_completed"]:
-            g["phases_completed"].append(name)
+        if name != "attestation" and name + suffix not in g["phases_completed"]:
+            g["phases_completed"].append(name + suffix)
     open(f"{M}/GATES.json", "w", encoding="utf-8").write(json.dumps(g, indent=1, ensure_ascii=False) + "\n")
     print(target, {k: v["status"] for k, v in g["gates"].items() if v["status"] != "NOT_RUN" or "note" in v})
     print("final_result", g.get("final_result"))
