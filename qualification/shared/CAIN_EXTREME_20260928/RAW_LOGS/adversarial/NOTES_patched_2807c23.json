@@ -1,0 +1,660 @@
+[
+ {
+  "tag": "concurrent_propose",
+  "codes": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "decisions": [
+   "ABSTAIN",
+   "ABSTAIN",
+   "ABSTAIN",
+   "ABSTAIN",
+   "ABSTAIN",
+   "ABSTAIN",
+   "ABSTAIN",
+   "ABSTAIN",
+   "ABSTAIN",
+   "ALLOW"
+  ],
+  "tracebacks": [],
+  "numbers": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10
+  ],
+  "outbox": 1
+ },
+ {
+  "tag": "concurrent_ingest",
+  "codes": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "tracebacks": [],
+  "inbox": 1,
+  "facts": 1,
+  "memory": "intact"
+ },
+ {
+  "tag": "concurrent_dispatch",
+  "codes": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "tracebacks": [],
+  "files": 1
+ },
+ {
+  "tag": "interleaved",
+  "codes": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "tracebacks": [],
+  "inbox": 3,
+  "memory": {
+   "entries": 3,
+   "status": "intact",
+   "broken_at": null,
+   "head": "dfe57e69440d5a32a7be8201597247d1632fb80a1cf3638f0518baa9a8819e2e",
+   "head_recorded_at": "2026-09-28T19:12:43.536173Z",
+   "projection": "consistent"
+  }
+ },
+ {
+  "tag": "result_fuzz",
+  "mutations": 372,
+  "ingested": [
+   ".adapter.distribution:str",
+   ".adapter.module:str",
+   ".adapter.version:str",
+   ".outcome.reason:str",
+   ".outcome.reason:unicode",
+   ".outcome.reason:nul"
+  ],
+  "rejected": 366,
+  "crashes": [],
+  "codes": {
+   "SCHEMA_INVALID": 109,
+   "FLOAT_FORBIDDEN": 31,
+   "ingested": 6,
+   "CLIENT_REF_MISMATCH": 32,
+   "DOMAIN_UNKNOWN": 10,
+   "ID_NOT_QUALIFIED": 50,
+   "OUTCOME_INVALID": 18,
+   "duplicate": 1,
+   "CORRELATION_MISMATCH": 70,
+   "CAPITAL_FORBIDDEN": 10,
+   "PAYLOAD_HASH_MISMATCH": 14,
+   "PAYLOAD_SCHEMA_MISMATCH": 10,
+   "VERSION_UNSUPPORTED": 11
+  },
+  "inbox": 7,
+  "facts": 1,
+  "memory": "intact"
+ },
+ {
+  "tag": "garbage_results",
+  "outcomes": {
+   "empty": "rejected:SIZE_LIMIT",
+   "nul": "rejected:SCHEMA_INVALID",
+   "bom": "rejected:SCHEMA_INVALID",
+   "nan": "rejected:SCHEMA_INVALID",
+   "float": "rejected:FLOAT_FORBIDDEN",
+   "deep": "rejected:SCHEMA_INVALID",
+   "big": "rejected:SIZE_LIMIT",
+   "dupkeys": "rejected:SCHEMA_INVALID",
+   "latin1": "rejected:SCHEMA_INVALID",
+   "list": "rejected:SCHEMA_INVALID",
+   "str": "rejected:SCHEMA_INVALID",
+   "crlf": "rejected:NON_CANONICAL"
+  }
+ },
+ {
+  "tag": "symlink_huge",
+  "action": "rejected",
+  "code": "SIZE_LIMIT",
+  "seconds": 0.002
+ },
+ {
+  "tag": "proposal_fuzz",
+  "outcomes": {
+   "empty/propose": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: invalid JSON\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "empty/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: invalid JSON\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "nul/propose": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: invalid JSON\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "nul/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: invalid JSON\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "bom/propose": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: invalid JSON\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "bom/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: invalid JSON\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "nan/propose": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: non-finite constant NaN\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "nan/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: non-finite constant NaN\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "float/propose": [
+    0,
+    "",
+    "{\"decision\": \"BLOCK\", \"episode_id\": \"crypto:episode-1\", \"reason_code\": \"DOMAIN_MISMATCH\", \"receipt_sha256\": \"77a0978ee24"
+   ],
+   "float/decision-receipt": [
+    0,
+    "",
+    "receipt BLOCK {\"as_of\":\"2030-01-01T10:00:00Z\",\"capital_permission\":false,\""
+   ],
+   "deep/propose": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: nesting too deep\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "deep/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: nesting too deep\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "big/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_TOO_LARGE\", \"error\": \"INPUT_INVALID\"}"
+   ],
+   "big/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_TOO_LARGE\", \"error\": \"INPUT_INVALID\"}"
+   ],
+   "dupkeys/propose": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: duplicate key 'schema'\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "dupkeys/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: duplicate key 'schema'\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "latin1/propose": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: not UTF-8\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "latin1/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"SCHEMA_INVALID: not UTF-8\", \"error\": \"SCHEMA_INVALID\"}"
+   ],
+   "list/propose": [
+    0,
+    "",
+    "{\"decision\": \"BLOCK\", \"episode_id\": \"crypto:episode-2\", \"reason_code\": \"SCHEMA_INVALID\", \"receipt_sha256\": \"ae2bf884ec32"
+   ],
+   "list/decision-receipt": [
+    0,
+    "",
+    "receipt BLOCK {\"as_of\":\"2030-01-01T10:00:00Z\",\"capital_permission\":false,\""
+   ],
+   "str/propose": [
+    0,
+    "",
+    "{\"decision\": \"BLOCK\", \"episode_id\": \"crypto:episode-3\", \"reason_code\": \"SCHEMA_INVALID\", \"receipt_sha256\": \"20163c7f53ab"
+   ],
+   "str/decision-receipt": [
+    0,
+    "",
+    "receipt BLOCK {\"as_of\":\"2030-01-01T10:00:00Z\",\"capital_permission\":false,\""
+   ],
+   "int/propose": [
+    0,
+    "",
+    "{\"decision\": \"BLOCK\", \"episode_id\": \"crypto:episode-4\", \"reason_code\": \"SCHEMA_INVALID\", \"receipt_sha256\": \"d4c512fba5d6"
+   ],
+   "int/decision-receipt": [
+    0,
+    "",
+    "receipt BLOCK {\"as_of\":\"2030-01-01T10:00:00Z\",\"capital_permission\":false,\""
+   ],
+   "null/propose": [
+    0,
+    "",
+    "{\"decision\": \"BLOCK\", \"episode_id\": \"crypto:episode-5\", \"reason_code\": \"SCHEMA_INVALID\", \"receipt_sha256\": \"dd9f670a4f24"
+   ],
+   "null/decision-receipt": [
+    0,
+    "",
+    "receipt BLOCK {\"as_of\":\"2030-01-01T10:00:00Z\",\"capital_permission\":false,\""
+   ],
+   "nested_request/propose": [
+    0,
+    "",
+    "{\"decision\": \"BLOCK\", \"episode_id\": \"crypto:episode-6\", \"reason_code\": \"SCHEMA_INVALID\", \"receipt_sha256\": \"6e185a9d3663"
+   ],
+   "nested_request/decision-receipt": [
+    0,
+    "",
+    "receipt BLOCK {\"as_of\":\"2030-01-01T10:00:00Z\",\"capital_permission\":false,\""
+   ],
+   "huge_based_on/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "huge_based_on/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "request_str_params/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "request_str_params/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "request_refs_list/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "request_refs_list/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "priority_missing/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "priority_missing/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "extra_top/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "extra_top/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "extra_top2/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "extra_top2/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "client_ref/propose": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "client_ref/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"PROPOSAL_ID_CONFLICT: cain:PROP-1 already recorded with other content\", \"error\": \"PROPOSAL_ID_CONFLICT\"}"
+   ],
+   "as_of_bad/propose": [
+    2,
+    "",
+    "{\"detail\": \"AS_OF_INVALID: 2030-13-45T99:00:00Z is not an instant\", \"error\": \"AS_OF_INVALID\"}"
+   ],
+   "as_of_bad/decision-receipt": [
+    2,
+    "",
+    "{\"detail\": \"AS_OF_INVALID: 2030-13-45T99:00:00Z is not an instant\", \"error\": \"AS_OF_INVALID\"}"
+   ]
+  },
+  "unexpected": {},
+  "tracebacks": {},
+  "crashed": {}
+ },
+ {
+  "tag": "id_lookalikes",
+  "outcomes": {
+   "hypothesis_id='H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='Crypto:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='Crypto:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='Crypto:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='Crypto:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='Crypto:H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto :H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto :H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto :H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto :H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto :H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto:H9\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto:H9\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto:H9\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto:H9\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto:H9\\u200b'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto::H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto::H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto::H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto::H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto::H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='stocks:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='stocks:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='stocks:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='stocks:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='stocks:H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto:H9 '": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto:H9 '": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto:H9 '": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto:H9 '": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto:H9 '": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto:HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto:'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto:'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto:'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto:'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto:'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id=':H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id=':H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id=':H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on=':H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id=':H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto:H9\\n'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto:H9\\n'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto:H9\\n'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto:H9\\n'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto:H9\\n'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto\\x00:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto\\x00:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto\\x00:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto\\x00:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto\\x00:H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='CRYPTO:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='CRYPTO:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='CRYPTO:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='CRYPTO:H9'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='CRYPTO:H9'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto:QUAL-SHADOW-REAL-001\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto:QUAL-SHADOW-REAL-001\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto:QUAL-SHADOW-REAL-001\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto:QUAL-SHADOW-REAL-001\\u200b'": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto:QUAL-SHADOW-REAL-001\\u200b'": "BLOCK SCHEMA_INVALID R02",
+   "hypothesis_id='crypto:QUAL-SHADOW-REAL-001 '": "BLOCK DOMAIN_MISMATCH R01",
+   "request_id='crypto:QUAL-SHADOW-REAL-001 '": "BLOCK DOMAIN_MISMATCH R01",
+   "research_id='crypto:QUAL-SHADOW-REAL-001 '": "BLOCK DOMAIN_MISMATCH R01",
+   "based_on='crypto:QUAL-SHADOW-REAL-001 '": "BLOCK DOMAIN_MISMATCH R01",
+   "proposal_id='crypto:QUAL-SHADOW-REAL-001 '": "BLOCK SCHEMA_INVALID R02"
+  },
+  "allowed": {},
+  "exceptions": {}
+ },
+ {
+  "tag": "determinism_env",
+  "codes": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "distinct": 1,
+  "stderr": []
+ },
+ {
+  "tag": "state_copy",
+  "same": true
+ },
+ {
+  "tag": "past_as_of",
+  "as_of": "2000-01-01T00:00:00Z",
+  "decision": "DUPLICATE",
+  "reason": "EQUIVALENT_REQUEST",
+  "rule": "R17"
+ },
+ {
+  "tag": "past_as_of",
+  "as_of": "2026-09-27T08:59:59Z",
+  "decision": "DUPLICATE",
+  "reason": "EQUIVALENT_REQUEST",
+  "rule": "R17"
+ },
+ {
+  "tag": "past_as_of",
+  "as_of": "2026-09-27T09:00:00Z",
+  "decision": "DUPLICATE",
+  "reason": "EQUIVALENT_REQUEST",
+  "rule": "R17"
+ },
+ {
+  "tag": "past_as_of",
+  "as_of": "2030-01-01T10:00:00Z",
+  "decision": "DUPLICATE",
+  "reason": "EQUIVALENT_REQUEST",
+  "rule": "R17"
+ },
+ {
+  "tag": "temporal_view",
+  "before": [
+   0,
+   [
+    "crypto:TASK-5d60fe842c623cb55c113d3b5507302c"
+   ]
+  ],
+  "after": [
+   1,
+   []
+  ]
+ },
+ {
+  "tag": "future_dated_result",
+  "ingest": "ingested",
+  "next_decision": [
+   "ABSTAIN",
+   "OPEN_TASK_PENDING"
+  ]
+ },
+ {
+  "tag": "chaos",
+  "deaths": 21,
+  "episodes": 30,
+  "allow": 12,
+  "outbox": 12,
+  "inbox": 12,
+  "facts": 12,
+  "task_files": 12,
+  "result_files": 12,
+  "deliveries": 12,
+  "domain_runs": 12,
+  "memory": "intact",
+  "numbers_contiguous": true
+ },
+ {
+  "tag": "memory_tamper",
+  "verify": {
+   "entries": 1,
+   "status": "intact",
+   "broken_at": null,
+   "head": "1358effa3bc085daa72f29935480d266942fb1b68af503ce216f40eec6909b3f",
+   "head_recorded_at": "2026-09-28T19:13:30.366182Z",
+   "projection": "diverged"
+  },
+  "view_state": "REFUTED",
+  "decision": [
+   "ALLOW",
+   "ALLOWED"
+  ]
+ },
+ {
+  "tag": "outbox_tamper",
+  "detected": true,
+  "error": "V2Error: PAYLOAD_INVALID: $.parameters.horizon_days: above maximum"
+ },
+ {
+  "tag": "spool_task_tamper",
+  "report": [
+   {
+    "file": "TASK-5d60fe842c623cb55c113d3b5507302c.json",
+    "action": "rejected",
+    "code": "PAYLOAD_INVALID",
+    "reason": "PAYLOAD_INVALID: $.parameters.horizon_days: above maximum"
+   }
+  ]
+ },
+ {
+  "tag": "llm_adversarial",
+  "outcomes": {
+   "closed": "BLOCK HYPOTHESIS_CLOSED R05",
+   "foreign": "BLOCK DOMAIN_MISMATCH R01",
+   "unqualified": "BLOCK DOMAIN_MISMATCH R01",
+   "injection": "ALLOW ALLOWED R14",
+   "extra_keys": "EXC ValueError LLM_ANSWER_INVALID: expected hypothesis_id, rationale",
+   "not_json": "EXC JSONDecodeError Expecting value: line 1 column 1 (char 0)",
+   "list": "EXC ValueError LLM_ANSWER_INVALID: expected hypothesis_id, rationale",
+   "long_rationale": "ALLOW ALLOWED R14",
+   "float_in_answer": "EXC ValueError LLM_ANSWER_INVALID: expected hypothesis_id, rationale"
+  }
+ },
+ {
+  "tag": "br_sealed",
+  "outcomes": {
+   "ok_2023": "ALLOW ALLOWED R14 | ",
+   "season_2025": "REQUIRE_HUMAN SEALED_SCOPE R16 | season = 2025 is sealed; a human decides",
+   "season_2026": "REQUIRE_HUMAN SEALED_SCOPE R16 | season = 2026 is sealed; a human decides",
+   "season_str": "BLOCK SCHEMA_INVALID R02 | PAYLOAD_INVALID: $.season: expected type integer",
+   "season_missing": "BLOCK SCHEMA_INVALID R02 | PAYLOAD_INVALID: $: missing required property 'season'",
+   "season_2024_window_touches_2025": "REQUIRE_HUMAN SEALED_SCOPE R16 | window [2024-12-01T00:00:00Z, 2025-01-01T00:00:01Z) intersects sealed [2025-01-0",
+   "window_ends_exactly_at_2025": "ALLOW ALLOWED R14 | ",
+   "window_reversed": "REQUIRE_HUMAN SEALED_SCOPE R16 | window events.kickoff_from..events.kickoff_to malformed; a human decides",
+   "fixture_in_2025": "REQUIRE_HUMAN SEALED_SCOPE R16 | events.fixtures[].kickoff_at = 2025-05-05T20:00:00Z within sealed [2025-01-01T00",
+   "fixture_malformed": "BLOCK SCHEMA_INVALID R02 | PAYLOAD_INVALID: $.events.fixtures[0].kickoff_at: does not match pattern",
+   "events_missing": "BLOCK SCHEMA_INVALID R02 | PAYLOAD_INVALID: $: missing required property 'events'",
+   "cutoff_in_2025": "ALLOW ALLOWED R14 | ",
+   "season_2027_open": "ALLOW ALLOWED R14 | "
+  }
+ },
+ {
+  "tag": "cross_domain_state",
+  "stocks_view": [
+   0,
+   0
+  ],
+  "br_view": [
+   0,
+   0
+  ],
+  "ingest": {
+   "file": "TASK-5d60fe842c623cb55c113d3b5507302c.dbfee9e532b47cb8.json",
+   "action": "rejected",
+   "code": "DOMAIN_MISMATCH",
+   "reason": "result of domain crypto"
+  },
+  "decision": [
+   "BLOCK",
+   "DOMAIN_MISMATCH"
+  ]
+ },
+ {
+  "tag": "scale",
+  "cycles": 300,
+  "seconds_build": 29.1,
+  "seconds_one_decision": 0.046,
+  "seconds_one_process": 0.201,
+  "decision": "ALLOW",
+  "tasks": 150,
+  "state_mb": 1.71
+ },
+ {
+  "tag": "read_only",
+  "propose": [
+   0,
+   "b'b8288e9822ba4a7f137\", \"previous_task_id\": \"crypto:TASK-5d60fe842c623cb55c113d3b5507302c\", \"task_id\": \"crypto:TASK-39105d49dc4d6afaa4140332c146f298\"}}\\n'"
+  ],
+  "receipt": [
+   0,
+   "ok"
+  ],
+  "ingest_missing_spool": [
+   0,
+   "b''"
+  ]
+ }
+]
