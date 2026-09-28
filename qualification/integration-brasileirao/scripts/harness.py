@@ -128,14 +128,18 @@ class Harness:
         env = {"CAIN_ORCHESTRATION_FAULT": fault} if fault else None
         return self.run(label, [self.bin["CAIN_BIN"], "research", *args], env, public_stdout="full")
 
-    def proposal_path(self, template: str | Path, dest: Path | None = None, /, **request_changes) -> Path:
-        """The frozen proposal (path relative to the mission); with changes, an effective copy logged by sha256.
-        The paths are positional-only, so request fields (e.g. the Brasileirão ``target``) never collide with them."""
+    def proposal_path(self, template: str | Path, dest: Path | None = None, proposal_id: str | None = None, /,
+                      **request_changes) -> Path:
+        """The frozen proposal (path relative to the mission); with changes, an effective copy logged by sha256, with
+        its own proposal_id when given (one CAIN state records each proposal_id once). The paths are positional-only,
+        so request fields (e.g. the Brasileirão ``target``) never collide with them."""
         source = self.mission / template
-        if not request_changes:
+        if not request_changes and not proposal_id:
             return source
         value = json.loads(source.read_text(encoding="utf-8"))
         value["request"].update(request_changes)
+        if proposal_id:
+            value["proposal_id"] = proposal_id
         dest = dest or self.work / "effective" / Path(template).name
         dest.parent.mkdir(parents=True, exist_ok=True)
         raw = json.dumps(value, ensure_ascii=False, indent=1).encode("utf-8")
