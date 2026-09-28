@@ -40,3 +40,25 @@ outra decisão. Commit `ec9fa66`, PR #68, mergeado (`b246f4e`).
 | `PROTECTED_SET.json`, `ARCHITECTURE_TRUTH_MAP.json` (`scripts/truth_map.py`) | conjuntos da Etapa A íntegros nas bases (cripto 1387, stocks 89, brasileirao 1884 itens; 0 problemas); dado privado com sha256 igual; componentes da Etapa B; loop do PR #50 fora dos console scripts | C15.1, C2 |
 | `RAW_LOGS/cleanroom-baseline/` (`scripts/cleanroom_baseline.sh`) | diagnóstico: conformidade 89 passed contra a rc3 instalada; transporte 0.1.0rc4 e cain 0.4.13rc7 ainda sem o Brasileirão | C5 |
 | `FINDINGS.json` | IB-F003 (P2): regex numérica do `no_data_rows_check` sem agrupamento acusa substring (falso positivo num hash de blob); verificador não alterado; causa corrigida nos artefatos (conjuntos dos outros domínios por referência; log bruto do coletor no diretório privado, sha256 registrado) | prompt da sessão 6 e 15 |
+
+## Fases envelope-v2, domain-adapter, cain-wiring-decision-policy, publish-candidates, cleanroom-final, contract-revalidation, e2e e n-plus-1
+
+Runtime no **PC 2** (owner_linux, Ubuntu 24.04 WSL2), run `run-20260928T034216Z-br`; saídas públicas em `RAW_LOGS/runtime/run-20260928T034216Z-br/`, estado e
+conteúdo por jogo só no diretório privado `~/predictors/runtime/integration-brasileirao/priv/run-20260928T034216Z-br/`.
+
+| Repositório | Mudança | Commit | PR / release |
+|---|---|---|---|
+| brasileirao-predictor | `brasileirao_predictor/adapters/research_v2.py` (novo) + versão 0.3.0rc4 (C24.3 a) | `1fc2e88` | brasileirao-predictor#81; release `v0.3.0rc4` (wheel `1874e22f…`, sdist `410d0917…`) |
+| ecosystem-predictor | entrada `brasileirao` na allowlist do transporte, testes, README, versão 0.1.0rc5 | `b11494a` | ecosystem-predictor#33; release `predictor-research-transport-v0.1.0rc5` (wheel `408d73c2…`) |
+| cain | `data/brasileirao.json`, `tools/build_domain_config.py` (entrada brasileirao; crypto/stocks regenerados iguais), teste novo, 2 testes para domínio fora do registro, transporte rc5, versão 0.4.13rc9 | `4b2f556`, `3e515fd` | cain#63 (CONFLICTING com o main: pendência do dono); release `v0.4.13rc9` (wheel `6e0d31a1…`) |
+
+| Arquivo (predictor-qualification) | O quê |
+|---|---|
+| `scripts/envelope_v2_check.py`, `RAW_LOGS/envelope-v2/` | protocolo congelado 20/20 |
+| `scripts/adapter_smoke.py`, `RAW_LOGS/domain-adapter/`, `RAW_LOGS/cain-wiring-decision-policy/` | diagnósticos locais (não são prova) |
+| `scripts/publish_rc.sh`, `release-notes/`, `RAW_LOGS/publish-candidates/` | três pré-releases, build reprodutível, download anônimo conferido |
+| `runtime_targets.json`, `scripts/runtime_env.sh`, `scripts/operator_env.py` | runtime suportado do PC 2 e operador privado (dataset real + canário) |
+| `scripts/cleanroom_final.sh` | conformidade 89, transporte 15, cain 70, contra as wheels publicadas |
+| `scripts/contract_revalidation.py`, `scripts/contract_d.py` | C24.3: (a)(b)(c)(d)(e) verdes; (f) IB-F005 |
+| `scripts/harness.py`, `scripts/run_scenario.sh`, `scripts/e2e.py`, `scripts/n_plus_1.py` | E2E real 79/79; N+1 78/81 (as 3 falhas são o holdout, IB-F002) |
+| `FINDINGS.json` | IB-F004 (inbox do CAIN com o ResultV2 bruto) e IB-F005 (CI do domínio × regra 10.3), ambos aguardando o dono |

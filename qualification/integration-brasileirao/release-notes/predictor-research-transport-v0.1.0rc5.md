@@ -1,0 +1,1 @@
+Pré-release da Etapa B (missão `integration-brasileirao`): entrada `brasileirao → brasileirao_predictor.adapters.research_v2` na allowlist fixa de adapters. `research-protocol` não muda (2.0.0rc2). Base: `1304b20` (0.1.0rc4, integration-stocks). Build reprodutível (git archive, SOURCE_DATE_EPOCH=1758240000, duas vezes, mesmos bytes).
