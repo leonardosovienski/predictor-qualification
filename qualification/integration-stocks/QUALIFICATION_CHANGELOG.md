@@ -249,3 +249,60 @@ Família (D-24) e disputa no código do stocks ficam como estão. **Nenhuma fase
   - os candidatos por embedding acertam 1 de 3;
   - IS-F009 fica pela regra;
   - famílias do main do stocks ficam pela D-24.
+
+## 2026-09-28 — ciclo 4 da freeze-parameters (C14): famílias do main (D-26), transporte 0.1.0rc6 e cain 0.4.13rc13 com o cain#78
+
+**Decisões do dono** no chat da sessão, perguntas com opções, depois de "arruma os não resolvidos":
+- **"Somar as famílias do main (Recomendado)"**, registrada como **D-26** no `qualification/DECISIONS.json`. Muda só a D-24 (2) quanto à lista de famílias congeladas.
+- **"Só o transporte (Recomendado)"**: trava por domínio no consumidor do transporte (0.1.0rc6). Nenhum domínio muda.
+- **"Calibrar embedding (Recomendado)"**: medição no cain#78. Pela regra fixada antes de medir, deu `KEEP_REVIEW_ONLY`, e a findings-policy continua na v2.
+- **Agenda de pesquisa, "todas":** não entra neste ciclo. Cada frente pede fator novo no código do stocks e reabertura da Etapa A (C24.4).
+
+**Nenhuma fase roda antes do merge deste PR pelo dono (C15).**
+
+| Onde | O quê |
+|---|---|
+| `qualification/DECISIONS.json`, `scripts/owner_decision_d26.py` | D-26 com as palavras do dono, a pergunta e as duas opções. O script confere se o arquivo regravado volta aos mesmos bytes, blob e sha256 do `research/scientific_state.json` em `4c82885` e as famílias acrescentadas |
+| `FROZEN_PARAMETERS.json`, `FROZEN_PARAMETERS_cycle3_6cd6a68059c7.json`, `scripts/freeze_cycle4.py` | O ciclo 3 fica byte a byte no arquivo de supersedes, que aponta para o ciclo 2. Mudanças descritas abaixo da tabela |
+| `GATES.json`, `scripts/cycle4_gates.py`, `ATTESTATION_PARTIAL_freeze-parameters-c4.json` | Nenhum gate do ciclo 3 chegou a rodar. Continuam NOT_RUN, com nota do ciclo 4; o bloco do ciclo 3 fica dentro do novo. Parcial com P0=P1=P2=0 |
+| `RAW_LOGS/c0/c0_preflight_108d42f.log` | Pré-voo 4.1–4.7 no main `108d42f`: 0 falhas |
+| `RAW_LOGS/freeze/freeze_parameters_cycle4.log` | Execução com o merge do cain#78 no main (`1f38e71`, árvore igual à do head da PR). A execução 1, que citava o head da PR antes do merge, fica em `freeze_parameters_cycle4_run1_head_da_pr.log` |
+| `RAW_LOGS/freeze/diag-c4/` | Diagnóstico antes de congelar (abaixo) |
+
+**Mudanças no `FROZEN_PARAMETERS.json`:**
+- `stocks_config.frozen_families`: **17 famílias**. Entram `quality_net_margin` e `quality_roe_leverage_double_filter`, e nenhuma sai.
+- `stocks_config.additional_frozen_families`: o que o builder do cain lê e confere.
+- `protected_set_initial.never_read` com a exceção da D-26.
+- `decision_policy.framework` na rc13 com o cain#78 e o transporte 0.1.0rc6.
+- `policy_module` conferido de novo no merge, com os mesmos bytes.
+- `base.framework_cycle4`, `repos.cain`, `repos.ecosystem-predictor` e `c14_cycle4`.
+- Os vetores são os do ciclo 3, sem mudança.
+
+**O que a rc13 junta:**
+- a rc12 (`302a5c8`) e o **cain#77**;
+- o **cain#78**, mergeado pelo dono (`1f38e71`, CI do push verde):
+  - builder: `additional_frozen_families`, que só acrescenta; `crypto.json`, `brasileirao.json` e o `stocks.json` atual saem com os mesmos bytes;
+  - `ingest-state --describe`;
+  - calibração selada: conjunto, procedimento e medição em três commits;
+  - transporte 0.1.0rc6 no `uv.lock`;
+- o `stocks.json` regenerado do merge deste ciclo e a versão.
+
+**Transporte 0.1.0rc6** (ecosystem-predictor#36, publicado por esta missão):
+- tag `predictor-research-transport-v0.1.0rc6` em `bac1f7b`, wheel `6c7e83c4…`;
+- build reprodutível 2×; download anônimo igual ao digest da API.
+- A sessão cripto conferiu no Windows (msvcrt): 20/20, perdedor com exit 6 e nada publicado, morte da dona da trava com retomada 3/3.
+- **Observação da sessão cripto**, fora da matriz congelada e sem ligação com a trava: com morte em `after_result_write`, o sucessor reentrega, o domínio responde `DUPLICATE`, e o inbox do CAIN fica com 2 entradas `TERMINAL_RESULT` com o mesmo payload e 1 fato na memória. Fica como melhoria possível do inbox numa versão futura.
+
+**Diagnóstico local** (WSL, não é gate; `RAW_LOGS/freeze/diag-c4/`). Rodou com a wheel candidata (cain#78 + `stocks.json` destes congelados) e o runtime da missão com o transporte 0.1.0rc6 publicado.
+- **Fases:**
+  - e2e 55/0;
+  - N+1 63/0 e integrado 64/0; ciclo do cripto 1/0;
+  - isolamento 28/0; contradição 9/0;
+  - F01–F15 sem falha;
+  - **soak 44/0 com 6 propostas de LLM** (piso 5).
+- **Famílias:** `quality_net_margin`, `quality_roe_leverage_double_filter` e `net_margin` dão BLOCK R05 `HYPOTHESIS_CLOSED`; sem família, ALLOW R14.
+- **Disputa (race.py, 20 repetições):** 20/20 com exits (0, 6), 1 `RESULT` e 1 experimento em cada, **0 envelopes falsos** e 0 exceções. Com o transporte 0.1.0rc5 eram 16× `OPS_FAILED_RETRYABLE` e 4× `RECONCILIATION_REQUIRED` falsos. Na reemissão, IS-F009 passa a FIXED se a disputa nas wheels publicadas repetir isto.
+
+**Limites que continuam:**
+- paráfrase sem nome não é decidida: embedding só para revisão, e o número fica com o dono;
+- as frentes da agenda esperam a Etapa A do stocks.
