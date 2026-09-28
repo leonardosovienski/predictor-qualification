@@ -152,27 +152,26 @@ autorizada. Só havia mensagens do script e o resumo do E2E, sem linha do dado. 
 do runtime no WSL (sha256 conferido) e removido do `%TEMP%`. A pasta `C:\QUALIFICACAO\runtime\integration-brasileirao\`
 ficou sem nenhum banco do dado real fora de tools/venv.
 
-## 2026-09-28 — pendência C14: cain 0.4.13rc13 e transporte 0.1.0rc6 (preparação pela sessão de auditoria, nuvem)
+## Reemissão na cain v0.4.13rc13 + transporte 0.1.0rc6 (C14; run `run-20260928T183300Z-br13`, PC 2)
 
-As integrações do cripto e do stocks já refizeram as fases na cain `v0.4.13rc13` (`960fb25`, wheel `a1d94fd5…`) e no
-transporte `0.1.0rc6` (`bac1f7b`, wheel `6c7e83c4…`, trava exclusiva por domínio no consumidor) e reemitiram as
-attestations. Esta missão continua atestada na rc12/rc5; pela C14 ("cain, ecosystem-predictor ou envelope V2 → fases
-das integrações que os exercitam, inclusive as já QUALIFIED"), as fases de runtime precisam ser refeitas. Elas rodam só
-no **PC 2** (owner_linux, D-19), então esta sessão só preparou a troca; **nada da attestation, dos gates ou dos alvos
-mudou aqui**.
+O cain (rodadas de utilidade do stocks: cain#77, D-26) e o transporte (um consumidor por domínio: ecosystem-predictor#36)
+mudaram, e a C14 manda refazer as fases que os exercitam. Alvos adotados por `scripts/adopt_release.py` (7/7): cain
+v0.4.13rc13 `960fb25` (a1d94fd5…) e transporte v0.1.0rc6 `bac1f7b` (6c7e83c4…), pinado pelo uv.lock da rc13. O
+brasileirao.json e o policy.py são byte a byte os da rc12.
 
-| Arquivo | O quê |
+| Fase | Resultado |
 |---|---|
-| `RAW_LOGS/release-rc13/config_check_rc12_vs_rc13.log` | wheels rc12 e rc13 baixadas anonimamente com o sha256 publicado; `brasileirao.json` empacotado na rc13 = `f51ac735…` = o da rc12 = o regenerado conferido em `RAW_LOGS/release-rc12/release_check.json` (7/7); `policy.py`, `service.py`, `store.py`, `config.py` e `crypto.json` iguais nas duas; só `llm.py` e `stocks.json` mudam. Transporte rc5 → rc6: `adapters.py` igual (entrada `brasileirao` presente); `consumer.py` e `spool.py` mudam (trava) |
-| `scripts/rc13_edits.py` | troca só o bloco do cain e o do transporte em `runtime_targets.json` (todos os scripts da missão leem os alvos de lá). **Não executado aqui**: é o primeiro passo da sessão do PC 2 |
+| cleanroom-final | conformidade 89, transporte 19, cain 95 testes, 0 falhas |
+| contract-revalidation | estática 10/10 ((f) pelo IB-F005); (d) 11/11 |
+| e2e | 79/79 |
+| n-plus-1 | congelado 84/84, integrado 85/85; holdout 2025 → REQUIRE_HUMAN SEALED_SCOPE |
+| isolation-ids-contradiction | 30/30; contradição 9/9 |
+| idempotency-failure | F01–F16: 65 conferências, 0 falhas |
+| windows-smoke (PC 2) | E2E 79/79; dado real devolvido ao WSL: 142 arquivos conferidos |
+| soak | 61/62: todos os pisos, menos o de LLM (IB-F009, waiver do dono, mantido) |
 
-Roteiro do PC 2 (mesma ordem do ciclo 4 na rc12, `run-20260928T145525Z-br12`): `python scripts/rc13_edits.py
-qualification/integration-brasileirao` → `runtime_env.sh` (venvs novos só com as wheels publicadas) → `cleanroom_final.sh`
-→ `contract_revalidation.py` (d) → `run_scenario.sh` e2e → `n_plus_1.py` → `isolation.py` → matriz F01–F16 →
-`windows_smoke.ps1` → `hosted_ci.py` (cain `960fb25` main + tag; ecosystem `bac1f7b`) → `soak.py` → `no_data_rows_check`
-antes de cada commit → `attest.py` (a attestation nova aponta `supersedes_sha256` para a atual, `8aef1104…`). O waiver
-IB-F009 continua valendo na rc13: o molde do LLM ainda toma emprestada uma task do mesmo tipo, o pedido do Brasileirão
-não tem `parameters`, e a R17 segura todas as hipóteses (conferido no código da rc13, `llm.py` `templates`/`_request`).
-
-Os dois arquivos acrescentados aqui só carregam hashes, versões e comandos: nenhuma linha do dado. O `no_data_rows_check`
-exige a cópia privada do dado e roda no PC 2 antes do commit das fases.
+Registro: um run anterior na mesma pilha (`run-20260928T180538Z-br13`) deu os mesmos resultados, mas o no_data_rows_check acusou o
+falso positivo IB-F003 no `real_env.policy.sha256` do operador daquele run (7 dígitos dentro do hex de 64). O run saiu do
+RAW_LOGS (privado, SUMMARY do E2E sha256 `978881495657…`); este run tem operador novo e saída limpa. O checker
+não foi alterado. A attestation da rc12 fica preservada em `QUALIFICATION_ATTESTATION_superseded_<sha12>.json`, e a nova
+aponta para ela por `supersedes_sha256`.

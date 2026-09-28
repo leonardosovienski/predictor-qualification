@@ -16,14 +16,16 @@ nunca substitui execução) para o dono decidir o que entra nas missões. Todo n
 | crypto, brasileirao, stocks (Etapa A) | QUALIFIED | nenhum | — | — |
 | integration-crypto | QUALIFIED | nenhum | 0.4.13rc13 `960fb25` | 0.1.0rc6 `bac1f7b` |
 | integration-stocks | QUALIFIED | nenhum | 0.4.13rc13 `960fb25` | 0.1.0rc6 `bac1f7b` |
-| integration-brasileirao | QUALIFIED | nenhum | **0.4.13rc12 `302a5c8`** | **0.1.0rc5 `b11494a`** |
+| integration-brasileirao | QUALIFIED | nenhum | 0.4.13rc13 `960fb25` (reemissão `4a14f6c`, PC 2) | 0.1.0rc6 `bac1f7b` |
 
-**Sincronização pendente:** só o `integration-brasileirao` ficou na rc12/rc5. Pela C14 as fases de runtime dele são
-refeitas na rc13/rc6; elas rodam só no PC 2 (dado privado, D-19), então esta sessão preparou a troca sem executá-la
-(`qualification/integration-brasileirao/scripts/rc13_edits.py`, `RAW_LOGS/release-rc13/`, entrada no
-`QUALIFICATION_CHANGELOG.md`). O `brasileirao.json` empacotado na rc13 é byte a byte o da rc12 (`f51ac735…`), e
+**Sincronização:** quando esta auditoria começou (`main` em `d188810`), o `integration-brasileirao` ainda estava na
+rc12/rc5. Enquanto ela rodava, a sessão do PC 2 refez as fases pela C14 e reemitiu a attestation na rc13/rc6
+(predictor-qualification#89, `4a14f6c`, run `run-20260928T183300Z-br13`): as três integrações estão na mesma cain e no
+mesmo transporte. A preparação que esta sessão tinha feito para essa troca ficou superada e foi retirada deste PR; fica
+só a conferência das wheels: o `brasileirao.json` empacotado na rc13 é byte a byte o da rc12 (`f51ac735…`), e
 `policy.py`, `service.py`, `store.py`, `config.py` também não mudaram entre as duas
-(`RAW_LOGS/repro/wheels_rc12_rc13_transport_rc5_rc6.log`). O waiver IB-F009 continua valendo na rc13 (seção 4).
+(`RAW_LOGS/repro/wheels_rc12_rc13_transport_rc5_rc6.log`, `RAW_LOGS/repro/brasileirao_config_check_rc12_vs_rc13.log`).
+O waiver IB-F009 continua valendo na rc13 (seção 4; confirmado pelo soak 61/62 do PC 2).
 
 ## 2. Suítes de CI dos cinco repositórios, localmente, com `uv sync --locked` (Python 3.13)
 
@@ -107,13 +109,14 @@ contaminação entre domínios ou capital. Todos os itens abaixo são robustez d
 | 5.7 | cain (observação) | resultado do domínio datado no futuro deixa a task aberta e o domínio em ABSTAIN sem aviso | nenhuma; fail closed, e o relógio do domínio não é do CAIN | registrado |
 | 5.8 | brasileirao.json (observação) | `data_cutoff` em 2025 com janela em 2023, e `season` 2027, são ALLOW: os lacres cobrem só temporadas 2025/2026 e janelas em 2025; o cutoff é regra PIT do domínio | nenhuma | registrado |
 
-**Consequência das correções (C14):** se o dono adotar cain#80 e/ou ecosystem-predictor#38 numa release (rc14 / rc7),
-as três integrações refazem as fases que exercitam o `cain` e o transporte e reemitem. O `integration-brasileirao` já
-tem a C14 da rc13/rc6 pendente no PC 2; pode ser um só ciclo.
+**Consequência das correções (C14):** cain#80 e ecosystem-predictor#38 foram mesclados no `main` (código da futura
+rc14 do cain e da rc7 do transporte, ainda sem release). Quando o dono publicar e adotar essas releases, as três
+integrações refazem as fases que exercitam o `cain` e o transporte e reemitem (núcleo C14). Até lá, as attestations
+vigentes (rc13/rc6) continuam válidas: nenhum recibo de entrada válida muda.
 
 ## 6. O que continua fora do alcance desta sessão
 
-- Fases de runtime do `integration-brasileirao` (PC 2, dado privado).
+- Fases de runtime do `integration-brasileirao` (PC 2, dado privado; feitas pela sessão do PC 2 em `4a14f6c`).
 - Windows (`WINDOWS_SMOKE` das três integrações), soak com modelo local, E2E com os predictors reais.
 - Python 3.14 final (só rc2 disponível aqui) e os dois scripts do ecosystem que consultam a API do GitHub.
 
@@ -125,6 +128,7 @@ SHA256SUMS                         sha256 de tudo nesta pasta
 scripts_test_adv_cain.py           a suíte adversarial (roda com o venv do cain: uv run pytest <arquivo>)
 scripts_transport_task_fuzz.py     fuzz de arquivos de task no consumidor + custo de memory.verify()
 RAW_LOGS/ci/                       saídas dos comandos de CI dos cinco repositórios
-RAW_LOGS/repro/                    verify_wheel, build reprodutível, comparação das wheels rc12/rc13 e rc5/rc6
+RAW_LOGS/repro/                    verify_wheel, build reprodutível, comparação das wheels rc12/rc13 e rc5/rc6 (inclusive o
+                                   brasileirao.json empacotado)
 RAW_LOGS/adversarial/              pytest -rA e NOTES.json na rc13 (960fb25) e com as correções (2807c23)
 ```
