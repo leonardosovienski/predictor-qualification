@@ -151,3 +151,28 @@ Registro no Windows do PC 2: o console da primeira execução do `windows_smoke.
 autorizada. Só havia mensagens do script e o resumo do E2E, sem linha do dado. O arquivo foi movido para o diretório privado
 do runtime no WSL (sha256 conferido) e removido do `%TEMP%`. A pasta `C:\QUALIFICACAO\runtime\integration-brasileirao\`
 ficou sem nenhum banco do dado real fora de tools/venv.
+
+## 2026-09-28 — pendência C14: cain 0.4.13rc13 e transporte 0.1.0rc6 (preparação pela sessão de auditoria, nuvem)
+
+As integrações do cripto e do stocks já refizeram as fases na cain `v0.4.13rc13` (`960fb25`, wheel `a1d94fd5…`) e no
+transporte `0.1.0rc6` (`bac1f7b`, wheel `6c7e83c4…`, trava exclusiva por domínio no consumidor) e reemitiram as
+attestations. Esta missão continua atestada na rc12/rc5; pela C14 ("cain, ecosystem-predictor ou envelope V2 → fases
+das integrações que os exercitam, inclusive as já QUALIFIED"), as fases de runtime precisam ser refeitas. Elas rodam só
+no **PC 2** (owner_linux, D-19), então esta sessão só preparou a troca; **nada da attestation, dos gates ou dos alvos
+mudou aqui**.
+
+| Arquivo | O quê |
+|---|---|
+| `RAW_LOGS/release-rc13/config_check_rc12_vs_rc13.log` | wheels rc12 e rc13 baixadas anonimamente com o sha256 publicado; `brasileirao.json` empacotado na rc13 = `f51ac735…` = o da rc12 = o regenerado conferido em `RAW_LOGS/release-rc12/release_check.json` (7/7); `policy.py`, `service.py`, `store.py`, `config.py` e `crypto.json` iguais nas duas; só `llm.py` e `stocks.json` mudam. Transporte rc5 → rc6: `adapters.py` igual (entrada `brasileirao` presente); `consumer.py` e `spool.py` mudam (trava) |
+| `scripts/rc13_edits.py` | troca só o bloco do cain e o do transporte em `runtime_targets.json` (todos os scripts da missão leem os alvos de lá). **Não executado aqui**: é o primeiro passo da sessão do PC 2 |
+
+Roteiro do PC 2 (mesma ordem do ciclo 4 na rc12, `run-20260928T145525Z-br12`): `python scripts/rc13_edits.py
+qualification/integration-brasileirao` → `runtime_env.sh` (venvs novos só com as wheels publicadas) → `cleanroom_final.sh`
+→ `contract_revalidation.py` (d) → `run_scenario.sh` e2e → `n_plus_1.py` → `isolation.py` → matriz F01–F16 →
+`windows_smoke.ps1` → `hosted_ci.py` (cain `960fb25` main + tag; ecosystem `bac1f7b`) → `soak.py` → `no_data_rows_check`
+antes de cada commit → `attest.py` (a attestation nova aponta `supersedes_sha256` para a atual, `8aef1104…`). O waiver
+IB-F009 continua valendo na rc13: o molde do LLM ainda toma emprestada uma task do mesmo tipo, o pedido do Brasileirão
+não tem `parameters`, e a R17 segura todas as hipóteses (conferido no código da rc13, `llm.py` `templates`/`_request`).
+
+Os dois arquivos acrescentados aqui só carregam hashes, versões e comandos: nenhuma linha do dado. O `no_data_rows_check`
+exige a cópia privada do dado e roda no PC 2 antes do commit das fases.
