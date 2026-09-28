@@ -100,9 +100,12 @@ for branch in ("crypto", "brasileirao", "stocks"):
     rel = f"qualification/{branch}/DOMAIN_RESEARCH_CONTRACT.json"
     check(f"4.5/comum1-contrato-{branch}", (root / rel).is_file(), f"{rel} sha256={sha256_file(root / rel)}")
 
-# wheels do stack que esta missão usaria (Etapa A do Stocks; cain/ecosystem viriam da integration-crypto)
+# wheels do stack que esta missão usa: Etapa A do Stocks + cain/ecosystem da integration-crypto
+FRAMEWORK_REPOS = ("leonardosovienski/cain/", "leonardosovienski/ecosystem-predictor/")
 stocks_att = load("qualification/stocks/QUALIFICATION_ATTESTATION.json") or {}
-used = {w["sha256"]: f"{w['name']} {w['version']}" for w in stocks_att.get("final_wheels", [])}
+ic_att = load("qualification/integration-crypto/QUALIFICATION_ATTESTATION.json")
+framework_wheels = [w for w in (ic_att or {}).get("final_wheels", []) if any(r in w["url"] for r in FRAMEWORK_REPOS)]
+used = {w["sha256"]: f"{w['name']} {w['version']}" for w in stocks_att.get("final_wheels", []) + framework_wheels}
 for issue in load("qualification/shared/SHARED_ISSUES.json")["issues"]:
     verdict = issue.get("verdict") or {}
     resolution = issue.get("resolution") or {}
@@ -117,7 +120,6 @@ for issue in load("qualification/shared/SHARED_ISSUES.json")["issues"]:
 
 # ---------------------------------------------------------------- 4.5 §1 do prompt da missão
 ic_dir = root / "qualification/integration-crypto"
-ic_att = load("qualification/integration-crypto/QUALIFICATION_ATTESTATION.json")
 check("4.5/missao1-integration-crypto-QUALIFIED", bool(ic_att) and ic_att.get("result") == "QUALIFIED",
       f"result={ic_att.get('result')}" if ic_att else
       f"qualification/integration-crypto/QUALIFICATION_ATTESTATION.json ausente (diretório existe: {ic_dir.is_dir()})")
@@ -127,9 +129,17 @@ fw = {w["name"]: w for w in (ic_att or {}).get("final_wheels", [])}
 for repo, pkg in (("cain", "cain-research"), ("ecosystem-predictor", None)):
     check(f"4.5/reuso-final_commit-{repo}", repo in fc,
           f"final_commits[{repo}]={fc.get(repo)}" if ic_att else "não verificável: attestation da integration-crypto ausente")
-wheel_names = sorted(n for n in fw if n not in {"cripto-predictor", "predictor-core", "predictor-ops"})
-check("4.5/reuso-final_wheels-cain-ecosystem", bool(ic_att) and bool(wheel_names),
-      f"final_wheels={wheel_names}" if ic_att else "não verificável: attestation da integration-crypto ausente")
+check("4.5/reuso-final_wheels-cain-ecosystem", bool(ic_att) and any("/cain/" in w["url"] for w in framework_wheels)
+      and any("/ecosystem-predictor/" in w["url"] for w in framework_wheels),
+      f"final_wheels={[w['name'] + ' ' + w['version'] for w in framework_wheels]}" if ic_att
+      else "não verificável: attestation da integration-crypto ausente")
+for w in framework_wheels:
+    dl = downloads / w["url"].rsplit("/", 1)[1]
+    dl.unlink(missing_ok=True)
+    run("curl", "-fsSL", "--retry", "3", "-o", str(dl), w["url"])
+    got = sha256_file(dl)
+    check(f"4.5/reuso-wheel-{w['name']}", got == w["sha256"],
+          f"{w['version']} url={w['url']} declarado={w['sha256']} download={got}")
 rel = "qualification/integration-crypto/DECISION_POLICY_REPORT.md"
 check("4.5/reuso-DECISION_POLICY_REPORT", (root / rel).is_file(), f"{rel} {'presente' if (root / rel).is_file() else 'ausente'}")
 
