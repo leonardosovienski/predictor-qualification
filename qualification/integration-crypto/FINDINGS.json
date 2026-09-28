@@ -230,6 +230,105 @@
     "option_text": "Congelo o ciclo 2 como está no diff. O ciclo 1 fica preservado byte a byte em FROZEN_PARAMETERS_cycle1_c428e4b769e3.json, e o ciclo 2 aponta para ele por sha256. O gate PROTECTED_ARTIFACTS_UNCHANGED aceita esse item só com a supersessão conferida, como você decidiu no IS-F006.",
     "applied": "scripts/protected_check.py: o item conta como alterado (all_unchanged, a letra) e como encadeado só se o arquivo do ciclo 1 tiver os bytes protegidos e cycle.supersedes apontar para eles (all_unchanged_or_chained); scripts/update_gates.py usa este último e cita o IC-F011."
    }
+  },
+  {
+   "id": "IC-F012",
+   "severity": "P2",
+   "title": "config do CAIN aceita o que a admissão real do cripto não aceita: QUAL-SHADOW-001 e os datasets positive v1 e future-canary v1",
+   "description": "Auditoria do crypto.json da wheel rc10 contra as fontes pinadas: 10 conferências OK e 2 divergências com a admissão do domínio no ambiente real. (1) crypto:QUAL-SHADOW-001 é proponível no CAIN, mas o cripto não a admite: no ciclo real custou 1 tarefa recusada (HYPOTHESIS_NOT_ADMITTED), e depois a R15 a barrou. (2) Os datasets 'positive v1' e 'future-canary v1' são referências permitidas no CAIN e não existem no registro do domínio; o modo LLM não escolhe referências (reusa o molde), então não chegaram a ser pedidos. Os três itens vêm do vetor sintético da Etapa A, do qual partem os vetores congelados de N+1 (00/01/02) e de contradição (01): tirá-los muda decisões esperadas congeladas. Efeito no soak, achado depois (runtime da rc11 e soak local com a correção do orçamento, cain#75): quando o modelo escolhe a QUAL-SHADOW-001, o domínio recusa, e duas conferências de tolerância zero contavam a recusa como tarefa não admitida e resultado perdido; no CI da rc10 o modelo de 0,5B não a escolheu (passou por acaso nesse ponto).",
+   "classification": "C6 P2: contido pela política (R15) e sem efeito em resultado ou operação; decisão do dono",
+   "evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/pratica-rc10/A1/audit_config.json",
+     "sha256": "de37b078243651a738ed8db06a741f3c48dd2c21e4282047a9916f85cff0e1a5"
+    },
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/pratica-rc10/loop/campaign.jsonl",
+     "sha256": "004c5d166bd969c88fb42534a05bd72a7288e8cf6b8905b2a7343c7141b83719"
+    }
+   ],
+   "status": "ACCEPTED_LIMITATION",
+   "owner_decision": "escolher: (a) manter e registrar (a R15 contém); (b) tirar os três itens e reconstruir os vetores de N+1 e contradição com hipóteses reais (novo ciclo com vetores novos)",
+   "owner_decision_taken": [
+    {
+     "date": "2026-09-28",
+     "by": "dono",
+     "channel": "chat da sessão cripto (pergunta com opções)",
+     "words": "Manter e registrar (Recomendado)"
+    },
+    {
+     "date": "2026-09-28",
+     "by": "dono",
+     "channel": "chat da sessão cripto (pergunta com opções)",
+     "words": "Soak conta a recusa (Recomendado)",
+     "option_text": "Ajusto as duas conferências do harness do soak para aceitar a recusa do domínio com código fechado (ex.: HYPOTHESIS_NOT_ADMITTED) como desfecho terminal registrado, e não como resultado perdido. Emitidas = admitidas + recusadas. As demais conferências de tolerância zero ficam iguais.",
+     "applied": "scripts/soak.py: uma recusa só conta quando os dois lados a registram (TERMINAL_REFUSAL/REJECTED no CAIN e REJECTED com código fechado na admissão do domínio, para o request_id da própria task); conferência nova: hipótese recusada nunca é emitida de novo (R15)"
+    }
+   ]
+  },
+  {
+   "id": "IC-F013",
+   "severity": "P2",
+   "title": "memória e contexto do LLM sem as métricas dos resultados (só rótulos de estado)",
+   "description": "No ciclo real (20 rodadas), os fatos da memória guardavam estado, classe, IDs e o hash do payload, e o prompt do modo de proposta só trazia rótulos ('INCONCLUSIVE ×2'): o modelo não via retorno líquido, IC nem amostra.",
+   "classification": "C6 P2: limita a utilidade das propostas; sem efeito em resultado, capital ou decisão da política",
+   "evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/pratica-rc10/loop/campaign.jsonl",
+     "sha256": "004c5d166bd969c88fb42534a05bd72a7288e8cf6b8905b2a7343c7141b83719"
+    },
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/pratica-rc10/loop/episodes_final.json",
+     "sha256": "44348df39eaec40cd75b25c152b92216661cc17fc49d5622d541b40fc6488363"
+    }
+   ],
+   "status": "FIXED",
+   "owner_decision_taken": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão cripto",
+    "words": "Código + config (Recomendado)"
+   },
+   "fix": "cain#73 (merge c3a28d9, na rc11): chave opcional result_metrics; números finitos nos fatos, no view e no contexto do LLM; ciclo 3 dos congelados declara net_return_bps, net_ci_low_bps, net_ci_high_bps e sample_size. Mini-ciclo com o código: 4/4 resultados com métricas no prompt.",
+   "evidence_refs": [
+    "qualification/integration-crypto/RAW_LOGS/pratica-rc10/loop-dev/campaign.jsonl"
+   ]
+  },
+  {
+   "id": "IC-F014",
+   "severity": "P2",
+   "title": "findings check não reconhecia o ID qualificado (crypto:H9) de uma hipótese fechada",
+   "description": "`cain findings check --hypothesis-id H9` casava com a H9 fechada; `crypto:H9` (C18, o formato do envelope V2) respondia 'não equivalente', porque o estado científico entra com IDs sem prefixo. A proteção da orquestração não dependia disso (a R05 usa os IDs qualificados da configuração).",
+   "classification": "C6 P2: sem efeito na orquestração (R05); consulta de equivalência respondia errado",
+   "evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/pratica-rc10/A2/check_results.json",
+     "sha256": "8fc8a9e4ed9ba22b7a64c6876553f4107d188e7d5e9a33ca0df662fcb3367f3a"
+    }
+   ],
+   "status": "FIXED",
+   "owner_decision_taken": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão cripto",
+    "words": "Código + config (Recomendado)"
+   },
+   "fix": "cain#73 (merge c3a28d9, na rc11): o ID qualificado do próprio domínio vale como o do estado; prefixo de outro domínio nunca casa"
+  },
+  {
+   "id": "IC-F015",
+   "severity": "P2",
+   "title": "paráfrase de hipótese fechada não é detectada pelo findings check",
+   "description": "5 paráfrases de hipóteses fechadas (H1, H2, H4, H6, H9) sem ID nem família: 0 detectadas. A política de equivalência é identidade ou Jaccard lexical ≥ 0,6 (valor inicial, não calibrado, segundo a própria política), e o enunciado guardado de cada tentativa é o nome mais os parâmetros em JSON. O embedding só ordena e nunca decide. Na orquestração, hipótese nova vira REQUIRE_HUMAN (R11), então a paráfrase chega ao dono, mas sem aviso de semelhança.",
+   "classification": "C6 P2: contido pela R11 (decisão humana); falta o aviso de semelhança ao dono",
+   "evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/pratica-rc10/A2/check_results.json",
+     "sha256": "8fc8a9e4ed9ba22b7a64c6876553f4107d188e7d5e9a33ca0df662fcb3367f3a"
+    }
+   ],
+   "status": "OPEN_AWAITING_OWNER",
+   "owner_decision": "escolher: (a) calibrar a equivalência (nova versão da política, por exemplo com enunciados em linguagem natural das tentativas e limiar medido); (b) manter o comportamento atual (identidade e família; paráfrase vai ao dono pela R11)"
   }
  ]
 }

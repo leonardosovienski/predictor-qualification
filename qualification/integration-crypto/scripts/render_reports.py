@@ -4,7 +4,7 @@ Nenhum número é digitado: cada tabela vem de um arquivo de RAW_LOGS/ (citado c
   CORE_IDENTITY_REPORT.md, CAIN_ROUNDTRIP_REPORT.md, CONTRACT_REVALIDATION_REPORT.md, HOSTED_CI_REPORT.md,
   PROTECTED_ARTIFACT_REPORT.md, SOAK_REPORT.md e a seção cleanroom-final do CLEANROOM_REPORT.md.
 Uso: python render_reports.py <qualification/integration-crypto> <run do runtime> <run do soak> [sufixo]
-  sufixo (ex.: -c14, -c14s, -ciclo2): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
+  sufixo (ex.: -c14, -c14s, -ciclo2, -ciclo3): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
   diretórios da reemissão; os raw logs da attestation anterior ficam como estão.
 """
 
@@ -142,7 +142,9 @@ def main() -> int:
             "a esta missão; a reemissão genuína do harness (`61d3430`) está nos final_commits do ecosystem. Reemissão "
             "C14 pela integration-stocks: final_commits cain `deccaaa` (0.4.13rc7) e ecosystem `1304b20` (transporte "
             "0.1.0rc4). Ciclo 2: cain `fb0e1dc` (0.4.13rc10, release única; vale o run mais recente naquele SHA, o do "
-            "push da tag, e o run do push no main também está verde) e ecosystem `b11494a` (transporte 0.1.0rc5). A "
+            "push da tag, e o run do push no main também está verde) e ecosystem `b11494a` (transporte 0.1.0rc5). "
+            "Ciclo 3: cain `302a5c8` (0.4.13rc12; de novo vale o run da tag, e o do "
+            "main também está verde). A "
             "attestation NOT_QUALIFIED registrou o vermelho em `a19655f`.\n")
            if final_ok else
            "**Há final_commit com job não verde:** ver a tabela e os JSON brutos.\n"),
@@ -154,9 +156,10 @@ def main() -> int:
         ch = item["chain"]
         chained += (
             f"\n- `{item['path']}`: esperado `{item['expected'][:16]}…`, atual `{item['current'][:16]}…`. Reemissão como "
-            f"ciclo 2 (C14): os bytes esperados estão em `{ch['superseded_file']}` (sha256 "
-            f"`{str(ch['superseded_file_sha256'])[:16]}…`) e o `cycle.supersedes.sha256` do atual é "
-            f"`{str(ch['current_supersedes_sha256'])[:16]}…`; encadeamento conferido: {'sim' if ch['ok'] else 'NÃO'}. "
+            f"novo ciclo (C14): os bytes esperados estão em `{ch['superseded_file']}` (sha256 "
+            f"`{str(ch['superseded_file_sha256'])[:16]}…`), e a cadeia do atual (`cycle.supersedes` e `cycle.chain`) "
+            f"chega a ele: " + ", ".join(f"`{link['file']}`" for link in ch.get("links", [])) + "; "
+            f"encadeamento conferido: {'sim' if ch['ok'] else 'NÃO'}. "
             f"Decisão do dono: {ch['decision']}. O gate aceita o item só com a supersessão conferida.\n")
     if "all_unchanged_or_chained" in prot:
         chained += (f"\nIguais ou encadeados por decisão do dono: "

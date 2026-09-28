@@ -1,0 +1,1175 @@
+### propose r0 (0.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/qualification/integration-crypto/fixtures/proposals/e2e/01-allow.json --as-of 2026-09-28T13:47:28Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "ba72688ddefdcfab8d692c03fda35baafbfbd7e08b38815b712eaef57911fae7", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- stderr
+{"duration_ms": 209, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "1d1ff90cbcfc46fd980676589c0191b1", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:47:28.673393Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:66fb935e6b6c493490b5a9e846950030", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- stderr
+--- exit 0
+
+### llm r1 (9.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-01.json --proposal-id cain:CAMP-01 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-01.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-002", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-01.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001", "crypto:QUAL-SHADOW-REAL-002"], "without_evidence": ["crypto:QUAL-SHADOW-REAL-002"]}}
+--- stderr
+--- exit 0
+
+### propose r1 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-01.json --as-of 2026-09-28T13:47:37Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-2", "reason_code": "ALLOWED", "receipt_sha256": "4bab7ac7047bcfea6c44d80a675b818795dd37acddb5a833f27e86d90c0e78ac", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "bd80451a47078112559410a3bb753ed38b1f1ae2241528550b15de3ab3c64bee", "previous_task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-b65f40bc180e15189613b9c9cc455203.json", "spool": "WRITTEN", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+--- stderr
+--- exit 0
+
+### consumer (0.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-2", "result_file": "crypto/results/TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+--- stderr
+{"duration_ms": 210, "event": "job_finished", "job_id": "crypto-research-e634a2b524840ec1165f01b2", "level": "INFO", "run_id": "87847aa66e8f4b729166527d29f18f2f", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:47:38.546525Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:39beb96806ca48ebb4c1d61333f03fb9", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+--- stderr
+--- exit 0
+
+### llm r2 (2.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-02.json --proposal-id cain:CAMP-02 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-02.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-001", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-02.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-001", "crypto:QUAL-SHADOW-REAL-001", "crypto:QUAL-SHADOW-REAL-002", "crypto:QUAL-SHADOW-REAL-003"], "without_evidence": ["crypto:QUAL-SHADOW-001", "crypto:QUAL-SHADOW-REAL-003"]}}
+--- stderr
+--- exit 0
+
+### propose r2 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-02.json --as-of 2026-09-28T13:47:40Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-3", "reason_code": "ALLOWED", "receipt_sha256": "d78b793fe9f5052f0a8660a50727dbc90daaa6b92fa342ca769faebce26987fb", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "38c08fcbb4b25e5faedf2042168e28d60d772632d7e1f266cc54dc7ad724493d", "previous_task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-e4e1805b8a9b2069fb993aca3cb65e2e.json", "spool": "WRITTEN", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+--- stderr
+--- exit 0
+
+### consumer (0.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_REFUSAL", "episode_id": "crypto:episode-3", "result_file": "crypto/results/TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json", "result_write": "WRITTEN", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+--- stderr
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "ingested", "class": "TERMINAL_REFUSAL", "fact": "fact:f50db43ee3cb4e8b8cba4d8d40ef2703", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+--- stderr
+--- exit 0
+
+### llm r3 (2.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-03.json --proposal-id cain:CAMP-03 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-03.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-003", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-03.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": [], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r3 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-03.json --as-of 2026-09-28T13:47:43Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-4", "reason_code": "ALLOWED", "receipt_sha256": "07b70c99e680eb57296c82986658f551c88f97a537c6b881addbffd3cf9d4d7c", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "4f762ab249930230341c39fe57b9de7015d6f69d2f6875fb25ae0c71a0cbe89e", "previous_task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-d7e180ab898a9597ceacf6f0139408a6.json", "spool": "WRITTEN", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-4", "result_file": "crypto/results/TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+--- stderr
+{"duration_ms": 216, "event": "job_finished", "job_id": "crypto-research-ab7902ae0b5ba104e0c8ae49", "level": "INFO", "run_id": "54975e4421324b97806db2d2bb956547", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:47:44.199576Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:1828bbaa2ebc46f19810c22e8f13ea24", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+--- stderr
+--- exit 0
+
+### llm r4 (2.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-04.json --proposal-id cain:CAMP-04 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-04.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-001", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-04.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r4 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-04.json --as-of 2026-09-28T13:47:46Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-5", "reason_code": "ALLOWED", "receipt_sha256": "89f5eea602a06de474c549f4f318d195589185352a3c9d5ec219c1086c205f9a", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "18280d4e5a22a3eaf2e8e3693a363ce29911b560858c1a0f5e58aa681afb7aa2", "previous_task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-937e1629ba93db42082d161105c7cc9f.json", "spool": "WRITTEN", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-5", "result_file": "crypto/results/TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+--- stderr
+{"duration_ms": 216, "event": "job_finished", "job_id": "crypto-research-1b6b1d57e1ac366eb4baa68b", "level": "INFO", "run_id": "29f4a8a503a8412cb17c9c5946495424", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:47:47.193132Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:41ec5de7b1da4d1bbcef7998b9a2cdaa", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+--- stderr
+--- exit 0
+
+### llm r5 (2.6s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-05.json --proposal-id cain:CAMP-05 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-05.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-003", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-05.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r5 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-05.json --as-of 2026-09-28T13:47:49Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-6", "reason_code": "ALLOWED", "receipt_sha256": "6bed0c400635973a530cd522c1398c6019294f0234500717203d6a9121c23527", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "719192bdc751810406628e1de1b8b839440de3958ac7400482aab8088f006413", "previous_task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-aac39c792f7a37dabdcc338cf99c7ab6.json", "spool": "WRITTEN", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-6", "result_file": "crypto/results/TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+--- stderr
+{"duration_ms": 212, "event": "job_finished", "job_id": "crypto-research-9bbfbfa9a03d7b5c257a366e", "level": "INFO", "run_id": "7df440df69744d229e86172a75e4f161", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:47:50.539630Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:795c36bc4f9c4b36a8967ac8842dfd8e", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+--- stderr
+--- exit 0
+
+### llm r6 (2.8s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-06.json --proposal-id cain:CAMP-06 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-06.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-002", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-06.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001", "crypto:QUAL-SHADOW-REAL-002", "crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r6 (0.3s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-06.json --as-of 2026-09-28T13:47:53Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-7", "reason_code": "ALLOWED", "receipt_sha256": "e17a6e3fc738faf0d88f94f618c5ce3567c7448c34c1172e34dbc7d4ec3e584d", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "57d5b88aecbf2d04e09437b3c888d0d2968cd32d7cfcd4fe2d494f985f135488", "previous_task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-e0f59d9da4d400a1a498bfbf52c48b91.json", "spool": "WRITTEN", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+--- stderr
+--- exit 0
+
+### consumer (0.7s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-7", "result_file": "crypto/results/TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+--- stderr
+{"duration_ms": 211, "event": "job_finished", "job_id": "crypto-research-ecbf53241b06070df1fa56e9", "level": "INFO", "run_id": "5a9209547ffe483b89a2c340b6df0eb3", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:47:54.700191Z"}
+--- exit 0
+
+### ingest (0.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:1b966a4a0798480cb4de6f227ffca9cf", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+--- stderr
+--- exit 0
+
+### llm r7 (2.8s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-07.json --proposal-id cain:CAMP-07 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-07.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-001", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-07.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r7 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-07.json --as-of 2026-09-28T13:47:58Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-8", "reason_code": "ALLOWED", "receipt_sha256": "8230b5d3d15be5dc61225b9bb00aeca27a2f800b75172348b93f7b3ddfac9f03", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "b8266ee0d6342963c9160758cc9991f815814b6c33e1a1084d96af6c0f8d5b3d", "previous_task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-f75184dcc992edefef0bb5c227bd551b.json", "spool": "WRITTEN", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-8", "result_file": "crypto/results/TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+--- stderr
+{"duration_ms": 212, "event": "job_finished", "job_id": "crypto-research-97982ea669e5dc34d15a6321", "level": "INFO", "run_id": "c5b650c031624653ac21e4bac450ba47", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:47:58.589055Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:1ee218753e6140068009409c095586fe", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+--- stderr
+--- exit 0
+
+### llm r8 (2.6s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-08.json --proposal-id cain:CAMP-08 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-08.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-002", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-08.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001", "crypto:QUAL-SHADOW-REAL-002", "crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r8 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-08.json --as-of 2026-09-28T13:48:01Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-9", "reason_code": "ALLOWED", "receipt_sha256": "bf2e27a09d14ddb6a4fc58d74d91920c50c1db4262a8ae16228735a222386696", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "fb0e900655c2dca57c65718d33f4ad5821d3729f3f9b4a986097f9309dce5452", "previous_task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-3eb0494624401b7385aee7e37efc3615.json", "spool": "WRITTEN", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-9", "result_file": "crypto/results/TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+--- stderr
+{"duration_ms": 211, "event": "job_finished", "job_id": "crypto-research-b20f1a6b06e73e44d6854687", "level": "INFO", "run_id": "c1d959e73d3f4222ba7a66500ae16ae8", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:02.035427Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:cec8805b317e476798f58a3da3e26b37", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r9 (3.0s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-09.json --proposal-id cain:CAMP-09 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-09.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-003", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-09.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-001", "crypto:QUAL-SHADOW-REAL-001", "crypto:QUAL-SHADOW-REAL-002", "crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r9 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-09.json --as-of 2026-09-28T13:48:05Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-10", "reason_code": "ALLOWED", "receipt_sha256": "f2413d8722c6b8e90b94430a52d3f139c56d7cf86b5f450f3e41595d8f7a5499", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "25675ebde34635599c7e72facfb69c2bc70b73e0f6e4d6dd731c56930df4b18e", "previous_task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-c16c6b38337244ca92b5beed66f325cb.json", "spool": "WRITTEN", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+--- stderr
+--- exit 0
+
+### consumer (0.6s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-10", "result_file": "crypto/results/TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+--- stderr
+{"duration_ms": 221, "event": "job_finished", "job_id": "crypto-research-f00d3e26615857cb0c719f76", "level": "INFO", "run_id": "9a68b3b7c0f44f6b8fadd78bd31720fb", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:05.772839Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:0389eff288364526adaf2d8290c7ecbe", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r10 (2.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-10.json --proposal-id cain:CAMP-10 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-10.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-001", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-10.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r10 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-10.json --as-of 2026-09-28T13:48:08Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-11", "reason_code": "ALLOWED", "receipt_sha256": "d6271a55d06ccf7727146b2efb121eba0818abc34f832e65e9dc4aa02a755c74", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "339e37461e007b14394abce745ba9cd844510f36601470520bd6a017496b047c", "previous_task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-f376135b8d81ba2eab41b2115ca0b2e1.json", "spool": "WRITTEN", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+--- stderr
+--- exit 0
+
+### consumer (0.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-11", "result_file": "crypto/results/TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+--- stderr
+{"duration_ms": 210, "event": "job_finished", "job_id": "crypto-research-66c68798baf909316d9ae0fa", "level": "INFO", "run_id": "2073b344a45c43388a3a2be70ada9853", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:08.718604Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:17947702c86f4914afa8473cb831866e", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r11 (2.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-11.json --proposal-id cain:CAMP-11 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-11.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-002", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-11.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001", "crypto:QUAL-SHADOW-REAL-002", "crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r11 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-11.json --as-of 2026-09-28T13:48:11Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-12", "reason_code": "ALLOWED", "receipt_sha256": "34086c7820d5db921c2c27153bf4ea49ef81e24adaebc7fca1baf2f2a23cd416", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "b8b969fdae2537135e12b05da2495bbf529240686ab2d9c7704198691f8669a7", "previous_task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-25df741a9e25261dcbe74ab9a0c1c62c.json", "spool": "WRITTEN", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+--- stderr
+--- exit 0
+
+### consumer (0.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-12", "result_file": "crypto/results/TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+--- stderr
+{"duration_ms": 208, "event": "job_finished", "job_id": "crypto-research-3d00af5bb6cf0588a7d756b7", "level": "INFO", "run_id": "497bdd939507484eb1895331f692c784", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:11.819254Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:c44b279460204ad8b26a66d7910c5d41", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r12 (2.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-12.json --proposal-id cain:CAMP-12 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-12.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-003", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-12.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r12 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-12.json --as-of 2026-09-28T13:48:14Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-13", "reason_code": "ALLOWED", "receipt_sha256": "7376e31fa8c8db30ed959f2d98be720a3b1ebcd5ab345c5da0f7758816e5e65a", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "1bfb239ba7df7f4cc8cf90198a3e6cd98c85e4226d8df3a1ad2b599350923f1f", "previous_task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-b50923b02198e5bbdead8d44603a8421.json", "spool": "WRITTEN", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-13", "result_file": "crypto/results/TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+--- stderr
+{"duration_ms": 210, "event": "job_finished", "job_id": "crypto-research-8a3e4eee441c7f35deced32d", "level": "INFO", "run_id": "bca08fb8bd5d414caaf2fc084aa37393", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:15.065810Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:a57d36c363474137bc336170d59f9545", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r13 (2.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-13.json --proposal-id cain:CAMP-13 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-13.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-001", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-13.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r13 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-13.json --as-of 2026-09-28T13:48:17Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-14", "reason_code": "ALLOWED", "receipt_sha256": "0cae995cac6a9a998a80bcf4c00a09a52f74653a47e889d6920caf19eee0fd88", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "df5b96a4ec74922e228a6a5bc78a3789243ad7478d16662cd23817586ad78dbd", "previous_task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-04cf36b55bc72d71e56c34ad5c93d643.json", "spool": "WRITTEN", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+--- stderr
+--- exit 0
+
+### consumer (0.6s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-14", "result_file": "crypto/results/TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+--- stderr
+{"duration_ms": 222, "event": "job_finished", "job_id": "crypto-research-e3c268c50d04cc15cc05f0c8", "level": "INFO", "run_id": "f7d297077f0e49aa8655801a0facfe27", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:18.298422Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:e96dc0d7022a44d8af4b1cc9c47a4a67", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r14 (2.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-14.json --proposal-id cain:CAMP-14 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-14.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-002", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-14.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-002"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r14 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-14.json --as-of 2026-09-28T13:48:21Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-15", "reason_code": "ALLOWED", "receipt_sha256": "6cc64de29f4551a936381b45b2970398bb97730f8e22e3b6bc21b96b54c729a7", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "13e353b14f834e3fbb8988d2c042ab99c852885b2471930f20380e83b84ba38c", "previous_task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-612c099e764b4b22938718167ff5b45b.json", "spool": "WRITTEN", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+--- stderr
+--- exit 0
+
+### consumer (0.6s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "skipped", "episode_id": "crypto:episode-14", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-15", "result_file": "crypto/results/TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+--- stderr
+{"duration_ms": 228, "event": "job_finished", "job_id": "crypto-research-a72a62bb1ab61ce78f578292", "level": "INFO", "run_id": "e222d892e5b14098aed8c4534e3f2fbb", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:21.739186Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:3f2779a000584375b1493d9e3bc3a674", "file": "TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r15 (2.9s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-15.json --proposal-id cain:CAMP-15 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-15.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-003", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-15.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r15 (0.6s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-15.json --as-of 2026-09-28T13:48:24Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-16", "reason_code": "ALLOWED", "receipt_sha256": "97e0d0bf48334f0c0ac1884fd1dce9815f0293021ea5afc110068032e5530254", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "a23038de5a33c1079160ee8b0cbac6ad504b33ce1b652223a4b5270f63b7550f", "previous_task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-6cc930138c917aedf714b3561a01660b.json", "spool": "WRITTEN", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+--- stderr
+--- exit 0
+
+### consumer (0.7s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "skipped", "episode_id": "crypto:episode-14", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "skipped", "episode_id": "crypto:episode-15", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-16", "result_file": "crypto/results/TASK-6cc930138c917aedf714b3561a01660b.4b4f305289b93289.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+--- stderr
+{"duration_ms": 212, "event": "job_finished", "job_id": "crypto-research-e1de4c92341efb23db2a2ac6", "level": "INFO", "run_id": "8307a3f8cd084e498eb79e74fa906122", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:26.049792Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:5bd7febfd1724bd58180cd71f284fb07", "file": "TASK-6cc930138c917aedf714b3561a01660b.4b4f305289b93289.json", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r16 (2.9s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-16.json --proposal-id cain:CAMP-16 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-16.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-001", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-16.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001", "crypto:QUAL-SHADOW-REAL-002", "crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r16 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-16.json --as-of 2026-09-28T13:48:29Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-17", "reason_code": "ALLOWED", "receipt_sha256": "4f8544a686950ec381aad70c5d0360d0defcf67372900dd819af1885894177c8", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "777dc2a767a6f2d7375c6ce6d075fc22ff89dc05dc5405cff625014504de0095", "previous_task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-d68228ee36e613f23de33dcbc00f4492.json", "spool": "WRITTEN", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}
+--- stderr
+--- exit 0
+
+### consumer (0.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "skipped", "episode_id": "crypto:episode-14", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "skipped", "episode_id": "crypto:episode-15", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+{"action": "skipped", "episode_id": "crypto:episode-16", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-17", "result_file": "crypto/results/TASK-d68228ee36e613f23de33dcbc00f4492.9304e756caf354a6.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}
+--- stderr
+{"duration_ms": 208, "event": "job_finished", "job_id": "crypto-research-ba546071af55eeecd011a8d1", "level": "INFO", "run_id": "96262e1f3b2a462582eb7556f33b3fac", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:29.970658Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json"}
+{"action": "duplicate", "file": "TASK-6cc930138c917aedf714b3561a01660b.4b4f305289b93289.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:c203796182e94fd7bde0e6fc3f2c9a51", "file": "TASK-d68228ee36e613f23de33dcbc00f4492.9304e756caf354a6.json", "status": "RESULT", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r17 (2.6s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-17.json --proposal-id cain:CAMP-17 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-17.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-002", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-17.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-002"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r17 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-17.json --as-of 2026-09-28T13:48:32Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-18", "reason_code": "ALLOWED", "receipt_sha256": "8314fee7335a55f8b164ceb8e1942b8d54385b1edf9eaae98b1a6301ff982f72", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "1df2e93e823190c1443a2c1107cb6400120133a19a87bb9788a90b41c2695881", "previous_task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-7996b9a38af78c1edf812139d418068a.json", "spool": "WRITTEN", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}
+--- stderr
+--- exit 0
+
+### consumer (0.5s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "skipped", "episode_id": "crypto:episode-14", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "skipped", "episode_id": "crypto:episode-15", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+{"action": "skipped", "episode_id": "crypto:episode-16", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+{"action": "skipped", "episode_id": "crypto:episode-17", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-18", "result_file": "crypto/results/TASK-7996b9a38af78c1edf812139d418068a.caab5a795b4b77d1.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}
+--- stderr
+{"duration_ms": 209, "event": "job_finished", "job_id": "crypto-research-622323bd916c4f1203abee18", "level": "INFO", "run_id": "a126d8210dd74001aedb633c429dd8f6", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:33.277794Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json"}
+{"action": "duplicate", "file": "TASK-6cc930138c917aedf714b3561a01660b.4b4f305289b93289.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:aa937cbe3e8e4473b2f88491fe180341", "file": "TASK-7996b9a38af78c1edf812139d418068a.caab5a795b4b77d1.json", "status": "RESULT", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d68228ee36e613f23de33dcbc00f4492.9304e756caf354a6.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r18 (2.9s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-18.json --proposal-id cain:CAMP-18 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-18.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-003", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-18.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-003"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r18 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-18.json --as-of 2026-09-28T13:48:36Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-19", "reason_code": "ALLOWED", "receipt_sha256": "03f46e78648aa95754601beebb78ac038eb4ae5851e7940b4530e09299435b47", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "261cf27c816247c09cec8db413a76f42a4a36d32be18067c164a27b9edef602a", "previous_task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-2b84fba3329aec23cb3dc995d6962200.json", "spool": "WRITTEN", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}
+--- stderr
+--- exit 0
+
+### consumer (0.7s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "skipped", "episode_id": "crypto:episode-14", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "skipped", "episode_id": "crypto:episode-15", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+{"action": "skipped", "episode_id": "crypto:episode-16", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+{"action": "skipped", "episode_id": "crypto:episode-17", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}
+{"action": "skipped", "episode_id": "crypto:episode-18", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-19", "result_file": "crypto/results/TASK-2b84fba3329aec23cb3dc995d6962200.67b1c021e1b6a26c.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}
+--- stderr
+{"duration_ms": 219, "event": "job_finished", "job_id": "crypto-research-93e7ad93052e563ee56c9cba", "level": "INFO", "run_id": "9b792fbfefad4186ae82cb9a4f3f4ea3", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:37.047871Z"}
+--- exit 0
+
+### ingest (0.2s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:7e60c29c73ea477790066c7a321eb283", "file": "TASK-2b84fba3329aec23cb3dc995d6962200.67b1c021e1b6a26c.json", "status": "RESULT", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json"}
+{"action": "duplicate", "file": "TASK-6cc930138c917aedf714b3561a01660b.4b4f305289b93289.json"}
+{"action": "duplicate", "file": "TASK-7996b9a38af78c1edf812139d418068a.caab5a795b4b77d1.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d68228ee36e613f23de33dcbc00f4492.9304e756caf354a6.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+--- stderr
+--- exit 0
+
+### llm r19 (2.7s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-19.json --proposal-id cain:CAMP-19 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-19.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-001", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-19.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-001"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r19 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-19.json --as-of 2026-09-28T13:48:40Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-20", "reason_code": "ALLOWED", "receipt_sha256": "b0153806f97857032bb2eaf47e6e88a6f222c15abfea279ec3049ed367feb499", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "384a18f294a6677e9686fbc2225bf20f47cc3114bc322a05858e49e792adafe5", "previous_task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-ff9b9b3b56df52ffa0c0156c7333d7e4.json", "spool": "WRITTEN", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}
+--- stderr
+--- exit 0
+
+### consumer (0.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "skipped", "episode_id": "crypto:episode-14", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "skipped", "episode_id": "crypto:episode-15", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+{"action": "skipped", "episode_id": "crypto:episode-16", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+{"action": "skipped", "episode_id": "crypto:episode-17", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}
+{"action": "skipped", "episode_id": "crypto:episode-18", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}
+{"action": "skipped", "episode_id": "crypto:episode-19", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-20", "result_file": "crypto/results/TASK-ff9b9b3b56df52ffa0c0156c7333d7e4.70cc8882f7d61728.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}
+--- stderr
+{"duration_ms": 209, "event": "job_finished", "job_id": "crypto-research-e92108c50824965f6c2f9fd4", "level": "INFO", "run_id": "7169e59768bd4b43a15b2ee1b6b1f030", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:40.749185Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-2b84fba3329aec23cb3dc995d6962200.67b1c021e1b6a26c.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json"}
+{"action": "duplicate", "file": "TASK-6cc930138c917aedf714b3561a01660b.4b4f305289b93289.json"}
+{"action": "duplicate", "file": "TASK-7996b9a38af78c1edf812139d418068a.caab5a795b4b77d1.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d68228ee36e613f23de33dcbc00f4492.9304e756caf354a6.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:89a9cac51e3b454381ccf624c3f2cbbd", "file": "TASK-ff9b9b3b56df52ffa0c0156c7333d7e4.70cc8882f7d61728.json", "status": "RESULT", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}
+--- stderr
+--- exit 0
+
+### llm r20 (2.8s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research explain proximo experimento de pesquisa do cripto --propose-for-domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal-out /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-20.json --proposal-id cain:CAMP-20 --config /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/cain-llm.toml
+--- stdout
+{"audit": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-20.audit.json", "hypothesis_id": "crypto:QUAL-SHADOW-REAL-002", "model": {"digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd", "model": "qwen3.5:4b", "provider": "OllamaLLM"}, "proposal": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-20.json", "rationale_check": {"count_mismatches": [], "eligibility_mismatches": [], "mentioned": ["crypto:QUAL-SHADOW-REAL-002"], "without_evidence": []}}
+--- stderr
+--- exit 0
+
+### propose r20 (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research propose --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --proposal /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/out/proposals/camp-20.json --as-of 2026-09-28T13:48:43Z
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-21", "reason_code": "ALLOWED", "receipt_sha256": "e83ae60219532644a01d2649e1299594152d5ec5674e7644dae8f0c8dca79636", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "d968f19c8c4ecf246c71112658475f23e9b9518fa49c3bfb2216748d4ae7ad28", "previous_task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4", "task_id": "crypto:TASK-a5268111c0ce33a4874c796433401ea4"}}
+--- stderr
+--- exit 0
+
+### dispatch (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research dispatch --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-a5268111c0ce33a4874c796433401ea4.json", "spool": "WRITTEN", "task_id": "crypto:TASK-a5268111c0ce33a4874c796433401ea4"}
+--- stderr
+--- exit 0
+
+### consumer (0.4s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/consumer-venv/bin/predictor-research-consumer --domain crypto --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool --ledger /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/consumer/ledger.sqlite --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/domain-state --policy /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/policy.json --objects /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/op/objects
+--- stdout
+{"action": "skipped", "episode_id": "crypto:episode-1", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "skipped", "episode_id": "crypto:episode-2", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}
+{"action": "skipped", "episode_id": "crypto:episode-3", "state": "TERMINAL_REFUSAL", "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}
+{"action": "skipped", "episode_id": "crypto:episode-4", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}
+{"action": "skipped", "episode_id": "crypto:episode-5", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}
+{"action": "skipped", "episode_id": "crypto:episode-6", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}
+{"action": "skipped", "episode_id": "crypto:episode-7", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}
+{"action": "skipped", "episode_id": "crypto:episode-8", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}
+{"action": "skipped", "episode_id": "crypto:episode-9", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}
+{"action": "skipped", "episode_id": "crypto:episode-10", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}
+{"action": "skipped", "episode_id": "crypto:episode-11", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}
+{"action": "skipped", "episode_id": "crypto:episode-12", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}
+{"action": "skipped", "episode_id": "crypto:episode-13", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}
+{"action": "skipped", "episode_id": "crypto:episode-14", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}
+{"action": "skipped", "episode_id": "crypto:episode-15", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}
+{"action": "skipped", "episode_id": "crypto:episode-16", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}
+{"action": "skipped", "episode_id": "crypto:episode-17", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}
+{"action": "skipped", "episode_id": "crypto:episode-18", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}
+{"action": "skipped", "episode_id": "crypto:episode-19", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}
+{"action": "skipped", "episode_id": "crypto:episode-20", "state": "TERMINAL_RESULT", "status": "RESULT", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-21", "result_file": "crypto/results/TASK-a5268111c0ce33a4874c796433401ea4.393a577ad063a2ba.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-a5268111c0ce33a4874c796433401ea4"}
+--- stderr
+{"duration_ms": 209, "event": "job_finished", "job_id": "crypto-research-90393b6cbb1e82327d8bbd09", "level": "INFO", "run_id": "c82f60d2b4ed4cd491919b685e5da73c", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:48:44.256418Z"}
+--- exit 0
+
+### ingest (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research ingest --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state --spool /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/spool
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.bb113966ceeb4c12.json"}
+{"action": "duplicate", "file": "TASK-04cf36b55bc72d71e56c34ad5c93d643.54fa6e70c713d954.json"}
+{"action": "duplicate", "file": "TASK-25df741a9e25261dcbe74ab9a0c1c62c.3edc03c5e1611f41.json"}
+{"action": "duplicate", "file": "TASK-2b84fba3329aec23cb3dc995d6962200.67b1c021e1b6a26c.json"}
+{"action": "duplicate", "file": "TASK-3eb0494624401b7385aee7e37efc3615.a3d7b34464c97fa7.json"}
+{"action": "duplicate", "file": "TASK-612c099e764b4b22938718167ff5b45b.e8a5bbf751956578.json"}
+{"action": "duplicate", "file": "TASK-6cc930138c917aedf714b3561a01660b.4b4f305289b93289.json"}
+{"action": "duplicate", "file": "TASK-7996b9a38af78c1edf812139d418068a.caab5a795b4b77d1.json"}
+{"action": "duplicate", "file": "TASK-937e1629ba93db42082d161105c7cc9f.1f0ebdb4577ca1d6.json"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:dc8227ece21f4cb8a9746b57f403314d", "file": "TASK-a5268111c0ce33a4874c796433401ea4.393a577ad063a2ba.json", "status": "RESULT", "task_id": "crypto:TASK-a5268111c0ce33a4874c796433401ea4"}
+{"action": "duplicate", "file": "TASK-aac39c792f7a37dabdcc338cf99c7ab6.5f5fbf4beba98a4d.json"}
+{"action": "duplicate", "file": "TASK-b50923b02198e5bbdead8d44603a8421.580f5390a1497c18.json"}
+{"action": "duplicate", "file": "TASK-b65f40bc180e15189613b9c9cc455203.1f9e2fa02f35a835.json"}
+{"action": "duplicate", "file": "TASK-c16c6b38337244ca92b5beed66f325cb.c9a2147c644ebf91.json"}
+{"action": "duplicate", "file": "TASK-d68228ee36e613f23de33dcbc00f4492.9304e756caf354a6.json"}
+{"action": "duplicate", "file": "TASK-d7e180ab898a9597ceacf6f0139408a6.a02aef491f58d8a3.json"}
+{"action": "duplicate", "file": "TASK-e0f59d9da4d400a1a498bfbf52c48b91.8370d51835be9b95.json"}
+{"action": "duplicate", "file": "TASK-e4e1805b8a9b2069fb993aca3cb65e2e.2bb7c9910904c51c.json"}
+{"action": "duplicate", "file": "TASK-f376135b8d81ba2eab41b2115ca0b2e1.c476a7e74eb9e03a.json"}
+{"action": "duplicate", "file": "TASK-f75184dcc992edefef0bb5c227bd551b.ae6a7005a864b070.json"}
+{"action": "duplicate", "file": "TASK-ff9b9b3b56df52ffa0c0156c7333d7e4.70cc8882f7d61728.json"}
+--- stderr
+--- exit 0
+
+### episodes (0.1s)
+$ /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/bin/cain research episodes --domain crypto --state /home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/loop/walk/cain-state
+--- stdout
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-28T13:47:28Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "ba72688ddefdcfab8d692c03fda35baafbfbd7e08b38815b712eaef57911fae7", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"as_of": "2026-09-28T13:47:37Z", "decision": "ALLOW", "number": 2, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}, "proposal_id": "cain:CAMP-01", "reason_code": "ALLOWED", "receipt_sha256": "4bab7ac7047bcfea6c44d80a675b818795dd37acddb5a833f27e86d90c0e78ac", "source": "operator", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}, {"as_of": "2026-09-28T13:47:40Z", "decision": "ALLOW", "number": 3, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}, "proposal_id": "cain:CAMP-02", "reason_code": "ALLOWED", "receipt_sha256": "d78b793fe9f5052f0a8660a50727dbc90daaa6b92fa342ca769faebce26987fb", "source": "operator", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}, {"as_of": "2026-09-28T13:47:43Z", "decision": "ALLOW", "number": 4, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}, "proposal_id": "cain:CAMP-03", "reason_code": "ALLOWED", "receipt_sha256": "07b70c99e680eb57296c82986658f551c88f97a537c6b881addbffd3cf9d4d7c", "source": "operator", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}, {"as_of": "2026-09-28T13:47:46Z", "decision": "ALLOW", "number": 5, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}, "proposal_id": "cain:CAMP-04", "reason_code": "ALLOWED", "receipt_sha256": "89f5eea602a06de474c549f4f318d195589185352a3c9d5ec219c1086c205f9a", "source": "operator", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}, {"as_of": "2026-09-28T13:47:49Z", "decision": "ALLOW", "number": 6, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}, "proposal_id": "cain:CAMP-05", "reason_code": "ALLOWED", "receipt_sha256": "6bed0c400635973a530cd522c1398c6019294f0234500717203d6a9121c23527", "source": "operator", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}, {"as_of": "2026-09-28T13:47:53Z", "decision": "ALLOW", "number": 7, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}, "proposal_id": "cain:CAMP-06", "reason_code": "ALLOWED", "receipt_sha256": "e17a6e3fc738faf0d88f94f618c5ce3567c7448c34c1172e34dbc7d4ec3e584d", "source": "operator", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}, {"as_of": "2026-09-28T13:47:58Z", "decision": "ALLOW", "number": 8, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}, "proposal_id": "cain:CAMP-07", "reason_code": "ALLOWED", "receipt_sha256": "8230b5d3d15be5dc61225b9bb00aeca27a2f800b75172348b93f7b3ddfac9f03", "source": "operator", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}, {"as_of": "2026-09-28T13:48:01Z", "decision": "ALLOW", "number": 9, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}, "proposal_id": "cain:CAMP-08", "reason_code": "ALLOWED", "receipt_sha256": "bf2e27a09d14ddb6a4fc58d74d91920c50c1db4262a8ae16228735a222386696", "source": "operator", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}, {"as_of": "2026-09-28T13:48:05Z", "decision": "ALLOW", "number": 10, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}, "proposal_id": "cain:CAMP-09", "reason_code": "ALLOWED", "receipt_sha256": "f2413d8722c6b8e90b94430a52d3f139c56d7cf86b5f450f3e41595d8f7a5499", "source": "operator", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}, {"as_of": "2026-09-28T13:48:08Z", "decision": "ALLOW", "number": 11, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}, "proposal_id": "cain:CAMP-10", "reason_code": "ALLOWED", "receipt_sha256": "d6271a55d06ccf7727146b2efb121eba0818abc34f832e65e9dc4aa02a755c74", "source": "operator", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}, {"as_of": "2026-09-28T13:48:11Z", "decision": "ALLOW", "number": 12, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}, "proposal_id": "cain:CAMP-11", "reason_code": "ALLOWED", "receipt_sha256": "34086c7820d5db921c2c27153bf4ea49ef81e24adaebc7fca1baf2f2a23cd416", "source": "operator", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}, {"as_of": "2026-09-28T13:48:14Z", "decision": "ALLOW", "number": 13, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}, "proposal_id": "cain:CAMP-12", "reason_code": "ALLOWED", "receipt_sha256": "7376e31fa8c8db30ed959f2d98be720a3b1ebcd5ab345c5da0f7758816e5e65a", "source": "operator", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}, {"as_of": "2026-09-28T13:48:17Z", "decision": "ALLOW", "number": 14, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}, "proposal_id": "cain:CAMP-13", "reason_code": "ALLOWED", "receipt_sha256": "0cae995cac6a9a998a80bcf4c00a09a52f74653a47e889d6920caf19eee0fd88", "source": "operator", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}, {"as_of": "2026-09-28T13:48:21Z", "decision": "ALLOW", "number": 15, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}, "proposal_id": "cain:CAMP-14", "reason_code": "ALLOWED", "receipt_sha256": "6cc64de29f4551a936381b45b2970398bb97730f8e22e3b6bc21b96b54c729a7", "source": "operator", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}, {"as_of": "2026-09-28T13:48:24Z", "decision": "ALLOW", "number": 16, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}, "proposal_id": "cain:CAMP-15", "reason_code": "ALLOWED", "receipt_sha256": "97e0d0bf48334f0c0ac1884fd1dce9815f0293021ea5afc110068032e5530254", "source": "operator", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}, {"as_of": "2026-09-28T13:48:29Z", "decision": "ALLOW", "number": 17, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}, "proposal_id": "cain:CAMP-16", "reason_code": "ALLOWED", "receipt_sha256": "4f8544a686950ec381aad70c5d0360d0defcf67372900dd819af1885894177c8", "source": "operator", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}, {"as_of": "2026-09-28T13:48:32Z", "decision": "ALLOW", "number": 18, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}, "proposal_id": "cain:CAMP-17", "reason_code": "ALLOWED", "receipt_sha256": "8314fee7335a55f8b164ceb8e1942b8d54385b1edf9eaae98b1a6301ff982f72", "source": "operator", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}, {"as_of": "2026-09-28T13:48:36Z", "decision": "ALLOW", "number": 19, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}, "proposal_id": "cain:CAMP-18", "reason_code": "ALLOWED", "receipt_sha256": "03f46e78648aa95754601beebb78ac038eb4ae5851e7940b4530e09299435b47", "source": "operator", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}, {"as_of": "2026-09-28T13:48:40Z", "decision": "ALLOW", "number": 20, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}, "proposal_id": "cain:CAMP-19", "reason_code": "ALLOWED", "receipt_sha256": "b0153806f97857032bb2eaf47e6e88a6f222c15abfea279ec3049ed367feb499", "source": "operator", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}, {"as_of": "2026-09-28T13:48:43Z", "decision": "ALLOW", "number": 21, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-a5268111c0ce33a4874c796433401ea4"}, "proposal_id": "cain:CAMP-20", "reason_code": "ALLOWED", "receipt_sha256": "e83ae60219532644a01d2649e1299594152d5ec5674e7644dae8f0c8dca79636", "source": "operator", "task_id": "crypto:TASK-a5268111c0ce33a4874c796433401ea4"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:66fb935e6b6c493490b5a9e846950030", "payload_sha256": "380426f42aefc12017a4758fa44b6d3d14505af0a797fbcc8dd18ba54a001956", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:39beb96806ca48ebb4c1d61333f03fb9", "payload_sha256": "9572c77e225a46210d066c163abc281f1cafaf9eae97fa32dfd3e8d8b66c6738", "status": "RESULT", "task_id": "crypto:TASK-b65f40bc180e15189613b9c9cc455203"}, {"class": "TERMINAL_REFUSAL", "fact_id": "fact:f50db43ee3cb4e8b8cba4d8d40ef2703", "payload_sha256": null, "status": "REJECTED", "task_id": "crypto:TASK-e4e1805b8a9b2069fb993aca3cb65e2e"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:1828bbaa2ebc46f19810c22e8f13ea24", "payload_sha256": "506ae86f300ca2a3e0bf668e91e0c2fadd9b086a807fda2adf53fcf799849654", "status": "RESULT", "task_id": "crypto:TASK-d7e180ab898a9597ceacf6f0139408a6"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:41ec5de7b1da4d1bbcef7998b9a2cdaa", "payload_sha256": "3a095fef00bc40bc6fb075c0ea4ebd80e2b1f691314af5958b16b70cd5df7b87", "status": "RESULT", "task_id": "crypto:TASK-937e1629ba93db42082d161105c7cc9f"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:795c36bc4f9c4b36a8967ac8842dfd8e", "payload_sha256": "81de4812f9a34e322de153db6d83bc449d9ac601191cb2ce034d6616fd909de1", "status": "RESULT", "task_id": "crypto:TASK-aac39c792f7a37dabdcc338cf99c7ab6"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:1b966a4a0798480cb4de6f227ffca9cf", "payload_sha256": "8585d2009062fd1b4e5ca8f7fa585957e46728f6f60bc91a96b4de74a1542626", "status": "RESULT", "task_id": "crypto:TASK-e0f59d9da4d400a1a498bfbf52c48b91"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:1ee218753e6140068009409c095586fe", "payload_sha256": "7387681f883851f2251d8ace2cef01e1ed9f4048f61821db035ac048f0c4631d", "status": "RESULT", "task_id": "crypto:TASK-f75184dcc992edefef0bb5c227bd551b"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:cec8805b317e476798f58a3da3e26b37", "payload_sha256": "b9694de40427850dfb277c2b98eee5f1101246ef810acf0bc1098c1f7c3b3a9c", "status": "RESULT", "task_id": "crypto:TASK-3eb0494624401b7385aee7e37efc3615"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:0389eff288364526adaf2d8290c7ecbe", "payload_sha256": "25a41cebbc0bbed1faaa1096de282f2ee9e441a593fd1f94d8a65ed60aeff912", "status": "RESULT", "task_id": "crypto:TASK-c16c6b38337244ca92b5beed66f325cb"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:17947702c86f4914afa8473cb831866e", "payload_sha256": "1d87ce15aa904eef7c309ac1442fe545465766856da01b3af25c6b3cddd2d76b", "status": "RESULT", "task_id": "crypto:TASK-f376135b8d81ba2eab41b2115ca0b2e1"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:c44b279460204ad8b26a66d7910c5d41", "payload_sha256": "18dc5daca793714a4f2705f1a5e2b5bf8c21d79373932da0dedba5012d684c94", "status": "RESULT", "task_id": "crypto:TASK-25df741a9e25261dcbe74ab9a0c1c62c"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:a57d36c363474137bc336170d59f9545", "payload_sha256": "f7f5d15ef00acf0fd24db3eba6f026badcd75e761d8c5512cde28b93094a620d", "status": "RESULT", "task_id": "crypto:TASK-b50923b02198e5bbdead8d44603a8421"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:e96dc0d7022a44d8af4b1cc9c47a4a67", "payload_sha256": "785b64f70bb4ca0506688b34d1c98235df89ea0faaa060da45a62d9de10ac719", "status": "RESULT", "task_id": "crypto:TASK-04cf36b55bc72d71e56c34ad5c93d643"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:3f2779a000584375b1493d9e3bc3a674", "payload_sha256": "023d5a1fa497f0312ba2e74c12ac475be3c1f19007c1a17a4f7ed5353941bd5a", "status": "RESULT", "task_id": "crypto:TASK-612c099e764b4b22938718167ff5b45b"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:5bd7febfd1724bd58180cd71f284fb07", "payload_sha256": "7ea2bbb5f521d4b670b777815e55c26dae3ed3fd485164c68fc1762b457ae5a0", "status": "RESULT", "task_id": "crypto:TASK-6cc930138c917aedf714b3561a01660b"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:c203796182e94fd7bde0e6fc3f2c9a51", "payload_sha256": "9fe406850a316d3f5b8057313680af1379d6a9c93fc25486ef4eb5501d2838ec", "status": "RESULT", "task_id": "crypto:TASK-d68228ee36e613f23de33dcbc00f4492"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:aa937cbe3e8e4473b2f88491fe180341", "payload_sha256": "0c94bcbcb1fc77af6a70078663b9919ff9faa2b1aba46496467bb8d550444d78", "status": "RESULT", "task_id": "crypto:TASK-7996b9a38af78c1edf812139d418068a"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:7e60c29c73ea477790066c7a321eb283", "payload_sha256": "f10bc4975b261a275fb4769c05d737a083605cb8952b8c8e662bf55f1d276b6c", "status": "RESULT", "task_id": "crypto:TASK-2b84fba3329aec23cb3dc995d6962200"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:89a9cac51e3b454381ccf624c3f2cbbd", "payload_sha256": "784d566972c379e4c7b77e6fb27000c962e92384f068ccb5480e43299a91bcf1", "status": "RESULT", "task_id": "crypto:TASK-ff9b9b3b56df52ffa0c0156c7333d7e4"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:dc8227ece21f4cb8a9746b57f403314d", "payload_sha256": "7dd44051a05593bfa929904487bf283ddc5aa57089ab77cb46c0e98d442c919b", "status": "RESULT", "task_id": "crypto:TASK-a5268111c0ce33a4874c796433401ea4"}], "memory": {"broken_at": null, "entries": 21, "head": "1180725a0398f3ecbd91176fe76be0145bb4c9471e227c2e75d049598f5af72f", "head_recorded_at": "2026-09-28T13:48:44.400111Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- exit 0
+

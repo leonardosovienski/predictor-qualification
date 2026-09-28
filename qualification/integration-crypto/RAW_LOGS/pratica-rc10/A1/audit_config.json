@@ -1,0 +1,85 @@
+{
+ "config": "/home/superleo13/predictors/runtime/integration-crypto/pratica-rc10/rt/cain-venv/lib/python3.13/site-packages/cain/orchestration/data/crypto.json",
+ "source_commit": "341d270e4d709150c581c3cd93f4518d483009eb",
+ "passed": 10,
+ "failed": 3,
+ "checks": [
+  {
+   "check": "hipóteses fechadas = estado científico em 341d270 (H1..H9, com o estado de cada uma)",
+   "ok": true
+  },
+  {
+   "check": "família congelada = frozen_families do estado",
+   "ok": true
+  },
+  {
+   "check": "custos = padrões de v3/costs.py (taxa e slippage por perna)",
+   "ok": true,
+   "config": {
+    "fee_bps": 10,
+    "slippage_bps": 5
+   },
+   "source": {
+    "fee": 10.0,
+    "slip": 5.0
+   }
+  },
+  {
+   "check": "fonte charters/scientific_state.json: sha256 igual ao git show no commit pinado",
+   "ok": true
+  },
+  {
+   "check": "fonte GarimpoInvestimentos/v3/costs.py: sha256 igual ao git show no commit pinado",
+   "ok": true
+  },
+  {
+   "check": "contrato: sha256 igual ao do predictor-qualification no commit registrado",
+   "ok": true
+  },
+  {
+   "check": "tipos de pedido = chaves da handler_allowlist do contrato",
+   "ok": true,
+   "contract": [
+    "BACKTEST_EXISTING_HYPOTHESIS"
+   ]
+  },
+  {
+   "check": "tipos de pedido = handlers da admissão do domínio",
+   "ok": true
+  },
+  {
+   "check": "símbolos = allowed_symbols da admissão do domínio",
+   "ok": true
+  },
+  {
+   "check": "toda hipótese propunhável do CAIN é admitida pelo domínio",
+   "ok": false,
+   "not_admitted": [
+    "crypto:QUAL-SHADOW-001"
+   ],
+   "admitted": [
+    "crypto:QUAL-SHADOW-REAL-001",
+    "crypto:QUAL-SHADOW-REAL-002",
+    "crypto:QUAL-SHADOW-REAL-003"
+   ]
+  },
+  {
+   "check": "toda referência permitida no CAIN existe no registro do domínio",
+   "ok": false,
+   "missing": [
+    "dataset: future-canary v1",
+    "dataset: positive v1"
+   ]
+  },
+  {
+   "check": "capital: o estado científico não autoriza capital nem alavancagem",
+   "ok": true
+  },
+  {
+   "check": "proveniência: o crypto.json aponta para o FROZEN_PARAMETERS vigente no main",
+   "ok": false,
+   "config_points_to": "c428e4b769e3",
+   "main_cycle": 2
+  }
+ ]
+}

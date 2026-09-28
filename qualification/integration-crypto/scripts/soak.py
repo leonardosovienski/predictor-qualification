@@ -11,6 +11,7 @@ Uso (com o env.sh do runtime_env.sh): python soak.py <qualification/integration-
 from __future__ import annotations
 
 import json
+import re
 import os
 import shutil
 import sys
@@ -20,6 +21,8 @@ from harness import Harness, now
 
 NEGATIVE_STATES = {"NO_EDGE", "INCONCLUSIVE", "REFUTED", "CLOSED_INSUFFICIENT_SAMPLE", "INCONCLUSIVE_DATA_QUALITY"}
 
+
+CLOSED_CODE = re.compile(r"[A-Z][A-Z0-9_]{2,63}\Z")  # the CAIN keeps only closed refusal codes
 
 def main() -> int:
     mission, work, out = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
@@ -149,16 +152,35 @@ def main() -> int:
     task_files = list((h.spool / "crypto" / "tasks").glob("TASK-*.json"))
     with h.ro(h.dstate / "admission.sqlite") as db:
         accepted = db.execute("SELECT count(DISTINCT request_id) FROM admissions WHERE decision='ACCEPTED'").fetchone()[0]
+        refused_by_domain = dict(db.execute("SELECT request_id, reason_code FROM admissions WHERE decision='REJECTED'"))
+    # IC-F012 (decisão do dono de 2026-09-28, "Soak conta a recusa"): a configuração do CAIN permite uma hipótese que a
+    # admissão real do cripto não aceita. Quando o modelo a escolhe, o domínio recusa com código fechado, o CAIN
+    # registra TERMINAL_REFUSAL e a R15 não deixa a hipótese voltar. É desfecho terminal registrado, não resultado
+    # perdido. Só conta assim a recusa que os dois lados registram: TERMINAL_REFUSAL/REJECTED no CAIN e REJECTED com
+    # código fechado na admissão do domínio, para o request_id da própria task.
+    task_of = {}
+    for path in task_files:
+        task = json.loads(path.read_bytes())
+        task_of[task["task_id"]] = task["payload"]
+    closed_refusals = {r["task_id"] for r in episodes["inbox"]
+                       if r["class"] == "TERMINAL_REFUSAL" and r["status"] == "REJECTED" and r["task_id"] in task_of
+                       and CLOSED_CODE.fullmatch(refused_by_domain.get(task_of[r["task_id"]]["request_id"]) or "")}
     with h.ro(h.dstate / "x" / "journal.sqlite") as db:
         experiments = db.execute("SELECT count(*) FROM experiments").fetchone()[0]
         per_request = db.execute("SELECT max(c) FROM (SELECT count(*) c FROM experiments GROUP BY request_id)").fetchone()[0]
-    h.check("tasks emitted == task files in the spool == distinct requests admitted by the domain",
-            len(emitted) == len(task_files) == accepted, emitted=len(emitted), spool=len(task_files), admitted=accepted)
+    h.check("tasks emitted == task files in the spool == distinct requests admitted by the domain + refused by it "
+            "with a closed code (IC-F012)",
+            len(emitted) == len(task_files) == accepted + len(closed_refusals), emitted=len(emitted),
+            spool=len(task_files), admitted=accepted, refused=sorted(closed_refusals))
+    refused_hypotheses = [task_of[t]["hypothesis_id"] for t in closed_refusals]
+    h.check("a hypothesis the domain refused is never emitted again (R15)",
+            len(refused_hypotheses) == len(set(refused_hypotheses)), refused_hypotheses=sorted(refused_hypotheses))
     h.check("one experiment per request in the domain (no duplicated effect)", per_request == 1 and
             experiments == accepted, experiments=experiments)
     terminal = {r["task_id"] for r in episodes["inbox"] if r["class"] == "TERMINAL_RESULT"}
-    h.check("no result lost: every emitted task has a terminal result", {e["task_id"] for e in emitted} <= terminal,
-            missing=sorted({e["task_id"] for e in emitted} - terminal))
+    h.check("no result lost: every emitted task has a terminal result or a domain refusal with a closed code "
+            "(IC-F012)", {e["task_id"] for e in emitted} <= terminal | closed_refusals,
+            missing=sorted({e["task_id"] for e in emitted} - terminal - closed_refusals))
     payloads = {}
     for r in episodes["inbox"]:
         if r["payload_sha256"]:

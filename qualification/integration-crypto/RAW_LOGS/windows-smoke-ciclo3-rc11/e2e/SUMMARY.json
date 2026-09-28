@@ -1,0 +1,420 @@
+{
+ "scenario": "e2e",
+ "finished_at": "2026-09-28T14:24:19Z",
+ "checks": [
+  {
+   "check": "01-allow: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "crypto:episode-1",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "54cdba7afdd6b4225e439f83c72495025e05f95df1ec288d71c5e2d211e970b5",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb",
+     "previous_task_id": null,
+     "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"
+    }
+   }
+  },
+  {
+   "check": "02-allow-restarts: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "crypto:episode-2",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "5833f06cb527d5eb38936bed0a36f29fc92673c18d74d731884f8b070d55e8ec",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "2f1a51cc878bbc2b90b9a06125dc4eb586e279b9f4b95229dff11a5f8596ce6c",
+     "previous_task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3",
+     "task_id": "crypto:TASK-9cb8ddb312aff3b4be933e167ae7e943"
+    }
+   }
+  },
+  {
+   "check": "02: consumer died at after_domain_before_result_write (exit 86)",
+   "ok": true,
+   "exit": 86
+  },
+  {
+   "check": "02: no V2 result written before the restart",
+   "ok": true
+  },
+  {
+   "check": "02: CAIN died at after_inbox_commit_before_memory (exit 86)",
+   "ok": true,
+   "exit": 86
+  },
+  {
+   "check": "02: restarted ingestion completed the memory",
+   "ok": true,
+   "got": [
+    {
+     "action": "duplicate",
+     "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.731584953f1c5d54.json"
+    },
+    {
+     "action": "remembered",
+     "fact_id": "fact:c95b971473dc47809f9a41b817718d3e",
+     "file": "TASK-9cb8ddb312aff3b4be933e167ae7e943.bc704962adeb9019.json",
+     "reused": false
+    }
+   ]
+  },
+  {
+   "check": "interleaved: stocks and brasileirao results rejected (DOMAIN_MISMATCH), crypto H9 of a task never emitted rejected (TASK_NOT_FOUND)",
+   "ok": true,
+   "got": {
+    "interleaved-fixtures-v2-brasileirao-result-h9.json": "DOMAIN_MISMATCH",
+    "interleaved-fixtures-v2-crypto-result-h9.json": "TASK_NOT_FOUND",
+    "interleaved-fixtures-v2-stocks-result-h9.json": "DOMAIN_MISMATCH"
+   }
+  },
+  {
+   "check": "03-canary: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "crypto:episode-3",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "5a29a4e48bc00ab2448fcb6cb260a4251ccae506a98eae8837b2c1d221589054",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "1cfa943e5152e6695e47cf670549cea81f0f052ead927c9905b74498bc2892bf",
+     "previous_task_id": "crypto:TASK-9cb8ddb312aff3b4be933e167ae7e943",
+     "task_id": "crypto:TASK-6f9d23e232884c4e3d510523e881874a"
+    }
+   }
+  },
+  {
+   "check": "04-duplicate: decision DUPLICATE",
+   "ok": true,
+   "got": {
+    "decision": "DUPLICATE",
+    "episode_id": "crypto:episode-4",
+    "reason_code": "DUPLICATE_REQUEST",
+    "receipt_sha256": "c93932fa4291dbb4118f98d5991c1b480bed506a995cb79409c7de94c12ad5c3",
+    "rule": "R08",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "04-duplicate: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "05-h9-closed: decision BLOCK",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "episode_id": "crypto:episode-5",
+    "reason_code": "HYPOTHESIS_CLOSED",
+    "receipt_sha256": "aa74e896dcfb2e7b1cf71d07aa563d1bb0d75e8c4f75b8f43eaf3dfbf7c85a2d",
+    "rule": "R05",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "05-h9-closed: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "06-stocks-h9: decision BLOCK",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "episode_id": "crypto:episode-6",
+    "reason_code": "DOMAIN_MISMATCH",
+    "receipt_sha256": "a9f7c1acb18819782dea21800057920e7d52ecb64fd88154358433d99c2b5211",
+    "rule": "R01",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "06-stocks-h9: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "07-next: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "crypto:episode-7",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "67a10abc902536a351b1a433d476695b00f3c7527a41e5673f1a850fa11f4e2c",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "2adbe0ec65ffcf947ec57ee38c71047536a6f04e103382c11ad849ba74039d65",
+     "previous_task_id": "crypto:TASK-6f9d23e232884c4e3d510523e881874a",
+     "task_id": "crypto:TASK-4fd811d6e4fd160bfab2e5c2995cc0ce"
+    }
+   }
+  },
+  {
+   "check": "every emitted task has a V2 result; no result for any other task",
+   "ok": true,
+   "tasks": [
+    "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3",
+    "crypto:TASK-4fd811d6e4fd160bfab2e5c2995cc0ce",
+    "crypto:TASK-6f9d23e232884c4e3d510523e881874a",
+    "crypto:TASK-9cb8ddb312aff3b4be933e167ae7e943"
+   ],
+   "results": [
+    "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3",
+    "crypto:TASK-4fd811d6e4fd160bfab2e5c2995cc0ce",
+    "crypto:TASK-6f9d23e232884c4e3d510523e881874a",
+    "crypto:TASK-9cb8ddb312aff3b4be933e167ae7e943"
+   ]
+  },
+  {
+   "check": "01: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-001: payload byte-identical to `cripto-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "851256de5d2a0c6fc7c54c37b47edf83a7fe3ab8d3f598237e593d8b2b6b8609",
+   "show_sha256": "851256de5d2a0c6fc7c54c37b47edf83a7fe3ab8d3f598237e593d8b2b6b8609"
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-001: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb"
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-001: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-001: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-001: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-001: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "cripto-predictor",
+    "module": "GarimpoInvestimentos.adapters.research_v2",
+    "version": "1.2.0rc3"
+   }
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-001: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "07: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-007: payload byte-identical to `cripto-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "4a65949b75cb9f052ef60d42af9e53330375b79d9fa065f781ec304af2fdcbca",
+   "show_sha256": "4a65949b75cb9f052ef60d42af9e53330375b79d9fa065f781ec304af2fdcbca"
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-007: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "2adbe0ec65ffcf947ec57ee38c71047536a6f04e103382c11ad849ba74039d65"
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-007: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-007: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-007: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-007: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "cripto-predictor",
+    "module": "GarimpoInvestimentos.adapters.research_v2",
+    "version": "1.2.0rc3"
+   }
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-007: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "03: the domain refused the canary (TEMPORAL_INTEGRITY_VIOLATION), no domain result",
+   "ok": true,
+   "got": [
+    "TEMPORAL_INTEGRITY_VIOLATION"
+   ]
+  },
+  {
+   "check": "02: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "DUPLICATE"
+   ]
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-002: payload byte-identical to `cripto-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "69cd37d45760f400a0f4e08f11a125081f72e556212b6e6418770d3887f7c240",
+   "show_sha256": "69cd37d45760f400a0f4e08f11a125081f72e556212b6e6418770d3887f7c240"
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-002: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "2f1a51cc878bbc2b90b9a06125dc4eb586e279b9f4b95229dff11a5f8596ce6c"
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-002: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-002: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-002: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-002: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "cripto-predictor",
+    "module": "GarimpoInvestimentos.adapters.research_v2",
+    "version": "1.2.0rc3"
+   }
+  },
+  {
+   "check": "crypto:REQ-IC-E2E-002: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "03: the domain has no authoritative result for the canary",
+   "ok": true,
+   "exit": 3,
+   "got": {
+    "request_id": "crypto:REQ-IC-E2E-003",
+    "status": "NOT_FOUND"
+   }
+  },
+  {
+   "check": "domain result store readable",
+   "ok": true,
+   "tables": [
+    "results"
+   ]
+  },
+  {
+   "check": "episodes numbered 1..n without gap",
+   "ok": true,
+   "decisions": [
+    "ALLOW",
+    "ALLOW",
+    "ALLOW",
+    "DUPLICATE",
+    "BLOCK",
+    "BLOCK",
+    "ALLOW"
+   ]
+  },
+  {
+   "check": "one inbox row per result file, memory hash chain intact",
+   "ok": true,
+   "inbox": 4,
+   "memory": {
+    "broken_at": null,
+    "entries": 4,
+    "head": "d47113bef0639a204b8bc137a7e26a2ac6ee3fda7470aefd0681cc7cf20c1770",
+    "head_recorded_at": "2026-09-28T14:24:18.742312Z",
+    "projection": "consistent",
+    "status": "intact"
+   }
+  },
+  {
+   "check": "tasks emitted == ALLOW decisions == task files in the spool",
+   "ok": true,
+   "emitted": 4
+  },
+  {
+   "check": "previous_task_id chains the domain's tasks",
+   "ok": true
+  },
+  {
+   "check": "e2e: canary token absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026, 9, 7 absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026-09-07 absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026, 9, 14 absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026-09-14 absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026, 9, 21 absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026-09-21 absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "no fact of another domain in the CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "no capital_permission true in CAIN state or spool",
+   "ok": true
+  }
+ ],
+ "passed": 56,
+ "failed": 0,
+ "decisions": [
+  "ALLOW",
+  "ALLOW",
+  "ALLOW",
+  "DUPLICATE",
+  "BLOCK",
+  "BLOCK",
+  "ALLOW"
+ ]
+}

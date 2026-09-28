@@ -1,8 +1,8 @@
 # integration-crypto — SOAK_REPORT
 
-Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36426935949`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/soak/SUMMARY.json` (sha256 `bbd0a46153683657…`); comandos brutos em `RAW_LOGS/runtime/run36426935949/soak/commands.log`.
+Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36439656179`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36439656179/soak/SUMMARY.json` (sha256 `a1c5d8971a449875…`); comandos brutos em `RAW_LOGS/runtime/run36439656179/soak/commands.log`.
 
-Resultado: **47 conferências OK, 0 falhas**.
+Resultado: **48 conferências OK, 0 falhas**.
 
 | Piso | Mínimo | Obtido |
 |---|--:|--:|
@@ -19,9 +19,10 @@ Execuções por classe de falha: {"cain_process_death": 10, "delivery_anomaly": 
 
 | Conferência (tolerância zero e fim) | Resultado |
 |---|---|
-| tasks emitted == task files in the spool == distinct requests admitted by the domain | OK |
+| tasks emitted == task files in the spool == distinct requests admitted by the domain + refused by it with a closed code (IC-F012) | OK |
+| a hypothesis the domain refused is never emitted again (R15) | OK |
 | one experiment per request in the domain (no duplicated effect) | OK |
-| no result lost: every emitted task has a terminal result | OK |
+| no result lost: every emitted task has a terminal result or a domain refusal with a closed code (IC-F012) | OK |
 | one domain payload per task | OK |
 | one memory fact per terminal task | OK |
 | episodes 1..n without gap | OK |
@@ -73,6 +74,8 @@ Execuções anteriores do soak, mantidas como evidência (não descartadas):
 - `run36357575208`: 43 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36357575208/soak/SUMMARY.json` (sha256 `1c666f2f7b00f2d6…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36357575208/soak/commands.log` (sha256 `b7f785e5441e881b…`) (bytes de entrada, limite): nenhuma.
 - `run36360088636`: 43 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36360088636/soak/SUMMARY.json` (sha256 `c6e35a3a68c43050…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36360088636/soak/commands.log` (sha256 `0dfe85df3c3f1c3e…`) (bytes de entrada, limite): nenhuma.
 - `run36365192302`: 43 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36365192302/soak/SUMMARY.json` (sha256 `00b1d883e00e1a51…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36365192302/soak/commands.log` (sha256 `ee81441dcd8a893d…`) (bytes de entrada, limite): nenhuma.
+- `run36426935949`: 47 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/soak/SUMMARY.json` (sha256 `bbd0a46153683657…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/soak/commands.log` (sha256 `9a8bdba024da2120…`) (bytes de entrada, limite): nenhuma.
+- `run36435382707`: 40 OK, 1 falhas — `floor llm_proposals >= 5` (obtido: 0). Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36435382707/soak/SUMMARY.json` (sha256 `a61df91088ee1662…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36435382707/soak/commands.log` (sha256 `899d58fe35e3c300…`) (bytes de entrada, limite): [(8226, 7680)].
 
 A falha anterior foi de configuração do harness, não do produto: o `cain-llm.toml` do soak declarava `num_ctx = 4096`, e o orçamento de entrada do cliente LLM do cain é `min(max_input_bytes, num_ctx - num_predict - 256)` = min(6500, 4096 - 256 - 256), menor que o pedido de proposta com contexto (números da recusa acima, lidos do log). Cada proposta saiu `LLM_PROPOSAL_FAILED` (fail closed, nenhuma task emitida). O harness passou a declarar `num_ctx = 8192` e `max_input_bytes = 16000` (`scripts/soak.py`, commit `2319ed0`, cuja mensagem atribui o 3584 ao padrão do cain por engano: o padrão de `max_input_bytes` é 6500, e o limite vinha do `num_ctx` do harness). Perfil, pisos, parâmetros congelados e vetores não mudaram.
 
