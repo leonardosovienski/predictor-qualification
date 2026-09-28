@@ -5,6 +5,8 @@ um arquivo de RAW_LOGS/ (citado com sha256). Gera CORE_IDENTITY_REPORT.md, CLEAN
 CAIN_ROUNDTRIP_REPORT.md, CONTRACT_REVALIDATION_REPORT.md, HOSTED_CI_REPORT.md, PROTECTED_ARTIFACT_REPORT.md,
 SOAK_REPORT.md, ENVELOPE_V2_CONFORMANCE_REPORT.md e DECISION_POLICY_REPORT.md.
 Uso: python render_reports.py <qualification/integration-stocks> <run do Linux> <run do Windows> <coleta do hosted-ci>
+     [<dir da parte estática do C24.3 em RAW_LOGS, padrão contract-revalidation>
+      [<dir do protected_check em RAW_LOGS, padrão protected>]]
 """
 
 from __future__ import annotations
@@ -29,6 +31,8 @@ def junit(path: Path) -> dict:
 
 def main() -> int:
     m, run, win, hosted = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+    static_dir = sys.argv[5] if len(sys.argv) > 5 else "contract-revalidation"
+    protected_dir = sys.argv[6] if len(sys.argv) > 6 else "protected"
     root = m.parent.parent
     raw = m / "RAW_LOGS"
     rt, wt = raw / "runtime" / run, raw / "runtime" / win
@@ -132,7 +136,7 @@ def main() -> int:
         "orquestração qualificada do Stocks não chama esse comando: a configuração do domínio vem de 61fc017 (SHA completo) "
         "pelo `tools/build_domain_config.py` e fica empacotada (`data/stocks.json`).\n", encoding="utf-8")
     # ---------------------------------------------------------------- CONTRACT_REVALIDATION
-    static = load(raw / "contract-revalidation" / "static_checks.json")
+    static = load(raw / static_dir / "static_checks.json")
     srows = "\n".join(f"| {c['check']} | {'OK' if c['ok'] else 'FALHA'} |" for c in static["checks"])
     a_changed = next(c for c in static["checks"] if c["check"].startswith("(a) outside adapter_paths only"))
     diff_rows = "\n".join(f"| `{p}` | {s} |" for p, s in sorted(a_changed["changed"].items()))
@@ -148,7 +152,7 @@ def main() -> int:
         "- **autorizados pela D-24 (4)** (decisão do dono, resposta ao conflito C19 entre a regra local R8 e C24.3(a)): "
         "arquivos NOVOS em `tests/adapters/`, os dois recibos R8 novos (só `.json`) em "
         "`docs/engineering/2026-09-27-integration-stocks/evidence/` e o selo `docs/engineering/current-operational-evidence.json`.\n\n"
-        f"Parte estática ({cite(raw / 'contract-revalidation' / 'static_checks.json')}):\n\n"
+        f"Parte estática ({cite(raw / static_dir / 'static_checks.json')}):\n\n"
         "| Conferência | Resultado |\n|---|---|\n" + srows + "\n\n"
         f"(c) suíte de conformidade verde com as wheels da integração: {finals['conformance']['tests']} testes, "
         f"{finals['conformance']['failures']} falhas ({cite(rt / 'cleanroom-final' / 'conformance.junit.xml')}).\n\n"
@@ -156,7 +160,8 @@ def main() -> int:
         f"({cite(rt / 'contract-revalidation' / 'SUMMARY.json')}): hash canônico sem `client_ref` igual ao do vetor "
         f"(`{cd['vector_sha256'][:16]}…`, o mesmo conferido contra o resultado real da Etapa A), `client_ref` devolvido igual, "
         "payload byte-idêntico ao `show` (adapter_api).\n\n"
-        "(f) CI do domínio: ver `HOSTED_CI_REPORT.md` (IS-F004, IS-F005).\n", encoding="utf-8")
+        "(f) CI do domínio: ver `HOSTED_CI_REPORT.md` (IS-F004, IS-F005 e a decisão do dono, quando houver).\n",
+        encoding="utf-8")
     # ---------------------------------------------------------------- HOSTED_CI
     lines, all_ok = [], True
     for s in load(raw / "hosted-ci" / hosted / "HOSTED_CI_SUMMARY.json"):
@@ -165,27 +170,61 @@ def main() -> int:
         lines.append(f"| {s['repo'].split('/')[1]} | {s['role']} | `{s['commit'][:12]}` | {'verde' if s['ok'] else 'SEM PUSH VERDE'} | {runs} | {s['non_success_jobs'] or ''} |")
     dispatch = load(raw / "hosted-ci" / "stocks-predictor_6f857b2_run36363108348.json")
     djobs = ", ".join(f"{j['name']}={j['conclusion']}" for j in dispatch["jobs"])
+    acc_path = raw / "hosted-ci" / hosted / "stocks_dispatch_acceptance.json"
+    if acc_path.is_file():
+        acc = load(acc_path)
+        leak = next(c for c in acc["checks"] if "vazamento não" in c["check"])["leaks"]
+        tree_log = raw / "hosted-ci" / hosted / "tree_scan_local.log"
+        tree = tree_log.read_text(encoding="utf-8")
+        stocks_text = (
+            "O `ci.yml` do stocks-predictor dispara `push` só em `main` (intocável pela D-24 (4c)): nem a base `61fc017` "
+            "nem o final_commit `6f857b2` têm run de push (IS-F004).\n\n"
+            f"**Decisão do dono** (chat da sessão, 2026-09-28: \"{acc['decision_words']}\"; IS-F004 e IS-F005 "
+            "`ACCEPTED_LIMITATION`): só para o stocks-predictor, o run `workflow_dispatch` do CI Pipeline no SHA exato "
+            "vale como o run de C21 / prompt 9.3 e de C24.3 (f), com o job `secrets` vermelho só pelo falso positivo "
+            "pré-existente fora da branch da missão.\n\n"
+            f"Conferência mecânica da decisão ({cite(acc_path)}): **{acc['passed']} OK, {acc['failed']} falhas**, "
+            f"aceito: {'sim' if acc['accepted'] else 'NÃO'}.\n\n"
+            "| Conferência | Resultado |\n|---|---|\n"
+            + "\n".join(f"| {c['check']} | {'OK' if c['ok'] else 'FALHA'} |" for c in acc["checks"]) + "\n\n"
+            f"- final_commit: run [{dispatch['databaseId']}]({acc['final_run']}): {djobs}.\n"
+            f"- base: run [{acc['base_run'].rsplit('/', 1)[1]}]({acc['base_run']}) (Etapa A), todos os jobs verdes.\n"
+            + "".join(f"- vazamento acusado: commit `{x['commit'][:12]}` (branches {', '.join(x['remote_branches_containing'])}), "
+                      f"`{x['path']}`:{x['line']} ({x['rule']}), ancestral do final_commit: "
+                      f"{'sim' if x['ancestor_of_final_commit'] else 'não'}.\n" for x in leak)
+            + f"- com o gitleaks vermelho, não rodaram no Actions: {', '.join(acc['skipped_after_gitleaks'])}. "
+            "Reproduzidos localmente (diagnóstico, WSL do PC 2, NÃO é CI hospedado), com o mesmo gitleaks 8.24.3 "
+            f"conferido pelo sha256 da release e os mesmos comandos do `ci.yml` ({cite(tree_log)}): "
+            + ("varredura da árvore sem achados e controle detectou o token sintético (PASS)."
+               if "RESULTADO PASS" in tree else "FALHA (ver o log).") + "\n")
+    else:
+        stocks_text = (
+            "O `ci.yml` do stocks-predictor dispara `push` só em `main` (intocável pela D-24 (4c)): nem a base `61fc017` "
+            "nem o final_commit `6f857b2` têm run de push (IS-F004). No SHA exato do final_commit há o run "
+            f"`workflow_dispatch` [{dispatch['databaseId']}]({dispatch['url']}): {dispatch['conclusion']} — {djobs} "
+            f"({cite(raw / 'hosted-ci' / 'stocks-predictor_6f857b2_run36363108348.json')}). O job `secrets` falha por um "
+            "falso positivo pré-existente fora desta branch "
+            f"({cite(raw / 'hosted-ci' / 'stocks-predictor_6f857b2_run36363108348_secrets_job.log')}; IS-F005). Decisão "
+            "do dono pendente; o gate fica `NOT_RUN` com BLOCKED e não é relaxado pelo agente.\n")
     (m / "HOSTED_CI_REPORT.md").write_text(
         "# integration-stocks — HOSTED_CI_REPORT\n\n"
         "Gate `HOSTED_CI` (C21; prompt da sessão 9.3: só o run de **push** cujo SHA é exatamente o commit vale). Coletado "
         f"por `scripts/hosted_ci.py` ({cite(raw / 'hosted-ci' / hosted / 'HOSTED_CI_SUMMARY.json')}). Core e Ops não mudaram "
         "(CI da Etapa A, HERDADO).\n\n"
         "| Repo | Papel | Commit | Estado | Runs de push | Jobs não verdes |\n|---|---|---|---|---|---|\n" + "\n".join(lines) + "\n\n"
-        "## stocks-predictor\n\n"
-        "O `ci.yml` do stocks-predictor dispara `push` só em `main` (intocável pela D-24 (4c)): nem a base `61fc017` nem o "
-        "final_commit `6f857b2` têm run de push (IS-F004). No SHA exato do final_commit há o run `workflow_dispatch` "
-        f"[{dispatch['databaseId']}]({dispatch['url']}): {dispatch['conclusion']} — {djobs} "
-        f"({cite(raw / 'hosted-ci' / 'stocks-predictor_6f857b2_run36363108348.json')}). O job `secrets` falha por um falso "
-        "positivo que está no histórico do `main` (commit `28f17d2`, PR #99), fora desta branch "
-        f"({cite(raw / 'hosted-ci' / 'stocks-predictor_6f857b2_run36363108348_secrets_job.log')}; IS-F005). Decisão do dono "
-        "pendente; o gate fica `NOT_RUN` com BLOCKED e não é relaxado pelo agente.\n", encoding="utf-8")
+        "## stocks-predictor\n\n" + stocks_text, encoding="utf-8")
     # ---------------------------------------------------------------- PROTECTED
-    prot = load(raw / "protected" / "protected_check.json")
+    prot = load(raw / protected_dir / "protected_check.json")
+    f006 = {x["id"]: x for x in load(m / "FINDINGS.json")["findings"]}.get("IS-F006", {})
+    f006_text = ("Conflito entre a C14 congelada (`FROZEN_PARAMETERS.c14_integration_crypto`) e a C15.1 (IS-F006): "
+                 + (f"decidido pelo dono em {f006['owner_decision_taken']['date']} (\"{f006['owner_decision_taken']['words']}\": "
+                    f"{f006['owner_decision_taken']['option_text']}). O gate aceita o item só com a supersessão conferida."
+                    if f006.get("status") == "ACCEPTED_LIMITATION" else "decisão do dono pendente."))
     prow = "\n".join(f"| {d} | {v['repo']} | `{v['commit'][:12]}` | {v['items']} | {len(v['changed'])} |" for d, v in prot["domains"].items())
     (m / "PROTECTED_ARTIFACT_REPORT.md").write_text(
         "# integration-stocks — PROTECTED_ARTIFACT_REPORT\n\n"
         "Gate `PROTECTED_ARTIFACTS_UNCHANGED` (C15.1). O conjunto veio do PROTECTED_SET.json de `truth-map` e foi "
-        f"reconferido por `scripts/protected_check.py` ({cite(raw / 'protected' / 'protected_check.json')}).\n\n"
+        f"reconferido por `scripts/protected_check.py` ({cite(raw / protected_dir / 'protected_check.json')}).\n\n"
         "| Domínio | Repo | Commit conferido | Itens | Alterados |\n|---|---|---|--:|--:|\n" + prow + "\n\n"
         f"Artefatos compartilhados conferidos por sha256: {len(prot['shared'])}; alterados: "
         f"{sum(not s['ok'] for s in prot['shared'])}. Total de itens: {prot['items_total']}; tudo igual: "
@@ -194,8 +233,7 @@ def main() -> int:
                   + (f" Reemissão: os bytes esperados estão em `{s['supersession']['superseded_file']}` (sha256 "
                      f"`{(s['supersession']['superseded_file_sha256'] or 'ausente')[:16]}…`) e o `supersedes_sha256` "
                      f"da attestation atual é `{(s['supersession']['current_supersedes_sha256'] or 'nulo')[:16]}…`. "
-                     "Conflito entre a C14 congelada (`FROZEN_PARAMETERS.c14_integration_crypto`) e a C15.1: IS-F006, "
-                     "decisão do dono." if "supersession" in s else "") + "\n"
+                     + f006_text if "supersession" in s else "") + "\n"
                   for s in prot["shared"] if not s["ok"]), encoding="utf-8")
     # ---------------------------------------------------------------- SOAK
     soak = load(rt / "soak" / "SUMMARY.json")
