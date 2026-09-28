@@ -1,0 +1,359 @@
+{
+ "schema": "integration-stocks/FROZEN_VECTORS/1",
+ "frozen_before": "fases e2e, n-plus-1, isolation-ids-contradiction, idempotency-failure, windows-smoke e soak",
+ "identity": "sha256 dos bytes de cada arquivo (caminho relativo a qualification/integration-stocks/)",
+ "as_of_marker": {
+  "marker": "AS_OF:PINNED_PANEL_DATA_CUTOFF",
+  "rule": "nos modelos do E2E e do soak, request.as_of = marcador; o harness o substitui pelo data_cutoff do painel real construído no run (REAL_ENV.json, pin novo por run: D-16, D-21) e muda só esse campo; o arquivo efetivo e o seu sha256 vão para o log bruto"
+ },
+ "e2e_plan": [
+  {
+   "proposal": "fixtures/proposals/e2e/01-allow.json",
+   "expected_decision": "ALLOW"
+  },
+  {
+   "proposal": "fixtures/proposals/e2e/02-allow-restarts.json",
+   "expected_decision": "ALLOW"
+  },
+  {
+   "proposal": "fixtures/proposals/e2e/03-canary.json",
+   "expected_decision": "ALLOW"
+  },
+  {
+   "proposal": "fixtures/proposals/e2e/04-duplicate.json",
+   "expected_decision": "DUPLICATE",
+   "expected_reason": "DUPLICATE_REQUEST"
+  },
+  {
+   "proposal": "fixtures/proposals/e2e/05-h9-closed.json",
+   "expected_decision": "BLOCK",
+   "expected_reason": "HYPOTHESIS_CLOSED"
+  },
+  {
+   "proposal": "fixtures/proposals/e2e/06-crypto-h9.json",
+   "expected_decision": "BLOCK",
+   "expected_reason": "DOMAIN_MISMATCH"
+  },
+  {
+   "proposal": "fixtures/proposals/e2e/07-frozen-family.json",
+   "expected_decision": "BLOCK",
+   "expected_reason": "HYPOTHESIS_CLOSED"
+  },
+  {
+   "proposal": "fixtures/proposals/e2e/08-next.json",
+   "expected_decision": "ALLOW"
+  }
+ ],
+ "n_plus_1": {
+  "as_of": "2026-09-27T00:00:00Z",
+  "seed": "fixtures/proposals/n1/00-seed-etapa-a.json",
+  "processes": 3,
+  "state_results": [
+   "../integration-crypto/fixtures/v2/stocks/result-etapa-a.json",
+   "../integration-crypto/fixtures/v2/stocks/result-h9.json",
+   "../integration-crypto/fixtures/v2/crypto/result-etapa-a.json",
+   "../integration-crypto/fixtures/v2/crypto/result-h9.json",
+   "../integration-crypto/fixtures/v2/brasileirao/result-etapa-a.json",
+   "../integration-crypto/fixtures/v2/brasileirao/result-h9.json"
+  ],
+  "candidates": [
+   {
+    "proposal": "fixtures/proposals/n1/01-next.json",
+    "expected_decision": "ALLOW"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/02-duplicate.json",
+    "expected_decision": "DUPLICATE",
+    "expected_reason": "DUPLICATE_REQUEST"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/03-crypto-h9.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "DOMAIN_MISMATCH"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/04-stocks-h9.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/05-brasileirao-h9.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "DOMAIN_MISMATCH"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/06-new-hypothesis.json",
+    "expected_decision": "REQUIRE_HUMAN",
+    "expected_reason": "NEW_HYPOTHESIS"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/07-h1-momentum.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/08-h2-low-vol.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/09-h14-52w-high.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/10-h15-volume.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/11-family-momentum.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/12-family-low-vol.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/13-family-52w-high.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/14-family-volume.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "HYPOTHESIS_CLOSED"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/15-watch-high-priority.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "PRIORITY_ABOVE_CAP"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/16-cost-mismatch.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "COST_MODEL_MISMATCH"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/17-collection.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "COST_MODEL_MISMATCH"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/18-llm-shape.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "SCHEMA_INVALID"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/19-unqualified-id.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "DOMAIN_MISMATCH"
+   },
+   {
+    "proposal": "fixtures/proposals/n1/20-reference-not-allowed.json",
+    "expected_decision": "BLOCK",
+    "expected_reason": "REFERENCE_NOT_ALLOWED"
+   }
+  ]
+ },
+ "contradiction": {
+  "derivation": "resultado real da Etapa A do Stocks (fixture V2 congelada) com result_state/scientific/economic, request_id, result_id e experiment_id trocados; mesma hipótese stocks:QUAL-PIT-MOM-001; não é resultado de domínio, é vetor do CAIN",
+  "plan": [
+   {
+    "proposal": "fixtures/proposals/contradiction/01-supported.json",
+    "expected_decision": "ALLOW",
+    "result": "fixtures/v2/stocks/contradiction-supported-result.json"
+   },
+   {
+    "proposal": "fixtures/proposals/contradiction/02-refuted.json",
+    "expected_decision": "ALLOW",
+    "result": "fixtures/v2/stocks/contradiction-refuted-result.json"
+   },
+   {
+    "proposal": "fixtures/proposals/contradiction/03-refuted-again.json",
+    "expected_decision": "REQUIRE_HUMAN",
+    "result": "fixtures/v2/stocks/contradiction-refuted-again-result.json",
+    "expected_reason": "CONTRADICTION_UNRESOLVED",
+    "result_expected": "TASK_NOT_FOUND (nenhuma task emitida: a maioria não se forma)"
+   },
+   {
+    "proposal": "fixtures/proposals/contradiction/04-after.json",
+    "expected_decision": "REQUIRE_HUMAN",
+    "expected_reason": "CONTRADICTION_UNRESOLVED"
+   }
+  ],
+  "as_of": "2026-09-27T00:00:00Z",
+  "why": "SUPPORTED × REFUTED na mesma hipótese: o CAIN para e pede humano; os dois fatos ficam na memória; um terceiro resultado não entra e nada é decidido por maioria"
+ },
+ "soak_generator": {
+  "hypotheses": [
+   "stocks:QUAL-PIT-MOM-REAL-001",
+   "stocks:QUAL-PIT-MOM-REAL-002",
+   "stocks:QUAL-PIT-MOM-REAL-003"
+  ],
+  "request_id": "stocks:REQ-IS-SOAK-<nnn>",
+  "template": "real_request(request_id, hypotheses[(n-1) % 3]) com as_of do painel do run",
+  "dataset": "b3-cvm-real v1",
+  "cycles": 24
+ },
+ "files": {
+  "../integration-crypto/fixtures/v2/FIXTURES_MANIFEST.json": {
+   "sha256": "064673a1ffac074b09596369c28e63b2b0ab1f93a15ec56f7e1c6abc92650721"
+  },
+  "../integration-crypto/fixtures/v2/brasileirao/result-etapa-a.json": {
+   "sha256": "f65145cf824a888dbf4f119b410a1284fcdbdc948a6065adf7c7e1c2895f5a0f"
+  },
+  "../integration-crypto/fixtures/v2/brasileirao/result-h9.json": {
+   "sha256": "6e5802f5822121890802f535bb21d4ef85b01cc6547d42d8b8cce02916494d22"
+  },
+  "../integration-crypto/fixtures/v2/brasileirao/task-etapa-a.json": {
+   "sha256": "d008b945dac58ebccee88502224ddf931d8f0c07b8a71da0beea200ce4372c1f"
+  },
+  "../integration-crypto/fixtures/v2/brasileirao/task-h9.json": {
+   "sha256": "d47ec07e25d821463b94eb1e15964061f1a55397766b0f3360d698ed794052bc"
+  },
+  "../integration-crypto/fixtures/v2/crypto/result-etapa-a.json": {
+   "sha256": "b7156c1eeafd0891531a573e0500611b0a17935cab40899e32b1a69c13add1d1"
+  },
+  "../integration-crypto/fixtures/v2/crypto/result-h9.json": {
+   "sha256": "0c1638398fa27a58a72fbe7c09582730c01c9cc2bf57af40efefc0ed013cbd72"
+  },
+  "../integration-crypto/fixtures/v2/crypto/task-etapa-a.json": {
+   "sha256": "14be1aba75288d4542e8943eed29a0f47984dffb4ad735e1235907a610ad17d8"
+  },
+  "../integration-crypto/fixtures/v2/crypto/task-h9.json": {
+   "sha256": "5b6881ca0a5431af2e5d385f28292379331c85ed28858a468973474ce9b2221c"
+  },
+  "../integration-crypto/fixtures/v2/stocks/result-etapa-a.json": {
+   "sha256": "99bf7c2049f7404c192868806b5a8e38ffae70facca4902da2fcde1b0e222290"
+  },
+  "../integration-crypto/fixtures/v2/stocks/result-h9.json": {
+   "sha256": "a669e9d2829e2570e1180720b38d2e871912ac0457334a3315c27cebd2fa52d0"
+  },
+  "../integration-crypto/fixtures/v2/stocks/task-etapa-a.json": {
+   "sha256": "fd677615c6ea23ac9eb8ccb7d730ab95df44917d455b91c0028096898236f962"
+  },
+  "../integration-crypto/fixtures/v2/stocks/task-h9.json": {
+   "sha256": "fec63dd5e21c823ae09a263eb850412d421bc9e4b72aec4c54685667e2301a23"
+  },
+  "fixtures/proposals/contradiction/01-supported.json": {
+   "sha256": "c15988145c87732005a0ddbbf99f5838a469034422d3e555b7f16d22474f15f5"
+  },
+  "fixtures/proposals/contradiction/02-refuted.json": {
+   "sha256": "29f76281294f75acea27a2fc961f0eb974a752510ace67557ecd626cd0b99c20"
+  },
+  "fixtures/proposals/contradiction/03-refuted-again.json": {
+   "sha256": "6caef9db6a982ad9544b961ba99e79dfa79873f4f0d691361dd42e51d20ee8c5"
+  },
+  "fixtures/proposals/contradiction/04-after.json": {
+   "sha256": "0db1708762722f742412d31d4aa9d5d275e470ca4539261ba5b1e305faa4a51f"
+  },
+  "fixtures/proposals/e2e/01-allow.json": {
+   "sha256": "3fdef0dc0195a7d8a7554a66b132cecad2e355c228fde73e6685b72c784a5781"
+  },
+  "fixtures/proposals/e2e/02-allow-restarts.json": {
+   "sha256": "309eb42d6f60ca5c4f7092519b69dc8e54d259acd37326aa840fc938a408ac86"
+  },
+  "fixtures/proposals/e2e/03-canary.json": {
+   "sha256": "39b93c810cd2eac6773e700a6006122f067ca9696d5509fac8ca72123b9e6a64"
+  },
+  "fixtures/proposals/e2e/04-duplicate.json": {
+   "sha256": "960f41d87f5a72dbddb208c3cce925762112f839eb3453b44f24aae6a5b9edfb"
+  },
+  "fixtures/proposals/e2e/05-h9-closed.json": {
+   "sha256": "c364d016f235538522fac2b7577f4101801fa335db7342198cbb7799974cab99"
+  },
+  "fixtures/proposals/e2e/06-crypto-h9.json": {
+   "sha256": "72ada5f2900a0fbdcb3947998cf971e0bc012e8b0bf4793eca94d1bdad0e7211"
+  },
+  "fixtures/proposals/e2e/07-frozen-family.json": {
+   "sha256": "54a2a439fffb87ad9a08578f30eb14f9808b95c4e19feaa793828586cb63d25f"
+  },
+  "fixtures/proposals/e2e/08-next.json": {
+   "sha256": "12a99911d6d6656ee52fba4075c2f4ed8363f56c05ec1665d89f646dc6743f0c"
+  },
+  "fixtures/proposals/n1/00-seed-etapa-a.json": {
+   "sha256": "9e5116ead191d3555a6556bea06739bc193513e062b565276f265aabebcbb9fc"
+  },
+  "fixtures/proposals/n1/01-next.json": {
+   "sha256": "0f0fc71e3165f00415c0790c473d1f8b7bee39fcd9b9a37154e4d975d15b2711"
+  },
+  "fixtures/proposals/n1/02-duplicate.json": {
+   "sha256": "9019998b14fc6fca2192b094490223ebca112e15b52fb1a581176c5a0ca72de9"
+  },
+  "fixtures/proposals/n1/03-crypto-h9.json": {
+   "sha256": "5c1bc205e750d08899502d6b3d7fd49be947063dd39b07929913fdee82d5dad8"
+  },
+  "fixtures/proposals/n1/04-stocks-h9.json": {
+   "sha256": "fb1886a803a743c155056745655ffc8d33d154b0aaaaac41cc50c2dec6872a9f"
+  },
+  "fixtures/proposals/n1/05-brasileirao-h9.json": {
+   "sha256": "7fa8fb997b6fb83a6592741c3665e0d2c71af0ab0a23e79cd9862e8b3ad7eb99"
+  },
+  "fixtures/proposals/n1/06-new-hypothesis.json": {
+   "sha256": "3afead75aba3af8bf94fe92dd3a8fd9f7bc8fd89d7c0838886dcd9212c191167"
+  },
+  "fixtures/proposals/n1/07-h1-momentum.json": {
+   "sha256": "8005c780bd5ce81c5ad46f06657b789221be843256b2e268526fe77118c8669a"
+  },
+  "fixtures/proposals/n1/08-h2-low-vol.json": {
+   "sha256": "85f03d15d9c3b225ecc4f94b6167888f4872a5f136843a80f478d8ca0e3c2e99"
+  },
+  "fixtures/proposals/n1/09-h14-52w-high.json": {
+   "sha256": "010e0812401493960cd7325a0a40489c8f0f4de385ea2fbc530c9d475add45ea"
+  },
+  "fixtures/proposals/n1/10-h15-volume.json": {
+   "sha256": "f2e08ddf60ed49bf6a1f867c91a5bac7ef3b893cceafe872809cb22f4870e24e"
+  },
+  "fixtures/proposals/n1/11-family-momentum.json": {
+   "sha256": "04531fdce5313ad898f88964242616ec4217fcb2fb6fe6b4543c2c1b5ebc388a"
+  },
+  "fixtures/proposals/n1/12-family-low-vol.json": {
+   "sha256": "b15a243a3c804ba255652138b8680a22a19ed9ee49a8197ff34e610a8a71cb64"
+  },
+  "fixtures/proposals/n1/13-family-52w-high.json": {
+   "sha256": "ec9b6a635cbe45cc1c1966caa16ee65af1b896044a9676bb962e7f04dc8a45fe"
+  },
+  "fixtures/proposals/n1/14-family-volume.json": {
+   "sha256": "ec5cc095828f382015eec50115b5281a357ecb3630051c47e0acb1b3b6a344bf"
+  },
+  "fixtures/proposals/n1/15-watch-high-priority.json": {
+   "sha256": "8619afee274c1e83726e22cad7ea78ca19892b7e0a3367f65d9f751bb3580b76"
+  },
+  "fixtures/proposals/n1/16-cost-mismatch.json": {
+   "sha256": "f1b553590c851e11a0265704ebbe4bb212b5d6f26262e717d6f789fae4617e58"
+  },
+  "fixtures/proposals/n1/17-collection.json": {
+   "sha256": "005b5e401c283d4cf8ae99277e311c60ee068a59338b322be785c9ec0056ad7e"
+  },
+  "fixtures/proposals/n1/18-llm-shape.json": {
+   "sha256": "88cecdd35cf18aac5d21bba725045f9bfe26b259c31a5a4e3563166d14cc0ee8"
+  },
+  "fixtures/proposals/n1/19-unqualified-id.json": {
+   "sha256": "a36409fe5e0a401c6338550695b876b515abf5f5d5a836ec1241a6f136016962"
+  },
+  "fixtures/proposals/n1/20-reference-not-allowed.json": {
+   "sha256": "c0a02917cd573f3fc67873111010c876273f9c66d37204f748d489b3a4c290fe"
+  },
+  "fixtures/v2/stocks/contradiction-refuted-again-result.json": {
+   "sha256": "8e11baa2eaf215e0d2e863069d6fb1630fbd5961e14b13c7a70003fca739b331"
+  },
+  "fixtures/v2/stocks/contradiction-refuted-again-task.json": {
+   "sha256": "a428a21607e9c69e598b96fdfc8e206ee9dfa413b25dd727966dfb20fbcb925d"
+  },
+  "fixtures/v2/stocks/contradiction-refuted-result.json": {
+   "sha256": "3b35f64eedc65475898a7b8f021a7973b3fb2ba053923ff114dbbe6c8487c325"
+  },
+  "fixtures/v2/stocks/contradiction-refuted-task.json": {
+   "sha256": "e6e96ca865929c650f48a8be642f57e724934d04a0100251c6ec6fb748810d9e"
+  },
+  "fixtures/v2/stocks/contradiction-supported-result.json": {
+   "sha256": "5dfce487b89f80de3858be25ebc4faad5dc6759548f51c3c944f93fd24bc21fe"
+  },
+  "fixtures/v2/stocks/contradiction-supported-task.json": {
+   "sha256": "a485e522aa66055dee34a72c05144f6c2090f9d804af9c53987c144db209e321"
+  }
+ }
+}
