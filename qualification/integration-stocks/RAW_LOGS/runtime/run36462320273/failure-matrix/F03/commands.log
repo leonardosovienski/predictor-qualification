@@ -1,0 +1,36 @@
+{"effective_proposal": "/home/runner/work/_temp/work/failures/F03/proposals/1.json", "template": "fixtures/proposals/e2e/01-allow.json", "sha256": "ab55cbc8e94caa61c215c76d59e4278209d84355386193a95f3a8df7144ef7c8"}
+{"n": 1, "label": "propose 1", "at": "2026-09-28T18:16:36Z", "seconds": 0.139, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F03/proposals/1.json", "--as-of", "2026-09-28T18:16:35Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "stocks:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "665cee8b4530a3968a57d312917133a7dbb573a9b2add1558b3aa3311e5de466", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "0c845050a149f217e7f2a934df40205773e0366c50f9ac857cbae35162d0ff04", "previous_task_id": null, "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch", "at": "2026-09-28T18:16:36Z", "seconds": 0.121, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F03/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "stocks/tasks/TASK-fd6fedc61565dbd8b96acc853c4d00ab.json", "spool": "WRITTEN", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer", "at": "2026-09-28T18:16:44Z", "seconds": 8.409, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "stocks", "--spool", "/home/runner/work/_temp/work/failures/F03/spool", "--ledger", "/home/runner/work/_temp/work/failures/F03/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F03/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "stocks:episode-1", "result_file": "stocks/results/TASK-fd6fedc61565dbd8b96acc853c4d00ab.4af5e2bb6b7a8d97.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}
+--- stderr
+{"duration_ms": 8129, "event": "job_finished", "job_id": "stocks-research-eaba642660f9a565505bf808", "level": "INFO", "run_id": "63b0453e8fe44d7baa66a3a986243cee", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T18:16:44.502229Z"}
+--- end
+{"n": 4, "label": "ingest (fault)", "at": "2026-09-28T18:16:44Z", "seconds": 0.113, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F03/spool"], "fault_env": {"CAIN_ORCHESTRATION_FAULT": "after_inbox_commit_before_memory"}, "exit": 86}
+--- stdout
+--- stderr
+--- end
+{"n": 5, "label": "inbox without fact before recovery", "at": "2026-09-28T18:16:44Z", "seconds": 0.12, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-09-28T18:16:35Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}, "proposal_id": "cain:FM-F03-1", "reason_code": "ALLOWED", "receipt_sha256": "665cee8b4530a3968a57d312917133a7dbb573a9b2add1558b3aa3311e5de466", "source": "operator", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": null, "payload_sha256": "757517b8f69d48aaa5281ff701e80853ad56187778eeab80879e94557ae3cd04", "status": "RESULT", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}], "memory": {"broken_at": null, "entries": 0, "head": "cain-memory-log/1", "head_recorded_at": null, "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end
+{"n": 6, "label": "ingest after restart", "at": "2026-09-28T18:16:44Z", "seconds": 0.125, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F03/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "remembered", "fact_id": "fact:f86c60143770445ab3afa6626caad6f4", "file": "TASK-fd6fedc61565dbd8b96acc853c4d00ab.4af5e2bb6b7a8d97.json", "reused": false}
+--- stderr
+--- end
+{"n": 7, "label": "memory completed once", "at": "2026-09-28T18:16:45Z", "seconds": 0.119, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-09-28T18:16:35Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}, "proposal_id": "cain:FM-F03-1", "reason_code": "ALLOWED", "receipt_sha256": "665cee8b4530a3968a57d312917133a7dbb573a9b2add1558b3aa3311e5de466", "source": "operator", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:f86c60143770445ab3afa6626caad6f4", "payload_sha256": "757517b8f69d48aaa5281ff701e80853ad56187778eeab80879e94557ae3cd04", "status": "RESULT", "task_id": "stocks:TASK-fd6fedc61565dbd8b96acc853c4d00ab"}], "memory": {"broken_at": null, "entries": 1, "head": "3a20bf163d6627e26ae8838d116e81c9f8f55f47e4181c01cfc1a9bee941e3be", "head_recorded_at": "2026-09-28T18:16:44.898178Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end

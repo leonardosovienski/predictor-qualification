@@ -15,6 +15,11 @@ Ciclo 2 (C14; decisões do dono de 2026-09-28: "Aprovo o ciclo novo", "Hipótese
 -c2/-rc12); as do ciclo 1 ficam no histórico do git e em GATES.json → cycle1_evidence. PROTECTED_ARTIFACTS_UNCHANGED
 aplica a decisão do IS-F008: cada item alterado só passa encadeado salto a salto até o sha256 protegido.
 
+Ciclo 4 (C14; decisões do dono de 2026-09-28: D-26 "Somar as famílias do main", "Só o transporte" e "Calibrar
+embedding" → só revisão): as constantes apontam para as evidências do ciclo 4 (run na cain 0.4.13rc13 com o transporte
+0.1.0rc6, diretórios -c4/-rc13); as do ciclo 2 ficam no histórico do git e em GATES.json → cycle2_evidence. As fases
+refeitas entram em phases_completed com o sufixo do ciclo (-c2, -c4).
+
 Uso: python update_gates.py <fase>   (aplica, cumulativamente, todas as fases até ela, na ordem de PHASES)
 """
 
@@ -26,21 +31,22 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 M = "qualification/integration-stocks"
-RUN = "run36440479456"  # ciclo 2: run do runtime na cain 0.4.13rc12 (ciclo 1: run36365355063)
+RUN = "run36462320273"  # ciclo 4: run do runtime na cain 0.4.13rc13 (ciclo 2: run36440479456; ciclo 1: run36365355063)
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
 W = f"{M}/RAW_LOGS/runtime/{RUN}-windows"
 FM = f"{R}/failure-matrix"
-HOSTED = f"{M}/RAW_LOGS/hosted-ci/final-rc12"  # ciclo 1: hosted-ci/final-r1
-STATIC = f"{M}/RAW_LOGS/contract-revalidation-rc12/static_checks.json"
+HOSTED = f"{M}/RAW_LOGS/hosted-ci/final-rc13"  # ciclo 2: final-rc12; ciclo 1: final-r1
+STATIC = f"{M}/RAW_LOGS/contract-revalidation-rc13/static_checks.json"
 ACCEPTANCE = f"{HOSTED}/stocks_dispatch_acceptance.json"
-PREFLIGHT = f"{M}/RAW_LOGS/c0/c0_preflight_8817b7c.log"
-SECRETS = f"{M}/RAW_LOGS/secrets-c2/secrets_scan.json"
-PROTECTED = f"{M}/RAW_LOGS/protected-c2/protected_check.json"  # ciclo 1: protected-r1
-# o main recebeu, depois da base da branch, o ciclo 3 da integration-crypto (congelados e attestation): a mesma
-# conferência roda também num snapshot do main (git archive), para valer no estado depois do merge
-PROTECTED_MAIN = f"{M}/RAW_LOGS/protected-c2/protected_check_main_8817b7c.json"
-CORE = f"{M}/RAW_LOGS/core-identity-c2/core_identity.json"  # ciclo 1: core-identity
-SUPERSEDED = "QUALIFICATION_ATTESTATION_superseded_12411b51d527.json"  # a attestation da reemissão 1 do ciclo 1
+PREFLIGHT = f"{M}/RAW_LOGS/c0/c0_preflight_37a0e28.log"
+SECRETS = f"{M}/RAW_LOGS/secrets-c4/secrets_scan.json"
+PROTECTED = f"{M}/RAW_LOGS/protected-c4/protected_check.json"  # ciclo 2: protected-c2; ciclo 1: protected-r1
+# a mesma conferência roda também num snapshot do main (git archive), para valer no estado depois do merge mesmo que o
+# main receba mudanças de outras missões depois da base da branch
+MAIN_SNAPSHOT = "37a0e28"
+PROTECTED_MAIN = f"{M}/RAW_LOGS/protected-c4/protected_check_main_{MAIN_SNAPSHOT}.json"
+CORE = f"{M}/RAW_LOGS/core-identity-c4/core_identity.json"  # ciclo 2: core-identity-c2; ciclo 1: core-identity
+SUPERSEDED = "QUALIFICATION_ATTESTATION_superseded_9979d19be7fc.json"  # a attestation do ciclo 2
 TARGETS = __import__("json").load(open(f"{M}/runtime_targets.json", encoding="utf-8"))
 
 
@@ -125,8 +131,7 @@ def contract_revalidation(g, gates):
         note = (f"{prot['items_total'] - len(changed)} de {prot['items_total']} itens iguais; alterados: "
                 + ", ".join(changed) + ". Cada um com os bytes protegidos preservados e encadeados salto a salto "
                 "(cycle.supersedes nos congelados, supersedes_sha256 nas attestations; conferido no "
-                "protected_check.json da branch e no do snapshot do main 8817b7c, que já tem o ciclo 3 da "
-                "integration-crypto); "
+                f"protected_check.json da branch e no do snapshot do main {MAIN_SNAPSHOT}); "
                 + ("aceito pela decisão do dono sobre IS-F008 (opção a)" if accepted else
                    "FAIL pela letra da C15.1" + ("" if decided else ", decisão do dono pendente (IS-F008)")))
     gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p(status,
@@ -153,7 +158,8 @@ def n_plus_1(g, gates):
                                           f"{M}/DECISION_POLICY_REPORT.md"],
                                  "determinística, versionada (código + configuração do stocks), receipt sem LLM; "
                                  "política v2 (R01–R17, policy.py com os bytes congelados) e configuração do stocks do "
-                                 "ciclo 2; IS-F002 e IS-F003 corrigidos no cain#62 (17-collection ALLOW no N+1)")
+                                 "ciclo 4 (17 famílias congeladas pela D-26; 8 hipóteses só para o LLM); IS-F002 e "
+                                 "IS-F003 corrigidos no cain#62 (17-collection ALLOW no N+1)")
     gates["CAPITAL_FORBIDDEN"] = p("PASS", [f"{R}/e2e/SUMMARY.json", f"{R}/n-plus-1/frozen/SUMMARY.json",
                                             f"{M}/DECISION_POLICY_REPORT.md"],
                                    "nenhum caminho concede capital; receipts e resultados com capital_permission=false")
@@ -244,7 +250,7 @@ def soak(g, gates):
     gates["SOAK"] = p("PASS", [f"{R}/run.json", f"{R}/soak/SUMMARY.json", f"{R}/soak/commands.log",
                                f"{M}/QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json", f"{M}/SOAK_REPORT.md"],
                       "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais; "
-                      "propostas de LLM das hipóteses só para o LLM do ciclo 2")
+                      "propostas de LLM das hipóteses só para o LLM do ciclo 4 (8 hipóteses, sementes 9001–9008)")
 
 
 def attestation(g, gates):
@@ -283,7 +289,8 @@ def main():
     if target not in names:
         raise SystemExit(f"fase desconhecida: {target}")
     g = json.load(open(f"{M}/GATES.json", encoding="utf-8"))
-    suffix = "-c2" if g.get("cycle", {}).get("number") == 2 else ""  # ciclo 2: as fases refeitas entram com -c2
+    number = g.get("cycle", {}).get("number", 1)
+    suffix = f"-c{number}" if number >= 2 else ""  # ciclo n ≥ 2: as fases refeitas entram com -c<n>
     for name, apply in PHASES[: names.index(target) + 1]:
         apply(g, g["gates"])
         if name != "attestation" and name + suffix not in g["phases_completed"]:

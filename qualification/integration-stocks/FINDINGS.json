@@ -333,7 +333,7 @@
      "sha256": "32322cb45e2aa093ee044ebda66d243db1764782c3c1ea78926e993d575230a3"
     }
    ],
-   "status": "ACCEPTED_LIMITATION",
+   "status": "FIXED",
    "owner_decision": "escolher: (a) registrar + regra (um consumidor por domínio por vez, como no cripto); (b) registrar e reemitir já; (c) corrigir no stocks (trava antes da materialização; código fora dos adapter_paths, reabre a Etapa A pela C24.4); (d) não registrar",
    "owner_decision_taken": {
     "date": "2026-09-28",
@@ -342,6 +342,33 @@
     "words": "Registrar + regra (Recomendado)",
     "option_text": "Mesma regra do cripto: um consumidor por domínio por vez. Registro agora no CHANGELOG da integration-stocks, como pós-attestation (a attestation segue válida), e o achado IS-F009 (P2) entra no FINDINGS.json na próxima reemissão. Sem mudar código.",
     "applied": "CHANGELOG pós-attestation do ciclo 2 (PR #82); este registro no ciclo 3. Regra de operação: um consumidor por domínio por vez (o agendador do Ops já garante). Código sem mudança."
+   },
+   "fix_cycle4": {
+    "date": "2026-09-28",
+    "owner_decision": {
+     "by": "dono",
+     "channel": "chat da sessão integration-stocks (pergunta com opções)",
+     "words": "Só o transporte (Recomendado)"
+    },
+    "fix": "predictor-research-transport 0.1.0rc6 (ecosystem-predictor#36, bac1f7b; wheel 6c7e83c4…): trava exclusiva por domínio no consumidor; o segundo consumidor sai com código 6 (CONSUMER_BUSY) sem ler o ledger, sem chamar o domínio e sem publicar. Na disputa refeita nas wheels publicadas do ciclo 4 (cain 0.4.13rc13, transporte 0.1.0rc6, stocks-predictor 0.3.0rc3): 20/20, exits (0, 6) em todas, 1 experimento e só RESULT em cada, 0 envelopes falsos (ciclo 3, transporte 0.1.0rc5: 16× OPS_FAILED_RETRYABLE e 4× RECONCILIATION_REQUIRED falsos)",
+    "evidence": [
+     {
+      "file": "qualification/integration-stocks/RAW_LOGS/race-c4/RACE.json",
+      "sha256": "718a3bcfcd879365df081fba0653156031c2c76a095bd13fb4a5a30c68569929"
+     },
+     {
+      "file": "qualification/integration-stocks/RAW_LOGS/race-c4/race.log",
+      "sha256": "2fd00deeea8a5d77c10053eca9b23c22fea5fed3872486226b6461970c685f43"
+     },
+     {
+      "file": "qualification/integration-stocks/RAW_LOGS/race-c4/pip_freeze_consumer.txt",
+      "sha256": "d6f06a5320d5cccf6f85fc61c508aef1ad10e87bc2551a708e1455c8eeedbce3"
+     },
+     {
+      "file": "qualification/integration-stocks/scripts/race.py",
+      "sha256": "32322cb45e2aa093ee044ebda66d243db1764782c3c1ea78926e993d575230a3"
+     }
+    ]
    }
   }
  ],
