@@ -128,37 +128,42 @@ class Harness:
         env = {"CAIN_ORCHESTRATION_FAULT": fault} if fault else None
         return self.run(label, [self.bin["CAIN_BIN"], "research", *args], env, public_stdout="full")
 
-    def proposal_path(self, template: str | Path, target: Path | None = None, **request_changes) -> Path:
-        """The frozen proposal (path relative to the mission); with changes, an effective copy logged by sha256."""
+    def proposal_path(self, template: str | Path, dest: Path | None = None, /, **request_changes) -> Path:
+        """The frozen proposal (path relative to the mission); with changes, an effective copy logged by sha256.
+        The paths are positional-only, so request fields (e.g. the Brasileirão ``target``) never collide with them."""
         source = self.mission / template
         if not request_changes:
             return source
         value = json.loads(source.read_text(encoding="utf-8"))
         value["request"].update(request_changes)
-        target = target or self.work / "effective" / Path(template).name
-        target.parent.mkdir(parents=True, exist_ok=True)
+        dest = dest or self.work / "effective" / Path(template).name
+        dest.parent.mkdir(parents=True, exist_ok=True)
         raw = json.dumps(value, ensure_ascii=False, indent=1).encode("utf-8")
-        target.write_bytes(raw)
-        self.log.write(json.dumps({"effective_proposal": str(target), "template": str(template), "sha256": sha(raw),
+        dest.write_bytes(raw)
+        self.log.write(json.dumps({"effective_proposal": str(dest), "template": str(template), "sha256": sha(raw),
                                    "changes": sorted(request_changes)}) + "\n")
-        return target
+        return dest
 
-    def integrated_proposal(self, domain: str, template: str, target: Path, **request_changes) -> Path:
+    def integrated_proposal(self, domain: str, template: str, dest: Path, proposal_id: str | None = None, /,
+                            **request_changes) -> Path:
         """A frozen proposal of the crypto/stocks integration (path relative to qualification/integration-<domain>),
         with the stocks as_of marker replaced by the data_cutoff of this run's stocks panel (their FROZEN_VECTORS
-        rule); the effective copy is logged by sha256."""
+        rule) and, when given, its own proposal_id (one CAIN state records each proposal_id once); the effective copy
+        is logged by sha256."""
         other = self.mission.parent / f"integration-{domain}"
         value = json.loads((other / template).read_text(encoding="utf-8"))
+        if proposal_id:
+            value["proposal_id"] = proposal_id
         marker = json.loads((other / "FROZEN_VECTORS.json").read_text(encoding="utf-8")).get("as_of_marker")
         if marker and value["request"].get("as_of") == marker["marker"]:
             value["request"]["as_of"] = json.loads(Path(os.environ["STOCKS_REAL_ENV"]).read_text())["data_cutoff"]
         value["request"].update(request_changes)
-        target.parent.mkdir(parents=True, exist_ok=True)
+        dest.parent.mkdir(parents=True, exist_ok=True)
         raw = json.dumps(value, ensure_ascii=False, indent=1).encode("utf-8")
-        target.write_bytes(raw)
-        self.log.write(json.dumps({"effective_proposal": str(target), "template": f"integration-{domain}/{template}",
+        dest.write_bytes(raw)
+        self.log.write(json.dumps({"effective_proposal": str(dest), "template": f"integration-{domain}/{template}",
                                    "sha256": sha(raw), "changes": sorted(request_changes)}) + "\n")
-        return target
+        return dest
 
     def propose(self, label: str, proposal: str | Path, *, as_of: str | None = None, fault: str | None = None):
         path = Path(proposal)

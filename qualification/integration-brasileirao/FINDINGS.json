@@ -402,6 +402,50 @@
         "words": "Aceitar precedente (Recommended)",
         "applied": "só para o brasileirao-predictor: o run de pull_request do CI Pipeline com head = final_commit + o run de push do publication-validation no SHA exato (ambos verdes) valem como o CI de C21 / prompt 10.3 / C24.3 (f), como na Etapa A"
       }
+    },
+    {
+      "id": "IB-F006",
+      "severity": "P1",
+      "title": "o modo de proposta do LLM do cain v0.4.13rc10 quebra para o Brasileirão (KeyError 'parameters')",
+      "description": "`cain research explain --propose-for-domain brasileirao` morre antes de chamar o modelo: src/cain/orchestration/llm.py:204 lê p['parameters'] de cada task emitida, e o pedido do Brasileirão (brasileirao-research-request/1) não tem parameters. Reproduzido no diagnóstico privado do soak na rc10 (fb0e1dc), depois de 16 ciclos reais.",
+      "classification": "C6 P1: defeito real do framework, sem violação observada (nenhuma proposta sai; nada é despachado); torna o piso de ≥ 5 propostas de LLM do perfil inatingível na rc10.",
+      "evidence": [
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/freeze/freeze_parameters_cycle4.log",
+          "sha256": "9a04e14469e78dd115c4e1eed8aedd16506a012e7c732a3dc12813c8888e0676"
+        },
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/freeze/cycle4_check.json",
+          "sha256": "52609666335bc99a790f1c3e1067dc099573ef164b17e5d928d1d2c2b28d75a6"
+        }
+      ],
+      "status": "OPEN",
+      "fix": "sessão STOCKS, commit f7b56c0 do cain (branch integration-stocks/proposal-overlays-20260928): p.get('parameters', {}) nos 4 acessos do caminho do LLM + teste tests/integration/test_orchestration.py::test_llm_proposal_for_a_domain_whose_request_has_no_parameters; entra na rc11. Fecha quando o soak na rc11 fizer as propostas de LLM chegarem a uma decisão."
+    },
+    {
+      "id": "IB-F007",
+      "severity": "P2",
+      "title": "o plano congelado do soak (3 hipóteses em rodízio por 24 experimentos) não alcança o piso de ciclos",
+      "description": "No diagnóstico privado do soak na rc10, QUAL-SERVING-REAL-001 e -003 receberam SUPPORTED (contra climatologia) e REFUTED (contra mercado); a R10 CONTRADICTION_UNRESOLVED para as duas hipóteses (comportamento correto do CAIN: contradição nunca decidida por maioria) e o soak fica em 16 ciclos (piso 20).",
+      "classification": "C6 P2: defeito do desenho do plano da missão, não do CAIN nem do domínio; sem efeito em resultado ou operação.",
+      "evidence": [
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/freeze/freeze_parameters_cycle4.log",
+          "sha256": "9a04e14469e78dd115c4e1eed8aedd16506a012e7c732a3dc12813c8888e0676"
+        },
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/freeze/cycle4_check.json",
+          "sha256": "52609666335bc99a790f1c3e1067dc099573ef164b17e5d928d1d2c2b28d75a6"
+        }
+      ],
+      "status": "FIXED",
+      "owner_decision_taken": {
+        "date": "2026-09-28",
+        "by": "dono",
+        "channel": "chat da sessão integration-brasileirao (pergunta com opções)",
+        "words": "1 hipótese por ciclo (Recommended)"
+      },
+      "resolution": "ciclo 4 da freeze-parameters: uma hipótese de qualificação por ciclo do soak (brasileirao:QUAL-SOAK-001..024), definidas antes da execução, no brasileirao.json da rc11; pisos e critérios sem mudança"
     }
   ]
 }

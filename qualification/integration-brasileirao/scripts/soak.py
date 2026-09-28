@@ -103,8 +103,8 @@ def main() -> int:
             params["max_securities"] = int(params["max_securities"]) - i
             hyp = f"stocks:QUAL-PIT-MOM-REAL-00{(i - 1) % 3 + 1}"
             rid = f"stocks:REQ-IB-SOAK-X{i:02d}"
-        path = h.integrated_proposal(domain, rel, props / f"x{i:02d}-{domain}.json", request_id=rid,
-                                     hypothesis_id=hyp, parameters=params)
+        path = h.integrated_proposal(domain, rel, props / f"x{i:02d}-{domain}.json", f"cain:IB-SOAK-X{i:02d}-{domain}",
+                                     request_id=rid, hypothesis_id=hyp, parameters=params)
         line = decide(f"{domain} {i}: propose real (integrated)", path, x)
         seen = {p.name for p, _r in x.results(domain)}
         if line.get("decision") == "ALLOW":
@@ -177,7 +177,8 @@ def main() -> int:
             events_log.append({"event": f"F07 cycle {n}", "task_waits_in_spool": waiting, "counted": ok})
         if k in RETRYABLE:
             _c, lines, _ = h.consumer(f"consumer {n} (F14 Ops crash)", domain_fault="ops_worker_crash")
-            retryable = bool(lines) and lines[0].get("status") == "OPS_FAILED_RETRYABLE"
+            # the consumer lists every task of the spool (earlier ones as skipped): read this task's line
+            retryable = any(l.get("task_id") == task_id and l.get("status") == "OPS_FAILED_RETRYABLE" for l in lines)
             h.ingest(f"ingest {n} retryable")
             h.cain(f"retry {n}", "retry", "--domain", "brasileirao", "--state", h.state, "--spool", h.spool,
                    "--task-id", task_id)
@@ -202,7 +203,9 @@ def main() -> int:
             h.dispatch(f"resend {n}", resend=True)
             _c, lines, _ = h.consumer(f"consumer resend {n}")
             h.ingest(f"ingest after resend {n}")
-            ok = any(l.get("status") == "DUPLICATE" or l.get("action") in ("skipped", "duplicate") for l in lines)
+            # this task's line only: the re-delivered task is not executed again (skipped or domain DUPLICATE)
+            ok = any(l.get("task_id") == task_id and (l.get("status") == "DUPLICATE"
+                                                      or l.get("action") in ("skipped", "duplicate")) for l in lines)
         elif dup == "result":
             mine = [p for p, r in h.results() if r["task_id"] == task_id]
             shutil.copy(mine[0], mine[0].with_name(f"redelivered-{n:03d}-" + mine[0].name))

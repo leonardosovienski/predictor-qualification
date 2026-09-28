@@ -38,6 +38,8 @@ LOOP_FAMILY = "brasileirao-elo-1x2-dev2022"
 DATA_SHA = "31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43"
 DATASET_AS_OF = "2026-09-08T19:31:32Z"
 QUAL = ["brasileirao:QUAL-SERVING-REAL-001", "brasileirao:QUAL-SERVING-REAL-002", "brasileirao:QUAL-SERVING-REAL-003"]
+# ciclo 4 (decisão do dono, 2026-09-28): uma hipótese de qualificação por ciclo do soak, cada uma um experimento só
+SOAK = [f"brasileirao:QUAL-SOAK-{n:03d}" for n in range(1, 25)]
 
 
 def sha(raw: bytes) -> str:
@@ -128,7 +130,7 @@ def main() -> int:
         "allowed_request_types": sorted(contract["handler_allowlist"]),
         "closed_hypotheses": closed,
         "frozen_families": [LOOP_FAMILY],
-        "proposable_hypotheses": sorted(["brasileirao:HQ-SERVING-BASELINE", *QUAL]),
+        "proposable_hypotheses": sorted(["brasileirao:HQ-SERVING-BASELINE", *QUAL, *SOAK]),
         "allowed_symbols": [],
         "costs": {},
         "costs_note": "o request_schema do Brasileirão não tem parameters: nenhum custo entra pelo pedido; o modelo de "
@@ -257,9 +259,25 @@ def main() -> int:
             "predictor-ops": {"role": "congelado (wheel 4.2.2rc1)", "base": fc["predictor-ops"]},
         },
         "cycle": {
-            "number": 3,
-            "supersedes": {"path": f"{M}/FROZEN_PARAMETERS_cycle2_1c9e11bd702b.json",
-                           "sha256_prefix": "1c9e11bd702b"},
+            "number": 4,
+            "supersedes": {"path": f"{M}/FROZEN_PARAMETERS_cycle3_baf78dafe45d.json",
+                           "sha256_prefix": "baf78dafe45d"},
+            "cycle_4": {
+                "owner_decision": {"date": "2026-09-28", "by": "dono",
+                                   "channel": "chat da sessão integration-brasileirao (pergunta com opções)",
+                                   "words": "1 hipótese por ciclo (Recommended)"},
+                "why": "no diagnóstico privado do soak na rc10 (não é evidência), as 3 hipóteses em rodízio por 24 "
+                       "experimentos diferentes deram SUPPORTED contra climatologia e REFUTED contra mercado na mesma "
+                       "hipótese; a R10 para corretamente (contradição nunca decidida por maioria) e o piso de 20 ciclos "
+                       "fica inatingível (16 ciclos)",
+                "change": "24 hipóteses de qualificação proponíveis e admitidas pelo operador "
+                          "(brasileirao:QUAL-SOAK-001..024), uma por ciclo do soak, cada uma um experimento só, "
+                          "definidas antes da execução; entram no brasileirao.json da rc11",
+                "unchanged": "pisos e critérios do perfil, rule_order, lacres, custos, referências, budget, cooldown, "
+                             "holdout e todos os vetores fora do soak_generator",
+            },
+            "cycle_3_supersedes": {"path": f"{M}/FROZEN_PARAMETERS_cycle2_1c9e11bd702b.json",
+                                   "sha256_prefix": "1c9e11bd702b"},
             "release_name": "a release única da decisão do dono ('rc8' nos textos dos ciclos 2 e 3) foi publicada como "
                             "v0.4.13rc10 (tag → fb0e1dc; cain#70 só sobe a versão): a v0.4.13rc9 já existia (a "
                             "pré-release desta missão de 3e515fd, política v1); só o nome muda",
@@ -341,7 +359,7 @@ def main() -> int:
         "operator_env": {
             "stage_a_reference": fsha("qualification/brasileirao/scripts/real_env.py"),
             "policy_id": "brasileirao-integration-qualification",
-            "hypotheses": sorted(["brasileirao:HQ-SERVING-BASELINE", *QUAL]),
+            "hypotheses": sorted(["brasileirao:HQ-SERVING-BASELINE", *QUAL, *SOAK]),
             "hypothesis_family": "brasileirao:serving-baseline",
             "references": references,
             "limits": "os da policy real da Etapa A (real_env.py): max_pending_requests 100, max_concurrency 1, "

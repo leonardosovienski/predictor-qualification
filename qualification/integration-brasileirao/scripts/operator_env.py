@@ -41,7 +41,9 @@ FEATURES = {"schema": "brasileirao-features/1", "features": ["elo_diff_pre_match
 ODDS = {"schema": "brasileirao-odds/1", "source": "sofascore_matches (1X2) + odds_lines ou 2.5 (O/U)", "price": "close",
         "use": "ex post evaluation only"}
 HYPOTHESES = ("brasileirao:HQ-SERVING-BASELINE", "brasileirao:QUAL-SERVING-REAL-001",
-              "brasileirao:QUAL-SERVING-REAL-002", "brasileirao:QUAL-SERVING-REAL-003")
+              "brasileirao:QUAL-SERVING-REAL-002", "brasileirao:QUAL-SERVING-REAL-003",
+              # ciclo 4 (decisão do dono): uma hipótese de qualificação por ciclo do soak (FROZEN_PARAMETERS → operator_env)
+              *(f"brasileirao:QUAL-SOAK-{n:03d}" for n in range(1, 25)))
 
 
 def sha(path: Path) -> str:

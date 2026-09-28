@@ -103,3 +103,22 @@ Conferência mecânica (`scripts/cycle3_check.py`, 13/0): o `brasileirao_config`
 `rule_order`, framework, ciclo e os ponteiros para os vetores novos; os vetores mudaram só onde foi declarado; o
 `brasileirao.json` da wheel publicada é, byte a byte, o que o `tools/build_domain_config.py` do commit da release gera a
 partir de `417024e`. Nenhum limiar, holdout, critério ou waiver muda.
+
+## Ciclo 4 da freeze-parameters (decisão do dono: uma hipótese por ciclo do soak)
+
+No diagnóstico privado do soak na rc10 (não é evidência), as 3 hipóteses de qualificação em rodízio por 24 experimentos
+diferentes receberam SUPPORTED contra climatologia e REFUTED contra mercado na mesma hipótese. A R10
+CONTRADICTION_UNRESOLVED parou corretamente essas hipóteses, e o soak ficou em 16 ciclos (piso 20) (IB-F007). Decisão do
+dono no chat desta sessão, 2026-09-28: "1 hipótese por ciclo".
+
+| Arquivo | Mudança |
+|---|---|
+| `FROZEN_PARAMETERS.json` | `brasileirao_config.proposable_hypotheses` e `operator_env.hypotheses` + `brasileirao:QUAL-SOAK-001..024`; ciclo 4 |
+| `FROZEN_VECTORS.json` | `soak_generator`: uma hipótese por ciclo (o mesmo calendário de 24 experimentos) |
+| `QUALIFICATION_PROFILE_INTEGRATION_BR_V1.json` | só `plan.cycles` e o bloco `cycle`; pisos e critérios iguais |
+| `*_cycle3_<sha12>.json`, perfil `*_cycle2_<sha12>.json` | preservados byte a byte |
+| `scripts/operator_env.py` | a policy do operador admite as 24 hipóteses |
+
+O mesmo diagnóstico achou o IB-F006: na rc10, o modo de proposta do LLM quebra para o Brasileirão (`KeyError
+'parameters'` em `llm.py:204`, o pedido do Brasileirão não tem parameters). A correção é da sessão STOCKS e entra na
+rc11 junto com o brasileirao.json deste ciclo. Conferência mecânica: `scripts/freeze_cycle4.py check`.

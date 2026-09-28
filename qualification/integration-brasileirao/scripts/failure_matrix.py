@@ -194,8 +194,10 @@ def run_point(fid: str, p: Point) -> None:
         h.check("F10: late copy of episode 1 is DUPLICATE, episode 2 ingested against its own task",
                 sorted(l.get("action") for l in lines) == ["duplicate", "duplicate", "ingested"], got=lines)
         ep = h.episodes("episodes")
+        second = h.task(ep["episodes"][1]["task_id"])
         h.check("F10: chain intact", [e["decision"] for e in ep["episodes"]] == ["ALLOW", "ALLOW"]
-                and ep["episodes"][1].get("previous_task_id") == ep["episodes"][0]["task_id"], got=ep["episodes"])
+                and second["previous_task_id"] == ep["episodes"][0]["task_id"],
+                decisions=[e["decision"] for e in ep["episodes"]], previous_task_id=second["previous_task_id"])
         one("two tasks, two results", {"allow": 2, "inbox": 2, "facts": 2, "spool_tasks": 2, "admissions": 2,
                                        "experiments": 2, "effects": 2, "authoritative_results": 2})
     elif fid == "F11":
