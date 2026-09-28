@@ -279,9 +279,15 @@ def main() -> int:
         "schema": "integration-brasileirao/FROZEN_VECTORS/1",
         "frozen_before": "fases e2e, n-plus-1, isolation-ids-contradiction, idempotency-failure, windows-smoke e soak",
         "cycle": {
-            "number": 3,
-            "supersedes": {"path": "qualification/integration-brasileirao/FROZEN_VECTORS_cycle2_bb210f62a840.json",
-                           "sha256_prefix": "bb210f62a840"},
+            "number": 4,
+            "supersedes": {"path": "qualification/integration-brasileirao/FROZEN_VECTORS_cycle3_913680e90e0e.json",
+                           "sha256_prefix": "913680e90e0e"},
+            "cycle_4": "decisão do dono (2026-09-28, '1 hipótese por ciclo'): o soak_generator passa a uma hipótese de "
+                       "qualificação por ciclo (brasileirao:QUAL-SOAK-001..024, cada uma um experimento só); com 3 "
+                       "hipóteses em rodízio, o dado real deu SUPPORTED × REFUTED na mesma hipótese e a R10 travava o "
+                       "soak (diagnóstico privado na rc10). Só o soak_generator muda; nenhum outro vetor",
+            "cycle_3_supersedes": {"path": "qualification/integration-brasileirao/FROZEN_VECTORS_cycle2_bb210f62a840.json",
+                                   "sha256_prefix": "bb210f62a840"},
             "why": "a release única rc8 (publicada como v0.4.13rc10) leva também a R17 DUPLICATE EQUIVALENT_REQUEST (cain#68: o mesmo pedido sem "
                    "request_id, hypothesis_id, research_id e client_ref, já rodado ou pendente, não gera task; avaliada "
                    "antes da R12); dois vetores do ciclo 2 que esperavam ALLOW eram o mesmo experimento de um anterior "
@@ -321,8 +327,10 @@ def main() -> int:
             "token": "FUTURE_CANARY_BR_INTEGRATION_001",
             "vector": "fixtures/proposals/e2e/03-canary.json, com o controle fixtures/proposals/e2e/04-canary-control.json",
         },
-        "soak_generator": {"hypotheses": list(REAL), "request_id": "brasileirao:REQ-IB-SOAK-<nnn>",
-                           "template": "real_request(request_id, hypotheses[(n-1) % 3], **schedule[n-1]); window "
+        "soak_generator": {"hypotheses": [f"brasileirao:QUAL-SOAK-{n:03d}" for n in range(1, 25)],
+                           "request_id": "brasileirao:REQ-IB-SOAK-<nnn>",
+                           "template": "real_request(request_id, hypotheses[n-1], **schedule[n-1]) (ciclo 4: uma hipótese "
+                                       "por ciclo, cada uma um experimento só); window "
                                        "'season' = temporada inteira, 'second-half' = <season>-07-01 a <season+1>-01-01",
                            "schedule": soak_schedule(), "dataset": "real-20260908 1", "cycles": 24},
         "files": dict(sorted({**files, **crypto_files}.items())),

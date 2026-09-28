@@ -1,0 +1,80 @@
+{
+ "schema": "integration-brasileirao/CYCLE4_CHECK/1",
+ "checks": [
+  {
+   "check": "brasileirao_config: only proposable_hypotheses changed",
+   "ok": true
+  },
+  {
+   "check": "proposable_hypotheses = cycle 3 + QUAL-SOAK-001..024",
+   "ok": true
+  },
+  {
+   "check": "operator_env.hypotheses = cycle 3 + QUAL-SOAK-001..024",
+   "ok": true
+  },
+  {
+   "check": "FROZEN_PARAMETERS.base: only the sha256 of the other missions' DECISION_POLICY_REPORT.md (same paths) changed",
+   "ok": true,
+   "reports": [
+    {
+     "path": "qualification/integration-crypto/DECISION_POLICY_REPORT.md",
+     "cycle3": "6d431088cd34",
+     "cycle4": "b3e9efd78e1e"
+    },
+    {
+     "path": "qualification/integration-stocks/DECISION_POLICY_REPORT.md",
+     "cycle3": "7b87cd00a905",
+     "cycle4": "7b87cd00a905"
+    }
+   ]
+  },
+  {
+   "check": "FROZEN_PARAMETERS.soak_profile points to the cycle-4 profile",
+   "ok": true
+  },
+  {
+   "check": "FROZEN_PARAMETERS: only base (reports), brasileirao_config, operator_env, cycle and the pointers to the new vectors/profile",
+   "ok": true,
+   "top": [
+    "base",
+    "cycle",
+    "decision_policy",
+    "frozen_vectors",
+    "operator_env",
+    "protected_set_initial",
+    "soak_profile"
+   ]
+  },
+  {
+   "check": "rule_order unchanged",
+   "ok": true
+  },
+  {
+   "check": "sealed_scopes unchanged",
+   "ok": true
+  },
+  {
+   "check": "FROZEN_VECTORS: only soak_generator changed",
+   "ok": true,
+   "sections": [
+    "soak_generator"
+   ]
+  },
+  {
+   "check": "soak_generator: one QUAL-SOAK hypothesis per cycle; schedule, request_id, dataset and cycles unchanged",
+   "ok": true
+  },
+  {
+   "check": "profile: only plan.cycles and cycle changed; minimums, definitions and zero tolerance unchanged",
+   "ok": true
+  },
+  {
+   "check": "every vector file matches its manifest sha256",
+   "ok": true,
+   "mismatched": []
+  }
+ ],
+ "passed": 12,
+ "failed": 0
+}
