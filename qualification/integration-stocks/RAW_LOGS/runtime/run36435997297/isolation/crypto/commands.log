@@ -1,0 +1,37 @@
+{"n": 1, "label": "crypto: propose real", "at": "2026-09-28T14:42:39Z", "seconds": 0.107, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/shared/cain-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/e2e/01-allow.json", "--as-of", "2026-09-28T14:42:39Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "67ada2db9787110e1f3d7a383f3a06747fbe1f74527efeaab5a1bb9af7a6dcf4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- stderr
+--- end
+{"n": 2, "label": "crypto: dispatch", "at": "2026-09-28T14:42:39Z", "seconds": 0.088, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/shared/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/shared/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- stderr
+--- end
+{"n": 3, "label": "crypto: consumer", "at": "2026-09-28T14:42:39Z", "seconds": 0.384, "argv": ["/home/runner/work/_temp/work/rt/crypto-venv/bin/predictor-research-consumer", "--domain", "crypto", "--spool", "/home/runner/work/_temp/work/isolation/shared/spool", "--ledger", "/home/runner/work/_temp/work/isolation/shared/consumer/crypto-ledger.sqlite", "--state", "/home/runner/work/_temp/work/isolation/shared/crypto-domain-state", "--policy", "/home/runner/work/_temp/work/rt/crypto-op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/crypto-op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.c3a8f9ab7af60291.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- stderr
+{"duration_ms": 206, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "2815287680d346c28eea1192eec8e6da", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T14:42:39.580947Z"}
+--- end
+{"n": 4, "label": "crypto: ingest", "at": "2026-09-28T14:42:39Z", "seconds": 0.092, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/shared/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/shared/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:c10eb83119fe45dfa2d8045d2ec856af", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.c3a8f9ab7af60291.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- stderr
+--- end
+{"n": 5, "label": "crypto: ingest the real stocks result", "at": "2026-09-28T14:42:46Z", "seconds": 0.087, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/shared/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/shared/spool"], "fault_env": {}, "exit": 2}
+--- stdout
+{"action": "duplicate", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.c3a8f9ab7af60291.json"}
+{"action": "rejected", "code": "DOMAIN_MISMATCH", "file": "cross-stocks-real.json", "reason": "result of domain stocks"}
+--- stderr
+--- end
+{"n": 6, "label": "same H9: crypto:H9 -> crypto", "at": "2026-09-28T14:42:46Z", "seconds": 0.101, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/shared/cain-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/e2e/05-h9-closed.json", "--as-of", "2026-09-28T14:42:46Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "BLOCK", "episode_id": "crypto:episode-2", "reason_code": "HYPOTHESIS_CLOSED", "receipt_sha256": "eec57b3f32a12e337c674fc16780cbe5701f212f9169d33bcf798d79e6efc07d", "rule": "R05", "status": "RECORDED", "task": null}
+--- stderr
+--- end
+{"n": 7, "label": "same H9: stocks:H9 -> crypto", "at": "2026-09-28T14:42:47Z", "seconds": 0.088, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/shared/cain-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/e2e/06-stocks-h9.json", "--as-of", "2026-09-28T14:42:46Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "BLOCK", "episode_id": "crypto:episode-3", "reason_code": "DOMAIN_MISMATCH", "receipt_sha256": "f105c293363158925609fe5d9370d1188d0ce57baf2881a28d6bcee0ac06bc4e", "rule": "R01", "status": "RECORDED", "task": null}
+--- stderr
+--- end

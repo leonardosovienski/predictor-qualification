@@ -65,7 +65,8 @@ def main() -> int:
     for path in sorted(raw.rglob("protected_check.json")):
         doc = json.loads(path.read_text(encoding="utf-8"))
         put(f"{path.relative_to(raw).as_posix()}:protected", path,
-            {"all_unchanged": doc["all_unchanged"], "items_total": doc["items_total"]})
+            {"all_unchanged": doc["all_unchanged"], "all_unchanged_or_chained": doc.get("all_unchanged_or_chained"),
+             "chained_items": doc.get("chained_items", []), "items_total": doc["items_total"]})
     for path in sorted(raw.rglob("secrets_scan.json")):
         doc = json.loads(path.read_text(encoding="utf-8"))
         put(f"{path.relative_to(raw).as_posix()}:secrets", path, {"clean": doc["clean"], "findings": len(doc["findings"]),

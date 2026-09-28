@@ -8,13 +8,13 @@ Dados reais: painel B3/CVM do pin do run (`data/SOURCES.json`), data_cutoff `202
 
 | Cenário | Ambiente | Conferências OK | Falhas | Fonte |
 |---|---|--:|--:|---|
-| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run36365355063` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json` (sha256 `88e1655b4a29c826…`) |
-| E2E + restart (WINDOWS_SMOKE) | GitHub Actions windows-latest, run `run36365355063-windows` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/e2e/SUMMARY.json` (sha256 `6799c23a913bade9…`) |
-| N+1 congelado (3 processos, receipt byte a byte) | Linux primário | 63 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/n-plus-1/frozen/SUMMARY.json` (sha256 `70e38fb48fd64d10…`) |
-| N+1 integrado (resultado real do cripto no spool) | Linux primário | 64 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/n-plus-1/integrated/SUMMARY.json` (sha256 `4d1cb99197d67659…`) |
-| Isolamento e IDs (cripto integrado; brasileirao por fixture) | Linux primário | 27 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/isolation/SUMMARY.json` (sha256 `24578a8b3e01137a…`) |
-| Contradição | Linux primário | 9 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/isolation/contradiction/SUMMARY.json` (sha256 `677c90a2490abd71…`) |
-| Contrato C24.3 (d) | Linux primário | 11 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/contract-revalidation/SUMMARY.json` (sha256 `390e243d9dca7ca3…`) |
+| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run36440479456` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/e2e/SUMMARY.json` (sha256 `661fbfff4b8ac6a5…`) |
+| E2E + restart (WINDOWS_SMOKE) | GitHub Actions windows-latest, run `run36440479456-windows` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456-windows/e2e/SUMMARY.json` (sha256 `5952048010f541b7…`) |
+| N+1 congelado (3 processos, receipt byte a byte) | Linux primário | 63 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/n-plus-1/frozen/SUMMARY.json` (sha256 `f3d385f9f5b14afb…`) |
+| N+1 integrado (resultado real do cripto no spool) | Linux primário | 64 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/n-plus-1/integrated/SUMMARY.json` (sha256 `adb4e32b1a4d05d9…`) |
+| Isolamento e IDs (cripto integrado; brasileirao por fixture) | Linux primário | 28 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/isolation/SUMMARY.json` (sha256 `8060a25e75824614…`) |
+| Contradição | Linux primário | 9 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/isolation/contradiction/SUMMARY.json` (sha256 `e2500e41daeab7bf…`) |
+| Contrato C24.3 (d) | Linux primário | 11 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/contract-revalidation/SUMMARY.json` (sha256 `39f6dff90a32fb66…`) |
 
 Decisões do E2E (em ordem): ALLOW, ALLOW, ALLOW, DUPLICATE, BLOCK, BLOCK, BLOCK, ALLOW.
 
@@ -32,26 +32,26 @@ Memória por cubo no estado compartilhado do isolamento: {"brasileirao": [], "cr
 
 | Candidata | Decisão | Motivo | Regra | receipt sha256 |
 |---|---|---|---|---|
-| 01-next | ALLOW | ALLOWED | R14 | `6bbebc6cb987bc35…` |
-| 02-duplicate | DUPLICATE | DUPLICATE_REQUEST | R08 | `b61222eb914966a5…` |
-| 03-crypto-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `7457aae570436262…` |
-| 04-stocks-h9 | BLOCK | HYPOTHESIS_CLOSED | R05 | `42dc5050b2fb8c4e…` |
-| 05-brasileirao-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `543717edc19d9dae…` |
-| 06-new-hypothesis | REQUIRE_HUMAN | NEW_HYPOTHESIS | R11 | `dbf4c7a791a35a92…` |
-| 07-h1-momentum | BLOCK | HYPOTHESIS_CLOSED | R05 | `965cd5148b5259c1…` |
-| 08-h2-low-vol | BLOCK | HYPOTHESIS_CLOSED | R05 | `3d591ad5d70e3a3c…` |
-| 09-h14-52w-high | BLOCK | HYPOTHESIS_CLOSED | R05 | `f423fe9dfcb79525…` |
-| 10-h15-volume | BLOCK | HYPOTHESIS_CLOSED | R05 | `6c5d18d8d69af923…` |
-| 11-family-momentum | BLOCK | HYPOTHESIS_CLOSED | R05 | `dccfef9174952b8a…` |
-| 12-family-low-vol | BLOCK | HYPOTHESIS_CLOSED | R05 | `12000caca70ac1c1…` |
-| 13-family-52w-high | BLOCK | HYPOTHESIS_CLOSED | R05 | `e8c03e7a847b1446…` |
-| 14-family-volume | BLOCK | HYPOTHESIS_CLOSED | R05 | `b0ea6be2b27618ff…` |
-| 15-watch-high-priority | BLOCK | PRIORITY_ABOVE_CAP | R06 | `f309e17fa6d10648…` |
-| 16-cost-mismatch | BLOCK | COST_MODEL_MISMATCH | R06 | `2692cdd94e08b294…` |
-| 17-collection | BLOCK | COST_MODEL_MISMATCH | R06 | `78983e0f4654fc22…` |
-| 18-llm-shape | BLOCK | SCHEMA_INVALID | R02 | `506216e1c9fa3ec6…` |
-| 19-unqualified-id | BLOCK | DOMAIN_MISMATCH | R01 | `fbcd8d7264b06bab…` |
-| 20-reference-not-allowed | BLOCK | REFERENCE_NOT_ALLOWED | R06 | `863e1e42be4d4db3…` |
+| 01-next | ALLOW | ALLOWED | R14 | `51ed34c3b5c886c3…` |
+| 02-duplicate | DUPLICATE | DUPLICATE_REQUEST | R08 | `5ffa023b2daf4520…` |
+| 03-crypto-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `fe4b0e7ed41822d4…` |
+| 04-stocks-h9 | BLOCK | HYPOTHESIS_CLOSED | R05 | `8d70e2dc46ca2ba8…` |
+| 05-brasileirao-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `22b7974dda3cd2ff…` |
+| 06-new-hypothesis | REQUIRE_HUMAN | NEW_HYPOTHESIS | R11 | `e8459aabb473fdd0…` |
+| 07-h1-momentum | BLOCK | HYPOTHESIS_CLOSED | R05 | `ab62d7048e4f3c72…` |
+| 08-h2-low-vol | BLOCK | HYPOTHESIS_CLOSED | R05 | `b38c48026ddf2bb2…` |
+| 09-h14-52w-high | BLOCK | HYPOTHESIS_CLOSED | R05 | `d2704a04b40604e0…` |
+| 10-h15-volume | BLOCK | HYPOTHESIS_CLOSED | R05 | `e1f5cfb0c0c979db…` |
+| 11-family-momentum | BLOCK | HYPOTHESIS_CLOSED | R05 | `eeb42f722f2103e6…` |
+| 12-family-low-vol | BLOCK | HYPOTHESIS_CLOSED | R05 | `ecbf55b239af34d1…` |
+| 13-family-52w-high | BLOCK | HYPOTHESIS_CLOSED | R05 | `2f4a6adf71e73129…` |
+| 14-family-volume | BLOCK | HYPOTHESIS_CLOSED | R05 | `16bab1f295b3ff62…` |
+| 15-watch-high-priority | BLOCK | PRIORITY_ABOVE_CAP | R06 | `53b7c7b9c65d83d8…` |
+| 16-cost-mismatch | BLOCK | COST_MODEL_MISMATCH | R06 | `e54215d7a2d7305e…` |
+| 17-collection | ALLOW | ALLOWED | R14 | `46eb2119e239bb75…` |
+| 18-llm-shape | BLOCK | SCHEMA_INVALID | R02 | `a15ff144e6de7533…` |
+| 19-unqualified-id | BLOCK | DOMAIN_MISMATCH | R01 | `214ebf8fe01a9b07…` |
+| 20-reference-not-allowed | BLOCK | REFERENCE_NOT_ALLOWED | R06 | `2d413d31bf794b31…` |
 
 Receipts da variante integrada iguais aos da congelada: **sim**.
 
@@ -75,11 +75,11 @@ Receipts da variante integrada iguais aos da congelada: **sim**.
 | F14 | 3 | 0 |
 | F15 | 4 | 0 |
 
-Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
+Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
 
 ## Parecer de contenção (CAIN_CONTAINMENT)
 
 - O CAIN só propõe: o pedido não carrega handler, comando, módulo, caminho, URL, budget, prioridade final nem capital (R03). O handler vem da `admission_policy` do Stocks (allowlist compilada).
 - O CAIN nunca lê banco de domínio: ele só lê o spool (envelopes V2) e a própria memória. O venv do CAIN não tem domínio instalado, e nenhum console script do `cain` alcança um pacote de domínio (`test_loop_fenced.py`).
-- O CAIN nunca executa código de avaliação fora do circuito: o loop do PR #50 continua fora do runtime qualificado (framework da integration-crypto, sem mudança).
+- O CAIN nunca executa código de avaliação fora do circuito: o loop do PR #50 continua fora do runtime qualificado (`python -m cain.loop`, ferramenta de laboratório; nenhum console script o alcança).
 - PR #51 (`cain findings ingest-*`): leitura de arquivo versionado por `git show` num commit fixado, só leitura. A orquestração qualificada do Stocks não chama esse comando: a configuração do domínio vem de 61fc017 (SHA completo) pelo `tools/build_domain_config.py` e fica empacotada (`data/stocks.json`).

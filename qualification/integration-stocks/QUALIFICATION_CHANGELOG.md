@@ -132,3 +132,46 @@ Decisão no chat da sessão, numa pergunta com opções: **"(a) Encadeada (Recom
 | `FINDINGS.json`, `scripts/owner_decision_is_f008.py` | IS-F008 → `ACCEPTED_LIMITATION`, com as palavras do dono e o texto da opção |
 | `scripts/protected_check.py` | Para os 4 itens, segue os ponteiros (`cycle.supersedes` nos congelados; `supersedes_sha256` + `_superseded_<sha12>` nas attestations) até `MAX_HOPS`. `all_unchanged` continua sendo a letra da C15.1; o gate usa `all_unchanged_or_chained`. Teste a seco no checkout deste commit: 3387 itens, os 4 encadeados (a attestation da integration-crypto em 2 saltos), nenhum outro alterado. A conferência que vale como evidência é a da fase protected do ciclo 2 |
 | `RAW_LOGS/c0/c0_preflight_30c02c7.log` | Pré-voo 4.1–4.7 no main novo |
+
+## 2026-09-28 — ciclo 2: run na cain 0.4.13rc11 e decisão do dono de seguir para a rc12
+
+- **Run 36435997297** (push em `integration-stocks/runtime-…-c2`, commit `e1cf15a`; artefatos em `RAW_LOGS/runtime/run36435997297/` e `-windows/`). Rodou com o cain 0.4.13rc11 (`3b65ffe`), o transporte 0.1.0rc5 e o stocks rc3. Todas as fases terminaram com exit 0:
+  - cleanroom-final;
+  - C24.3 (d) 11/0;
+  - e2e 55/0;
+  - N+1 63/0, integrado 64/0;
+  - isolamento 28/0; contradição 9/0;
+  - F01–F15 sem falha;
+  - soak 43/0 com `qwen2.5:0.5b`: 5 propostas de LLM, uma por hipótese `QUAL-LLM-CTRL`, sementes 9001–9005. O modelo errou 1 das 6 tentativas.
+  - Windows: e2e + restart verde.
+- **Conferências feitas na rc11** (stocks-predictor `6f857b2`, que não muda):
+  - `RAW_LOGS/hosted-ci/final-c2/`: aceite do dono IS-F004/IS-F005 (b) reconferido 9/0. A varredura local da árvore agora usa um Python gerenciado, e `tree_scan_local.sh` corrige o desvio da reemissão 1: PASS, controle detectado.
+  - `RAW_LOGS/contract-revalidation-c2/`: C24.3 estático 12/0. A 1ª execução, chamada sem o arquivo do aceite, fica preservada como `*_run1_sem_aceite.*`.
+- **Regressão da rc11 no cripto.** A sessão cripto achou que, com `result_metrics`, o contexto do LLM do cripto passava do orçamento do provider. A correção é o cain#75 (só `llm.py`), mergeado pelo dono, e sai na rc12. O stocks não é atingido.
+- **Decisão do dono** no chat, pergunta com opções: **"Seguir para a rc12 (Recomendado)"**. A integration-stocks fecha a attestation na mesma release das outras duas integrações, com C14 de novo: run e conferências refeitos na rc12.
+  - Não há novo ciclo de congelados: a política (`policy.py`, sha256 `aff2f5fc…`) e o `stocks.json` são byte a byte os da rc11.
+  - O `FROZEN_PARAMETERS.json` do ciclo 2 cita a rc11 como a release planejada; o `runtime_targets.json` fixa a rc12.
+  - O run da rc11 fica preservado como evidência.
+
+## 2026-09-28 — ciclo 2 fechado na cain 0.4.13rc12: attestation reemitida **QUALIFIED**
+
+A cain v0.4.13rc12 foi publicada pela sessão cripto: `302a5c8`, rc11 + cain#75, orçamento de contexto do modo de proposta. Esta sessão a conferiu de forma independente (`RAW_LOGS/publish-candidates/verify_cain_0.4.13rc12.log`):
+- tag → commit;
+- digest da API = download anônimo;
+- `policy.py` e `stocks.json` na wheel com os bytes do congelado e da rc11;
+- CI de push do main e CI da tag verdes.
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json`, `hosted_ci_targets.json`, `data/SOURCES.json`, `RAW_LOGS/pin/pin_3.log` | Alvos na rc12 e pin novo antes do run, com o mesmo painel `8509f54f…` (D-16) |
+| `RAW_LOGS/runtime/run36440479456/` e `-windows/` | Run de push em `integration-stocks/runtime-…-rc12` (`686e7de`), todas as fases com exit 0: cleanroom-final; C24.3 (d) 11/0; e2e 55/0; N+1 63/0 e integrado 64/0; isolamento 28/0; contradição 9/0; F01–F15; soak 43/0 com 5 propostas de LLM (`qwen2.5:0.5b`), uma por hipótese `QUAL-LLM-CTRL`, todas ALLOW (R14). Windows: e2e + restart 55/0 |
+| `scripts/cycle2_publish.py` | Fase publish-candidates-c2: final_commits e final_wheels (cain 0.4.13rc12 `302a5c8`, transporte 0.1.0rc5 `b11494a`, stocks 0.3.0rc3 `6f857b2`) |
+| `RAW_LOGS/core-identity-c2/`, `RAW_LOGS/final-wheels/final_wheels_check_run36440479456.json` | Identidade do Core 13/0; final_wheels 19/0 |
+| `RAW_LOGS/hosted-ci/final-rc12/` | Push verde no SHA exato: cain `302a5c8` e ecosystem `b11494a`. stocks-predictor pelo aceite do dono (IS-F004/IS-F005 b), reconferido 9/0. Varredura local da árvore com Python gerenciado: PASS |
+| `RAW_LOGS/contract-revalidation-rc12/` | C24.3 estático 12/0, com o aceite da rc12 |
+| `RAW_LOGS/protected-c2/` | Conjunto protegido, 3387 itens, conferido duas vezes: no checkout desta branch e num snapshot do main `8817b7c`, que já tem o ciclo 3 da integration-crypto. Nos dois, só os 4 itens do IS-F008 mudam, e cada um fecha a cadeia salto a salto até o sha256 protegido: a attestation da integration-crypto em 2 saltos na branch e em 3 no main. Aceito pela decisão do dono no IS-F008 |
+| `RAW_LOGS/secrets-c2/`, `scripts/secrets_scan.py` | 0 achados, com os finais lidos de `runtime_targets.json` |
+| `FINDINGS.json`, `scripts/cycle2_findings.py`, `RAW_LOGS/findings-c2/versions.log` | Passam a FIXED, cada um conferido contra raw log: IS-F001 (main do stocks em 0.3.0rc4, sem release rc4), IS-F002 (17-collection ALLOW no N+1), IS-F003 (propostas de LLM sem `placebo_seed`) e IS-F007 (main do cain = commit da tag da versão que declara) |
+| relatórios, `scripts/render_reports.py`, `scripts/update_gates.py`, `scripts/evidence_numbers.py` | Relatórios do ciclo 2: política v2 e `rule_order` lidas dos congelados; cadeias do IS-F008; hipóteses só para o LLM; limites do framework com o estado do ciclo 2. `update_gates.py` aponta para as evidências do ciclo 2; as do ciclo 1 ficam em `GATES.json → cycle1_evidence` e no histórico |
+| `QUALIFICATION_ATTESTATION_superseded_12411b51d527.json`, `ATTESTATION_PARTIAL_ciclo2-attestation.json`, `QUALIFICATION_ATTESTATION.json` | A attestation da reemissão 1 do ciclo 1 (QUALIFIED, cain rc7) fica preservada. A nova é **QUALIFIED**: 30/30 gates PASS, P0=0, P1=0, P2=0, `supersedes_sha256` = `12411b51…` |
+| `RAW_LOGS/c0/c0_preflight_8817b7c.log` | Pré-voo 4.1–4.7 no main atual: 0 falhas |
