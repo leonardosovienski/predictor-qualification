@@ -315,6 +315,25 @@
       ],
       "status": "OPEN_AWAITING_OWNER",
       "owner_decision": "(a) aprovar uma regra genérica de escopo lacrado no framework (configuração com escopos lacrados por campo do pedido → REQUIRE_HUMAN SEALED_SCOPE; lista vazia para cripto e stocks), com novo ciclo da rule_order nas três integrações; ou (b) aprovar explicitamente, para o Brasileirão, BLOCK no CAIN + HOLDOUT_SEALED no domínio em lugar de REQUIRE_HUMAN. Informação recebida da sessão cripto em 2026-09-28 (não vale como aprovação nesta sessão): o dono teria escolhido reconciliar as linhas do cain no fim, incluindo essa regra"
+    },
+    {
+      "id": "IB-F003",
+      "severity": "P2",
+      "title": "no_data_rows_check: regex numérica sem agrupamento acusa event_id como substring (falso positivo)",
+      "description": "qualification/brasileirao/scripts/no_data_rows_check.py monta o padrão de event_id como (?<![0-9])a|b|c…(?![0-9]), sem agrupar as alternativas: as fronteiras só se aplicam à primeira e à última, e os outros valores casam como substring de qualquer sequência maior de dígitos. Na fase baseline/truth-map, o verificador acusou 1 ocorrência em PROTECTED_SET.json e 1 no log bruto do coletor da baseline: 7 dígitos no começo de uma sequência de 12 dentro de um hash de blob git hexadecimal de um arquivo protegido de outro domínio. Com as fronteiras aplicadas a todas as alternativas, as ocorrências são 0 (diagnóstico local, valor mascarado, nada gravado).",
+      "classification": "C6 P2: o defeito só aumenta ocorrências (falha fechada), nunca esconde um event_id; sem efeito em resultado. O verificador não foi alterado nem teve a cobertura reduzida (prompt da sessão 6). Causa corrigida nos artefatos desta missão: PROTECTED_SET.json passa a registrar os conjuntos da Etapa A dos outros dois domínios por referência (sha256 dos arquivos-fonte + conferência item a item), e o log bruto do coletor fica no diretório privado do runtime, com sha256 registrado em STACK_BASELINE.json (o JSON coletado, de onde saem os números, passa limpo e é publicado).",
+      "evidence": [
+        {
+          "file": "qualification/integration-brasileirao/STACK_BASELINE.json",
+          "sha256": "f62716ce5008ebef6b7225859d9a533f4323cd25d2491589120d201128fad0bb"
+        },
+        {
+          "file": "qualification/integration-brasileirao/PROTECTED_SET.json",
+          "sha256": "7896b42cda16f7c038d3be27faea4f8d97335c4c2cf27cc57b2d7aa783378da7"
+        }
+      ],
+      "status": "OPEN",
+      "owner_decision": "decidir se o no_data_rows_check da Etapa A ganha o agrupamento (?:…) no padrão numérico (mudança em artefato do Brasileirão da Etapa A; esta missão não altera o verificador)"
     }
   ]
 }

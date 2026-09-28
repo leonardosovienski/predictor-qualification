@@ -31,3 +31,12 @@ outra decisão. Commit `ec9fa66`, PR #68, mergeado (`b246f4e`).
 | `RAW_LOGS/freeze/hypothesis_sources_pin_check.log` | 22/22 fontes iguais entre `e540f97` e `25cdf4d` | D-25 (2) (`scripts/hypothesis_sources_pin_check.py`) |
 | `GATES.json`, `scripts/attest.py`, `tools/` | ledger dos gates, gerador/conferidor das attestations, ferramentas da missão (`uv sync --locked`) | C7, C8 |
 | `.gitattributes` (raiz) | `RAW_LOGS/**` e `E2E_EVIDENCE/**` desta missão com `-text` | C20: log bruto preservado byte a byte (mesmo padrão das outras missões) |
+
+## Fases baseline, truth-map e cleanroom-baseline
+
+| Arquivo | O quê | Por quê |
+|---|---|---|
+| `STACK_BASELINE.json` (`scripts/mission_baseline.py`) | coleta pelo coletor compartilhado `collect_stack_baseline_v2.py` (sem mudança) com cain `deccaaa` e ecosystem `1304b20`; igual ao STACK_BASELINE_V2.0 fora esses dois; base do Brasileirão `25cdf4d` | C3 (gate STACK_BASELINE_FROZEN) |
+| `PROTECTED_SET.json`, `ARCHITECTURE_TRUTH_MAP.json` (`scripts/truth_map.py`) | conjuntos da Etapa A íntegros nas bases (cripto 1387, stocks 89, brasileirao 1884 itens; 0 problemas); dado privado com sha256 igual; componentes da Etapa B; loop do PR #50 fora dos console scripts | C15.1, C2 |
+| `RAW_LOGS/cleanroom-baseline/` (`scripts/cleanroom_baseline.sh`) | diagnóstico: conformidade 89 passed contra a rc3 instalada; transporte 0.1.0rc4 e cain 0.4.13rc7 ainda sem o Brasileirão | C5 |
+| `FINDINGS.json` | IB-F003 (P2): regex numérica do `no_data_rows_check` sem agrupamento acusa substring (falso positivo num hash de blob); verificador não alterado; causa corrigida nos artefatos (conjuntos dos outros domínios por referência; log bruto do coletor no diretório privado, sha256 registrado) | prompt da sessão 6 e 15 |
