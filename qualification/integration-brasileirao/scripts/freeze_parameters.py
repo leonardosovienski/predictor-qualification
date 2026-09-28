@@ -257,9 +257,19 @@ def main() -> int:
             "predictor-ops": {"role": "congelado (wheel 4.2.2rc1)", "base": fc["predictor-ops"]},
         },
         "cycle": {
-            "number": 2,
-            "supersedes": {"path": f"{M}/FROZEN_PARAMETERS_cycle1_e5f254bd5d44.json",
-                           "sha256_prefix": "e5f254bd5d44"},
+            "number": 3,
+            "supersedes": {"path": f"{M}/FROZEN_PARAMETERS_cycle2_1c9e11bd702b.json",
+                           "sha256_prefix": "1c9e11bd702b"},
+            "release_name": "a release única da decisão do dono ('rc8' nos textos dos ciclos 2 e 3) foi publicada como "
+                            "v0.4.13rc10 (tag → fb0e1dc; cain#70 só sobe a versão): a v0.4.13rc9 já existia (a "
+                            "pré-release desta missão de 3e515fd, política v1); só o nome muda",
+            "cycle_3": "a release única rc8 passa a levar também os PRs da sessão STOCKS (cain#67–#69: R04 por "
+                       "hipótese, R17 DUPLICATE EQUIVALENT_REQUEST, justificativa do LLM conferida), mergeados pelo "
+                       "dono antes da publicação; o rule_order congelado tem de nomear a política que roda. "
+                       "brasileirao_config sem mudança; nenhum limiar, holdout, critério ou waiver muda; fases refeitas "
+                       "a partir do cleanroom-final (C14)",
+            "cycle_2_supersedes": {"path": f"{M}/FROZEN_PARAMETERS_cycle1_e5f254bd5d44.json",
+                                   "sha256_prefix": "e5f254bd5d44"},
             "why": "decisão do dono no chat desta sessão, 2026-09-28 (pergunta com opções): 'Trocar para a rc8 "
                    "(Recommended)': a base do cain passa de deccaaa (rc7/rc9, política v1) para a release única "
                    "v0.4.13rc8 com a R16; C14 'Parâmetro/vetor/perfil congelado' ⇒ a fase inteira como novo ciclo e as "
@@ -344,15 +354,20 @@ def main() -> int:
             "framework": "release única do cain v0.4.13rc8 (decisão do dono de 2026-09-28): política v2 (cain#59, "
                          "R15), custos e semente do LLM pelas variantes do contrato (cain#62), configuração do "
                          "Brasileirão (cain#64 e o PR que materializa os sealed_scopes) e a regra genérica de escopo "
-                         "lacrado R16 (cain#65); o commit e a wheel da release vão para runtime_targets.json na "
+                         "lacrado R16 (cain#65); ciclo 3: tipo de pedido por hipótese proponível na R04 e no molde "
+                         "do LLM (cain#67; configuração proposable_request_types, que para o Brasileirão é o único tipo "
+                         "permitido), R17 DUPLICATE EQUIVALENT_REQUEST (cain#68) e a justificativa do LLM conferida "
+                         "contra a visão (cain#69); o commit e a wheel da release vão para runtime_targets.json na "
                          "publicação",
             "rule_order": ["R01 BLOCK DOMAIN_MISMATCH", "R02 BLOCK SCHEMA_INVALID", "R03 BLOCK FORBIDDEN_FIELD",
-                           "R04 BLOCK REQUEST_TYPE_NOT_ALLOWED", "R05 BLOCK HYPOTHESIS_CLOSED",
+                           "R04 BLOCK REQUEST_TYPE_NOT_ALLOWED (fora da allowlist, ou não o tipo fixado para a "
+                           "hipótese proponível)", "R05 BLOCK HYPOTHESIS_CLOSED",
                            "R16 REQUIRE_HUMAN SEALED_SCOPE",
                            "R06 BLOCK SYMBOL_NOT_ALLOWED / COST_MODEL_MISMATCH / REFERENCE_NOT_ALLOWED / "
                            "PRIORITY_ABOVE_CAP", "R07 BLOCK REQUEST_ID_CONFLICT", "R08 DUPLICATE",
                            "R09 REQUIRE_HUMAN DOMAIN_RECONCILIATION_PENDING", "R10 REQUIRE_HUMAN CONTRADICTION_UNRESOLVED",
                            "R15 REQUIRE_HUMAN HYPOTHESIS_NOT_ADMITTED_BY_DOMAIN", "R11 REQUIRE_HUMAN NEW_HYPOTHESIS",
+                           "R17 DUPLICATE EQUIVALENT_REQUEST",
                            "R12 ABSTAIN OPEN_TASK_PENDING / BUDGET_EXHAUSTED", "R13 COOLDOWN NEGATIVE_STREAK",
                            "R14 ALLOW"],
             "brasileirao_config": brasileirao_config,

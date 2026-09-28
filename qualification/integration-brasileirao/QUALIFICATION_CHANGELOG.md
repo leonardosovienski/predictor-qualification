@@ -81,3 +81,25 @@ fases a partir do cleanroom-final são refeitas na rc8.
 
 Diagnóstico com o código da R16 (cain#65, `1e49bd0`): os três lacres passam na validação da configuração e as três
 propostas de holdout congeladas dão REQUIRE_HUMAN SEALED_SCOPE (R16); os controles continuam ALLOW (R14).
+
+## Ciclo 3 da freeze-parameters (release única publicada como cain v0.4.13rc10)
+
+A release única da decisão do dono ("rc8" nos textos) foi publicada pela sessão cripto como **cain v0.4.13rc10**
+(tag → `fb0e1dc`, wheel sha256 `752de98d3855…`), já que a v0.4.13rc9 existia (pré-release desta missão, política
+v1). Ela leva também os PRs da sessão STOCKS: cain#67 (tipo de pedido por hipótese: R04 e molde do LLM), cain#68
+(**R17 DUPLICATE EQUIVALENT_REQUEST**: o mesmo pedido sem request_id, hypothesis_id, research_id e client_ref, já rodado
+ou pendente, não gera task; avaliada antes da R12) e cain#69 (justificativa do LLM conferida). Todos foram mergeados pelo
+dono, junto com o cain#66 (lacres do Brasileirão).
+
+| Arquivo | Mudança |
+|---|---|
+| `FROZEN_PARAMETERS.json` | `rule_order` com a R17 entre R11 e R12 e a R04 por hipótese; framework e ciclo 3; `brasileirao_config` sem mudança |
+| `FROZEN_VECTORS.json` | `n1/01-next` e `contradiction/02-refuted` passam ao alvo OU25 (eram o mesmo experimento da semente e do 01-supported e esperavam ALLOW); tasks e resultados da contradição reencadeados; vetor novo `n1/24-equivalent-request` (DUPLICATE EQUIVALENT_REQUEST) |
+| `*_cycle2_<sha12>.json` | os arquivos do ciclo 2 preservados byte a byte |
+| `runtime_targets.json` | cain → v0.4.13rc10 |
+| `GATES.json`, `FINDINGS.json` | ciclo 3; IB-F001 FIXED; IB-F002 com a release publicada |
+
+Conferência mecânica (`scripts/cycle3_check.py`, 13/0): o `brasileirao_config` é igual ao de `417024e`; só mudaram
+`rule_order`, framework, ciclo e os ponteiros para os vetores novos; os vetores mudaram só onde foi declarado; o
+`brasileirao.json` da wheel publicada é, byte a byte, o que o `tools/build_domain_config.py` do commit da release gera a
+partir de `417024e`. Nenhum limiar, holdout, critério ou waiver muda.
