@@ -1,0 +1,89 @@
+{
+ "schema": "integration-crypto/CONTRACT_REVALIDATION_STATIC/1",
+ "stage_a_final_commit": "341d270e4d709150c581c3cd93f4518d483009eb",
+ "final_commit": "ee3d3d17de0b76cf731808243ffa838a0f5ee8cc",
+ "checks": [
+  {
+   "check": "(a) files changed outside adapter_paths are only the version files",
+   "ok": true,
+   "changed": [
+    "GarimpoInvestimentos/__init__.py",
+    "GarimpoInvestimentos/adapters/research_v2.py",
+    "pyproject.toml",
+    "uv.lock"
+   ]
+  },
+  {
+   "check": "(a) GarimpoInvestimentos/__init__.py: only the pre-release version line changed",
+   "ok": true,
+   "lines": [
+    "-__version__ = \"1.2.0rc2\"",
+    "+__version__ = \"1.2.0rc3\""
+   ]
+  },
+  {
+   "check": "(a) pyproject.toml: only the pre-release version line changed",
+   "ok": true,
+   "lines": [
+    "-version = \"1.2.0rc2\"",
+    "+version = \"1.2.0rc3\""
+   ]
+  },
+  {
+   "check": "(a) uv.lock: only the pre-release version line changed",
+   "ok": true,
+   "lines": [
+    "-version = \"1.2.0rc2\"",
+    "+version = \"1.2.0rc3\""
+   ]
+  },
+  {
+   "check": "(a) uv.lock identical apart from the project version (no dependency change)",
+   "ok": true
+  },
+  {
+   "check": "(b) nothing outside adapter_paths imports from it",
+   "ok": true,
+   "offenders": []
+  },
+  {
+   "check": "(b) no console script points into adapter_paths",
+   "ok": true,
+   "scripts": {
+    "cripto-predictor": "GarimpoInvestimentos.cli:main",
+    "cripto-predictor-job": "GarimpoInvestimentos.jobs:main",
+    "cripto-research": "GarimpoInvestimentos.research_runner:main"
+   }
+  },
+  {
+   "check": "(e) every protected item of the crypto domain has the same blob at the final commit",
+   "ok": true,
+   "items": 1387,
+   "changed": []
+  },
+  {
+   "check": "(f) CI of the domain green on the exact final commit (push run)",
+   "ok": true,
+   "runs": [
+    {
+     "conclusion": "success",
+     "databaseId": 36355995378,
+     "headSha": "ee3d3d17de0b76cf731808243ffa838a0f5ee8cc",
+     "name": "CI",
+     "status": "completed",
+     "url": "https://github.com/leonardosovienski/cripto-predictor/actions/runs/36355995378"
+    },
+    {
+     "conclusion": "success",
+     "databaseId": 36355073494,
+     "headSha": "ee3d3d17de0b76cf731808243ffa838a0f5ee8cc",
+     "name": "CI",
+     "status": "completed",
+     "url": "https://github.com/leonardosovienski/cripto-predictor/actions/runs/36355073494"
+    }
+   ]
+  }
+ ],
+ "passed": 9,
+ "failed": 0
+}

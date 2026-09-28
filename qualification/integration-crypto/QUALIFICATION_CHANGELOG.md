@@ -48,3 +48,18 @@ arquivo de evidência + sha256 no `GATES.json` / attestation.
 | `RAW_LOGS/protected/`, `RAW_LOGS/secrets/` | conjunto protegido igual; varredura de segredos refeita sobre todos os arquivos da missão, sem achados | C15.1, `SECRETS_CLEAN` | #61 |
 | `FINDINGS.json` | IC-F010 (P2, `ACCEPTED_LIMITATION`): parciais C8 não gravados fase a fase depois do cleanroom-baseline | C6 | #61 |
 | `ATTESTATION_PARTIAL_soak.json`, `QUALIFICATION_ATTESTATION.json` | attestation final **NOT_QUALIFIED**: `HOSTED_CI` FAIL e `BLOCKERS_ZERO` FAIL, os dois só pelo P1 IC-F004 (CI do ecosystem-predictor vermelho por atestados de harness do cripto vencidos, anterior à missão, decisão do dono pendente); os outros 28 gates PASS; WINDOWS_SMOKE no PC 2 cita a D-23 (no main) | C7.3 (gate FAIL ou P1 aberto ⇒ NOT_QUALIFIED) | #61 |
+
+## 2026-09-27 — IC-F004 fechado (decisão do dono) e reemissão C14 (sessão no PC 2)
+
+Decisão do dono no chat da sessão: "tenta renovar se nao coloca como expired". A renovação genuína funcionou, então as entradas não ficaram só como `EXPIRED`.
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `RAW_LOGS/harness-renewal/` | harness oficial `pipeline-power/2` do cripto rodado de novo sobre a árvore limpa `ee3d3d1`, Core 3.2.1, seeds fixos; quatro braços OK; atestados gravados fora do repo do cripto, porque os arquivos canônicos estão no `PROTECTED_SET` e fora da 7.1 | IC-F004 | #62 |
+| `ecosystem-predictor` `registries/harness_registry.json`, `docs/engineering_controls/20260927/`, `.gitattributes` | entradas ALIGNED vencidas → `EXPIRED` + `reissue_required`; 2 entradas ALIGNED novas, até 2026-10-04, com `evidence_sha256` (`scripts/renew_harness_registry.py`) | check_offline exige um harness ALIGNED para o Core 3.2.1; só EXPIRED não fecharia | `61d3430`; ecosystem-predictor#31 |
+| `ecosystem-predictor` `packages/research-transport` | 0.1.0rc3, só versão, publicado de `61f3ac4` com CI de push verde | C21: final_commit = commit da tag, CI verde | `61f3ac4`; ecosystem-predictor#31; pré-release `predictor-research-transport-v0.1.0rc3` |
+| `cain` `pyproject.toml`, `uv.lock`, `__version__`, README | transport 0.1.0rc3 e versão 0.4.13rc6, sem código | uma só versão do transporte no stack | `10744a9`; cain#58; pré-release `v0.4.13rc6` |
+| `runtime_targets.json`, `hosted_ci_final_targets.json`, `scripts/{render_reports,secrets_scan,update_gates}.py` | alvos novos; relatórios leem versões e diretórios da reemissão (sufixo `-c14`); os raw logs citados pela attestation anterior não mudam | C14, C20 | #62 |
+| `RAW_LOGS/runtime/run36360075557/`, `run36360088636/`, `windows-smoke-c14/`, `hosted-ci/final-c14/`, `core-identity-c14/`, `contract-revalidation-c14/`, `protected-c14/`, `final-wheels-c14/`, `secrets-c14/` | fases refeitas com as wheels finais: cleanroom-final, C24.3, e2e, N+1, isolamento, F01–F15, soak, Windows (PC 2, mesma pasta autorizada; `logs`/`out` da rodada rc5 renomeados para `logs-rc5`/`out-rc5`, nada apagado), HOSTED_CI, core identity, conjunto protegido, final wheels, segredos | C14 (`cain`/`ecosystem-predictor` mudaram) | #62 |
+| `FINDINGS.json` | IC-F004 `FIXED` | decisão do dono executada | #62 |
+| `QUALIFICATION_ATTESTATION_superseded_3dce62a9d3d6.json`, `ATTESTATION_PARTIAL_c14-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (NOT_QUALIFIED) é preservada; a nova é **QUALIFIED**, com `supersedes_sha256` apontando para ela | C7.1 regra 8, C7.3 | #62 |
