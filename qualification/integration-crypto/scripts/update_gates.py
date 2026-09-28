@@ -8,6 +8,7 @@ Ciclo 2 (C14, cain 0.4.13rc10: política v2 e configurações das três integra�
 *-ciclo2 e o run 36426935949 (todas as fases num run só); FROZEN_PARAMETERS.json reemitido e encadeado (IC-F011).
 Ciclo 3 (C14, cain 0.4.13rc12 (a rc11 falhou no soak, #75): result_metrics na memória e no modelo; FROZEN_PARAMETERS ciclo 3 encadeado ao 2 e ao 1):
 diretórios *-ciclo3 e o run 36439656179.
+Reemissão só por achados (IC-F016, IC-F017: disputa da trava do Ops, teste de ecossistema), sem refazer fases.
 """
 
 import hashlib
@@ -168,7 +169,7 @@ gates["BLOCKERS_ZERO"] = p("FAIL" if blocking else "PASS", [f"{M}/FINDINGS.json"
 g["final_result"] = ("QUALIFIED" if all(v["status"] == "PASS" for v in gates.values()) and not blocking
                      else "NOT_QUALIFIED")
 # a attestation substituída é a imediatamente anterior (nome explícito; a ordem dos nomes não é a do tempo)
-g["supersedes_sha256"] = hashlib.sha256(Path(M, "QUALIFICATION_ATTESTATION_superseded_d1c76b4eedb9.json").read_bytes()).hexdigest()
+g["supersedes_sha256"] = hashlib.sha256(Path(M, "QUALIFICATION_ATTESTATION_superseded_dc4b9cf9946e.json").read_bytes()).hexdigest()
 g["domain_revalidation"] = {"status": "PASS", "evidence": [f"{M}/RAW_LOGS/contract-revalidation-ciclo3/static_checks.json",
                                                            f"{R}/cleanroom-final/conformance.junit.xml",
                                                            f"{R}/contract-revalidation/SUMMARY.json"]}
