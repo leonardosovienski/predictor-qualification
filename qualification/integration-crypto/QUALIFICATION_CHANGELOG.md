@@ -124,3 +124,19 @@ Decisões do dono: "Código + config"; sobre a config, "Manter e registrar"; cic
 | `RAW_LOGS/{core-identity,contract-revalidation,protected,final-wheels,secrets}-ciclo3/`, `RAW_LOGS/hosted-ci/final-ciclo3/` | conferências refeitas com os final_commits `302a5c8`/`b11494a`/`ee3d3d1`; CI de push verde nos três (no cain, main e tag) | C14, C21 | — |
 | `runtime_targets.json`, `hosted_ci_final_targets_ciclo3.json`, `scripts/{secrets_scan,update_gates}.py`, `DECISION_POLICY_REPORT.md`, `ENVELOPE_V2_CONFORMANCE_REPORT.md` | alvos, ledger e relatórios na rc12 | C14, C20 | — |
 | `QUALIFICATION_ATTESTATION_superseded_d1c76b4eedb9.json`, `ATTESTATION_PARTIAL_ciclo3-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, cain rc10) é preservada. A nova aponta para ela por `supersedes_sha256` | C7.1 regra 8, C14 | — |
+
+## 2026-09-28 — achados pós-attestation: disputa da trava do Ops (teste de ecossistema, sessão cripto, PC 2)
+
+Pedido do dono: provar o ecossistema inteiro junto, com atenção ao Core e ao Ops.
+
+O teste: dois consumidores do cripto iniciados ao mesmo tempo sobre a mesma task, spool, ledger e estado do domínio, 20 repetições no Windows e 20 no Linux. Stack: cain 0.4.13rc12, Ops 4.2.2rc1, Core 3.2.1 e cripto 1.2.0rc3.
+
+A trava do Ops, com a correção SHARED-005, nunca derrubou processo. Nas 40 repetições houve uma admissão, um experimento e um RESULT terminal.
+
+Decisão do dono: "Registrar + regra". A attestation é reemitida só pelos achados, sem refazer fases.
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `RAW_LOGS/ops-disputa-windows/`, `RAW_LOGS/ops-disputa-linux/` | resumo, comandos e scripts das duas disputas, com SHA256SUMS | evidência | — |
+| `FINDINGS.json` (`scripts/add_findings_disputa.py`) | IC-F016 (P2, ACCEPTED_LIMITATION): no Windows, 1/20, o perdedor morre com PermissionError em `durable_io.atomic_write`, na escrita de `reference-materialization.json` antes do `run_job` do Ops. IC-F017 (P2, ACCEPTED_LIMITATION): o perdedor publica OPS_FAILED_RETRYABLE para uma task concluída (39/40). Regra operacional nos dois: um consumidor por domínio por vez. Correção anotada para a próxima versão do cripto (C24.4) | teste de ecossistema; C6 | — |
+| `scripts/update_gates.py`, `QUALIFICATION_ATTESTATION_superseded_dc4b9cf9946e.json`, `ATTESTATION_PARTIAL_achados-disputa-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, ciclo 3) é preservada. A nova tem os mesmos gates e evidências de fase e os achados novos na contagem | C7.1 regra 8 | — |

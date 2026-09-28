@@ -1,0 +1,506 @@
+### 1 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it01\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 1 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it01\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it01\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 1 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.b856cb9dce65225b.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 396, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "537bcd70e6cf478f9a15db35e54934ea", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:13.291666Z"}
+--- exit 0
+### 1 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.92a6f3dd3e4d32e2.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 1 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it01\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it01\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.92a6f3dd3e4d32e2.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:bdf3a5b5bf414411bb3b8f5675d64178", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.b856cb9dce65225b.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 1 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it01\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:bdf3a5b5bf414411bb3b8f5675d64178", "payload_sha256": "0e4207a2c35235c2b6b91c2610a3dfc511f4b28da74d090e797ca38757e98353", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "41f036e21f0efd4564d455fce98d6445e8023f6975fbb2c102e0d12492f12e6e", "head_recorded_at": "2026-09-28T15:32:13.563910Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 2 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it02\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 2 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it02\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it02\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 2 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.2d061bc2da203ec8.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 394, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "b2cdee7bb2f44f4e9654ce0f0b8c47e1", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:14.907415Z"}
+--- exit 0
+### 2 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.309b08758220f0fd.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 2 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it02\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it02\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:cff9e806bc1b4d2ba763d9567ad4a56a", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.2d061bc2da203ec8.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.309b08758220f0fd.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 2 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it02\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:cff9e806bc1b4d2ba763d9567ad4a56a", "payload_sha256": "96487524f32af11144eda81d29b0ec00e7dabf2c1b72d8f94391ffe4b2fe78db", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "9ccb6e9c6abaa6fe4d4a886460da653e315c36d5851adfcf11e05f2678d3a821", "head_recorded_at": "2026-09-28T15:32:15.162849Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 3 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it03\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 3 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it03\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it03\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 3 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.9dec26c254c4e303.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 399, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "5b245bf019b040fe873ff81af056ff43", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:16.549512Z"}
+--- exit 0
+### 3 consumer 1
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.0eb2094b4ecdf76b.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 3 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it03\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it03\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.0eb2094b4ecdf76b.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:cbfd19bb3f0147078a01099500a043ad", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.9dec26c254c4e303.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 3 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it03\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:cbfd19bb3f0147078a01099500a043ad", "payload_sha256": "b9320a19c72440652431a5dc50e0330008042c4285934f658391b7f7120003e5", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "678e4fc5949706e01ce35d51459e87000398ce3f5b90d955d1082c7b1a9c8d16", "head_recorded_at": "2026-09-28T15:32:16.814835Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 4 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it04\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 4 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it04\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it04\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 4 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.07229825e9679d5a.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 397, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "57619e29259f472991cdf8803a789084", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:18.187981Z"}
+--- exit 0
+### 4 consumer 1
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.d0f361520ff080ff.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 4 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it04\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it04\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:1e064ebd862842b88b6faa57ae05eae2", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.07229825e9679d5a.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.d0f361520ff080ff.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 4 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it04\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:1e064ebd862842b88b6faa57ae05eae2", "payload_sha256": "0ba298f0cb1514fb5cdd7cad89b478b1ea4ea96237d20aef6f420b9e9f206822", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "131469e00afdc2ba338e7d822d985fdf2566a984cf15003442bb5e491b53e014", "head_recorded_at": "2026-09-28T15:32:18.449450Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 5 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it05\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 5 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it05\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it05\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 5 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.c2ed4a13ffe29d8c.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 405, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "7529051b7abe4fd99735178843febbbc", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:19.868922Z"}
+--- exit 0
+### 5 consumer 1
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Scripts\predictor-research-consumer.exe\__main__.py", line 5, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\research_transport\cli.py", line 44, in main
+    return _run(args, report_fd)
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\research_transport\cli.py", line 65, in _run
+    for line in consumer.run_once():
+                ~~~~~~~~~~~~~~~~~^^
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\research_transport\consumer.py", line 120, in run_once
+    report.append(self._deliver(task, raw))
+                  ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\research_transport\consumer.py", line 162, in _deliver
+    outcome = self.adapter.submit_task(task, self.config)
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\GarimpoInvestimentos\adapters\research_v2.py", line 61, in submit_task
+    return circuit.submit_request(raw, source=f"research-task-v2:{task['task_id']}")
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\GarimpoInvestimentos\research_runner.py", line 146, in submit_request
+    executed = executor.execute(request["request_id"])
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\GarimpoInvestimentos\research_execution.py", line 549, in execute
+    atomic_write(receipt_path, canonical(materialization))
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Cripto\qualificacao\runtime\integration-crypto\venv-consumer\Lib\site-packages\GarimpoInvestimentos\durable_io.py", line 62, in atomic_write
+    os.replace(temporary, path)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 5] Acesso negado: 'C:\\Cripto\\qualificacao\\runtime\\integration-crypto\\ops-disputa\\it05\\domain\\x\\e\\159fdfb2ad2ccd8f\\.reference-materialization.json.d6d8db8df47949a9ab8f0033ddf7fbf0.tmp' -> 'C:\\Cripto\\qualificacao\\runtime\\integration-crypto\\ops-disputa\\it05\\domain\\x\\e\\159fdfb2ad2ccd8f\\reference-materialization.json'
+--- exit 1
+### 5 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it05\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it05\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:31c52624d2fd4ba1ade3605d5d700ca0", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.c2ed4a13ffe29d8c.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 5 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it05\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:31c52624d2fd4ba1ade3605d5d700ca0", "payload_sha256": "a8d23157da71143c9c7c2168ef5a267ef13bf87e81c42b5249acffd3a48f086e", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "6f3219a0540e3392490031bc3d5d7862c2da02e21bfea9397998c70172a66c17", "head_recorded_at": "2026-09-28T15:32:20.123761Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 6 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it06\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 6 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it06\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it06\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 6 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.b5da2353d9066a58.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 395, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "171428c141614e79b96b91ea4f2726ac", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:21.489326Z"}
+--- exit 0
+### 6 consumer 1
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.afd14c0baa4e1fbf.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 6 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it06\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it06\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.afd14c0baa4e1fbf.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:2f0d693e48e64d0f9eaf68915b9cc2bf", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.b5da2353d9066a58.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 6 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it06\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:2f0d693e48e64d0f9eaf68915b9cc2bf", "payload_sha256": "8244fed7231e72ec7af33f7d74c161d210670c41a9dfbb5be44321976f261ab9", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "2457804f7cad4b3c66339bdc0a24ccadd35cec5e469daa06573fd96d1422ec45", "head_recorded_at": "2026-09-28T15:32:21.756411Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 7 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it07\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 7 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it07\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it07\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 7 consumer 0
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5de313062c075ea9.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 7 consumer 1
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.75e2fbb9224f524a.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 404, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "b4cbd64864cc49ed95b8066408a6ad63", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:23.129943Z"}
+--- exit 0
+### 7 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it07\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it07\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5de313062c075ea9.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:5dfa8d4b0a2c463f97144d6f7b888cf5", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.75e2fbb9224f524a.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 7 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it07\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:5dfa8d4b0a2c463f97144d6f7b888cf5", "payload_sha256": "9c174208e101142a7e65f67667025ae9c3e57f7d04de97c04040ec201b159dbc", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "74409f85f93cea195b803e9a5999e9dd2a646e5cbaa9be7ce66c614993d9d7b5", "head_recorded_at": "2026-09-28T15:32:23.400588Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 8 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it08\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 8 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it08\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it08\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 8 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5000f8dd3fb7d30c.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 400, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "5e147169dccf439f99ce1e012a3874c1", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:24.805762Z"}
+--- exit 0
+### 8 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.b6e8e998d84c6b10.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 8 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it08\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it08\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:856e26bf14d04cdb86806ed940af1363", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5000f8dd3fb7d30c.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.b6e8e998d84c6b10.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 8 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it08\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:856e26bf14d04cdb86806ed940af1363", "payload_sha256": "0bc6209d792cf19f2b2cb76690baee21b95c0a0fa8e72d50158e2df44c358b33", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "635c43072113ec6726193d4526960b2d1e0796d712e8b2875078e1dbb9978a14", "head_recorded_at": "2026-09-28T15:32:25.073821Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 9 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it09\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 9 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it09\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it09\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 9 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.138d42ad1b0a65eb.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 396, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "9cddd293fdeb401daf906aa52ed0f322", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:26.450657Z"}
+--- exit 0
+### 9 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.6620ea95377ba68f.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 9 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it09\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it09\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:1637165d36474facbc40536f782e2231", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.138d42ad1b0a65eb.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.6620ea95377ba68f.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 9 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it09\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:1637165d36474facbc40536f782e2231", "payload_sha256": "0afd4c87ad4faa4e0cb91b08f3f6395792e59b32f0dbbde543a89464e3e889c2", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "81b74d39409bf8cf8d9768698364e236ad01467ae7f0199d398d2e0dfe85e313", "head_recorded_at": "2026-09-28T15:32:26.707815Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 10 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it10\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 10 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it10\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it10\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 10 consumer 0
+{"action": "delivered", "attempt": 2, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.7d39c82928e44eb9.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 395, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "2116e9da4f034956a32dd59522a10bb9", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:28.090381Z"}
+--- exit 0
+### 10 consumer 1
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.2671c7f6f91eb454.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 10 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it10\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it10\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.2671c7f6f91eb454.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:3dc9c70701ba492eadffb1b412e4fa97", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.7d39c82928e44eb9.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 10 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it10\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:3dc9c70701ba492eadffb1b412e4fa97", "payload_sha256": "ca89a0fc57eee8ebc00f41d6488b7066e5b52f155cc713509dc5438742e97123", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "3db85c31ce0bd14c6cfa16b91ea2caf54550c560c50a45e01f1de6598dae1fab", "head_recorded_at": "2026-09-28T15:32:28.353987Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 11 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it11\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 11 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it11\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it11\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 11 consumer 0
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.4e21663904a477e4.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 11 consumer 1
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.d86dff08bc4964a3.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 402, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "a15e6d20fdfe45868dbc2e59d90a3100", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:29.791593Z"}
+--- exit 0
+### 11 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it11\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it11\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.4e21663904a477e4.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:a37c205a06974759b4b692e87bfd6f08", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.d86dff08bc4964a3.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 11 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it11\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:a37c205a06974759b4b692e87bfd6f08", "payload_sha256": "f39e69d18d154e43aab64ba794e5d17b2e84f04293b9a22c6d34376f16efa0fa", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "eff36c7d9e83222ea0af1a5b0446b7dab41158d36b9f1fb5f10ff7fdd1acc122", "head_recorded_at": "2026-09-28T15:32:30.058334Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 12 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it12\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 12 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it12\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it12\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 12 consumer 0
+{"action": "delivered", "attempt": 2, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.01e3cb4574e34225.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 395, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "e234c47303ef4eabb7797a9c3bb5add4", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:31.438421Z"}
+--- exit 0
+### 12 consumer 1
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.944ec45e7a197b5d.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 12 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it12\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it12\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:e477acf8fe12454a96d10282170e53cc", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.01e3cb4574e34225.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.944ec45e7a197b5d.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 12 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it12\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:e477acf8fe12454a96d10282170e53cc", "payload_sha256": "8c3dc013e82195bc50be2efaaaeaa17523475db34564d73f29e03cc113d234e9", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "a540871e2cf99bc94458b4cea51a69c684535d528ed79a31e36ebabc81cb4bea", "head_recorded_at": "2026-09-28T15:32:31.695569Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 13 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it13\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 13 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it13\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it13\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 13 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.e688de732025953a.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 398, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "c682f06e28e741cbad6a8dc6945b8ff1", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:33.068354Z"}
+--- exit 0
+### 13 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.481b80f6a2ab3c05.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 13 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it13\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it13\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.481b80f6a2ab3c05.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:b231d46cce1a42c1a3fa063f47df534c", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.e688de732025953a.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 13 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it13\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:b231d46cce1a42c1a3fa063f47df534c", "payload_sha256": "486413d026a668f07f9d348d529bf3a0945bdf1953b11d8b8062938804d73c29", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "cfdce26da2e6e07b221f39ce6327631e30c755e3ad22fa2a8d84246441467946", "head_recorded_at": "2026-09-28T15:32:33.338361Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 14 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it14\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 14 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it14\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it14\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 14 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.210b490b3294a025.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 399, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "c4cce148d8d14687b288c9dff780fc8b", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:34.711340Z"}
+--- exit 0
+### 14 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.aaef91e80643745b.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 14 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it14\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it14\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:fbd6574f58744df09062d0a2afc04e82", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.210b490b3294a025.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.aaef91e80643745b.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 14 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it14\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:fbd6574f58744df09062d0a2afc04e82", "payload_sha256": "03b9de0277fd1fbc0dd81c3d09213a131b01fdd049dae1818766c937a9ed69e1", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "299c78f835518ddc18659072b285accb9506521e825e248e07280df76a90538a", "head_recorded_at": "2026-09-28T15:32:34.970040Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 15 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it15\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 15 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it15\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it15\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 15 consumer 0
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5122c8c625d32277.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 15 consumer 1
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.229bcb0f22023893.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 407, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "c5c85b9d17bd46a0875d3ffba3c538f0", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:36.377341Z"}
+--- exit 0
+### 15 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it15\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it15\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:6815c68791e24e42a74735d327fcb68a", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.229bcb0f22023893.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5122c8c625d32277.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 15 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it15\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:6815c68791e24e42a74735d327fcb68a", "payload_sha256": "9668e170a00ffaeab8e9201845cc0b3252c5c8909a6104a46378ad5013c540a2", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "477baf2e136709ef3fc58c82e12367abd488cc45bfb3d0fb9643ab7b0d8bc37d", "head_recorded_at": "2026-09-28T15:32:36.695011Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 16 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it16\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 16 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it16\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it16\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 16 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.27969a91268ea9e9.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 399, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "d3d715d9a8cd47fc96e550aa4530c2b4", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:38.203961Z"}
+--- exit 0
+### 16 consumer 1
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.e52cd67cb79228c8.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 16 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it16\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it16\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:d50bec1cd1d84840b9178541106b9711", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.27969a91268ea9e9.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.e52cd67cb79228c8.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 16 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it16\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:d50bec1cd1d84840b9178541106b9711", "payload_sha256": "202f06e19b41e333ec2721f75230639bd7b0e7ca77b69b9edd460fe220200864", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "e9d911e369126b961fe37564d443e032935368566e9f9c18ab51608401f3a095", "head_recorded_at": "2026-09-28T15:32:38.465152Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 17 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it17\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 17 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it17\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it17\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 17 consumer 0
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.a5f4a409d276d29f.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 17 consumer 1
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.28c943cf3a4a5699.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 398, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "f635a292b1f240c5ad6e87169b30e862", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:39.849879Z"}
+--- exit 0
+### 17 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it17\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it17\spool
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:54a4ef8218d0489689edc0d012981e0d", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.28c943cf3a4a5699.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.a5f4a409d276d29f.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 17 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it17\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:54a4ef8218d0489689edc0d012981e0d", "payload_sha256": "1b70f1fa3cc1a32391075048f8c833e794e55a24e0d38bd221ab3add6a655869", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "c1fc203a54cc4d3649ab79f7e22f623f9e7d2ef5c2f7b75817f5a254ad56f8c1", "head_recorded_at": "2026-09-28T15:32:40.106688Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 18 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it18\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 18 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it18\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it18\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 18 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.9ed18514d2b599df.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 396, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "cc30b5f7b54b436b864629f19a7789db", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:41.475956Z"}
+--- exit 0
+### 18 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5a2ce173f9a6b360.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 18 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it18\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it18\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.5a2ce173f9a6b360.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:a878aeb6dbde4fb5b5478e1013788c84", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.9ed18514d2b599df.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 18 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it18\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:a878aeb6dbde4fb5b5478e1013788c84", "payload_sha256": "9d0de320e0a2efdd2a90f75a7aed587d40c7f0b74f16db559713ea3e07806eff", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "f648892939f71360b44584a1bd7b12c978880b7e14069e83e3c9a7f0c31b4d45", "head_recorded_at": "2026-09-28T15:32:41.738476Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 19 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it19\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 19 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it19\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it19\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 19 consumer 0
+{"action": "delivered", "attempt": 2, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.fbc62ab8d84f880a.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 410, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "228c61b7a72d42deb94191ebb03df773", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:43.138737Z"}
+--- exit 0
+### 19 consumer 1
+{"action": "delivered", "attempt": 1, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.6df6a33c288294d6.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 19 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it19\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it19\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.6df6a33c288294d6.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:ee3e7101513940b98531ccfe0ffeacb7", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.fbc62ab8d84f880a.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 19 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it19\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:ee3e7101513940b98531ccfe0ffeacb7", "payload_sha256": "59756adff2e8e5b7b24b2dce4e66c42a51dba1882fb187cb87748bdd160ea226", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "8a96ee51701383afbe5990043317aa3a708f7a3d54e63e9df16ba3a51ae3c6c7", "head_recorded_at": "2026-09-28T15:32:43.404313Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
+### 20 propose
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research propose --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it20\cain --proposal C:\Cripto\qualificacao\runtime\integration-crypto\stage-ciclo3b\mission\fixtures\proposals\e2e\01-allow.json --as-of 2026-09-29T12:00:00Z
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "5fe20eb7b93d743530485cae313699a24e6bde31926371024ff20b8d3ef89beb", "previous_task_id": null, "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}}
+--- exit 0
+### 20 dispatch
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research dispatch --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it20\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it20\spool
+{"action": "dispatched", "file": "crypto/tasks/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json", "spool": "WRITTEN", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 20 consumer 0
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.3c9530bc8ac826e0.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"duration_ms": 397, "event": "job_finished", "job_id": "crypto-research-159fdfb2ad2ccd8f8d612a36", "level": "INFO", "run_id": "a4e2499bcbb04c09b7020f32fc0fe159", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T15:32:44.780495Z"}
+--- exit 0
+### 20 consumer 1
+{"action": "delivered", "attempt": 2, "class": "RETRYABLE", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-02bf95b3940c9a226f8a9ae2a37a11a3.3423622cb10e8160.json", "result_write": "WRITTEN", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 20 ingest
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research ingest --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it20\cain --spool C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it20\spool
+{"action": "ingested", "class": "RETRYABLE", "fact": null, "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.3423622cb10e8160.json", "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:b56f42f0a2464791b2f88ad9b378f45d", "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.3c9530bc8ac826e0.json", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}
+--- exit 0
+### 20 episodes
+$ C:\Cripto\qualificacao\runtime\integration-crypto\venv-cain\Scripts\cain.exe research episodes --domain crypto --state C:\Cripto\qualificacao\runtime\integration-crypto\ops-disputa\it20\cain
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-29T12:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, "proposal_id": "cain:E2E-01", "reason_code": "ALLOWED", "receipt_sha256": "d364ff5a3e2d04c1d3032650a6d7a73088ee668bc2a361792e2e481b76ecccb4", "source": "operator", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "inbox": [{"class": "RETRYABLE", "fact_id": null, "payload_sha256": null, "status": "OPS_FAILED_RETRYABLE", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:b56f42f0a2464791b2f88ad9b378f45d", "payload_sha256": "51304672b4235822a18edc7e56482e9aa3ff3868ad090a3113896d1fc91ada65", "status": "RESULT", "task_id": "crypto:TASK-02bf95b3940c9a226f8a9ae2a37a11a3"}], "memory": {"broken_at": null, "entries": 1, "head": "2ea27c257c9f993bfa485805249b227ea636c09ad7af76060a84e132399a43d8", "head_recorded_at": "2026-09-28T15:32:45.050561Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- exit 0
