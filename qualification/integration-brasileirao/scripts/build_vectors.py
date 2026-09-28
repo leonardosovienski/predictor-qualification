@@ -169,7 +169,8 @@ def main() -> int:
     other_ref = variant("brasileirao:REQ-IB-N1-020")
     other_ref["references"]["dataset"] = {"name": "real-other", "version": "1"}
     n1 = {
-        "01-next": (variant("brasileirao:REQ-IB-N1-001"), {}, "ALLOW", None),
+        # ciclo 3: outro experimento que a semente (alvo OU25), senão a R17 EQUIVALENT_REQUEST responde antes da R14
+        "01-next": (variant("brasileirao:REQ-IB-N1-001", target="OU25"), {}, "ALLOW", None),
         "02-duplicate": (copy.deepcopy(seed), {}, "DUPLICATE", "DUPLICATE_REQUEST"),
         "03-crypto-h9": (crypto_h9, {"domain": "crypto"}, "BLOCK", "DOMAIN_MISMATCH"),
         "04-brasileirao-h9": (brasileirao_h9, {}, "BLOCK", "HYPOTHESIS_CLOSED"),
@@ -196,6 +197,8 @@ def main() -> int:
                              "PRIORITY_ABOVE_CAP"),
         "23-unqualified-id": (variant("brasileirao:REQ-IB-N1-023", hypothesis_id="H9"), {}, "BLOCK",
                               "DOMAIN_MISMATCH"),
+        # ciclo 3 (R17, cain#68): o mesmo experimento da semente com outro request_id não gera task
+        "24-equivalent-request": (variant("brasileirao:REQ-IB-N1-024"), {}, "DUPLICATE", "EQUIVALENT_REQUEST"),
     })
     n1_plan = []
     for number, (name, (req, extra, expected, reason)) in enumerate(n1.items(), start=1):
@@ -240,6 +243,8 @@ def main() -> int:
         start=1,
     ):
         req = variant(f"brasileirao:REQ-IB-CONTRA-00{number}")
+        if label == "refuted":  # ciclo 3: outro experimento da mesma hipótese (a R17 não o toma pelo 01)
+            req["target"] = "OU25"
         prop_rel = put(f"fixtures/proposals/contradiction/{number:02d}-{label}.json",
                        proposal(f"IB-CONTRA-{number}", req))
         task = v2.build_task("brasileirao", req, episode_id=v2.episode_id_for("brasileirao", number),
@@ -273,6 +278,16 @@ def main() -> int:
     doc = {
         "schema": "integration-brasileirao/FROZEN_VECTORS/1",
         "frozen_before": "fases e2e, n-plus-1, isolation-ids-contradiction, idempotency-failure, windows-smoke e soak",
+        "cycle": {
+            "number": 3,
+            "supersedes": {"path": "qualification/integration-brasileirao/FROZEN_VECTORS_cycle2_bb210f62a840.json",
+                           "sha256_prefix": "bb210f62a840"},
+            "why": "a release única rc8 (publicada como v0.4.13rc10) leva também a R17 DUPLICATE EQUIVALENT_REQUEST (cain#68: o mesmo pedido sem "
+                   "request_id, hypothesis_id, research_id e client_ref, já rodado ou pendente, não gera task; avaliada "
+                   "antes da R12); dois vetores do ciclo 2 que esperavam ALLOW eram o mesmo experimento de um anterior "
+                   "(n1/01-next = semente; contradiction/02-refuted = 01-supported) e passam a outro alvo (OU25); o "
+                   "vetor novo n1/24-equivalent-request cobre a regra. Nenhum limiar, holdout, critério ou waiver muda",
+        },
         "identity": "sha256 dos bytes de cada arquivo (caminho relativo a qualification/integration-brasileirao/)",
         "real_data_rule": "os pedidos só nomeiam referências do operador (dataset real-20260908 / real-canary-20260908 "
                           "capturados no runtime privado); nenhum valor do dado real está nestes arquivos",

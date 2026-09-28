@@ -75,7 +75,7 @@ class Harness:
         self.log = (self.out / "commands.log").open("a", encoding="utf-8")
         self.private = (self.work / "commands.private.log").open("a", encoding="utf-8")
         self.checks: list[dict] = []
-        self.counter = 0
+        self.counter = [0]  # shared with for_domain(): one numbering per public log
 
     def for_domain(self, domain: str) -> "Harness":
         """Same CAIN state and spool, another domain's consumer (runtime integrado)."""
@@ -94,14 +94,14 @@ class Harness:
     # ------------------------------------------------------------------ processes
     def run(self, label: str, argv: list, extra_env: dict | None = None, *, public_stdout: str = "none"):
         """public_stdout: 'full' (CAIN), 'redacted' (consumidor: reason → sha256) ou 'none' (domínio)."""
-        self.counter += 1
+        self.counter[0] += 1
         env = {k: v for k, v in os.environ.items() if k not in FAULT_VARS}
         env.update(extra_env or {})
         started = time.time()
         done = subprocess.run([str(a) for a in argv], capture_output=True, env=env, timeout=3600)
         stdout = done.stdout.decode("utf-8", "replace")
         stderr = done.stderr.decode("utf-8", "replace")
-        head = {"n": self.counter, "label": label, "at": now(), "seconds": round(time.time() - started, 3),
+        head = {"n": self.counter[0], "domain": self.domain, "label": label, "at": now(), "seconds": round(time.time() - started, 3),
                 "argv": [str(a) for a in argv], "fault_env": extra_env or {}, "exit": done.returncode,
                 "stdout_sha256": sha(done.stdout), "stdout_bytes": len(done.stdout),
                 "stderr_sha256": sha(done.stderr), "stderr_bytes": len(done.stderr)}
@@ -143,6 +143,23 @@ class Harness:
                                    "changes": sorted(request_changes)}) + "\n")
         return target
 
+    def integrated_proposal(self, domain: str, template: str, target: Path, **request_changes) -> Path:
+        """A frozen proposal of the crypto/stocks integration (path relative to qualification/integration-<domain>),
+        with the stocks as_of marker replaced by the data_cutoff of this run's stocks panel (their FROZEN_VECTORS
+        rule); the effective copy is logged by sha256."""
+        other = self.mission.parent / f"integration-{domain}"
+        value = json.loads((other / template).read_text(encoding="utf-8"))
+        marker = json.loads((other / "FROZEN_VECTORS.json").read_text(encoding="utf-8")).get("as_of_marker")
+        if marker and value["request"].get("as_of") == marker["marker"]:
+            value["request"]["as_of"] = json.loads(Path(os.environ["STOCKS_REAL_ENV"]).read_text())["data_cutoff"]
+        value["request"].update(request_changes)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        raw = json.dumps(value, ensure_ascii=False, indent=1).encode("utf-8")
+        target.write_bytes(raw)
+        self.log.write(json.dumps({"effective_proposal": str(target), "template": f"integration-{domain}/{template}",
+                                   "sha256": sha(raw), "changes": sorted(request_changes)}) + "\n")
+        return target
+
     def propose(self, label: str, proposal: str | Path, *, as_of: str | None = None, fault: str | None = None):
         path = Path(proposal)
         path = path if path.is_absolute() else self.mission / path
@@ -179,7 +196,8 @@ class Harness:
 
     # ------------------------------------------------------------------ evidence
     def check(self, name: str, ok: bool, **detail) -> bool:
-        self.checks.append({"check": name, "ok": bool(ok), **detail})
+        # public SUMMARY.json: free-text reason/stderr of the domain replaced by its sha256, as in the public log
+        self.checks.append({"check": name, "ok": bool(ok), **redact(detail)})
         return bool(ok)
 
     def ro(self, path: Path) -> sqlite3.Connection:
