@@ -122,3 +122,13 @@ Diagnóstico local antes de congelar (WSL do PC 2, não é gate; `RAW_LOGS/freez
   - O LLM escolheu `stocks:QUAL-PIT-MOM-001`, proponível desde o ciclo 1 mas não admitida pelo operador desta integração, e o domínio recusou (TERMINAL_REFUSAL).
   - Três checagens de tolerância zero contam só resultados admitidos.
   - Daí o 1º ciclo do soak sem controle: o molde emprestado dessa hipótese passa a repetir um experimento já rodado (R17).
+
+## 2026-09-28 — IS-F008: decisão do dono (reemissão encadeada)
+
+Decisão no chat da sessão, numa pergunta com opções: **"(a) Encadeada (Recomendado)"**. O gate PROTECTED_ARTIFACTS_UNCHANGED aceita cada um dos 4 itens do IS-F008 só com a cadeia conferida byte a byte até o sha256 protegido (arquivo preservado + ponteiro, salto a salto). Todo outro item alterado continua FAIL.
+
+| Onde | O quê |
+|---|---|
+| `FINDINGS.json`, `scripts/owner_decision_is_f008.py` | IS-F008 → `ACCEPTED_LIMITATION`, com as palavras do dono e o texto da opção |
+| `scripts/protected_check.py` | Para os 4 itens, segue os ponteiros (`cycle.supersedes` nos congelados; `supersedes_sha256` + `_superseded_<sha12>` nas attestations) até `MAX_HOPS`. `all_unchanged` continua sendo a letra da C15.1; o gate usa `all_unchanged_or_chained`. Teste a seco no checkout deste commit: 3387 itens, os 4 encadeados (a attestation da integration-crypto em 2 saltos), nenhum outro alterado. A conferência que vale como evidência é a da fase protected do ciclo 2 |
+| `RAW_LOGS/c0/c0_preflight_30c02c7.log` | Pré-voo 4.1–4.7 no main novo |

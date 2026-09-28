@@ -257,8 +257,17 @@
      "sha256": "112d18a35c7b3abfc53e67594d269d2c9ea44521edf54cd247f54cc23bc801f7"
     }
    ],
-   "status": "OPEN_AWAITING_OWNER",
-   "owner_decision": "escolher: (a) reemissão encadeada: o gate aceita cada um dos quatro itens só com a cadeia conferida byte a byte até o sha256 protegido (arquivo preservado com esses bytes e ponteiro do atual, salto a salto); todo outro item alterado continua FAIL; (b) manter a letra: o gate fica FAIL e a attestation do ciclo 2 sai NOT_QUALIFIED; (c) refazer o truth-map no ciclo 2, com um conjunto protegido novo (só cresce) e hashes a partir dele"
+   "status": "ACCEPTED_LIMITATION",
+   "owner_decision": "escolher: (a) reemissão encadeada: o gate aceita cada um dos quatro itens só com a cadeia conferida byte a byte até o sha256 protegido (arquivo preservado com esses bytes e ponteiro do atual, salto a salto); todo outro item alterado continua FAIL; (b) manter a letra: o gate fica FAIL e a attestation do ciclo 2 sai NOT_QUALIFIED; (c) refazer o truth-map no ciclo 2, com um conjunto protegido novo (só cresce) e hashes a partir dele",
+   "owner_decision_taken": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão (pergunta com opções)",
+    "words": "(a) Encadeada (Recomendado)",
+    "option_text": "O gate aceita cada um dos 4 itens só com a cadeia conferida byte a byte até o sha256 protegido (arquivo preservado + ponteiro, salto a salto). Todo outro item alterado continua FAIL. É o mesmo critério do IS-F006 e do IC-F011 do cripto.",
+    "applied": "scripts/protected_check.py: para os quatro itens do IS-F008, segue a cadeia salto a salto (cycle.supersedes nos FROZEN_*; supersedes_sha256 e QUALIFICATION_ATTESTATION_superseded_<sha12>.json nas attestations) e registra o item como encadeado só se cada arquivo preservado tiver os bytes que o ponteiro diz e a cadeia chegar ao sha256 protegido. all_unchanged continua sendo a letra da C15.1; o gate usa all_unchanged_or_chained. Todo outro item alterado continua FAIL.",
+    "evidence": "RAW_LOGS/protected do ciclo 2 (protected_check.json)"
+   }
   }
  ],
  "c0": {
