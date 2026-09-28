@@ -1,0 +1,563 @@
+{
+ "scenario": "e2e",
+ "finished_at": "2026-09-28T15:10:32Z",
+ "checks": [
+  {
+   "check": "01-allow: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "02-allow-restarts: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "02: consumer died at after_domain_before_result_write (exit 86)",
+   "ok": true,
+   "exit": 86
+  },
+  {
+   "check": "02: no V2 result written before the restart",
+   "ok": true
+  },
+  {
+   "check": "02: CAIN died at after_inbox_commit_before_memory (exit 86)",
+   "ok": true,
+   "exit": 86
+  },
+  {
+   "check": "02: restarted ingestion completed the memory",
+   "ok": true,
+   "got": [
+    "duplicate",
+    "remembered"
+   ]
+  },
+  {
+   "check": "interleaved: crypto and stocks results rejected (DOMAIN_MISMATCH), brasileirao H9 of a task never emitted rejected (TASK_NOT_FOUND)",
+   "ok": true,
+   "got": {
+    "interleaved-brasileirao-result-h9.json": "TASK_NOT_FOUND",
+    "interleaved-crypto-result-h9.json": "DOMAIN_MISMATCH",
+    "interleaved-stocks-result-h9.json": "DOMAIN_MISMATCH"
+   }
+  },
+  {
+   "check": "03-canary: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "04-canary-control: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "05-duplicate: decision DUPLICATE DUPLICATE_REQUEST",
+   "ok": true,
+   "got": {
+    "decision": "DUPLICATE",
+    "reason_code": "DUPLICATE_REQUEST",
+    "rule": "R08"
+   }
+  },
+  {
+   "check": "05-duplicate: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "06-h9-protected: decision BLOCK HYPOTHESIS_CLOSED",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "reason_code": "HYPOTHESIS_CLOSED",
+    "rule": "R05"
+   }
+  },
+  {
+   "check": "06-h9-protected: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "07-crypto-h9: decision BLOCK DOMAIN_MISMATCH",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "reason_code": "DOMAIN_MISMATCH",
+    "rule": "R01"
+   }
+  },
+  {
+   "check": "07-crypto-h9: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "08-stocks-h9: decision BLOCK DOMAIN_MISMATCH",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "reason_code": "DOMAIN_MISMATCH",
+    "rule": "R01"
+   }
+  },
+  {
+   "check": "08-stocks-h9: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "09-frozen-family: decision BLOCK HYPOTHESIS_CLOSED",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "reason_code": "HYPOTHESIS_CLOSED",
+    "rule": "R05"
+   }
+  },
+  {
+   "check": "09-frozen-family: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "10-next: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "every emitted task has a V2 result; no result for any other task",
+   "ok": true,
+   "tasks": [
+    "brasileirao:TASK-1dbe590d60e927b6bd034bcafe5d0cf2",
+    "brasileirao:TASK-2026a6ea02942cdd62f6c1acede805f8",
+    "brasileirao:TASK-8b7665ad1ddb534b586d04e2bbf4ce69",
+    "brasileirao:TASK-96f42e4a16376ff5f6d3b08e610599b6",
+    "brasileirao:TASK-d5ad8e6222f8bd92d3779f375f28c473"
+   ],
+   "results": [
+    "brasileirao:TASK-1dbe590d60e927b6bd034bcafe5d0cf2",
+    "brasileirao:TASK-2026a6ea02942cdd62f6c1acede805f8",
+    "brasileirao:TASK-8b7665ad1ddb534b586d04e2bbf4ce69",
+    "brasileirao:TASK-96f42e4a16376ff5f6d3b08e610599b6",
+    "brasileirao:TASK-d5ad8e6222f8bd92d3779f375f28c473"
+   ]
+  },
+  {
+   "check": "01: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-001: payload byte-identical to `brasileirao-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "4bdafc470e0a0d191b80d8b321ae736039853bb19592dc23d25408998fc8a600",
+   "show_sha256": "4bdafc470e0a0d191b80d8b321ae736039853bb19592dc23d25408998fc8a600"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-001: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "6e8a8a5094e4233b9d161e8605851efc7b7d07da7f1d358cb6e31ca58129cf0b"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-001: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-001: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-001: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-001: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "brasileirao-predictor",
+    "module": "brasileirao_predictor.adapters.research_v2",
+    "version": "0.3.0rc4"
+   }
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-001: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "02: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "DUPLICATE"
+   ]
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-002: payload byte-identical to `brasileirao-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "95e1df83994ba80e5837c2419c5dfadd13a42448390ff75091b48db245a66ac7",
+   "show_sha256": "95e1df83994ba80e5837c2419c5dfadd13a42448390ff75091b48db245a66ac7"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-002: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "0a5392f0763df0dc31be1cae1ea4c65f5975d8b8e95b802ce3a5696e30388a24"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-002: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-002: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-002: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-002: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "brasileirao-predictor",
+    "module": "brasileirao_predictor.adapters.research_v2",
+    "version": "0.3.0rc4"
+   }
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-002: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "10: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-010: payload byte-identical to `brasileirao-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "a075349a18f2e22cbff1f19bde94980dfbc2ede530eada52cdabc6038d9d2630",
+   "show_sha256": "a075349a18f2e22cbff1f19bde94980dfbc2ede530eada52cdabc6038d9d2630"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-010: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "fcb0f5326451a7189ac1699d3bf071c4fbee048caf0ed2f883bf30c4f2bc47de"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-010: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-010: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-010: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-010: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "brasileirao-predictor",
+    "module": "brasileirao_predictor.adapters.research_v2",
+    "version": "0.3.0rc4"
+   }
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-010: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "03: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-003: payload byte-identical to `brasileirao-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "dfe73d338fe453fcae2a0d6392d085b14a736da7eb45b655c604f67108338f4c",
+   "show_sha256": "dfe73d338fe453fcae2a0d6392d085b14a736da7eb45b655c604f67108338f4c"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-003: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "5e477530047e2b15d86a86f8251ebd77f2c2824c5592e234e55eeb43f94825c1"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-003: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-003: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-003: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-003: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "brasileirao-predictor",
+    "module": "brasileirao_predictor.adapters.research_v2",
+    "version": "0.3.0rc4"
+   }
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-003: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "04: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-004: payload byte-identical to `brasileirao-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "5cabf270c9f5cd540bfe440465f30ed4b8830abaad595d74d807237c2c1aaaf0",
+   "show_sha256": "5cabf270c9f5cd540bfe440465f30ed4b8830abaad595d74d807237c2c1aaaf0"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-004: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "09a6ddca1660b3351e538dfd89846c669628d033c496f58514d2588af3ff05e0"
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-004: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-004: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-004: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-004: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "brasileirao-predictor",
+    "module": "brasileirao_predictor.adapters.research_v2",
+    "version": "0.3.0rc4"
+   }
+  },
+  {
+   "check": "brasileirao:REQ-IB-E2E-004: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "03 × 04: the canary (rows after the data_cutoff) never changed a prediction, metric, economic figure, data quality count or state (compared in the private directory)",
+   "ok": true,
+   "canary_comparable_sha256": "cc73e572a77a04422f9e18b24147507fb021446281a7f72b4861c173d3b36c09",
+   "control_comparable_sha256": "cc73e572a77a04422f9e18b24147507fb021446281a7f72b4861c173d3b36c09"
+  },
+  {
+   "check": "03: the canary dataset is the canary reference, the control the real one (only references differ)",
+   "ok": true
+  },
+  {
+   "check": "03/04: every prediction cutoff is at or before the request data_cutoff (no information after it)",
+   "ok": true,
+   "predictions": {
+    "03": 151,
+    "04": 151
+   }
+  },
+  {
+   "check": "no request of season 2025 or later reached the domain (holdout sealed)",
+   "ok": true,
+   "seasons": [
+    2022,
+    2023,
+    2024
+   ]
+  },
+  {
+   "check": "episodes numbered 1..n without gap",
+   "ok": true,
+   "decisions": [
+    "ALLOW",
+    "ALLOW",
+    "ALLOW",
+    "ALLOW",
+    "DUPLICATE",
+    "BLOCK",
+    "BLOCK",
+    "BLOCK",
+    "BLOCK",
+    "ALLOW"
+   ]
+  },
+  {
+   "check": "one inbox row per result file, memory hash chain intact",
+   "ok": true,
+   "inbox": 5,
+   "memory": {
+    "broken_at": null,
+    "entries": 5,
+    "head": "6baa28cc56e94a986a78b48db47ae427f1f3fd3e95a1c1fa9d5eb7dbd69edc7b",
+    "head_recorded_at": "2026-09-28T15:10:30.129393Z",
+    "projection": "consistent",
+    "status": "intact"
+   }
+  },
+  {
+   "check": "tasks emitted == ALLOW decisions == task files in the spool",
+   "ok": true,
+   "emitted": 5
+  },
+  {
+   "check": "previous_task_id chains the domain's tasks",
+   "ok": true
+  },
+  {
+   "check": "episode IDs are brasileirao/episode-<n> and every ID is brasileirao:-qualified",
+   "ok": true
+  },
+  {
+   "check": "e2e: canary marker absent from CAIN memory (retrieval source)",
+   "ok": true,
+   "marker_sha256": "a33df3b295e7cc3c69996dc2d0078f97177bba0eea315b29a50b55bea664f92a"
+  },
+  {
+   "check": "e2e: canary marker absent from CAIN memory (retrieval source)",
+   "ok": true,
+   "marker_sha256": "d65b880f677f0bd362b997a8a13d3b2fe60c7ad10c082602b4c8ecf13ac76d1e"
+  },
+  {
+   "check": "e2e: canary marker absent from CAIN memory (retrieval source)",
+   "ok": true,
+   "marker_sha256": "466672879ede6e3d1c1c78e9e35049d366e3537e3f086880d5cbbb9b3800a18f"
+  },
+  {
+   "check": "e2e: canary marker absent from CAIN memory (retrieval source)",
+   "ok": true,
+   "marker_sha256": "028534f3804d17d38b6ab0beb9ca8bd78b303b569075d643aa742866fcdfb3fa"
+  },
+  {
+   "check": "e2e: canary marker absent from CAIN memory (retrieval source)",
+   "ok": true,
+   "marker_sha256": "0ffb132baa01377547e75231141221bd0eee42e70f67e5a043d1e973b7b5d60d"
+  },
+  {
+   "check": "e2e: canary token absent from every CAIN state file (memory, episodes, outbox, inbox)",
+   "ok": true
+  },
+  {
+   "check": "e2e: canary token absent from the public outputs of this scenario",
+   "ok": true
+  },
+  {
+   "check": "no fact of another domain in the CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "no capital_permission true in CAIN state or spool",
+   "ok": true
+  }
+ ],
+ "passed": 79,
+ "failed": 0,
+ "decisions": [
+  "ALLOW",
+  "ALLOW",
+  "ALLOW",
+  "ALLOW",
+  "DUPLICATE",
+  "BLOCK",
+  "BLOCK",
+  "BLOCK",
+  "BLOCK",
+  "ALLOW"
+ ],
+ "domain_states": {
+  "01": {
+   "result_state": "INCONCLUSIVE",
+   "scientific_state": "INCONCLUSIVE",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  },
+  "02": {
+   "result_state": "INCONCLUSIVE",
+   "scientific_state": "INCONCLUSIVE",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  },
+  "10": {
+   "result_state": "INCONCLUSIVE",
+   "scientific_state": "INCONCLUSIVE",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  },
+  "03": {
+   "result_state": "REFUTED",
+   "scientific_state": "REFUTED",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  },
+  "04": {
+   "result_state": "REFUTED",
+   "scientific_state": "REFUTED",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  }
+ },
+ "real_env": {
+  "datasets": {
+   "real-20260908": {
+    "manifest_hash": "7daceca2c0c1235e4f87a03c1d2c6f4c1c618625f34abba043d3c787cd79d67d",
+    "source_sha256": "31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43"
+   },
+   "real-canary-20260908": {
+    "manifest_hash": "839a645e133e80952c91a1cf6189bb11abc02ea6c7400ea6044490680846ee56",
+    "source_sha256": "fffadbce5536c88b6f7f1a1ad9bbbe3bf7edb741e073af252e55d17c66bde71b"
+   }
+  },
+  "policy": {
+   "policy_id": "brasileirao-integration-qualification",
+   "sha256": "210487f6a668e426a01a72d5e66d8053b125960f44a78481662eb74066b5d038"
+  },
+  "dataset_source_sha256": "31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43"
+ }
+}
