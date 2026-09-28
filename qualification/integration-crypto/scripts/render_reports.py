@@ -4,7 +4,7 @@ Nenhum número é digitado: cada tabela vem de um arquivo de RAW_LOGS/ (citado c
   CORE_IDENTITY_REPORT.md, CAIN_ROUNDTRIP_REPORT.md, CONTRACT_REVALIDATION_REPORT.md, HOSTED_CI_REPORT.md,
   PROTECTED_ARTIFACT_REPORT.md, SOAK_REPORT.md e a seção cleanroom-final do CLEANROOM_REPORT.md.
 Uso: python render_reports.py <qualification/integration-crypto> <run do runtime> <run do soak> [sufixo]
-  sufixo (ex.: -c14): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
+  sufixo (ex.: -c14, -c14s): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
   diretórios da reemissão; os raw logs da attestation anterior ficam como estão.
 """
 
@@ -42,7 +42,7 @@ def main() -> int:
     (m / "CORE_IDENTITY_REPORT.md").write_text(
         "# integration-crypto — CORE_IDENTITY_REPORT\n\n"
         "Gates `LOCK_INTEGRITY` e `CORE_IDENTITY` (C4). Gerado por `scripts/render_reports.py`.\n\n"
-        f"Fonte: {cite(raw / 'core-identity' / 'core_identity.json')}, produzido por `scripts/core_identity.py` a "
+        f"Fonte: {cite(raw / f'core-identity{sfx}' / 'core_identity.json')}, produzido por `scripts/core_identity.py` a "
         f"partir dos `uv.lock` dos commits finais (git show, SHA completo) e dos logs do run `{run}`.\n\n"
         f"Resultado: **{ci['passed']} conferências OK, {ci['failed']} falhas**.\n\n"
         "| Conferência | Resultado |\n|---|---|\n" + rows + "\n\n"
@@ -88,7 +88,7 @@ def main() -> int:
         "domínio instalado; `runtime_env.sh` confere).\n\n"
         "| Cenário | Ambiente | Conferências OK | Falhas | Fonte |\n|---|---|--:|--:|---|\n"
         f"| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `{run}` | {e2e['passed']} | {e2e['failed']} | {cite(rt / 'e2e' / 'SUMMARY.json')} |\n"
-        f"| E2E + restart (WINDOWS_SMOKE) | Windows local do **PC 2** | {win['passed']} | {win['failed']} | {cite(raw / 'windows-smoke' / 'e2e' / 'SUMMARY.json')} |\n"
+        f"| E2E + restart (WINDOWS_SMOKE) | Windows local do **PC 2** | {win['passed']} | {win['failed']} | {cite(raw / f'windows-smoke{sfx}' / 'e2e' / 'SUMMARY.json')} |\n"
         f"| N+1 (3 processos, receipt byte a byte) | Linux primário | {n1['passed']} | {n1['failed']} | {cite(rt / 'n-plus-1' / 'SUMMARY.json')} |\n"
         f"| Isolamento, IDs com domínio, contradição | Linux primário | {iso['passed']} | {iso['failed']} | {cite(rt / 'isolation' / 'SUMMARY.json')} |\n"
         f"| Contrato C24.3 (d) | Linux primário | {contract['passed']} | {contract['failed']} | {cite(rt / 'contract-revalidation' / 'SUMMARY.json')} |\n\n"
@@ -139,8 +139,9 @@ def main() -> int:
         "| Repo | Papel | Commit | Estado | Runs | Jobs não verdes |\n|---|---|---|---|---|---|\n" + "\n".join(lines) + "\n\n"
         + (("Todos os final_commits verdes. O ecosystem-predictor da base (`49ffb16`) teve um run posterior vermelho "
             "só pelo IC-F004 (atestados de harness do cripto vencidos em 2026-09-27T02:02Z e ainda `ALIGNED`), anterior "
-            "a esta missão; o final_commit do ecosystem (`61f3ac4`) traz a reemissão genuína do harness (`61d3430`) e o "
-            "run de push dele é verde. A attestation anterior (NOT_QUALIFIED) registrou o vermelho em `a19655f`.\n")
+            "a esta missão; a reemissão genuína do harness (`61d3430`) está nos final_commits do ecosystem. Reemissão "
+            "C14 pela integration-stocks: final_commits cain `deccaaa` (0.4.13rc7) e ecosystem `1304b20` (transporte "
+            "0.1.0rc4). A attestation NOT_QUALIFIED registrou o vermelho em `a19655f`.\n")
            if final_ok else
            "**Há final_commit com job não verde:** ver a tabela e os JSON brutos.\n"),
         encoding="utf-8")

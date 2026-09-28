@@ -20,3 +20,38 @@ cita arquivo de evidência + sha256 no `GATES.json` / attestation.
 | `STACK_BASELINE.json` + `scripts/mission_baseline.py`, `RAW_LOGS/baseline/` | baseline com o coletor do STACK_BASELINE_V2.0 sem mudança, cain/ecosystem nos final_commits da integration-crypto; a primeira comparação (todos os campos) acusou só o estado remoto do cripto (main e release rc3 novos) e ficou preservada em `mission_baseline_run1_strict.log`; o script passou a separar campos de estado remoto dos da base | C3 | este PR |
 | `FINDINGS.json`, `GATES.json`, `scripts/{attest,findings_init}.py`, `ATTESTATION_PARTIAL_{freeze-parameters,baseline}.json` | achados IS-F001..IS-F004 (P2) acrescentados preservando o registro do C0; ledger de gates; parciais validados no schema | C6, C7, C8 | este PR |
 | `tools/pyproject.toml`, `tools/uv.lock` | ferramentas da missão: protocolo 2.0.0rc2 da release congelada (sha256 no lock) + jsonschema | venvs só de uv.lock | este PR |
+
+## 2026-09-28 — truth-map e cleanroom-baseline
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `ARCHITECTURE_TRUTH_MAP.json`, `PROTECTED_SET.json`, `scripts/truth_map.py`, `RAW_LOGS/truth-map/` | mapa do circuito com o cain e o ecosystem nos final_commits da integration-crypto; conjunto protegido: blobs do cripto (ee3d3d1), do stocks (61fc017) e do brasileirao, mais os artefatos compartilhados, entre eles os da integration-crypto | C13, C15.1 | `205cd7e`, #64 (mergeado) |
+| `CLEANROOM_REPORT.md` (seção baseline), `scripts/cleanroom_baseline.sh`, `RAW_LOGS/cleanroom-baseline/` | diagnóstico sem valor de gate: conformidade da Etapa A verde contra a wheel 0.3.0rc2; `ADAPTER_UNAVAILABLE` no consumidor e `CONFIG_INVALID` no `cain research propose --domain stocks` (o ponto de partida desta missão) | C5 | `205cd7e`, #64 |
+
+## 2026-09-28 — envelope-v2, domain-adapter, cain-wiring-decision-policy, publish-candidates
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `stocks-predictor` `stocks_predictor/adapters/research_v2.py`, `tests/adapters/` (novos), recibos R8 e selo, versão 0.3.0rc3 | adapter V2 só pela `adapter_api` (`Circuit.submit_request/show`), só stdlib; procedimento R8 da D-24 (4b) com os recibos real e de capacidade e o selo refeito (`RAW_LOGS/domain-adapter/r8_procedure.log`); suíte local completa em 6f857b2, árvore limpa antes e depois (`stocks_suite_6f857b2.log`). O passo `quality_exception_control` falhou na 1ª execução por defeito do script da suíte (ruff fora do PATH); foi reexecutado com o PATH do venv e passou (`stocks_quality_exception_control_rerun_6f857b2.log`), e o log original ficou preservado | C24, D-24 (4) | `6f857b2`; leonardosovienski/stocks-predictor#107; pré-release `v0.3.0rc3` |
+| `cain` `src/cain/orchestration/data/stocks.json`, `tools/build_domain_config.py`, testes; transporte 0.1.0rc4 e versão 0.4.13rc7 | configuração do Stocks lida de 61fc017 (SHA completo), do contrato e dos parâmetros congelados; framework sem mudança | C11, C12 | `581b760`, `deccaaa`; leonardosovienski/cain#60; pré-release `v0.4.13rc7` |
+| `ecosystem-predictor` `packages/research-transport` | entrada `stocks` na allowlist fixa de adapters, 0.1.0rc4 | C11 | `1304b20`; leonardosovienski/ecosystem-predictor#32; pré-release `predictor-research-transport-v0.1.0rc4` |
+| `RAW_LOGS/publish-candidates/`, `release-notes/`, `runtime_targets.json`, `scripts/publish_*.sh` | três pré-releases com build reprodutível (duas builds, mesmos bytes), conferidas por download anônimo (`RELEASE_VERIFIED`) | C7.1 regra 4, C21 | `552337a` |
+| `.github/workflows/integration-stocks-runtime.yml`, `scripts/` (harness, e2e, n_plus_1, isolation, failure_matrix, soak, contract_d, cleanroom_final, runtime_env, operator_env, ci_runtime, ollama_setup) | runtime suportado: Linux primário e Windows secundário no GitHub Actions (D-1, D-9, D-16), só wheels publicadas, dados públicos B3/CVM baixados no job pela URL oficial e conferidos pelo sha256 do pin | C8, C9, C10 | `552337a` |
+| `data/SOURCES.json`, `RAW_LOGS/pin/` | pin das fontes públicas antes do run (`build_real_panel.py pin`, sem mudança) | D-11, D-16 | `552337a` |
+| `RAW_LOGS/contract-revalidation/static_checks.json`, `scripts/contract_revalidation.py` | C24.3 (a), (b) e (e) verdes. (f) sem run de push verde no SHA exato | C24.3 | `552337a` |
+| `RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348*`, `FINDINGS.json` | run `workflow_dispatch` do CI no final_commit: Quality verde e `secrets` vermelho por falso positivo do main. Achado IS-F005 (P1, decisão do dono) | C21, prompt 9.3 | `552337a` |
+
+## 2026-09-28 — C14 da integration-crypto (cain e ecosystem mudaram)
+
+Ver `qualification/integration-crypto/QUALIFICATION_CHANGELOG.md`, seção "reemissão C14 pela integration-stocks". Fases refeitas com as wheels finais desta missão: run 36365192302 e Windows no PC 2 (D-23). A attestation QUALIFIED anterior foi preservada (`_superseded_112d18a35c7b`) e a reemitida também é **QUALIFIED**. Commits: `e0b4bc3` (alvos do runtime e domínio sem configuração do isolamento: `brasileirao`) e este PR.
+
+## 2026-09-28 — runtime, fechamento dos gates e attestation
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `RAW_LOGS/runtime/run36365355063/` (Linux) e `run36365355063-windows/` | run de push no commit `e0b4bc3`, com `run.json` de cada lado. Linux: cleanroom-final, C24.3 (d), E2E, N+1 congelado e integrado, isolamento com o cripto integrado, contradição, F01–F15 e soak (LLM local no runner). Windows: E2E + restart. Todas as fases terminaram com exit 0 | C8–C10, C24.3 | este PR |
+| `RAW_LOGS/{core-identity,final-wheels,protected,secrets}/`, `RAW_LOGS/hosted-ci/final/` | conferências finais; o conjunto protegido acusa a attestation da integration-crypto reemitida (IS-F006) | C4, C7.1, C15.1, C21 | este PR |
+| `scripts/protected_check.py` | registra, para uma attestation alterada, o arquivo `_superseded_` e o `supersedes_sha256`, só como registro: o item continua contado como alterado | C15.1 | este PR |
+| `scripts/render_reports.py`, `scripts/evidence_numbers.py`, relatórios `*_REPORT.md`, `EVIDENCE_NUMBERS.json` | relatórios gerados de `RAW_LOGS/`. A configuração da política vem de `FROZEN_PARAMETERS.json` e a decisão de cada proposta de LLM vem do `commands.log`; nada é digitado | C20 | este PR |
+| `RAW_LOGS/pr-merge-check/`, `FINDINGS.json` | cain#60 e ecosystem#32 contra o main atual (merge-tree, sem merge). IS-F006 (P2): parâmetros congelados contraditórios, C14 × conjunto protegido. IS-F007 (P2): o main do cain declara 0.4.13rc7 com outro código (PR #59, fora desta missão) | C6 | este PR |
+| `scripts/update_gates.py`, `GATES.json`, `ATTESTATION_PARTIAL_<fase>.json`, `QUALIFICATION_ATTESTATION.json` | ledger aplicado fase a fase e parciais C8 gravados na ordem das fases (as fases do runtime rodaram num único run). Attestation final **NOT_QUALIFIED**: `BLOCKERS_ZERO` FAIL (IS-F005 P1), `PROTECTED_ARTIFACTS_UNCHANGED` FAIL pela letra (IS-F006), `HOSTED_CI` e `DOMAIN_CONTRACTS_PRESERVED` NOT_RUN com BLOCKED (IS-F004/IS-F005) e os demais gates PASS | C7.3 | este PR |
