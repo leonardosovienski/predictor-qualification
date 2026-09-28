@@ -1,0 +1,26 @@
+{"effective_proposal": "/home/runner/work/_temp/work/failures/F01/proposals/1.json", "template": "fixtures/proposals/e2e/01-allow.json", "sha256": "ef42cd1e019ef1f93cc0d015adcae154d4d21840b8a87f4401c296baebdad678"}
+{"n": 1, "label": "propose 1", "at": "2026-09-28T18:16:18Z", "seconds": 0.129, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F01/proposals/1.json", "--as-of", "2026-09-28T18:16:17Z"], "fault_env": {"CAIN_ORCHESTRATION_FAULT": "after_outbox_commit"}, "exit": 86}
+--- stdout
+--- stderr
+--- end
+{"n": 2, "label": "dispatch after restart", "at": "2026-09-28T18:16:18Z", "seconds": 0.121, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F01/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "stocks/tasks/TASK-b7e9a514612668107e23add71bd6ab98.json", "spool": "WRITTEN", "task_id": "stocks:TASK-b7e9a514612668107e23add71bd6ab98"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer", "at": "2026-09-28T18:16:26Z", "seconds": 8.403, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "stocks", "--spool", "/home/runner/work/_temp/work/failures/F01/spool", "--ledger", "/home/runner/work/_temp/work/failures/F01/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F01/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "stocks:episode-1", "result_file": "stocks/results/TASK-b7e9a514612668107e23add71bd6ab98.081b004b6ffdd261.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "stocks:TASK-b7e9a514612668107e23add71bd6ab98"}
+--- stderr
+{"duration_ms": 8129, "event": "job_finished", "job_id": "stocks-research-8903ce49aff5ce66b3987468", "level": "INFO", "run_id": "2f8724337f3048ceb7ed2bc9a76997c1", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T18:16:26.563029Z"}
+--- end
+{"n": 4, "label": "ingest", "at": "2026-09-28T18:16:26Z", "seconds": 0.13, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F01/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:1192a497c367438aabca59da0a5a8fae", "file": "TASK-b7e9a514612668107e23add71bd6ab98.081b004b6ffdd261.json", "status": "RESULT", "task_id": "stocks:TASK-b7e9a514612668107e23add71bd6ab98"}
+--- stderr
+--- end
+{"n": 5, "label": "recovered exactly once", "at": "2026-09-28T18:16:26Z", "seconds": 0.119, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-09-28T18:16:17Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-b7e9a514612668107e23add71bd6ab98"}, "proposal_id": "cain:FM-F01-1", "reason_code": "ALLOWED", "receipt_sha256": "d61a15a882ad3ba91d9794d1a0dc6298dcf46d98df8c25f195572293173d79d1", "source": "operator", "task_id": "stocks:TASK-b7e9a514612668107e23add71bd6ab98"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:1192a497c367438aabca59da0a5a8fae", "payload_sha256": "de427c5ddbf821789169b3b22dcb063f263742bc21000496b52b6a70cadd7389", "status": "RESULT", "task_id": "stocks:TASK-b7e9a514612668107e23add71bd6ab98"}], "memory": {"broken_at": null, "entries": 1, "head": "2783d030364a73376cc7a9c96b215be3ff2dad0486baf677e0258e2465e6cccb", "head_recorded_at": "2026-09-28T18:16:26.729305Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end

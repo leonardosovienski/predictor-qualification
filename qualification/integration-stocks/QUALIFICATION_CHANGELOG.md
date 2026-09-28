@@ -306,3 +306,32 @@ Família (D-24) e disputa no código do stocks ficam como estão. **Nenhuma fase
 **Limites que continuam:**
 - paráfrase sem nome não é decidida: embedding só para revisão, e o número fica com o dono;
 - as frentes da agenda esperam a Etapa A do stocks.
+
+## 2026-09-28 — ciclo 4 fechado na cain 0.4.13rc13 e no transporte 0.1.0rc6: attestation reemitida **QUALIFIED**
+
+**Releases publicadas por esta sessão:**
+- **cain v0.4.13rc13**, de `960fb25` (main com cain#77, #78 e #79; CI de push 8/8 verde e CI da tag verde). Build reprodutível 2×; wheel `a1d94fd5…`, com download anônimo = digest da API.
+  - Dentro da wheel: `policy.py` `aff2f5fc…` (igual), `stocks.json` `c514a7b0…` (17 famílias, 8 hipóteses do LLM), `crypto.json` e `brasileirao.json` iguais byte a byte, findings-policy v2.
+  - Log: `RAW_LOGS/publish-candidates/publish_cain_0.4.13rc13.log`.
+- **predictor-research-transport v0.1.0rc6**, de `bac1f7b`: `publish_transport_0.1.0rc6.log`.
+
+**Decisões do dono depois do merge do ciclo 4** (chat da sessão, perguntas com opções):
+- **Paráfrase: "Só revisão (Recomendado)".** O embedding continua listando candidatos para revisão humana, e a findings-policy fica na v2. A medição do cain#78 mostrou que o modelo local separa mal: 11/33 na validação em t* = 0,650.
+- **Agenda: "H18/H19 + coleta (Recomendado)".** Vira uma missão própria no main do stocks: certificar a base de ações, rodar H18/H19 com os lacres de 04/09 e ligar a coleta prospectiva de VLMO e aluguel. A reabertura formal da Etapa A (C24.4), para levar fator novo ao CAIN, só depois desta reemissão. Nada disso muda esta integração.
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json`, `hosted_ci_targets.json`, `data/SOURCES.json`, `RAW_LOGS/pin/pin_4.log` | Alvos na rc13 e no transporte rc6; pin novo antes do run, com o mesmo painel `8509f54f…` (D-16) |
+| `RAW_LOGS/runtime/run36462320273/` e `-windows/` | Run de push em `integration-stocks/runtime-…-rc13` (`8ace5f8`), todas as fases com exit 0: cleanroom-final; C24.3 (d) 11/0; e2e 55/0; N+1 63/0 e integrado 64/0; isolamento 28/0; contradição 9/0; F01–F15; soak 43/0 com 5 propostas de LLM (`qwen2.5:0.5b`, piso 5). Windows: e2e + restart 55/0 |
+| `scripts/cycle4_publish.py` | Fase publish-candidates-c4: cain 0.4.13rc13 `960fb25`, transporte 0.1.0rc6 `bac1f7b`, stocks 0.3.0rc3 `6f857b2` |
+| `RAW_LOGS/core-identity-c4/`, `RAW_LOGS/final-wheels/final_wheels_check_run36462320273.json` | Identidade do Core 13/0; final_wheels 19/0 |
+| `RAW_LOGS/hosted-ci/final-rc13/` | Push verde no SHA exato: cain `960fb25` e ecosystem `bac1f7b`. stocks-predictor pelo aceite do dono (IS-F004/IS-F005 b), reconferido 9/0. Varredura local da árvore: PASS. A 1ª coleta, feita com o CI da tag v0.4.13rc13 ainda rodando, fica em `run1_ci_da_tag_em_andamento/` |
+| `RAW_LOGS/contract-revalidation-rc13/` | C24.3 estático 12/0 |
+| `RAW_LOGS/protected-c4/` | Conjunto protegido (3387 itens) na branch e num snapshot do main `37a0e28`. Só os 4 itens do IS-F008 mudam, todos encadeados até o sha256 protegido. Os congelados do stocks chegam ao ciclo 1 em 3 saltos (ciclo 3 → ciclo 2 → ciclo 1) |
+| `RAW_LOGS/race-c4/`, `FINDINGS.json`, `scripts/cycle4_findings.py` | **IS-F009 → FIXED.** Disputa refeita com as wheels publicadas (`runtime_env.sh` com os alvos deste ciclo): 20/20, exits (0, 6) em todas, 1 experimento e só RESULT em cada, 0 envelopes falsos e 0 exceções. O script confere tudo isso e o transporte instalado antes de mudar o status |
+| `RAW_LOGS/secrets-c4/` | 0 achados, com os diffs até os finais do ciclo 4 |
+| `RAW_LOGS/c0/c0_preflight_37a0e28.log` | Pré-voo 4.1–4.7 no main `37a0e28`: 0 falhas |
+| relatórios, `scripts/render_reports.py`, `scripts/update_gates.py` | Relatórios do ciclo 4 (famílias da D-26 no `DECISION_POLICY_REPORT.md`); gates com as constantes do ciclo 4 e fases com o sufixo `-c4` |
+| `QUALIFICATION_ATTESTATION.json`, `QUALIFICATION_ATTESTATION_superseded_9979d19be7fc.json`, `ATTESTATION_PARTIAL_ciclo4-attestation.json` | A attestation do ciclo 2 fica preservada. A nova é **QUALIFIED**, 30/30 gates PASS, P0=P1=P2=0, `supersedes_sha256` = `9979d19b…` |
+
+**C14 nas outras integrações:** a sessão cripto e a sessão Brasileirão foram avisadas da rc13 (wheel, sha256, conteúdo) e refazem as fases delas nas próprias sessões.

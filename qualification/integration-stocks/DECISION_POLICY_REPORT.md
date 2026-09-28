@@ -1,6 +1,6 @@
 # integration-stocks — DECISION_POLICY_REPORT
 
-Gate `DECISION_POLICY` (C12). Política `cain-decision-policy` versão 2 do `cain-research` 0.4.13rc12 (`src/cain/orchestration/policy.py`, sha256 `aff2f5fc6198eb49…`, conferido em `fb0e1dcb9003`), receipt `cain-decision-receipt/1`; configuração do Stocks empacotada em `src/cain/orchestration/data/stocks.json`.
+Gate `DECISION_POLICY` (C12). Política `cain-decision-policy` versão 2 do `cain-research` 0.4.13rc13 (`src/cain/orchestration/policy.py`, sha256 `aff2f5fc6198eb49…`, conferido em `fb0e1dcb9003`), receipt `cain-decision-receipt/1`; configuração do Stocks empacotada em `src/cain/orchestration/data/stocks.json`.
 
 ## Regras, na ordem de avaliação (FROZEN_PARAMETERS.json → decision_policy.rule_order)
 
@@ -24,14 +24,15 @@ Gate `DECISION_POLICY` (C12). Política `cain-decision-policy` versão 2 do `cai
 
 ## Configuração do Stocks (FROZEN_PARAMETERS.json → decision_policy.stocks_config)
 
-Fonte: `qualification/integration-stocks/FROZEN_PARAMETERS.json` (sha256 `11ad4cb7f255da06…`), chave `decision_policy.stocks_config`.
+Fonte: `qualification/integration-stocks/FROZEN_PARAMETERS.json` (sha256 `40d740cb257bbc1a…`), chave `decision_policy.stocks_config`.
 
 - fontes: stocks-predictor `61fc017256ffea815ae96bbe02b847dccdb395cc` (SHA completo): `stocks_predictor/research_admission.py`, `trials_v2.json`, `trials.json`, `config.yaml`, `EXTERNAL_INTELLIGENCE_TRIAL_READINESS_MATRIX.json`; contrato `qualification/stocks/DOMAIN_RESEARCH_CONTRACT.json` (`76fa8227dd83eb9a…`);
 - tipos de pedido: BACKTEST_PIT_FACTOR, COLLECT_EXTERNAL_INTELLIGENCE;
 - hipóteses que a política nunca reabre (22, H1..H22): CLOSED_JUDGED H1, H2, H3, H4, H5, H6, H8, H11, H14, H15, H16; CLOSED_EMBARGO_ORIGINAL H7, H9, H10, H12, H13; PAUSED_INCONCLUSIVE_DATA_QUALITY H17; PAUSED H18, H19; CLOSED_HISTORICAL H20; CLOSED_HISTORICAL_CONDITIONAL H21; CLOSED_REJECTED H22;
-- famílias congeladas (15): low_vol_252, momentum_12_1, momentum_12_1_total_return, momentum_6_1, momentum_lowvol_intersection, near_52w_high, net_margin, quality_leverage, quality_roe, quality_roe_leverage_intersection, revenue_growth_yoy, reversal_21d, turn_of_month, vol_target_sizing, volume_surge;
-- hipóteses propostas pela missão: stocks:QUAL-EI-COLLECTION-001, stocks:QUAL-LLM-CTRL-001, stocks:QUAL-LLM-CTRL-002, stocks:QUAL-LLM-CTRL-003, stocks:QUAL-LLM-CTRL-004, stocks:QUAL-LLM-CTRL-005, stocks:QUAL-PIT-MOM-001, stocks:QUAL-PIT-MOM-REAL-001, stocks:QUAL-PIT-MOM-REAL-002, stocks:QUAL-PIT-MOM-REAL-003;
-- sobreposição de parâmetros no molde do LLM (`proposal_overlays`): stocks:QUAL-LLM-CTRL-001 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9001}}; stocks:QUAL-LLM-CTRL-002 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9002}}; stocks:QUAL-LLM-CTRL-003 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9003}}; stocks:QUAL-LLM-CTRL-004 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9004}}; stocks:QUAL-LLM-CTRL-005 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9005}};
+- famílias congeladas (17): low_vol_252, momentum_12_1, momentum_12_1_total_return, momentum_6_1, momentum_lowvol_intersection, near_52w_high, net_margin, quality_leverage, quality_net_margin, quality_roe, quality_roe_leverage_double_filter, quality_roe_leverage_intersection, revenue_growth_yoy, reversal_21d, turn_of_month, vol_target_sizing, volume_surge;
+- famílias acrescentadas pela D-26: quality_net_margin, quality_roe_leverage_double_filter, da lista `frozen_families` de `research/scientific_state.json` em `4c82885eddab233f2b57442046875fdc2c8f0932` (sha256 `1f7eeff798a1ac37…`); nenhuma família sai;
+- hipóteses propostas pela missão: stocks:QUAL-EI-COLLECTION-001, stocks:QUAL-LLM-CTRL-001, stocks:QUAL-LLM-CTRL-002, stocks:QUAL-LLM-CTRL-003, stocks:QUAL-LLM-CTRL-004, stocks:QUAL-LLM-CTRL-005, stocks:QUAL-LLM-CTRL-006, stocks:QUAL-LLM-CTRL-007, stocks:QUAL-LLM-CTRL-008, stocks:QUAL-PIT-MOM-001, stocks:QUAL-PIT-MOM-REAL-001, stocks:QUAL-PIT-MOM-REAL-002, stocks:QUAL-PIT-MOM-REAL-003;
+- sobreposição de parâmetros no molde do LLM (`proposal_overlays`): stocks:QUAL-LLM-CTRL-001 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9001}}; stocks:QUAL-LLM-CTRL-002 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9002}}; stocks:QUAL-LLM-CTRL-003 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9003}}; stocks:QUAL-LLM-CTRL-004 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9004}}; stocks:QUAL-LLM-CTRL-005 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9005}}; stocks:QUAL-LLM-CTRL-006 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9006}}; stocks:QUAL-LLM-CTRL-007 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9007}}; stocks:QUAL-LLM-CTRL-008 {"negative_control": {"kind": "SHUFFLED_LABELS", "seed": 9008}};
 - custos: fee 3 bps + slippage 15 bps (config.yaml [H1-FROZEN] execution.b3_fee_pct 0.0003 e spread_slippage_pct 0.0015 em 61fc017 (os mesmos do cost_model h1-frozen do contrato));
 - prioridade máxima NORMAL; budget {"max_open_tasks": 1, "max_tasks_per_research": 64, "max_tasks_total": 512}; cooldown {"after_consecutive_negative": 3, "episodes": 2};
 - ST-F007: rebalance a cada 21 pregões (universe.rebalance_every_sessions = 21, o que o handler compilado aceita), nunca 'fim de mês' (D-21)
@@ -40,7 +41,7 @@ Fonte: `qualification/integration-stocks/FROZEN_PARAMETERS.json` (sha256 `11ad4c
 
 ## Decisões do N+1 (receipt em 3 processos novos, byte a byte)
 
-Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36440479456/n-plus-1/frozen/SUMMARY.json` (sha256 `f3d385f9f5b14afb…`).
+Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json` (sha256 `e46a865cb741163c…`).
 
 | Candidata | Decisão | Motivo | Regra |
 |---|---|---|---|
