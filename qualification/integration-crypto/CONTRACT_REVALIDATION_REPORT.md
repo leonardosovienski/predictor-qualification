@@ -2,7 +2,7 @@
 
 Gate `DOMAIN_CONTRACTS_PRESERVED` e `domain_attestations[0].revalidation` (C24.3), domínio crypto, entre o final_commit da Etapa A (`341d270e4d709150c581c3cd93f4518d483009eb`) e o desta missão (`ee3d3d17de0b76cf731808243ffa838a0f5ee8cc`, tag v1.2.0rc3).
 
-Parte estática (`qualification/integration-crypto/RAW_LOGS/contract-revalidation-c14s/static_checks.json` (sha256 `1d589d52eb96a450…`)):
+Parte estática (`qualification/integration-crypto/RAW_LOGS/contract-revalidation-ciclo2/static_checks.json` (sha256 `1d589d52eb96a450…`)):
 
 | Conferência | Resultado |
 |---|---|
@@ -16,6 +16,6 @@ Parte estática (`qualification/integration-crypto/RAW_LOGS/contract-revalidatio
 | (e) every protected item of the crypto domain has the same blob at the final commit | OK |
 | (f) CI of the domain green on the exact final commit (push run) | OK |
 
-(c) suíte de conformidade verde com as wheels da integração: 48 testes, 0 falhas (`qualification/integration-crypto/RAW_LOGS/runtime/run36365192302/cleanroom-final/conformance.junit.xml` (sha256 `4bde74feeb0a216c…`)).
+(c) suíte de conformidade verde com as wheels da integração: 48 testes, 0 falhas (`qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/cleanroom-final/conformance.junit.xml` (sha256 `04e2033dfcaaa8d6…`)).
 
-(d) vetor real da Etapa A pelo adapter: 10 conferências OK, 0 falhas (`qualification/integration-crypto/RAW_LOGS/runtime/run36365192302/contract-revalidation/SUMMARY.json` (sha256 `50205f651e8439f3…`)): hash canônico sem `client_ref` igual ao do vetor, `client_ref` devolvido igual, payload byte-idêntico ao `show` (adapter_api).
+(d) vetor real da Etapa A pelo adapter: 10 conferências OK, 0 falhas (`qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/contract-revalidation/SUMMARY.json` (sha256 `1aff1137250d0219…`)): hash canônico sem `client_ref` igual ao do vetor, `client_ref` devolvido igual, payload byte-idêntico ao `show` (adapter_api).

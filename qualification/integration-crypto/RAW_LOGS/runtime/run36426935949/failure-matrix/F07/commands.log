@@ -1,0 +1,35 @@
+{"n": 1, "label": "propose 1", "at": "2026-09-28T13:14:51Z", "seconds": 0.148, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F07/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F07/proposals/1.json", "--as-of", "2026-09-28T13:14:51Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "d575828829bfdcb177ba693a8a85f0c97746d392ba36a966ba9f537aa1d92240", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "f7689c417f71a0c2d1b0e412d9c4d5cbf46674bff4ab140519f477a5a5ee8d25", "previous_task_id": null, "task_id": "crypto:TASK-e7a6c2ad4bdc728910407f451dca25fc"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch", "at": "2026-09-28T13:14:51Z", "seconds": 0.128, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F07/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F07/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-e7a6c2ad4bdc728910407f451dca25fc.json", "spool": "WRITTEN", "task_id": "crypto:TASK-e7a6c2ad4bdc728910407f451dca25fc"}
+--- stderr
+--- end
+{"n": 3, "label": "ingest while consumer is out", "at": "2026-09-28T13:14:51Z", "seconds": 0.124, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F07/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F07/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+--- stderr
+--- end
+{"n": 4, "label": "propose 2", "at": "2026-09-28T13:14:51Z", "seconds": 0.13, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F07/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F07/proposals/2.json", "--as-of", "2026-09-28T13:14:51Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ABSTAIN", "episode_id": "crypto:episode-2", "reason_code": "OPEN_TASK_PENDING", "receipt_sha256": "624bdbdbeefd883165a0498d400168010b70864a5a87c3d09d16ac4088f43529", "rule": "R12", "status": "RECORDED", "task": null}
+--- stderr
+--- end
+{"n": 5, "label": "consumer back", "at": "2026-09-28T13:14:52Z", "seconds": 0.456, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "crypto", "--spool", "/home/runner/work/_temp/work/failures/F07/spool", "--ledger", "/home/runner/work/_temp/work/failures/F07/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F07/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-e7a6c2ad4bdc728910407f451dca25fc.86476ea2c47bf8a4.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-e7a6c2ad4bdc728910407f451dca25fc"}
+--- stderr
+{"duration_ms": 207, "event": "job_finished", "job_id": "crypto-research-33dad70cb0c0729c08670663", "level": "INFO", "run_id": "558b95c5f0ff431391bbc127d222b8c5", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T13:14:52.296652Z"}
+--- end
+{"n": 6, "label": "ingest", "at": "2026-09-28T13:14:52Z", "seconds": 0.132, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F07/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F07/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:9d4c948d7d5d42d4a332646bbb940abc", "file": "TASK-e7a6c2ad4bdc728910407f451dca25fc.86476ea2c47bf8a4.json", "status": "RESULT", "task_id": "crypto:TASK-e7a6c2ad4bdc728910407f451dca25fc"}
+--- stderr
+--- end
+{"n": 7, "label": "processed once", "at": "2026-09-28T13:14:52Z", "seconds": 0.127, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F07/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-28T13:14:51Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-e7a6c2ad4bdc728910407f451dca25fc"}, "proposal_id": "cain:FM-F07-1", "reason_code": "ALLOWED", "receipt_sha256": "d575828829bfdcb177ba693a8a85f0c97746d392ba36a966ba9f537aa1d92240", "source": "operator", "task_id": "crypto:TASK-e7a6c2ad4bdc728910407f451dca25fc"}, {"as_of": "2026-09-28T13:14:51Z", "decision": "ABSTAIN", "number": 2, "outbox": null, "proposal_id": "cain:FM-F07-2", "reason_code": "OPEN_TASK_PENDING", "receipt_sha256": "624bdbdbeefd883165a0498d400168010b70864a5a87c3d09d16ac4088f43529", "source": "operator", "task_id": null}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:9d4c948d7d5d42d4a332646bbb940abc", "payload_sha256": "be5765b96433ca4e341c74d5bb31e2ccfcdd7394f53fb72b1a143423da6af350", "status": "RESULT", "task_id": "crypto:TASK-e7a6c2ad4bdc728910407f451dca25fc"}], "memory": {"broken_at": null, "entries": 1, "head": "cc07d4f0e66f70f81cbbf0f891b4ac735b028b8def53cf7094a6b5674a995960", "head_recorded_at": "2026-09-28T13:14:52.451747Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end

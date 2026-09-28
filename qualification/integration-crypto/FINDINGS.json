@@ -199,6 +199,37 @@
    ],
    "status": "ACCEPTED_LIMITATION",
    "fix": "parcial ATTESTATION_PARTIAL_soak.json com o estado do fim da fase soak; a attestation final cobre todas as fases"
+  },
+  {
+   "id": "IC-F011",
+   "severity": "P2",
+   "title": "ciclo 2 dos parâmetros congelados (cain v0.4.13rc10) troca um item do conjunto protegido desta missão",
+   "description": "A release única do cain (v0.4.13rc10, fb0e1dc) muda a DecisionPolicy (v1 → v2: R04 por hipótese, R15, R16, R17 e a regra de custos do #62) e acrescenta chaves à configuração do cripto (proposable_request_types, sealed_scopes). decision_policy é parâmetro congelado da missão: pela C14, a fase inteira, como novo ciclo. O FROZEN_PARAMETERS.json está no PROTECTED_SET.json de truth-map (sha256 c428e4b769e3a6f9…), e o ciclo 2 troca o arquivo: o gate PROTECTED_ARTIFACTS_UNCHANGED (C15.1: hashes iguais de truth-map até a attestation) fica FAIL pela letra. Os bytes do ciclo 1 ficam iguais em FROZEN_PARAMETERS_cycle1_c428e4b769e3.json, e o bloco cycle.supersedes do ciclo 2 aponta para eles por sha256. Nada mais do conjunto protegido muda. O agente não reinterpreta o critério: a decisão é do dono.",
+   "classification": "C6 P2: sem efeito em resultado ou operação (mudança prevista pela C14, bytes protegidos preservados e encadeados); conflito de especificação para o dono resolver.",
+   "evidence": [
+    {
+     "file": "qualification/integration-crypto/FROZEN_PARAMETERS_cycle1_c428e4b769e3.json",
+     "sha256": "c428e4b769e3a6f932bda166d54f92d76b95680d8e689a612dbf4f3426dae760"
+    },
+    {
+     "file": "qualification/integration-crypto/FROZEN_PARAMETERS.json",
+     "sha256": "2ee84f572c1f678b7c0ae6f5c1aadee3fb3de8f529b97281389085b4cb12ac14"
+    },
+    {
+     "file": "qualification/integration-crypto/PROTECTED_SET.json",
+     "sha256": "923c3099e2fbe945cf6d2a2192bf2a28c92a9dbaf4418d6a0ed0f9563c3e1c85"
+    }
+   ],
+   "status": "ACCEPTED_LIMITATION",
+   "owner_decision": "escolher: (a) congelar o ciclo 2 com reemissão encadeada (ciclo 1 preservado no arquivo de supersedes; o gate aceita o item só com a supersessão conferida); (b) manter o ciclo 1 intocado e gravar o ciclo 2 num arquivo novo, somado ao conjunto protegido; ou (c) não congelar agora",
+   "owner_decision_taken": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão cripto (pergunta com opções, depois de ver o diff do ciclo 1 para o ciclo 2)",
+    "words": "Aprovo; reemissão encadeada (Recomendado)",
+    "option_text": "Congelo o ciclo 2 como está no diff. O ciclo 1 fica preservado byte a byte em FROZEN_PARAMETERS_cycle1_c428e4b769e3.json, e o ciclo 2 aponta para ele por sha256. O gate PROTECTED_ARTIFACTS_UNCHANGED aceita esse item só com a supersessão conferida, como você decidiu no IS-F006.",
+    "applied": "scripts/protected_check.py: o item conta como alterado (all_unchanged, a letra) e como encadeado só se o arquivo do ciclo 1 tiver os bytes protegidos e cycle.supersedes apontar para eles (all_unchanged_or_chained); scripts/update_gates.py usa este último e cita o IC-F011."
+   }
   }
  ]
 }

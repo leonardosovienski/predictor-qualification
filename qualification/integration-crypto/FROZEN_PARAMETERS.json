@@ -249,7 +249,7 @@
  },
  "decision_policy": {
   "id": "cain-decision-policy",
-  "version": 1,
+  "version": 2,
   "decisions": [
    "ALLOW",
    "BLOCK",
@@ -263,14 +263,17 @@
    "BLOCK DOMAIN_MISMATCH: proposta, pedido ou algum ID de outro domínio, ou ID sem domínio (C18)",
    "BLOCK SCHEMA_INVALID: pedido inválido contra o request_schema do contrato (validador do protocolo congelado)",
    "BLOCK FORBIDDEN_FIELD: proposta com campo fora do formato (handler, comando, módulo, caminho, URL, budget, prioridade final, capital)",
-   "BLOCK REQUEST_TYPE_NOT_ALLOWED: request_type fora das chaves da handler_allowlist do contrato",
+   "BLOCK REQUEST_TYPE_NOT_ALLOWED: request_type fora das chaves da handler_allowlist do contrato, ou diferente do tipo que a configuração fixa para a hipótese (proposable_request_types, cain#67)",
    "BLOCK HYPOTHESIS_CLOSED: hipótese crypto:H1..crypto:H9 (estado científico em 341d270, inclusive H7/H8 REGISTERED_NOT_ACTIVATED) ou família congelada funding_oi_hmm_v3",
-   "BLOCK COST_MODEL_MISMATCH / SYMBOL_NOT_ALLOWED / PRIORITY_ABOVE_CAP / REFERENCE_NOT_ALLOWED",
+   "REQUIRE_HUMAN SEALED_SCOPE (R16): pedido que tocaria um escopo lacrado da configuração (sealed_scopes: valor, janela ou instante); campo lacrado ausente ou malformado também retém. Cripto: nenhum lacre",
+   "BLOCK COST_MODEL_MISMATCH / SYMBOL_NOT_ALLOWED / PRIORITY_ABOVE_CAP / REFERENCE_NOT_ALLOWED (custos comparados quando a variante de parameters do request_schema declara as chaves de custo, cain#62; no cripto a única variante declara)",
    "BLOCK REQUEST_ID_CONFLICT: mesmo request_id com outro conteúdo já no outbox do domínio",
    "DUPLICATE: mesmo conteúdo de pedido já emitido no domínio (qualquer episódio)",
    "REQUIRE_HUMAN DOMAIN_RECONCILIATION_PENDING: algum resultado REQUIRES_HUMAN do domínio sem resolução",
    "REQUIRE_HUMAN CONTRADICTION_UNRESOLVED: resultados terminais da mesma hipótese com estados científicos em conflito (SUPPORTED × REFUTED); nunca decidido por maioria",
+   "REQUIRE_HUMAN HYPOTHESIS_NOT_ADMITTED_BY_DOMAIN (R15): o domínio já recusou a hipótese com o código HYPOTHESIS_NOT_ADMITTED; nova proposta dela não vira task",
    "REQUIRE_HUMAN NEW_HYPOTHESIS: hipótese fora da lista de hipóteses propostas da configuração",
+   "DUPLICATE EQUIVALENT_REQUEST (R17): o mesmo experimento (o pedido sem request_id, hypothesis_id, research_id e client_ref) já rodou ou está aberto no domínio com outro ID (cain#68); tarefa recusada pelo domínio não conta",
    "ABSTAIN OPEN_TASK_PENDING / BUDGET_EXHAUSTED",
    "COOLDOWN NEGATIVE_STREAK: depois de N resultados negativos seguidos da mesma hipótese, K episódios sem nova task dela",
    "ALLOW"
@@ -367,7 +370,14 @@
      "INCONCLUSIVE_DATA_QUALITY"
     ]
    },
-   "economic_signal": "nenhum: QUALIFIED da Etapa A e WATCH/WATCH_NO_CAPITAL nunca aumentam budget, prioridade, escopo nem capital (prompt do cripto §5)"
+   "economic_signal": "nenhum: QUALIFIED da Etapa A e WATCH/WATCH_NO_CAPITAL nunca aumentam budget, prioridade, escopo nem capital (prompt do cripto §5)",
+   "proposable_request_types": {
+    "crypto:QUAL-SHADOW-001": "BACKTEST_EXISTING_HYPOTHESIS",
+    "crypto:QUAL-SHADOW-REAL-001": "BACKTEST_EXISTING_HYPOTHESIS",
+    "crypto:QUAL-SHADOW-REAL-002": "BACKTEST_EXISTING_HYPOTHESIS",
+    "crypto:QUAL-SHADOW-REAL-003": "BACKTEST_EXISTING_HYPOTHESIS"
+   },
+   "sealed_scopes": []
   }
  },
  "n_plus_1": {
@@ -579,5 +589,23 @@
   "holdout_use": "nenhum",
   "cain_operational_mode": "proibido",
   "exchange_connection": "proibida"
+ },
+ "cycle": {
+  "number": 2,
+  "supersedes": {
+   "file": "FROZEN_PARAMETERS_cycle1_c428e4b769e3.json",
+   "sha256": "c428e4b769e3a6f932bda166d54f92d76b95680d8e689a612dbf4f3426dae760"
+  },
+  "why": "C14: a DecisionPolicy e a configuração do cripto mudaram (parâmetro congelado); a fase inteira, novo ciclo",
+  "cain": {
+   "commit": "fb0e1dcb9003130c0b5d50ecd95f7d8d0829cf0c",
+   "crypto_config_sha256": "0052fb2799ee07954131b4b9f7da4e15a520782ec10281d7bdc9caaffe725bc6",
+   "new_config_keys": [
+    "proposable_request_types",
+    "sealed_scopes"
+   ]
+  },
+  "authorized_by": "dono, 2026-09-28, chat da sessão cripto: (1) release única do cain e requalificação C14 das três integrações nela (respostas \"Reconciliar no fim\" e \"Planejado + molde por hipótese\"): política v2 com R15, #62, configuração do Brasileirão, R16, molde de pedido por hipótese e, pela sessão STOCKS, R17 e justificativa conferida, publicada como v0.4.13rc10; (2) este ciclo 2, mostrado ao dono antes de congelar (C15), aprovado com reemissão encadeada (resposta \"Aprovo; reemissão encadeada\"): o ciclo 1 fica byte a byte no arquivo de supersedes",
+  "unchanged": "n_plus_1, isolation, failure_matrix, soak_profile, gates_required e demais chaves do ciclo 1"
  }
 }
