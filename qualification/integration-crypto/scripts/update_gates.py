@@ -4,6 +4,8 @@ Reemissão C14 (IC-F004 fechado pela renovação do harness do cripto): evidênc
 runs novos; os raw logs citados pela attestation anterior não mudam.
 Reemissão C14 pela integration-stocks (cain 0.4.13rc7 e transporte 0.1.0rc4: configuração e entrada do Stocks):
 diretórios *-c14s e o run 36365192302 (todas as fases, inclusive o soak, num run só).
+Ciclo 2 (C14, cain 0.4.13rc10: política v2 e configurações das três integrações; transporte 0.1.0rc5): diretórios
+*-ciclo2 e o run 36426935949 (todas as fases num run só); FROZEN_PARAMETERS.json reemitido e encadeado (IC-F011).
 """
 
 import hashlib
@@ -32,9 +34,9 @@ for lk, name in ((cl, "predictor-research-snapshot"), (cl, "predictor-research-b
                  (kl, "predictor-ops")):
     (w,) = lk[name]["wheels"]
     wheels.append({"name": name, "version": lk[name]["version"], "url": w["url"], "sha256": w["hash"].split(":", 1)[1]})
-R = f"{M}/RAW_LOGS/runtime/run36365192302"
+R = f"{M}/RAW_LOGS/runtime/run36426935949"
 FM = f"{R}/failure-matrix"
-W = f"{M}/RAW_LOGS/windows-smoke-c14s"
+W = f"{M}/RAW_LOGS/windows-smoke-ciclo2"
 g = json.load(open(f"{M}/GATES.json", encoding="utf-8"))
 g["final_commits"] = [
     {"repo": "cain", "commit_sha": targets["cain"]["commit"]},
@@ -62,10 +64,10 @@ def p(status, ev, note):
 
 
 gates = g["gates"]
-gates["LOCK_INTEGRITY"] = p("PASS", [f"{M}/RAW_LOGS/core-identity-c14s/core_identity.json", f"{R}/env/runtime_env.log",
+gates["LOCK_INTEGRITY"] = p("PASS", [f"{M}/RAW_LOGS/core-identity-ciclo2/core_identity.json", f"{R}/env/runtime_env.log",
                                      f"{M}/CORE_IDENTITY_REPORT.md"],
                             "runtimes só de uv.lock --require-hashes + wheels publicadas conferidas por sha256")
-gates["CORE_IDENTITY"] = p("PASS", [f"{M}/RAW_LOGS/core-identity-c14s/core_identity.json",
+gates["CORE_IDENTITY"] = p("PASS", [f"{M}/RAW_LOGS/core-identity-ciclo2/core_identity.json",
                                     f"{R}/cleanroom-final/cleanroom_final.log", f"{M}/CORE_IDENTITY_REPORT.md"],
                            "pyproject ↔ uv.sources ↔ uv.lock ↔ wheel ↔ instalado ↔ site-packages")
 gates["CLEANROOM_FINAL"] = p("PASS", [f"{R}/cleanroom-final/cleanroom_final.log", f"{R}/cleanroom-final/conformance.junit.xml",
@@ -93,7 +95,7 @@ gates["WINDOWS_SMOKE"] = p("PASS", [f"{W}/e2e/SUMMARY.json", f"{W}/logs/windows_
                            "PC 2 (D-23), pasta C:\\Cripto\\qualificacao\\runtime\\integration-crypto\\, E2E + restart")
 gates["SHARED_DEPENDENCY_CLEAR"] = p("PASS", [f"{M}/RAW_LOGS/c0/c0_preflight.log", "qualification/shared/SHARED_ISSUES.json"],
                                      "nenhum issue bloqueante para as wheels usadas (Ops 4.2.2rc1, Core 3.2.1)")
-gates["SECRETS_CLEAN"] = p("PASS", [f"{M}/RAW_LOGS/secrets-c14s/secrets_scan.json"],
+gates["SECRETS_CLEAN"] = p("PASS", [f"{M}/RAW_LOGS/secrets-ciclo2/secrets_scan.json"],
                            "0 achados nos diffs da missão e nos arquivos da missão; gitleaks/scan_secrets nos CIs")
 gates["CAPITAL_FORBIDDEN"] = p("PASS", [f"{R}/e2e/SUMMARY.json", f"{R}/n-plus-1/SUMMARY.json",
                                         f"{M}/DECISION_POLICY_REPORT.md"],
@@ -122,31 +124,36 @@ gates["DOMAIN_QUALIFIED_IDS"] = p("PASS", [f"{R}/isolation/SUMMARY.json"],
                                   "mesmo H9 nos três domínios, IDs distintos; ID sem domínio recusado")
 gates["CONTRADICTION_PRESERVATION"] = p("PASS", [f"{R}/isolation/SUMMARY.json"],
                                         "SUPPORTED × REFUTED → REQUIRE_HUMAN; os dois fatos preservados; sem maioria")
-gates["DOMAIN_CONTRACTS_PRESERVED"] = p("PASS", [f"{M}/RAW_LOGS/contract-revalidation-c14s/static_checks.json",
+gates["DOMAIN_CONTRACTS_PRESERVED"] = p("PASS", [f"{M}/RAW_LOGS/contract-revalidation-ciclo2/static_checks.json",
                                                  f"{R}/cleanroom-final/conformance.junit.xml",
                                                  f"{R}/contract-revalidation/SUMMARY.json",
                                                  f"{M}/CONTRACT_REVALIDATION_REPORT.md"],
                                         "C24.3 (a)–(f) verdes")
-hosted = json.load(open(f"{M}/RAW_LOGS/hosted-ci/final-c14s/HOSTED_CI_SUMMARY.json", encoding="utf-8"))
+hosted = json.load(open(f"{M}/RAW_LOGS/hosted-ci/final-ciclo2/HOSTED_CI_SUMMARY.json", encoding="utf-8"))
 hosted_ok = all(item["ok"] for item in hosted)
 gates["HOSTED_CI"] = p("PASS" if hosted_ok else "FAIL",
                        [f"{M}/RAW_LOGS/hosted-ci/baseline/HOSTED_CI_SUMMARY.json",
-                        f"{M}/RAW_LOGS/hosted-ci/final-c14s/HOSTED_CI_SUMMARY.json", f"{M}/HOSTED_CI_REPORT.md"],
-                       "runs de push nos SHAs exatos dos final_commits (cain deccaaa, ecosystem 1304b20, cripto ee3d3d1) " + ("todos verdes" if hosted_ok else "com job não verde: ver resumo") + "; o ecosystem da base (49ffb16) ficou vermelho depois só pelo IC-F004, que 61d3430 corrige")
-S = f"{M}/RAW_LOGS/runtime/run36365192302"
+                        f"{M}/RAW_LOGS/hosted-ci/final-ciclo2/HOSTED_CI_SUMMARY.json", f"{M}/HOSTED_CI_REPORT.md"],
+                       "runs de push nos SHAs exatos dos final_commits (cain fb0e1dc, ecosystem b11494a, cripto ee3d3d1) " + ("todos verdes" if hosted_ok else "com job não verde: ver resumo") + "; o ecosystem da base (49ffb16) ficou vermelho depois só pelo IC-F004, que 61d3430 corrige")
+S = f"{M}/RAW_LOGS/runtime/run36426935949"
 if "soak" not in g["phases_completed"]:
     g["phases_completed"].append("soak")
 gates["SOAK"] = p("PASS", [f"{S}/run.json", f"{S}/soak/SUMMARY.json", f"{S}/soak/commands.log",
                            f"{M}/QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json", f"{M}/SOAK_REPORT.md"],
                   "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais da "
                   "reemissão; soaks anteriores mantidos em RAW_LOGS e listados no SOAK_REPORT")
-gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p("PASS", [f"{M}/RAW_LOGS/protected-c14s/protected_check.json",
-                                                    f"{M}/PROTECTED_SET.json", f"{M}/PROTECTED_ARTIFACT_REPORT.md"],
+protected = json.load(open(f"{M}/RAW_LOGS/protected-ciclo2/protected_check.json", encoding="utf-8"))
+gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p("PASS" if protected["all_unchanged_or_chained"] else "FAIL",
+                                           [f"{M}/RAW_LOGS/protected-ciclo2/protected_check.json",
+                                            f"{M}/PROTECTED_SET.json", f"{M}/PROTECTED_ARTIFACT_REPORT.md",
+                                            f"{M}/FINDINGS.json"],
                                            "conjunto protegido do truth-map igual no final_commit do cripto e no "
-                                           "checkout do predictor-qualification")
+                                           "checkout do predictor-qualification, exceto o FROZEN_PARAMETERS.json "
+                                           "reemitido como ciclo 2: aceito só com a supersessão conferida (ciclo 1 "
+                                           "byte a byte no arquivo de supersedes), por decisão do dono (IC-F011)")
 gates["EVIDENCE_CONSISTENCY"] = p("PASS", [f"{M}/EVIDENCE_NUMBERS.json", f"{M}/scripts/evidence_numbers.py",
                                            f"{M}/scripts/render_reports.py",
-                                           f"{M}/RAW_LOGS/final-wheels-c14s/final_wheels_check_run36365192302.json"],
+                                           f"{M}/RAW_LOGS/final-wheels-ciclo2/final_wheels_check_run36426935949.json"],
                                   "números dos relatórios gerados de RAW_LOGS por script versionado; RAW_LOGS "
                                   "-text no .gitattributes (bytes preservados); final_wheels conferidas contra os "
                                   "assets e contra o instalado no run (C7.1 regra 4)")
@@ -159,8 +166,8 @@ gates["BLOCKERS_ZERO"] = p("FAIL" if blocking else "PASS", [f"{M}/FINDINGS.json"
 g["final_result"] = ("QUALIFIED" if all(v["status"] == "PASS" for v in gates.values()) and not blocking
                      else "NOT_QUALIFIED")
 # a attestation substituída é a imediatamente anterior (nome explícito; a ordem dos nomes não é a do tempo)
-g["supersedes_sha256"] = hashlib.sha256(Path(M, "QUALIFICATION_ATTESTATION_superseded_112d18a35c7b.json").read_bytes()).hexdigest()
-g["domain_revalidation"] = {"status": "PASS", "evidence": [f"{M}/RAW_LOGS/contract-revalidation-c14s/static_checks.json",
+g["supersedes_sha256"] = hashlib.sha256(Path(M, "QUALIFICATION_ATTESTATION_superseded_2d588e3df966.json").read_bytes()).hexdigest()
+g["domain_revalidation"] = {"status": "PASS", "evidence": [f"{M}/RAW_LOGS/contract-revalidation-ciclo2/static_checks.json",
                                                            f"{R}/cleanroom-final/conformance.junit.xml",
                                                            f"{R}/contract-revalidation/SUMMARY.json"]}
 open(f"{M}/GATES.json", "w", encoding="utf-8").write(json.dumps(g, indent=1, ensure_ascii=False) + "\n")

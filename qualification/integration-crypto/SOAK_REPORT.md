@@ -1,8 +1,8 @@
 # integration-crypto — SOAK_REPORT
 
-Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36365192302`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36365192302/soak/SUMMARY.json` (sha256 `00b1d883e00e1a51…`); comandos brutos em `RAW_LOGS/runtime/run36365192302/soak/commands.log`.
+Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36426935949`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/soak/SUMMARY.json` (sha256 `bbd0a46153683657…`); comandos brutos em `RAW_LOGS/runtime/run36426935949/soak/commands.log`.
 
-Resultado: **43 conferências OK, 0 falhas**.
+Resultado: **47 conferências OK, 0 falhas**.
 
 | Piso | Mínimo | Obtido |
 |---|--:|--:|
@@ -15,7 +15,7 @@ Resultado: **43 conferências OK, 0 falhas**.
 | runs_per_failure_class | 3 | 4 |
 | llm_proposals | 5 | 6 |
 
-Execuções por classe de falha: {"cain_process_death": 10, "delivery_anomaly": 6, "consumer_process_death": 6, "domain_retryable": 4}. Decisões: {"ALLOW": 26, "DUPLICATE": 6, "BLOCK": 6, "COOLDOWN": 4}.
+Execuções por classe de falha: {"cain_process_death": 10, "delivery_anomaly": 6, "consumer_process_death": 6, "domain_retryable": 4}. Decisões: {"ALLOW": 30, "DUPLICATE": 6, "BLOCK": 6}.
 
 | Conferência (tolerância zero e fim) | Resultado |
 |---|---|
@@ -26,10 +26,13 @@ Execuções por classe de falha: {"cain_process_death": 10, "delivery_anomaly": 
 | one memory fact per terminal task | OK |
 | episodes 1..n without gap | OK |
 | crypto:REQ-IC-SOAK-008: payload == authoritative re-read | OK |
+| crypto:REQ-LLM-d516b11929b7a7de: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-024: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-011: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-016: payload == authoritative re-read | OK |
+| crypto:REQ-LLM-d0fe310e5118d78c: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-019: payload == authoritative re-read | OK |
+| crypto:REQ-LLM-9ae4d056a2e7b32a: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-005: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-015: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-023: payload == authoritative re-read | OK |
@@ -40,8 +43,9 @@ Execuções por classe de falha: {"cain_process_death": 10, "delivery_anomaly": 
 | crypto:REQ-IC-SOAK-009: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-021: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-013: payload == authoritative re-read | OK |
-| crypto:REQ-IC-SOAK-003: payload == authoritative re-read | OK |
 | crypto:REQ-LLM-07dfb4d65ab14036: payload == authoritative re-read | OK |
+| crypto:REQ-LLM-74964fc17c52c897: payload == authoritative re-read | OK |
+| crypto:REQ-IC-SOAK-003: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-004: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-020: payload == authoritative re-read | OK |
 | crypto:REQ-IC-SOAK-007: payload == authoritative re-read | OK |
@@ -68,6 +72,7 @@ Execuções anteriores do soak, mantidas como evidência (não descartadas):
 - `run36357313578`: 40 OK, 1 falhas — `floor llm_proposals >= 5` (obtido: 0). Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36357313578/soak/SUMMARY.json` (sha256 `0a89a8a02ae4ad14…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36357313578/soak/commands.log` (sha256 `62402be054cae991…`) (bytes de entrada, limite): [(4487, 3584)].
 - `run36357575208`: 43 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36357575208/soak/SUMMARY.json` (sha256 `1c666f2f7b00f2d6…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36357575208/soak/commands.log` (sha256 `b7f785e5441e881b…`) (bytes de entrada, limite): nenhuma.
 - `run36360088636`: 43 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36360088636/soak/SUMMARY.json` (sha256 `c6e35a3a68c43050…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36360088636/soak/commands.log` (sha256 `0dfe85df3c3f1c3e…`) (bytes de entrada, limite): nenhuma.
+- `run36365192302`: 43 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36365192302/soak/SUMMARY.json` (sha256 `00b1d883e00e1a51…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36365192302/soak/commands.log` (sha256 `ee81441dcd8a893d…`) (bytes de entrada, limite): nenhuma.
 
 A falha anterior foi de configuração do harness, não do produto: o `cain-llm.toml` do soak declarava `num_ctx = 4096`, e o orçamento de entrada do cliente LLM do cain é `min(max_input_bytes, num_ctx - num_predict - 256)` = min(6500, 4096 - 256 - 256), menor que o pedido de proposta com contexto (números da recusa acima, lidos do log). Cada proposta saiu `LLM_PROPOSAL_FAILED` (fail closed, nenhuma task emitida). O harness passou a declarar `num_ctx = 8192` e `max_input_bytes = 16000` (`scripts/soak.py`, commit `2319ed0`, cuja mensagem atribui o 3584 ao padrão do cain por engano: o padrão de `max_input_bytes` é 6500, e o limite vinha do `num_ctx` do harness). Perfil, pisos, parâmetros congelados e vetores não mudaram.
 

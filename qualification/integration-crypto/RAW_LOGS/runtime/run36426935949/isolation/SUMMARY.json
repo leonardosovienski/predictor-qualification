@@ -1,0 +1,238 @@
+{
+ "scenario": "isolation-ids-contradiction",
+ "finished_at": "2026-09-28T13:14:44Z",
+ "checks": [
+  {
+   "check": "result of crypto against task of crypto: ACCEPTED",
+   "ok": true,
+   "got": "ACCEPTED"
+  },
+  {
+   "check": "result of crypto against task of stocks: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of crypto against task of brasileirao: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of stocks against task of crypto: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of stocks against task of stocks: ACCEPTED",
+   "ok": true,
+   "got": "ACCEPTED"
+  },
+  {
+   "check": "result of stocks against task of brasileirao: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of brasileirao against task of crypto: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of brasileirao against task of stocks: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of brasileirao against task of brasileirao: ACCEPTED",
+   "ok": true,
+   "got": "ACCEPTED"
+  },
+  {
+   "check": "same H9 in three domains: distinct task_ids, episodes and qualified hypothesis IDs",
+   "ok": true,
+   "got": {
+    "brasileirao->brasileirao": "ACCEPTED",
+    "brasileirao->crypto": "DOMAIN_MISMATCH",
+    "brasileirao->stocks": "DOMAIN_MISMATCH",
+    "crypto->brasileirao": "DOMAIN_MISMATCH",
+    "crypto->crypto": "ACCEPTED",
+    "crypto->stocks": "DOMAIN_MISMATCH",
+    "episode_ids": {
+     "brasileirao": "brasileirao:episode-2",
+     "crypto": "crypto:episode-2",
+     "stocks": "stocks:episode-2"
+    },
+    "hypothesis_ids": {
+     "brasileirao": "brasileirao:H9",
+     "crypto": "crypto:H9",
+     "stocks": "stocks:H9"
+    },
+    "stocks->brasileirao": "DOMAIN_MISMATCH",
+    "stocks->crypto": "DOMAIN_MISMATCH",
+    "stocks->stocks": "ACCEPTED",
+    "task_ids": {
+     "brasileirao": "brasileirao:TASK-a217b64758a0bb915918e79a09d87ac7",
+     "crypto": "crypto:TASK-45b3afb3f4c777ae5aa52020f98afc6a",
+     "stocks": "stocks:TASK-09f813296679d4ab76c537177cd98368"
+    },
+    "unqualified": "ID_NOT_QUALIFIED"
+   }
+  },
+  {
+   "check": "ID without domain rejected by the envelope",
+   "ok": true,
+   "got": "ID_NOT_QUALIFIED"
+  },
+  {
+   "check": "no orchestration for a domain outside the protocol: CONFIG_INVALID, nothing written",
+   "ok": true,
+   "got": [
+    {
+     "detail": "unknown domain 'forex'",
+     "error": "CONFIG_INVALID"
+    }
+   ]
+  },
+  {
+   "check": "stocks proposal in the brasileirao orchestration: BLOCK DOMAIN_MISMATCH, no task",
+   "ok": true,
+   "got": [
+    {
+     "decision": "BLOCK",
+     "episode_id": "brasileirao:episode-1",
+     "reason_code": "DOMAIN_MISMATCH",
+     "receipt_sha256": "d87d3ce97db35ad12719d07c57deed532197e81a5b0d3df8b3bfe7a1b1a2a61b",
+     "rule": "R01",
+     "status": "RECORDED",
+     "task": null
+    }
+   ]
+  },
+  {
+   "check": "contradiction 01-supported: ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "crypto:episode-1",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "a7a32a8437fe7b0bfa5f04eb21ed1444401a93e24d62637c8a46b5453141c0bf",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "838ec3114160088bd1ae66a5fe6be98c84268ee7dc048c4ba6c22f4f127d7d42",
+     "previous_task_id": null,
+     "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"
+    }
+   }
+  },
+  {
+   "check": "contradiction 01-supported: result ingested",
+   "ok": true,
+   "got": [
+    {
+     "action": "ingested",
+     "class": "TERMINAL_RESULT",
+     "fact": "fact:35ce6ed6fd454853894802ba2e0afa20",
+     "file": "contradiction-supported-result.json",
+     "status": "RESULT",
+     "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"
+    }
+   ]
+  },
+  {
+   "check": "contradiction 02-refuted: ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "crypto:episode-2",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "cf822d198e4790b5ee8f3b5a3f6846f6b3eb33e6d3c6e1bc9deecbcc91c5e5e6",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "7b5153fdbb8a2cb83da5d8fea39254b8fa3dced0c14e8d441a171522f4111761",
+     "previous_task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc",
+     "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"
+    }
+   }
+  },
+  {
+   "check": "contradiction 02-refuted: result ingested",
+   "ok": true,
+   "got": [
+    {
+     "action": "ingested",
+     "class": "TERMINAL_RESULT",
+     "fact": "fact:daf98aad0e4143f4b6c8a27f5233208d",
+     "file": "contradiction-refuted-result.json",
+     "status": "RESULT",
+     "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"
+    }
+   ]
+  },
+  {
+   "check": "contradiction 03-refuted-again: REQUIRE_HUMAN CONTRADICTION_UNRESOLVED",
+   "ok": true,
+   "got": {
+    "decision": "REQUIRE_HUMAN",
+    "episode_id": "crypto:episode-3",
+    "reason_code": "CONTRADICTION_UNRESOLVED",
+    "receipt_sha256": "689e293a10ed77463eedf862e70ffd4d880ac4e6cfd7532568f81c01b87e2b29",
+    "rule": "R10",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "contradiction 03-refuted-again: result TASK_NOT_FOUND",
+   "ok": true,
+   "got": [
+    {
+     "action": "rejected",
+     "code": "TASK_NOT_FOUND",
+     "file": "contradiction-refuted-again-result.json",
+     "reason": "crypto:TASK-1e0520f466efcb0179abe2de4120f33c was not emitted by this CAIN"
+    }
+   ]
+  },
+  {
+   "check": "contradiction 04-after: REQUIRE_HUMAN CONTRADICTION_UNRESOLVED",
+   "ok": true,
+   "got": {
+    "decision": "REQUIRE_HUMAN",
+    "episode_id": "crypto:episode-4",
+    "reason_code": "CONTRADICTION_UNRESOLVED",
+    "receipt_sha256": "b871e756164137a889b9d639589cdfa1e31bfa5beb2a1cbecdd00ffa576ef0a0",
+    "rule": "R10",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "both conflicting facts preserved in memory (SUPPORTED and REFUTED), nothing superseded",
+   "ok": true
+  },
+  {
+   "check": "no third result entered: exactly two contradiction results in the inbox",
+   "ok": true,
+   "inbox": [
+    {
+     "class": "TERMINAL_RESULT",
+     "fact_id": "fact:35ce6ed6fd454853894802ba2e0afa20",
+     "payload_sha256": "1dc1743ca78d35316be10a3fa18d6736098acfd99fb79288811a13b50190b9b8",
+     "status": "RESULT",
+     "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"
+    },
+    {
+     "class": "TERMINAL_RESULT",
+     "fact_id": "fact:daf98aad0e4143f4b6c8a27f5233208d",
+     "payload_sha256": "46b3af04fc64c4dda4d75de366753bfb81f4cfbcdd1ca917ce4e2b4f366c2788",
+     "status": "RESULT",
+     "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"
+    }
+   ]
+  }
+ ],
+ "passed": 22,
+ "failed": 0
+}
