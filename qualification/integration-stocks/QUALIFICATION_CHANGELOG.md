@@ -335,3 +335,33 @@ Família (D-24) e disputa no código do stocks ficam como estão. **Nenhuma fase
 | `QUALIFICATION_ATTESTATION.json`, `QUALIFICATION_ATTESTATION_superseded_9979d19be7fc.json`, `ATTESTATION_PARTIAL_ciclo4-attestation.json` | A attestation do ciclo 2 fica preservada. A nova é **QUALIFIED**, 30/30 gates PASS, P0=P1=P2=0, `supersedes_sha256` = `9979d19b…` |
 
 **C14 nas outras integrações:** a sessão cripto e a sessão Brasileirão foram avisadas da rc13 (wheel, sha256, conteúdo) e refazem as fases delas nas próprias sessões.
+
+## 2026-09-28 — conjunto protegido: cadeia sem limite fixo de saltos (pós-attestation do ciclo 4)
+
+**Pedido do dono** no chat da sessão: **"Resolve"**, sobre a pendência avisada depois do merge do pq#87.
+- `scripts/protected_check.py` seguia no máximo 5 saltos de cadeia (`MAX_HOPS = 5`).
+- Com a C14 da integration-crypto na rc13 (pq#86), a attestation dela ficou exatamente em 5 saltos até o sha256 protegido.
+- A próxima reemissão do cripto faria a conferência do stocks acusar um item legitimamente encadeado.
+
+**O que muda:**
+- A cadeia agora segue até uma destas paradas, gravadas no campo `stop`:
+  - o sha256 protegido (`protected_sha256`);
+  - um documento sem ponteiro (`no_pointer`);
+  - um arquivo com bytes diferentes dos do ponteiro (`bytes_differ`) ou ausente (`missing`);
+  - um arquivo já visitado (`cycle`).
+- Só o sha256 protegido dá ok; as outras paradas continuam FAIL.
+- `CHAIN_GUARD = 1000` só impede laço sem fim.
+- A regra do IS-F008 ("(a) Encadeada") não muda: salto a salto, com cada arquivo nos bytes que o ponteiro diz.
+
+**Evidência (`RAW_LOGS/protected-chain/`):**
+- `selftest.log` (`scripts/protected_chain_selftest.py`), cadeias sintéticas, **6/6**:
+  - 7 saltos: ok (com o limite de 5, falhava);
+  - attestation com 6 saltos: ok;
+  - bytes trocados, arquivo ausente, ciclo e documento sem ponteiro: FAIL, cada um com a parada certa.
+- `protected_check_main_875e762.json`, o script novo no main `875e762` (depois dos pq#86 e pq#87), comparado com `protected_check_main_875e762_script_anterior.json`, o script anterior no mesmo main:
+  - mesmos 3387 itens, mesmos domínios, mesmos 4 itens encadeados;
+  - os mesmos saltos: attestation do cripto 5, congelados do cripto 2, congelados do stocks 3, vetores do stocks 2;
+  - todos com parada `protected_sha256`.
+- `RAW_LOGS/c0/c0_preflight_875e762.log`: pré-voo 4.1–4.7 com 0 falhas.
+
+**O que não muda:** a attestation do ciclo 4 (`60b75594…`) não cita o script. As evidências dela (`RAW_LOGS/protected-c4/`) ficam como estão.

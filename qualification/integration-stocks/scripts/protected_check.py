@@ -11,6 +11,11 @@ Ciclo 2 (IS-F008, decisão do dono de 2026-09-28, opção (a) "Encadeada"): os q
 (all_unchanged) e como encadeados só se a cadeia de ponteiros, salto a salto, chegar ao sha256 protegido com cada
 arquivo preservado nos bytes que o ponteiro diz (all_unchanged_or_chained, o que o gate usa). Todo outro item
 alterado continua FAIL.
+Cadeia sem limite fixo de saltos (pedido do dono de 2026-09-28, "Resolve"): até o ciclo 4 a cadeia parava em 5
+saltos, e a attestation da integration-crypto já estava em 5 depois da C14 na rc13. A cadeia agora segue até o sha256
+protegido, até um documento sem ponteiro, até um arquivo com bytes diferentes do ponteiro ou até um arquivo já
+visitado (ciclo, sempre FAIL). O teto CHAIN_GUARD só impede laço sem fim e nunca é atingido por uma cadeia real. Cada
+cadeia diz por que parou (stop). A regra do IS-F008 não muda.
 Adaptado de qualification/integration-crypto/scripts/protected_check.py (mesma lógica; missão integration-stocks).
 Uso: python protected_check.py <checkout do predictor-qualification> <clones> <final_commit do stocks> <out.json>
 """
@@ -29,7 +34,7 @@ CHAINED_ITEMS = {  # IS-F008 (a)
     "qualification/integration-crypto/FROZEN_PARAMETERS.json",
     "qualification/integration-crypto/QUALIFICATION_ATTESTATION.json",
 }
-MAX_HOPS = 5
+CHAIN_GUARD = 1000  # só contra laço sem fim; uma cadeia real para antes (ciclo, sha256 protegido ou fim)
 
 
 def sha(path: Path) -> str:
@@ -49,21 +54,29 @@ def pointer(path: Path) -> tuple[str, str] | None:
 
 
 def chain(path: Path, expected: str) -> dict:
-    hops, current, ok = [], path, False
-    for _ in range(MAX_HOPS):
+    hops, current, ok, stop = [], path, False, "guard"
+    seen = {path.name}
+    for _ in range(CHAIN_GUARD):
         target = pointer(current)
         if target is None:
+            stop = "no_pointer"
             break
         kept = current.with_name(target[0])
+        if kept.name in seen:
+            stop = "cycle"
+            break
+        seen.add(kept.name)
         kept_sha = sha(kept) if kept.is_file() else None
         hops.append({"file": kept.name, "pointer_sha256": target[1], "file_sha256": kept_sha})
         if kept_sha != target[1]:
+            stop = "bytes_differ" if kept_sha else "missing"
             break
         if kept_sha == expected:
-            ok = True
+            ok, stop = True, "protected_sha256"
             break
         current = kept
-    return {"hops": hops, "ok": ok, "decision": "IS-F008 (dono, 2026-09-28: \"(a) Encadeada (Recomendado)\")"}
+    return {"hops": hops, "ok": ok, "stop": stop,
+            "decision": "IS-F008 (dono, 2026-09-28: \"(a) Encadeada (Recomendado)\")"}
 
 
 def ls_tree(repo: Path, commit: str) -> dict[str, str]:
