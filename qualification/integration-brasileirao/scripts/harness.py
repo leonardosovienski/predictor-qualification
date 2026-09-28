@@ -144,12 +144,16 @@ class Harness:
                                    "changes": sorted(request_changes)}) + "\n")
         return dest
 
-    def integrated_proposal(self, domain: str, template: str, dest: Path, /, **request_changes) -> Path:
+    def integrated_proposal(self, domain: str, template: str, dest: Path, proposal_id: str | None = None, /,
+                            **request_changes) -> Path:
         """A frozen proposal of the crypto/stocks integration (path relative to qualification/integration-<domain>),
         with the stocks as_of marker replaced by the data_cutoff of this run's stocks panel (their FROZEN_VECTORS
-        rule); the effective copy is logged by sha256."""
+        rule) and, when given, its own proposal_id (one CAIN state records each proposal_id once); the effective copy
+        is logged by sha256."""
         other = self.mission.parent / f"integration-{domain}"
         value = json.loads((other / template).read_text(encoding="utf-8"))
+        if proposal_id:
+            value["proposal_id"] = proposal_id
         marker = json.loads((other / "FROZEN_VECTORS.json").read_text(encoding="utf-8")).get("as_of_marker")
         if marker and value["request"].get("as_of") == marker["marker"]:
             value["request"]["as_of"] = json.loads(Path(os.environ["STOCKS_REAL_ENV"]).read_text())["data_cutoff"]
