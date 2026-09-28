@@ -22,6 +22,10 @@ def main() -> int:
     findings = {f["id"]: f for f in json.loads((q / "FINDINGS.json").read_text(encoding="utf-8"))["findings"]}
     frozen = json.loads((q / "FROZEN_PARAMETERS.json").read_text(encoding="utf-8"))
     r = f"runtime/{run}"
+    suf = "rc" + targets["cain"]["version"].split("rc")[-1]
+    cdir = "core-identity" if suf == "rc12" else f"core-identity-{suf}"
+    pdir = "protected" if suf == "rc12" else f"protected-{suf}"
+    sdir = "secrets" if suf == "rc12" else f"secrets-{suf}"
 
     def n(key: str):
         return numbers[key]["value"]
@@ -61,11 +65,11 @@ def main() -> int:
 {head}pyproject ↔ `tool.uv.sources` ↔ `uv.lock` ↔ wheel publicada ↔ versão instalada ↔ módulo em `site-packages`,
 para o CAIN e o Brasileirão; Core 3.2.1 e Ops 4.2.2rc1 os mesmos da Etapa A.
 
-- Conferências: {n("core-identity/core_identity.json:checks")['passed']} passaram,
-  {n("core-identity/core_identity.json:checks")['failed']} falharam — {src("core-identity/core_identity.json:checks")}
-- Release do cain adotada: {n("release-rc12/release_check.json:checks")['passed']} de
-  {n("release-rc12/release_check.json:checks")['passed'] + n("release-rc12/release_check.json:checks")['failed']}
-  conferências — {src("release-rc12/release_check.json:checks")}
+- Conferências: {n(f"{cdir}/core_identity.json:checks")['passed']} passaram,
+  {n(f"{cdir}/core_identity.json:checks")['failed']} falharam — {src(f"{cdir}/core_identity.json:checks")}
+- Release do cain adotada: {n(f"release-{suf}/release_check.json:checks")['passed']} de
+  {n(f"release-{suf}/release_check.json:checks")['passed'] + n(f"release-{suf}/release_check.json:checks")['failed']}
+  conferências — {src(f"release-{suf}/release_check.json:checks")}
 """
     static = n(f"{r}/contract-revalidation/static.json:checks")
     acc = n(f"{r}/contract-revalidation/ib_f005_acceptance.json:accepted")
@@ -138,26 +142,26 @@ qualificação por ciclo (decisão do dono, IB-F007).
   pergunta ao modelo para um domínio sem `parameters` (todo molde é um experimento já rodado, R17). A conferência que
   falhou continua registrada no SUMMARY.json.
 """
-    hosted = n("hosted-ci/final-rc12/HOSTED_CI_SUMMARY.json:hosted_ci")
+    hosted = n(f"hosted-ci/final-{suf}/HOSTED_CI_SUMMARY.json:hosted_ci")
     reports["HOSTED_CI_REPORT.md"] = f"""# CI hospedado (HOSTED_CI, C21)
 
 {head}Só vale o run de `push` com `headSha` igual ao commit final.
 
 {chr(10).join(f"- {h['repo']} `{h['commit'][:12]}`: ok = {h['ok']}; " + ', '.join(f"{w} {v['conclusion']}" for w, v in h['runs'].items()) for h in hosted)}
-  — {src("hosted-ci/final-rc12/HOSTED_CI_SUMMARY.json:hosted_ci")}
+  — {src(f"hosted-ci/final-{suf}/HOSTED_CI_SUMMARY.json:hosted_ci")}
 - brasileirao-predictor `{targets['brasileirao']['commit'][:12]}`: pelo caminho aceito pelo dono (IB-F005): aceito =
   {acc['accepted']} — {src(f"{r}/contract-revalidation/ib_f005_acceptance.json:accepted")}
 """
-    prot = n("protected/protected_check.json:protected")
+    prot = n(f"{pdir}/protected_check.json:protected")
     reports["PROTECTED_ARTIFACT_REPORT.md"] = f"""# Artefatos protegidos (PROTECTED_ARTIFACTS_UNCHANGED, C15.1)
 
 {head}- Itens conferidos: {prot['items_total']}; inalterados (com a regra da cadeia preservada): {prot['all_unchanged']} —
-  {src("protected/protected_check.json:protected")}
+  {src(f"{pdir}/protected_check.json:protected")}
 - Regra: decisão do dono (IB-F008, "{findings['IB-F008']['owner_decision_taken']['words']}"): um artefato compartilhado
   alterado conta como inalterado só com os bytes do truth-map preservados (sha256 conferido) num `_cycle<N>_`/
   `_superseded_` do mesmo diretório; itens de código dos domínios sem exceção.
-- Segredos: limpo = {n("secrets/secrets_scan.json:secrets")['clean']}, achados = {n("secrets/secrets_scan.json:secrets")['findings']}
-  — {src("secrets/secrets_scan.json:secrets")}
+- Segredos: limpo = {n(f"{sdir}/secrets_scan.json:secrets")['clean']}, achados = {n(f"{sdir}/secrets_scan.json:secrets")['findings']}
+  — {src(f"{sdir}/secrets_scan.json:secrets")}
 """
     for name, text in reports.items():
         (q / name).write_text(text, encoding="utf-8")

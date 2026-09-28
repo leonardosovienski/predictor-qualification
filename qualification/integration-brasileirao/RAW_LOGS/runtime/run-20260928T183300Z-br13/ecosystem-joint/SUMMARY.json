@@ -1,0 +1,1493 @@
+{
+ "scenario": "ecosystem-joint",
+ "finished_at": "2026-09-28T18:54:16Z",
+ "checks": [
+  {
+   "check": "1: every final wheel installed has the published sha256",
+   "ok": true,
+   "wheels": {
+    "cain_research-0.4.13rc13-py3-none-any.whl": "a1d94fd52762",
+    "brasileirao_predictor-0.3.0rc4-py3-none-any.whl": "1874e22f7a73",
+    "predictor_research_transport-0.1.0rc6-py3-none-any.whl": "6c7e83c4d93d",
+    "predictor_research_protocol-2.0.0rc2-py3-none-any.whl": "34a1e4121e40",
+    "cripto_predictor-1.2.0rc3-py3-none-any.whl": "02b5e5dbbc60",
+    "stocks_predictor-0.3.0rc3-py3-none-any.whl": "902f0d34efe7"
+   }
+  },
+  {
+   "check": "1: brasileirao consumer requirements pin Core 3.2.1 (10ef42f3…) and Ops 4.2.2rc1 (0be70bfb…) by hash",
+   "ok": true
+  },
+  {
+   "check": "1: crypto consumer requirements pin Core 3.2.1 (10ef42f3…) and Ops 4.2.2rc1 (0be70bfb…) by hash",
+   "ok": true
+  },
+  {
+   "check": "1: stocks consumer requirements pin Core 3.2.1 (10ef42f3…) and Ops 4.2.2rc1 (0be70bfb…) by hash",
+   "ok": true
+  },
+  {
+   "check": "1: installed distributions read from each venv's dist-info (not empty) and equal to its uv pip freeze",
+   "ok": true,
+   "sizes": {
+    "cain-venv": 5,
+    "consumer-venv": 29,
+    "crypto-venv": 79,
+    "stocks-venv": 25
+   },
+   "differences": {}
+  },
+  {
+   "check": "1: the CAIN venv has no domain package",
+   "ok": true,
+   "cain": []
+  },
+  {
+   "check": "1: the brasileirao consumer venv has only its own domain",
+   "ok": true,
+   "got": [
+    "brasileirao-predictor"
+   ]
+  },
+  {
+   "check": "1: the crypto consumer venv has only its own domain",
+   "ok": true,
+   "got": [
+    "cripto-predictor"
+   ]
+  },
+  {
+   "check": "1: the stocks consumer venv has only its own domain",
+   "ok": true,
+   "got": [
+    "stocks-predictor"
+   ]
+  },
+  {
+   "check": "2: brasileirao real proposal ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "2: brasileirao one real RESULT ingested",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "2: brasileirao payload == authoritative re-read of the domain (show, new process)",
+   "ok": true,
+   "payload_sha256": "6842e8d27ccea7442d8d16f326e4eba7961370497c98a3bc1b932b841a7c51db",
+   "show": "6842e8d27ccea7442d8d16f326e4eba7961370497c98a3bc1b932b841a7c51db"
+  },
+  {
+   "check": "2: crypto real proposal ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "2: crypto one real RESULT ingested",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "2: crypto payload == authoritative re-read of the domain (show, new process)",
+   "ok": true,
+   "payload_sha256": "509a8912fa41a2dc07f42503c11aed087348a9497bf493da78c174834966c035",
+   "show": "509a8912fa41a2dc07f42503c11aed087348a9497bf493da78c174834966c035"
+  },
+  {
+   "check": "2: stocks real proposal ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "2: stocks one real RESULT ingested",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "2: stocks payload == authoritative re-read of the domain (show, new process)",
+   "ok": true,
+   "payload_sha256": "132b6bfe166bff0985ff9e293a6958b9710824bd1151d2a3fe7da6c1c0b4f8c9",
+   "show": "132b6bfe166bff0985ff9e293a6958b9710824bd1151d2a3fe7da6c1c0b4f8c9"
+  },
+  {
+   "check": "3: real results of the other domains in the brasileirao inbox → DOMAIN_MISMATCH, no fact",
+   "ok": true,
+   "got": {
+    "cross-crypto.json": "DOMAIN_MISMATCH",
+    "cross-stocks.json": "DOMAIN_MISMATCH"
+   }
+  },
+  {
+   "check": "3: real results of the other domains in the crypto inbox → DOMAIN_MISMATCH, no fact",
+   "ok": true,
+   "got": {
+    "cross-brasileirao.json": "DOMAIN_MISMATCH",
+    "cross-stocks.json": "DOMAIN_MISMATCH"
+   }
+  },
+  {
+   "check": "3: real results of the other domains in the stocks inbox → DOMAIN_MISMATCH, no fact",
+   "ok": true,
+   "got": {
+    "cross-brasileirao.json": "DOMAIN_MISMATCH",
+    "cross-crypto.json": "DOMAIN_MISMATCH"
+   }
+  },
+  {
+   "check": "3: tasks of the other domains in the brasileirao consumer → refused; brasileirao domain state unchanged",
+   "ok": true,
+   "refused": 2,
+   "state_unchanged": true
+  },
+  {
+   "check": "3: tasks of the other domains in the crypto consumer → refused; crypto domain state unchanged",
+   "ok": true,
+   "refused": 2,
+   "state_unchanged": true
+  },
+  {
+   "check": "3: tasks of the other domains in the stocks consumer → refused; stocks domain state unchanged",
+   "ok": true,
+   "refused": 2,
+   "state_unchanged": true
+  },
+  {
+   "check": "4: same H9 in the three domains: distinct task_id and episode_id, qualified hypothesis_id",
+   "ok": true
+  },
+  {
+   "check": "4: proposal of X in Y → BLOCK R01; closed H9 in its own orchestration → BLOCK R05; no task",
+   "ok": true,
+   "got": {
+    "crypto->brasileirao": [
+     "BLOCK",
+     "R01",
+     null
+    ],
+    "crypto->crypto": [
+     "BLOCK",
+     "R05",
+     null
+    ],
+    "crypto->stocks": [
+     "BLOCK",
+     "R01",
+     null
+    ],
+    "stocks->brasileirao": [
+     "BLOCK",
+     "R01",
+     null
+    ],
+    "stocks->crypto": [
+     "BLOCK",
+     "R01",
+     null
+    ],
+    "stocks->stocks": [
+     "BLOCK",
+     "R05",
+     null
+    ],
+    "brasileirao->brasileirao": [
+     "BLOCK",
+     "R05",
+     null
+    ],
+    "brasileirao->crypto": [
+     "BLOCK",
+     "R01",
+     null
+    ],
+    "brasileirao->stocks": [
+     "BLOCK",
+     "R01",
+     null
+    ]
+   }
+  },
+  {
+   "check": "8: brasileirao second real proposal ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "8: crypto second real proposal ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "8: stocks second real proposal ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "reason_code": "ALLOWED",
+    "rule": "R14"
+   }
+  },
+  {
+   "check": "8: the three consumers ran in parallel without error",
+   "ok": true,
+   "exits": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "check": "8: brasileirao: one task per request, one experiment per request, no result lost",
+   "ok": true,
+   "tasks": 2,
+   "results": 2,
+   "experiments_per_request": 1
+  },
+  {
+   "check": "8: crypto: one task per request, one experiment per request, no result lost",
+   "ok": true,
+   "tasks": 2,
+   "results": 2,
+   "experiments_per_request": 1
+  },
+  {
+   "check": "8: stocks: one task per request, one experiment per request, no result lost",
+   "ok": true,
+   "tasks": 2,
+   "results": 2,
+   "experiments_per_request": 1
+  },
+  {
+   "check": "9: brasileirao 01-season-2025 → REQUIRE_HUMAN SEALED_SCOPE (R16), no task",
+   "ok": true,
+   "got": {
+    "decision": "REQUIRE_HUMAN",
+    "reason_code": "SEALED_SCOPE"
+   }
+  },
+  {
+   "check": "9: brasileirao 02-window-into-2025 → REQUIRE_HUMAN SEALED_SCOPE (R16), no task",
+   "ok": true,
+   "got": {
+    "decision": "REQUIRE_HUMAN",
+    "reason_code": "SEALED_SCOPE"
+   }
+  },
+  {
+   "check": "9: brasileirao 03-season-2026 → REQUIRE_HUMAN SEALED_SCOPE (R16), no task",
+   "ok": true,
+   "got": {
+    "decision": "REQUIRE_HUMAN",
+    "reason_code": "SEALED_SCOPE"
+   }
+  },
+  {
+   "check": "9: crypto QUAL-SHADOW-001 refused by the domain (REJECTED), then REQUIRE_HUMAN (R15)",
+   "ok": true,
+   "first": "ALLOW",
+   "again": {
+    "decision": "REQUIRE_HUMAN",
+    "reason_code": "HYPOTHESIS_NOT_ADMITTED_BY_DOMAIN",
+    "rule": "R15"
+   }
+  },
+  {
+   "check": "10: LLM: crypto and stocks reach a decision; brasileirao NO_ELIGIBLE_HYPOTHESIS (IB-F009)",
+   "ok": true,
+   "got": {
+    "brasileirao": {
+     "exit": 2,
+     "decision": null,
+     "error": "NO_ELIGIBLE_HYPOTHESIS: the policy holds every proposable hy"
+    },
+    "crypto": {
+     "exit": 0,
+     "decision": "ALLOW",
+     "error": ""
+    },
+    "stocks": {
+     "exit": 0,
+     "decision": "ALLOW",
+     "error": ""
+    }
+   }
+  },
+  {
+   "check": "5: facts only in the domain's own cube; memory intact",
+   "ok": true,
+   "cubes": {
+    "brasileirao": 1,
+    "crypto": 3,
+    "stocks": 2
+   }
+  },
+  {
+   "check": "5: the view of each domain sees only its own domain",
+   "ok": true,
+   "views": {
+    "brasileirao": [
+     "brasileirao"
+    ],
+    "crypto": [
+     "crypto"
+    ],
+    "stocks": [
+     "stocks"
+    ]
+   }
+  },
+  {
+   "check": "6: metrics only in crypto facts, equal to what result_metrics reads from the payload",
+   "ok": true,
+   "crypto_facts_with_metrics": 2
+  },
+  {
+   "check": "7: policy.code_sha256 equal in the three; config.sha256 == digest of the packaged config, distinct",
+   "ok": true,
+   "policy": [
+    "aff2f5fc6198eb49012c737aa92fd6b32fca8d9de76c9cd95575cf1ceccce262"
+   ],
+   "configs": {
+    "brasileirao": "c193ee033517",
+    "crypto": "d9418ea8581b",
+    "stocks": "696fd1f0b52d"
+   }
+  },
+  {
+   "check": "12: every brasileirao RESULT carries non-empty core_facts and ops_facts (admission → Ops → Core ran)",
+   "ok": true,
+   "results": 2
+  },
+  {
+   "check": "12: brasileirao Ops journal: exactly one experiment per admitted request",
+   "ok": true,
+   "admitted": 2,
+   "requests_with_experiments": 2,
+   "max_per_request": 1
+  },
+  {
+   "check": "12: every crypto RESULT carries non-empty core_facts and ops_facts (admission → Ops → Core ran)",
+   "ok": true,
+   "results": 2
+  },
+  {
+   "check": "12: crypto Ops journal: exactly one experiment per admitted request",
+   "ok": true,
+   "admitted": 2,
+   "requests_with_experiments": 2,
+   "max_per_request": 1
+  },
+  {
+   "check": "12: every stocks RESULT carries non-empty core_facts and ops_facts (admission → Ops → Core ran)",
+   "ok": true,
+   "results": 2
+  },
+  {
+   "check": "12: stocks Ops journal: exactly one experiment per admitted request",
+   "ok": true,
+   "admitted": 2,
+   "requests_with_experiments": 2,
+   "max_per_request": 1
+  },
+  {
+   "check": "12: brasileirao venv: installed predictor-core 3.2.1 is the published wheel (sha256 10ef42f3…; every file of the wheel's RECORD, with its hash, in the installed RECORD)",
+   "ok": true,
+   "missing": 0
+  },
+  {
+   "check": "12: crypto venv: installed predictor-core 3.2.1 is the published wheel (sha256 10ef42f3…; every file of the wheel's RECORD, with its hash, in the installed RECORD)",
+   "ok": true,
+   "missing": 0
+  },
+  {
+   "check": "12: stocks venv: installed predictor-core 3.2.1 is the published wheel (sha256 10ef42f3…; every file of the wheel's RECORD, with its hash, in the installed RECORD)",
+   "ok": true,
+   "missing": 0
+  },
+  {
+   "check": "12: brasileirao venv: installed predictor-ops 4.2.2rc1 is the published wheel (sha256 0be70bfb…; every file of the wheel's RECORD, with its hash, in the installed RECORD)",
+   "ok": true,
+   "missing": 0
+  },
+  {
+   "check": "12: crypto venv: installed predictor-ops 4.2.2rc1 is the published wheel (sha256 0be70bfb…; every file of the wheel's RECORD, with its hash, in the installed RECORD)",
+   "ok": true,
+   "missing": 0
+  },
+  {
+   "check": "12: stocks venv: installed predictor-ops 4.2.2rc1 is the published wheel (sha256 0be70bfb…; every file of the wheel's RECORD, with its hash, in the installed RECORD)",
+   "ok": true,
+   "missing": 0
+  },
+  {
+   "check": "13: brasileirao: 20 races of two consumers on the same spool/ledger/state: one delivers (exit 0, one RESULT), the other is busy (exit 6, CONSUMER_BUSY) and publishes nothing; one experiment per task; no death, no PermissionError",
+   "ok": true,
+   "reps": 20,
+   "failures": [],
+   "loser_published": {
+    "none": 20
+   },
+   "died": 0
+  },
+  {
+   "check": "13: crypto: 20 races of two consumers on the same spool/ledger/state: one delivers (exit 0, one RESULT), the other is busy (exit 6, CONSUMER_BUSY) and publishes nothing; one experiment per task; no death, no PermissionError",
+   "ok": true,
+   "reps": 20,
+   "failures": [],
+   "loser_published": {
+    "none": 20
+   },
+   "died": 0
+  },
+  {
+   "check": "13: stocks: 20 races of two consumers on the same spool/ledger/state: one delivers (exit 0, one RESULT), the other is busy (exit 6, CONSUMER_BUSY) and publishes nothing; one experiment per task; no death, no PermissionError",
+   "ok": true,
+   "reps": 20,
+   "failures": [],
+   "loser_published": {
+    "none": 20
+   },
+   "died": 0
+  },
+  {
+   "check": "11: no capital_permission true in state, spool or receipts",
+   "ok": true
+  }
+ ],
+ "passed": 58,
+ "failed": 0,
+ "llm": {
+  "brasileirao": {
+   "exit": 2,
+   "decision": null,
+   "error": "NO_ELIGIBLE_HYPOTHESIS: the policy holds every proposable hy"
+  },
+  "crypto": {
+   "exit": 0,
+   "decision": "ALLOW",
+   "error": ""
+  },
+  "stocks": {
+   "exit": 0,
+   "decision": "ALLOW",
+   "error": ""
+  }
+ },
+ "memory": {
+  "cubes": {
+   "brasileirao": 1,
+   "crypto": 3,
+   "stocks": 2
+  },
+  "configs": {
+   "brasileirao": "c193ee0335178e947302841655d1685517d5252e94ede90a63f4e660385c7116",
+   "crypto": "d9418ea8581b8c083d98ddc7d2ee78b2e9b895abef7276c0a7a3a12fe90036e8",
+   "stocks": "696fd1f0b52d044e012891a283d2f4738f305ff6719b463be6d41ffbae2628eb"
+  },
+  "policy": [
+   "aff2f5fc6198eb49012c737aa92fd6b32fca8d9de76c9cd95575cf1ceccce262"
+  ]
+ },
+ "core_ops_wheels": {
+  "predictor-core": {
+   "wheel_sha256_ok": true
+  },
+  "predictor-ops": {
+   "wheel_sha256_ok": true
+  }
+ },
+ "lock_contention": {
+  "brasileirao": [
+   {
+    "rep": 1,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 2,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 3,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 4,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 5,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 6,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 7,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 8,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 9,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 10,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 11,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 12,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 13,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 14,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 15,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 16,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 17,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 18,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 19,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 20,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   }
+  ],
+  "crypto": [
+   {
+    "rep": 1,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 2,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 3,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 4,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 5,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 6,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 7,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 8,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 9,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 10,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 11,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 12,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 13,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 14,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 15,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 16,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 17,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 18,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 19,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 20,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   }
+  ],
+  "stocks": [
+   {
+    "rep": 1,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 2,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 3,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 4,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 5,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 6,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 7,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 8,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 9,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 10,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 11,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 12,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 13,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 14,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 15,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 16,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 17,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 18,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 19,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   },
+   {
+    "rep": 20,
+    "allow": true,
+    "exits": [
+     0,
+     6
+    ],
+    "busy": 1,
+    "experiments": 1,
+    "statuses": [
+     "RESULT"
+    ],
+    "loser_published": "none",
+    "died": false,
+    "permission_error": false
+   }
+  ]
+ }
+}

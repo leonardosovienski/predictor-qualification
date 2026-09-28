@@ -151,3 +151,27 @@ Registro no Windows do PC 2: o console da primeira execução do `windows_smoke.
 autorizada. Só havia mensagens do script e o resumo do E2E, sem linha do dado. O arquivo foi movido para o diretório privado
 do runtime no WSL (sha256 conferido) e removido do `%TEMP%`. A pasta `C:\QUALIFICACAO\runtime\integration-brasileirao\`
 ficou sem nenhum banco do dado real fora de tools/venv.
+
+## Reemissão na cain v0.4.13rc13 + transporte 0.1.0rc6 (C14; run `run-20260928T183300Z-br13`, PC 2)
+
+O cain (rodadas de utilidade do stocks: cain#77, D-26) e o transporte (um consumidor por domínio: ecosystem-predictor#36)
+mudaram, e a C14 manda refazer as fases que os exercitam. Alvos adotados por `scripts/adopt_release.py` (7/7): cain
+v0.4.13rc13 `960fb25` (a1d94fd5…) e transporte v0.1.0rc6 `bac1f7b` (6c7e83c4…), pinado pelo uv.lock da rc13. O
+brasileirao.json e o policy.py são byte a byte os da rc12.
+
+| Fase | Resultado |
+|---|---|
+| cleanroom-final | conformidade 89, transporte 19, cain 95 testes, 0 falhas |
+| contract-revalidation | estática 10/10 ((f) pelo IB-F005); (d) 11/11 |
+| e2e | 79/79 |
+| n-plus-1 | congelado 84/84, integrado 85/85; holdout 2025 → REQUIRE_HUMAN SEALED_SCOPE |
+| isolation-ids-contradiction | 30/30; contradição 9/9 |
+| idempotency-failure | F01–F16: 65 conferências, 0 falhas |
+| windows-smoke (PC 2) | E2E 79/79; dado real devolvido ao WSL: 142 arquivos conferidos |
+| soak | 61/62: todos os pisos, menos o de LLM (IB-F009, waiver do dono, mantido) |
+
+Registro: um run anterior na mesma pilha (`run-20260928T180538Z-br13`) deu os mesmos resultados, mas o no_data_rows_check acusou o
+falso positivo IB-F003 no `real_env.policy.sha256` do operador daquele run (7 dígitos dentro do hex de 64). O run saiu do
+RAW_LOGS (privado, SUMMARY do E2E sha256 `978881495657…`); este run tem operador novo e saída limpa. O checker
+não foi alterado. A attestation da rc12 fica preservada em `QUALIFICATION_ATTESTATION_superseded_<sha12>.json`, e a nova
+aponta para ela por `supersedes_sha256`.
