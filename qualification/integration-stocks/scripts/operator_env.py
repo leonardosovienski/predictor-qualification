@@ -3,7 +3,9 @@
 É a fronteira do operador do Stocks (não do CAIN): a mesma de qualification/stocks/d16/real_env.py da Etapa A
 (PROTOCOL_REAL.json, painel stocks-pit-panel/1 do construtor, matriz de prontidão do final_commit, fonte VLMO), com os
 valores congelados em FROZEN_PARAMETERS.json → operator_env: três hipóteses de qualificação no lugar de uma (rodízio
-exigido pelo cooldown da política) e o painel canário (FROZEN_PARAMETERS.json → data.future_canary). Roda com o
+exigido pelo cooldown da política), as cinco hipóteses só para o LLM do ciclo 2 (o mesmo protocolo com controle
+negativo de semente própria; FROZEN_VECTORS.json → llm_hypotheses) e o painel canário (FROZEN_PARAMETERS.json →
+data.future_canary). Roda com o
 stocks-predictor INSTALADO (ReferenceStore real, canonical do domínio). Não cria pedidos: na Etapa B os pedidos vêm
 das tasks V2 do CAIN.
 
@@ -25,6 +27,7 @@ from stocks_predictor.research_contract import canonical
 from stocks_predictor.research_execution import ReferenceStore
 
 HYPOTHESES = ("stocks:QUAL-PIT-MOM-REAL-001", "stocks:QUAL-PIT-MOM-REAL-002", "stocks:QUAL-PIT-MOM-REAL-003")
+LLM_HYPOTHESES = tuple(f"stocks:QUAL-LLM-CTRL-{k:03d}" for k in range(1, 6))
 COLLECTION_HYPOTHESIS = "stocks:QUAL-EI-COLLECTION-001"
 POLICY_ID = "stocks-integration-qualification"
 CANARY = "FUTURE_CANARY_STOCKS_INTEGRATION_001"
@@ -81,6 +84,10 @@ def provision(root: Path, build: Path, protocol: dict, matrix: dict) -> dict:
     hypotheses = {h: {"hypothesis_family": family,
                       "purpose": "qualification probe on real B3/CVM data; not a scientific hypothesis"}
                   for h in HYPOTHESES}
+    hypotheses.update({h: {"hypothesis_family": family,
+                           "purpose": "LLM-only qualification probe: negative control of the same protocol on real "
+                                      "B3/CVM data; not a scientific hypothesis"}
+                       for h in LLM_HYPOTHESES})
     hypotheses[COLLECTION_HYPOTHESIS] = {"hypothesis_family": "stocks-ei-collection-only",
                                          "purpose": "External Intelligence collection monitoring; never a trial"}
     policy = {
@@ -102,7 +109,7 @@ def provision(root: Path, build: Path, protocol: dict, matrix: dict) -> dict:
            "data_cutoff": panel["data_cutoff"], "dataset_version": panel["dataset_version"],
            "panel_sha256": hashlib.sha256(panel_raw).hexdigest(), "panel_bytes": len(panel_raw),
            "canary": canary_bar, "canary_markers": [canary_bar["session"], canary_bar["available_at"]],
-           "hypotheses": list(HYPOTHESES), "timeout_seconds": policy["limits"]["timeout_seconds"]}
+           "hypotheses": list(HYPOTHESES), "llm_hypotheses": list(LLM_HYPOTHESES), "timeout_seconds": policy["limits"]["timeout_seconds"]}
     (root / "REAL_ENV.json").write_text(json.dumps(env, indent=1), encoding="utf-8")
     return env
 

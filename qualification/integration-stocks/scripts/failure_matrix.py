@@ -56,6 +56,11 @@ class Point:
                                     request_id=f"stocks:REQ-IS-FM-{self.fid}-{k}", hypothesis_id=hypothesis)
         value = json.loads(path.read_text(encoding="utf-8"))
         value["proposal_id"] = f"cain:FM-{self.fid}-{k}"
+        if k > 1:  # ciclo 2 (R17): a proposta seguinte do ponto é outro experimento, com controle negativo de semente k
+            kind = json.loads((self.mission / "FROZEN_VECTORS.json").read_text(encoding="utf-8"))["soak_generator"][
+                "negative_control"]["kind"]
+            value["request"]["parameters"] = dict(value["request"]["parameters"],
+                                                  negative_control={"kind": kind, "seed": k})
         path.write_text(json.dumps(value), encoding="utf-8")
         return path
 

@@ -85,3 +85,40 @@ Pedido do dono no chat da sessão: "arruma esses erros" (os achados P2 que ficar
 | `cain` `src/cain/orchestration/{policy,llm}.py`, teste, `docs/ORCHESTRATION_V2.md` | `policy.declared_parameters`: variantes de `parameters` do `request_schema` congelado do domínio. A R06 compara custos só quando a variante declara as chaves de custo; o LLM grava `placebo_seed` só onde a variante declara esse parâmetro. No cripto nada muda. Suíte local: 1367 passed, 3 skipped, cobertura 87.42%. CI do PR e de push do main `51bfec3`: success | IS-F002, IS-F003 | `d8b8061`; leonardosovienski/cain#62 (mergeado) |
 | `cain` versão do main | 0.4.13rc8 (não publicada), feita pela sessão do cripto | IS-F007 | leonardosovienski/cain#61 (mergeado) |
 | `RAW_LOGS/c0/c0_preflight_ebf32fa.log` | pré-voo 4.1–4.7 no main novo, antes deste commit: 46 checks, 0 falhas | pré-voo antes de cada commit | este PR |
+
+## 2026-09-28 — ciclo 2 da freeze-parameters (C14): política v2 do cain e hipóteses só para o LLM (cain 0.4.13rc11)
+
+Decisões do dono no chat desta sessão, em perguntas com opções:
+- **"Aprovo o ciclo novo"**: ciclo novo dos parâmetros congelados na release única do cain. As mudanças propostas foram:
+  - 17-collection passa a ALLOW;
+  - as fixtures de contradição viram experimentos distintos;
+  - os vetores do N+1 são recalculados;
+  - REAL-001/002/003 viram experimentos distintos.
+  Perfil de soak, dados e pisos não mudam.
+- **"Hipóteses para o LLM"**: com a R17, o piso da C10 (≥ 5 propostas de LLM) ficou inatingível na rc10. A decisão cria 5 hipóteses de qualificação só para o LLM, cada uma um experimento distinto (controle negativo com semente própria), admitidas pelo operador. Isso exige uma nova release do cain (rc11) e a C14 das três integrações.
+
+Pela C14, a fase inteira é um novo ciclo. As fases a partir de publish-candidates serão refeitas na rc11. **Nenhuma fase roda antes do merge deste PR pelo dono (C15).**
+
+| Onde | O quê | Por quê |
+|---|---|---|
+| `FROZEN_PARAMETERS.json`, `FROZEN_PARAMETERS_cycle1_771b8a23e9b9.json`, `scripts/freeze_cycle2.py` | `decision_policy` v2: `rule_order` R01–R17 conferida contra a docstring de `policy.py` em `fb0e1dc` (v0.4.13rc10), mais `policy_module` com o sha256. `stocks_config` ganha as 5 hipóteses `stocks:QUAL-LLM-CTRL-001..005` (proponíveis, `proposal_overlays` com controle negativo SHUFFLED_LABELS, sementes 9001–9005) e o estado dos limites de framework do ciclo 1 (IS-F002 e IS-F003, corrigidos no cain#62). Outras mudanças: `operator_env` com as 5 hipóteses; `base.framework_cycle2` (rc10 + o que entra na rc11); `repos`; `c14_cycle2`; `hosted_ci_rule` com a decisão IS-F004/IS-F005; `decisions_cited` com as palavras do dono; bloco `cycle` com supersedes. O ciclo 1 fica byte a byte (mesmo blob git) no arquivo de supersedes | C14, C15 |
+| `FROZEN_VECTORS.json`, `FROZEN_VECTORS_cycle1_3ad4d197cb79.json`, `scripts/build_vectors.py`, `fixtures/proposals/**`, `fixtures/v2/stocks/contradiction-*` | Viram outro experimento, com controle negativo SHUFFLED_LABELS: e2e/02 e e2e/08 (sementes 2 e 8), n1/01-next (semente 1) e contradição 02–04 (sementes 2–4). n1/17-collection passa a ALLOW (cain#62). No soak, o 1º ciclo é o backtest real sem controle e do 2º em diante usa semente = número do ciclo. Entram 5 fixtures `fixtures/proposals/llm/` (o builder do cain lê delas o tipo de pedido) e a seção `llm_hypotheses`. O bloco `cycle` aponta para o ciclo 1 | R17 (mesmo experimento com outro nome) |
+| `scripts/operator_env.py`, `scripts/soak.py`, `scripts/failure_matrix.py`, `scripts/isolation.py` | Operador admite as 5 hipóteses do LLM. Soak: semente por ciclo a partir do 2º, e a checagem final aceita as hipóteses do LLM. Matriz: a 2ª proposta de cada ponto recebe controle negativo de semente k, para F07, F10 e F14 não caírem na R17 antes da regra que testam. Isolamento: na rc10+ os três domínios têm configuração, então o domínio fora do protocolo (`forex`) dá CONFIG_INVALID e a proposta do stocks na orquestração do brasileirao dá BLOCK DOMAIN_MISMATCH, como na integration-crypto | C14 |
+| `FINDINGS.json` (`IS-F008`, `scripts/add_finding_is_f008.py`) | O ciclo 2 troca quatro itens do `PROTECTED_SET.json`: os congelados desta missão (parâmetros e vetores) e dois da integration-crypto (os congelados do ciclo 2 dela e a attestation reemitida em dois saltos). Os bytes protegidos ficam preservados e encadeados. **Aguarda a decisão do dono** | C15.1 |
+| `GATES.json`, `scripts/cycle2_gates.py`, `ATTESTATION_PARTIAL_freeze-parameters-c2.json` | Gates refeitos no ciclo 2 voltam a NOT_RUN, com o ciclo 1 em `cycle1_evidence`. Ficam como estão STACK_BASELINE_FROZEN e BLOCKERS_ZERO. `supersedes_sha256` passa a ser a attestation atual. Parcial com P0=0, P1=0, P2=5 | C14, C8 |
+| `RAW_LOGS/freeze/freeze_parameters_cycle2.log` | Execução dos scripts, com os sha256 do ciclo 1 e a igualdade do blob git dos arquivos preservados | C20 |
+
+Diagnóstico local antes de congelar (WSL do PC 2, não é gate; `RAW_LOGS/freeze/diag-c2/`, com os `SUMMARY.json` de cada fase e o `phases.log`). Foi feito com o `runtime_env.sh` da missão e uma wheel candidata da rc11: cain `fb0e1dc` + cain#72 + `stocks.json` gerado destes congelados. Completam o runtime o transporte rc5, o stocks rc3 e o cripto integrado.
+- e2e 55/0.
+- N+1 63/0; integrado 64/0.
+- Isolamento 28/0; contradição 9/0.
+- Matriz F01–F15 sem falha.
+- Soak 43/0, com o modelo local `qwen3.5:4b` (no Actions é `qwen2.5:0.5b`):
+  - todos os pisos atingidos;
+  - as 5 hipóteses do LLM viraram 5 tasks distintas (ALLOW, sementes 9001–9005);
+  - a 6ª chamada parou em NO_ELIGIBLE_HYPOTHESIS;
+  - `llm_proposals` = 5, exatamente o piso: sobra uma tentativa para falha do modelo (no ciclo 1 do Actions, o `qwen2.5:0.5b` acertou 6 de 6).
+- Soak, 1ª tentativa (`soak-try1/`), com controle em todos os ciclos: 40/3.
+  - O LLM escolheu `stocks:QUAL-PIT-MOM-001`, proponível desde o ciclo 1 mas não admitida pelo operador desta integração, e o domínio recusou (TERMINAL_REFUSAL).
+  - Três checagens de tolerância zero contam só resultados admitidos.
+  - Daí o 1º ciclo do soak sem controle: o molde emprestado dessa hipótese passa a repetir um experimento já rodado (R17).

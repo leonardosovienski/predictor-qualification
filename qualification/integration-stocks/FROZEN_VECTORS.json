@@ -138,8 +138,7 @@
    },
    {
     "proposal": "fixtures/proposals/n1/17-collection.json",
-    "expected_decision": "BLOCK",
-    "expected_reason": "COST_MODEL_MISMATCH"
+    "expected_decision": "ALLOW"
    },
    {
     "proposal": "fixtures/proposals/n1/18-llm-shape.json",
@@ -195,8 +194,83 @@
   ],
   "request_id": "stocks:REQ-IS-SOAK-<nnn>",
   "template": "real_request(request_id, hypotheses[(n-1) % 3]) com as_of do painel do run",
+  "negative_control": {
+   "kind": "SHUFFLED_LABELS",
+   "seed": "n (o número do ciclo), a partir do 2º",
+   "first_cycle": "o backtest real sem controle (como no ciclo 1)",
+   "why": "ciclo 2: com a R17, sem semente o backtest real é um só experimento e o soak não passaria do 3º ciclo; o 1º ciclo sem controle deixa o experimento real emitido, e o molde emprestado de uma hipótese proponível sem task própria e sem overlay (stocks:QUAL-PIT-MOM-001, que o operador desta integração não admite) repete esse experimento (R17)"
+  },
+  "llm_hypotheses": [
+   "stocks:QUAL-LLM-CTRL-001",
+   "stocks:QUAL-LLM-CTRL-002",
+   "stocks:QUAL-LLM-CTRL-003",
+   "stocks:QUAL-LLM-CTRL-004",
+   "stocks:QUAL-LLM-CTRL-005"
+  ],
   "dataset": "b3-cvm-real v1",
   "cycles": 24
+ },
+ "llm_hypotheses": {
+  "stocks:QUAL-LLM-CTRL-001": {
+   "fixture": "fixtures/proposals/llm/01-qual-llm-ctrl-001.json",
+   "overlay": {
+    "negative_control": {
+     "kind": "SHUFFLED_LABELS",
+     "seed": 9001
+    }
+   }
+  },
+  "stocks:QUAL-LLM-CTRL-002": {
+   "fixture": "fixtures/proposals/llm/02-qual-llm-ctrl-002.json",
+   "overlay": {
+    "negative_control": {
+     "kind": "SHUFFLED_LABELS",
+     "seed": 9002
+    }
+   }
+  },
+  "stocks:QUAL-LLM-CTRL-003": {
+   "fixture": "fixtures/proposals/llm/03-qual-llm-ctrl-003.json",
+   "overlay": {
+    "negative_control": {
+     "kind": "SHUFFLED_LABELS",
+     "seed": 9003
+    }
+   }
+  },
+  "stocks:QUAL-LLM-CTRL-004": {
+   "fixture": "fixtures/proposals/llm/04-qual-llm-ctrl-004.json",
+   "overlay": {
+    "negative_control": {
+     "kind": "SHUFFLED_LABELS",
+     "seed": 9004
+    }
+   }
+  },
+  "stocks:QUAL-LLM-CTRL-005": {
+   "fixture": "fixtures/proposals/llm/05-qual-llm-ctrl-005.json",
+   "overlay": {
+    "negative_control": {
+     "kind": "SHUFFLED_LABELS",
+     "seed": 9005
+    }
+   }
+  }
+ },
+ "cycle": {
+  "number": 2,
+  "supersedes": {
+   "file": "FROZEN_VECTORS_cycle1_3ad4d197cb79.json",
+   "sha256": "3ad4d197cb79bb2f219f3dd5f1ccd25dfc45bdbde6cdbe20cb6c396f452bc066"
+  },
+  "why": "decisão do dono (2026-09-28): ciclo novo dos congelados na release única do cain com a política v2 (R15–R17, R04 por hipótese, custos e semente pelo contrato) e hipóteses de qualificação só para o LLM (overlay com controle negativo)",
+  "changes": [
+   "e2e/02-allow-restarts e e2e/08-next com controle negativo (sementes 2 e 8)",
+   "n1/01-next com controle negativo (semente 1); n1/17-collection → ALLOW",
+   "contradição 02–04 com controle negativo (sementes 2–4)",
+   "soak: 1º ciclo sem controle; do 2º em diante, controle negativo com semente = número do ciclo",
+   "5 hipóteses stocks:QUAL-LLM-CTRL-001..005 (sementes 9001–9005)"
+  ]
  },
  "files": {
   "../integration-crypto/fixtures/v2/FIXTURES_MANIFEST.json": {
@@ -242,19 +316,19 @@
    "sha256": "c15988145c87732005a0ddbbf99f5838a469034422d3e555b7f16d22474f15f5"
   },
   "fixtures/proposals/contradiction/02-refuted.json": {
-   "sha256": "29f76281294f75acea27a2fc961f0eb974a752510ace67557ecd626cd0b99c20"
+   "sha256": "4770a798fc9991c0b934620df113c9b415e8aaf9d5cb2a1a30ed556c2fa690c9"
   },
   "fixtures/proposals/contradiction/03-refuted-again.json": {
-   "sha256": "6caef9db6a982ad9544b961ba99e79dfa79873f4f0d691361dd42e51d20ee8c5"
+   "sha256": "b09f7ebc796ed9818b88a88ca03be73d047a4ba14ac2ebcdd6ec2ba1829759e8"
   },
   "fixtures/proposals/contradiction/04-after.json": {
-   "sha256": "0db1708762722f742412d31d4aa9d5d275e470ca4539261ba5b1e305faa4a51f"
+   "sha256": "3145b1fd4dcdcc7c4dc57dbdfe5308fa40d1592238878cd27b66bddd4c43bbb5"
   },
   "fixtures/proposals/e2e/01-allow.json": {
    "sha256": "3fdef0dc0195a7d8a7554a66b132cecad2e355c228fde73e6685b72c784a5781"
   },
   "fixtures/proposals/e2e/02-allow-restarts.json": {
-   "sha256": "309eb42d6f60ca5c4f7092519b69dc8e54d259acd37326aa840fc938a408ac86"
+   "sha256": "69a408c737fe002af523b67c20afa12f954d25f56c8dd227d8c79200160cc507"
   },
   "fixtures/proposals/e2e/03-canary.json": {
    "sha256": "39b93c810cd2eac6773e700a6006122f067ca9696d5509fac8ca72123b9e6a64"
@@ -272,13 +346,28 @@
    "sha256": "54a2a439fffb87ad9a08578f30eb14f9808b95c4e19feaa793828586cb63d25f"
   },
   "fixtures/proposals/e2e/08-next.json": {
-   "sha256": "12a99911d6d6656ee52fba4075c2f4ed8363f56c05ec1665d89f646dc6743f0c"
+   "sha256": "8054672224c0a895d9f82608f5ed813f8683ad4bd20de83f2018e204712c7508"
+  },
+  "fixtures/proposals/llm/01-qual-llm-ctrl-001.json": {
+   "sha256": "e9262354f19088de6842460687865639ef9b7721403eff69e199790d0a4930a3"
+  },
+  "fixtures/proposals/llm/02-qual-llm-ctrl-002.json": {
+   "sha256": "188deac128f402a8415acda1bdf481940901638d857437694f80b1859d51e0ff"
+  },
+  "fixtures/proposals/llm/03-qual-llm-ctrl-003.json": {
+   "sha256": "196b447175153be7fec514249e375312d5aa99cb76e7c9fabd1c01af37894404"
+  },
+  "fixtures/proposals/llm/04-qual-llm-ctrl-004.json": {
+   "sha256": "8ecfbeff8a9508fd4840bc5e392bdcfcb4cf70e8a31ae902226adb5dd6f26769"
+  },
+  "fixtures/proposals/llm/05-qual-llm-ctrl-005.json": {
+   "sha256": "665f00e893730fe8dff3d4a2fe6a04c4a77b7aab9f32648672495abb9e0774f0"
   },
   "fixtures/proposals/n1/00-seed-etapa-a.json": {
    "sha256": "9e5116ead191d3555a6556bea06739bc193513e062b565276f265aabebcbb9fc"
   },
   "fixtures/proposals/n1/01-next.json": {
-   "sha256": "0f0fc71e3165f00415c0790c473d1f8b7bee39fcd9b9a37154e4d975d15b2711"
+   "sha256": "e2baf5db9fe78c0e5fd127a408b350bb26c1808d7c1a4dd7ee348b419b9d49f6"
   },
   "fixtures/proposals/n1/02-duplicate.json": {
    "sha256": "9019998b14fc6fca2192b094490223ebca112e15b52fb1a581176c5a0ca72de9"
@@ -338,16 +427,16 @@
    "sha256": "c0a02917cd573f3fc67873111010c876273f9c66d37204f748d489b3a4c290fe"
   },
   "fixtures/v2/stocks/contradiction-refuted-again-result.json": {
-   "sha256": "8e11baa2eaf215e0d2e863069d6fb1630fbd5961e14b13c7a70003fca739b331"
+   "sha256": "b8f968a7868d1b0c1699281a95bb026fc897b9392d0b15acfceabb4832df78c1"
   },
   "fixtures/v2/stocks/contradiction-refuted-again-task.json": {
-   "sha256": "a428a21607e9c69e598b96fdfc8e206ee9dfa413b25dd727966dfb20fbcb925d"
+   "sha256": "55b1daff600f5c0e8942756a1258817d02eaa43e8642f13f4469ba0257a39a87"
   },
   "fixtures/v2/stocks/contradiction-refuted-result.json": {
-   "sha256": "3b35f64eedc65475898a7b8f021a7973b3fb2ba053923ff114dbbe6c8487c325"
+   "sha256": "35cca88fcf5ad5b642c7c8249d9a9c9b4fa91d5f390e19053e7f1a61cf458584"
   },
   "fixtures/v2/stocks/contradiction-refuted-task.json": {
-   "sha256": "e6e96ca865929c650f48a8be642f57e724934d04a0100251c6ec6fb748810d9e"
+   "sha256": "01fcf7fcf14c567ad6cb29244724dc8d357a37a0a561e9800ac4410f47fd79d5"
   },
   "fixtures/v2/stocks/contradiction-supported-result.json": {
    "sha256": "5dfce487b89f80de3858be25ebc4faad5dc6759548f51c3c944f93fd24bc21fe"

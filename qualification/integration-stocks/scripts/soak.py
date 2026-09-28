@@ -41,6 +41,11 @@ def main() -> int:
                                request_id=f"stocks:REQ-IS-SOAK-{n:03d}", hypothesis_id=hypothesis)
         value = json.loads(path.read_text(encoding="utf-8"))
         value["proposal_id"] = f"cain:SOAK-{n:03d}"
+        # ciclo 2 (R17): cada ciclo é outro experimento; o 1º é o backtest real sem controle, os seguintes com controle
+        # negativo de semente n (FROZEN_VECTORS → soak_generator.negative_control)
+        if n > 1:
+            value["request"]["parameters"] = dict(value["request"]["parameters"], negative_control={
+                "kind": gen["negative_control"]["kind"], "seed": n})
         path.write_text(json.dumps(value), encoding="utf-8")
         return path
 
@@ -182,8 +187,9 @@ def main() -> int:
             and b'"cube":"brasileirao"' not in mem)
     emitted_tasks = [h.task(e["task_id"]) for e in emitted]
     closed = re.compile(r"stocks:H[0-9]+\Z")
-    h.check("no ALLOW for stocks:H1..H22: every emitted task is a frozen soak hypothesis",
-            all(not closed.match(t["hypothesis_id"]) and t["hypothesis_id"] in hyps for t in emitted_tasks),
+    frozen_hyps = set(hyps) | set(gen["llm_hypotheses"])
+    h.check("no ALLOW for stocks:H1..H22: every emitted task is a frozen soak or LLM hypothesis",
+            all(not closed.match(t["hypothesis_id"]) and t["hypothesis_id"] in frozen_hyps for t in emitted_tasks),
             hypotheses=sorted({t["hypothesis_id"] for t in emitted_tasks}))
     h.check("no capital_permission true anywhere", all(
         b'"capital_permission":true' not in p.read_bytes().replace(b" ", b"")

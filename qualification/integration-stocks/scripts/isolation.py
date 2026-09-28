@@ -9,8 +9,10 @@ Pelos entrypoints do CAIN e dos consumidores (runtime suportado) e pelo protocol
      real de cada domínio; o resultado real de cada um entregue no spool do outro é recusado (DOMAIN_MISMATCH); a task
      do cripto no spool do consumidor do Stocks é recusada sem chamar o domínio; o mesmo H9 é bloqueado em cada
      orquestração pelo motivo certo; a memória fica separada por cubo (nenhum fato de um domínio no cubo do outro);
-  3. contra o brasileirao por fixtures V2 congeladas: resultado e proposta recusados; sem orquestração configurada
-     (CONFIG_INVALID) e sem efeito;
+  3. contra o brasileirao por fixtures V2 congeladas: resultado e proposta recusados; proposta do stocks na
+     orquestração do brasileirao é BLOCK DOMAIN_MISMATCH, sem task; domínio fora do protocolo sem orquestração
+     (CONFIG_INVALID) e sem efeito (ciclo 2, cain 0.4.13rc10+: os três domínios têm configuração, como na
+     integration-crypto);
   4. contradição: SUPPORTED × REFUTED da mesma hipótese do Stocks → REQUIRE_HUMAN; os dois fatos ficam na memória; um
      terceiro resultado não entra (nenhuma task) e nada é decidido por maioria.
 
@@ -147,11 +149,18 @@ def main() -> int:
     _c, lines, _ = h.ingest("stocks: ingest a brasileirao result")
     h.check("brasileirao result in the stocks spool: DOMAIN_MISMATCH",
             any(l.get("file") == "brasileirao.json" and l.get("code") == "DOMAIN_MISMATCH" for l in lines), got=lines)
-    code, lines, _ = h.cain("propose to a brasileirao orchestration", "propose", "--domain", "brasileirao", "--state",
-                            work / "brasileirao-state", "--proposal", mission / "fixtures/proposals/n1/05-brasileirao-h9.json")
-    h.check("no brasileirao orchestration configured: CONFIG_INVALID, nothing written",
-            code == 1 and lines[0].get("error") == "CONFIG_INVALID" and not (work / "brasileirao-state").exists(),
+    code, lines, _ = h.cain("propose to an orchestration of a domain outside the protocol", "propose", "--domain",
+                            "forex", "--state", work / "forex-state", "--proposal",
+                            mission / "fixtures/proposals/n1/04-stocks-h9.json")
+    h.check("no orchestration for a domain outside the protocol: CONFIG_INVALID, nothing written",
+            code == 1 and lines[0].get("error") == "CONFIG_INVALID" and not (work / "forex-state").exists(),
             got=lines)
+    code, lines, _ = h.cain("propose stocks H9 to the brasileirao orchestration", "propose", "--domain", "brasileirao",
+                            "--state", work / "brasileirao-state", "--proposal",
+                            mission / "fixtures/proposals/n1/04-stocks-h9.json")
+    h.check("stocks proposal in the brasileirao orchestration: BLOCK DOMAIN_MISMATCH, no task",
+            code == 0 and lines[0].get("decision") == "BLOCK" and lines[0].get("reason_code") == "DOMAIN_MISMATCH"
+            and not lines[0].get("task"), got=lines)
     # 4: contradiction (fresh state)
     k = Harness(out / "contradiction", work / "contradiction", mission, "contradiction")
     spec = vectors["contradiction"]

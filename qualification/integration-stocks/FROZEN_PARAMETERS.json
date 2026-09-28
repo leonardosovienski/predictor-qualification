@@ -10,7 +10,7 @@
   "sha256": "293820ee6544876725f9bfe34bcabec45d5377360cfebd77b792719cd19038da",
   "id": "STACK_BASELINE_V2.0"
  },
- "shown_to_owner": "mostrado ao dono antes de congelar: no PR da missão no predictor-qualification (primeiro commit da fase) e no relatório da sessão. Aprovar = merge. Mudar qualquer valor depois = novo ciclo da fase inteira (C14 'Parâmetro/vetor/perfil congelado').",
+ "shown_to_owner": "ciclo 2: mostrado ao dono antes de rodar qualquer fase, no PR do ciclo 2 no predictor-qualification e no relatório da sessão. Aprovar = merge. O ciclo 1 fica byte a byte no arquivo de supersedes.",
  "identity": {
   "common_core": {
    "path": "qualification/COMMON_QUALIFICATION_CORE.md",
@@ -35,7 +35,7 @@
   },
   "decisions": {
    "path": "qualification/DECISIONS.json",
-   "sha256": "a0f012fb73cb026a8484c486cd83e015c0d60ef785547bed9cd31ed0106a6358"
+   "sha256": "2dd21000573739d720a4e09d2238728f8b3a67600d5b297fec36b5e069f2c7a3"
   },
   "hygiene": {
    "path": "qualification/HYGIENE.json",
@@ -89,7 +89,8 @@
    "D-21",
    "D-22",
    "D-23",
-   "D-24"
+   "D-24",
+   "D-25"
   ],
   "D-1": "WINDOWS_SMOKE do Stocks no GitHub Actions windows-latest × 3.13; nada no Windows local",
   "D-5": "um agente por missão, sem subagentes",
@@ -101,7 +102,25 @@
   "D-18": "precedente dos recibos R8 como evidência de engenharia da regra local",
   "D-21": "ST-F007, ST-F008 aceitos; COTAHIST por snapshot fixado",
   "D-22": "segunda integração; reutiliza o framework da integration-crypto",
-  "D-24": "base 61fc017/0.3.0rc2; estado do CAIN só da base; WINDOWS_SMOKE no Actions; R8 × C24.3(a)"
+  "D-24": "base 61fc017/0.3.0rc2; estado do CAIN só da base; WINDOWS_SMOKE no Actions; R8 × C24.3(a)",
+  "D-25": "integration-brasileirao (base rc3, estado do Brasileirão no CAIN, WINDOWS_SMOKE no PC 2); nada nesta missão",
+  "owner_2026_09_28_cycle2": [
+   {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão integration-stocks (pergunta com opções)",
+    "words": "Aprovo o ciclo novo",
+    "question": "Aprova o ciclo novo de parâmetros congelados da integration-stocks na cain v0.4.13rc10? Com o transporte 0.1.0rc5 e a política nova (R15–R17, R04 por hipótese, custos pelo contrato), mudam as decisões esperadas congeladas. Proponho: (1) 17-collection passa de BLOCK para ALLOW; (2) as 4 fixtures de contradição viram experimentos distintos (hoje a R17 barra a 2ª por ser o mesmo); (3) vetores do N+1 recalculados para a política nova; (4) as hipóteses REAL-001/002/003 passam a ser experimentos distintos, senão a R17 barra o rodízio. Perfil de soak, dados, pisos e os demais parâmetros ficam iguais. Eu gravo o FROZEN_PARAMETERS novo e te mostro antes de rodar qualquer fase."
+   },
+   {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão integration-stocks (pergunta com opções)",
+    "words": "Hipóteses para o LLM",
+    "question": "Com a rc10, o soak do Stocks não chega ao piso da C10 de ≥ 5 propostas de LLM. Em todas as tentativas, depois da semente, o CAIN não pergunta ao modelo (NO_ELIGIBLE_HYPOTHESIS), porque toda hipótese disponível já rodou aquele mesmo experimento (R17). Isso está correto como comportamento, mas deixa o piso inatingível. Como seguir?",
+    "option_text": "No ciclo 2, 5 hipóteses de qualificação novas só para o LLM, cada uma um experimento distinto (controle negativo com semente própria), admitidas pelo operador. Exige mudar a configuração do stocks no cain (nova release rc11) e refazer a C14 das três integrações."
+   }
+  ]
  },
  "base": {
   "stocks_runtime_target": {
@@ -174,6 +193,21 @@
      "sha256": "ee1f550de36b28ee9ec559f1649e5eb7635849c6247adb8610605047e802701f"
     }
    }
+  },
+  "framework_cycle2": {
+   "cain": {
+    "release": "v0.4.13rc10",
+    "commit": "fb0e1dcb9003130c0b5d50ecd95f7d8d0829cf0c",
+    "stocks_json_sha256": "8434390f3c5c6d28ae5ba6b2aa359918c60451b4b98bd03cbeeaa843ad39f655",
+    "wheel_sha256": "752de98d385528b0bd90c950d117c46af0522125a2274ea9a7064461786b85e5",
+    "next": "v0.4.13rc11 = este commit + cain#72 (proposal_overlays: config.py, llm.py, builder, testes, docs; e a correção do llm.py para pedido sem parameters, relatada pela integration-brasileirao) + cain#71 (brasileirao.json da integration-brasileirao) + o PR da integration-crypto (result_metrics opcional, findings check; crypto.json do ciclo dela) + stocks.json regenerado por tools/build_domain_config.py a partir do merge deste ciclo e a versão; policy.py igual (policy_module); cada integração confere a própria configuração"
+   },
+   "predictor-research-transport": {
+    "release": "predictor-research-transport-v0.1.0rc5",
+    "commit": "b11494ae211e79e2e5faaa4b874470f5b6ce15ec",
+    "wheel_sha256": "408d73c2b991eb009806702121ed187f273aa6521979ed89bbe9491e58cff79f"
+   },
+   "rule": "runtime_targets.json do ciclo 2 fixa commits e sha256 das wheels publicadas; nada instalado de branch"
   }
  },
  "repos": {
@@ -182,12 +216,12 @@
    "base": "61fc017256ffea815ae96bbe02b847dccdb395cc"
   },
   "cain": {
-   "role": "só configuração do Stocks: src/cain/orchestration/data/stocks.json, entrada stocks em tools/build_domain_config.py, testes dela, versão e lock",
-   "base": "10744a9f149610d7741431c28c1e78c681c41165"
+   "role": "ciclo 2: a chave opcional proposal_overlays (src/cain/orchestration/config.py e llm.py, tools/build_domain_config.py, testes, docs/ORCHESTRATION_V2.md) e a correção do llm.py para pedido sem parameters (cain#72); stocks.json regenerado, versão e lock; política (policy.py) sem mudança; crypto.json e brasileirao.json só pelos PRs das outras integrações",
+   "base": "fb0e1dcb9003130c0b5d50ecd95f7d8d0829cf0c"
   },
   "ecosystem-predictor": {
-   "role": "só a entrada stocks na allowlist fixa do transporte (packages/research-transport) + testes e versão; research-protocol não muda",
-   "base": "61f3ac42160489ffbd872b05881a9b58b5bc0fcf"
+   "role": "não muda no ciclo 2 (o transporte 0.1.0rc5 da release única já tem a entrada stocks)",
+   "base": "b11494ae211e79e2e5faaa4b874470f5b6ce15ec"
   },
   "cripto-predictor": {
    "role": "não muda",
@@ -278,7 +312,12 @@
    "stocks:QUAL-PIT-MOM-REAL-001",
    "stocks:QUAL-PIT-MOM-REAL-002",
    "stocks:QUAL-PIT-MOM-REAL-003",
-   "stocks:QUAL-EI-COLLECTION-001"
+   "stocks:QUAL-EI-COLLECTION-001",
+   "stocks:QUAL-LLM-CTRL-001",
+   "stocks:QUAL-LLM-CTRL-002",
+   "stocks:QUAL-LLM-CTRL-003",
+   "stocks:QUAL-LLM-CTRL-004",
+   "stocks:QUAL-LLM-CTRL-005"
   ],
   "hypothesis_family": "stocks-qualification-momentum-12-1-pit",
   "references": {
@@ -305,12 +344,25 @@
     "mode": "NONE",
     "families": []
    }
-  }
+  },
+  "llm_hypotheses": {
+   "hypotheses": [
+    "stocks:QUAL-LLM-CTRL-001",
+    "stocks:QUAL-LLM-CTRL-002",
+    "stocks:QUAL-LLM-CTRL-003",
+    "stocks:QUAL-LLM-CTRL-004",
+    "stocks:QUAL-LLM-CTRL-005"
+   ],
+   "hypothesis_family": "stocks-qualification-momentum-12-1-pit",
+   "purpose": "LLM-only qualification probe: negative control of the same protocol on real B3/CVM data; not a scientific hypothesis",
+   "admitted_by": "scripts/operator_env.py (fronteira do operador do Stocks)"
+  },
+  "request_parameters_cycle2": "parameters.negative_control {kind SHUFFLED_LABELS, seed} nos pedidos que precisam ser outro experimento (FROZEN_VECTORS.json → cycle.changes); os demais parâmetros iguais"
  },
  "decision_policy": {
   "id": "cain-decision-policy",
-  "version": 1,
-  "framework": "sem mudança (integration-crypto); regras R01–R14 do DECISION_POLICY_REPORT.md herdado",
+  "version": 2,
+  "framework": "cain v0.4.13rc10 (fb0e1dc): política v2, regras R01–R17 na ordem abaixo; mais a chave opcional proposal_overlays da configuração (o molde de pedido do LLM aplica o overlay da hipótese), publicada como v0.4.13rc11; runtime_targets.json do ciclo 2 fixa commit e wheel",
   "stocks_config": {
    "source": {
     "repo": "stocks-predictor",
@@ -472,6 +524,11 @@
    ],
    "proposable_hypotheses": [
     "stocks:QUAL-EI-COLLECTION-001",
+    "stocks:QUAL-LLM-CTRL-001",
+    "stocks:QUAL-LLM-CTRL-002",
+    "stocks:QUAL-LLM-CTRL-003",
+    "stocks:QUAL-LLM-CTRL-004",
+    "stocks:QUAL-LLM-CTRL-005",
     "stocks:QUAL-PIT-MOM-001",
     "stocks:QUAL-PIT-MOM-REAL-001",
     "stocks:QUAL-PIT-MOM-REAL-002",
@@ -575,15 +632,101 @@
     {
      "id": "R06-custos-em-todo-pedido",
      "fact": "policy.decide compara config.costs com parameters de todo pedido; COLLECT_EXTERNAL_INTELLIGENCE não tem fee_bps/slippage_bps ⇒ sempre BLOCK COST_MODEL_MISMATCH (n1/17-collection)",
-     "decision": "não mudar o framework (6.4 do prompt da sessão; mudança = C14 do cripto); registrado como achado; o CAIN desta missão não propõe coleta"
+     "decision": "não mudar o framework (6.4 do prompt da sessão; mudança = C14 do cripto); registrado como achado; o CAIN desta missão não propõe coleta",
+     "cycle2_status": "ciclo 2: corrigido no cain#62 (d8b8061, IS-F002), na release única rc10; n1/17-collection passa a ALLOW"
     },
     {
      "id": "llm-placebo-seed",
      "fact": "cain.orchestration.llm grava parameters.placebo_seed (parâmetro do cripto); o request_schema do Stocks recusa campo extra ⇒ proposta de LLM do Stocks = BLOCK SCHEMA_INVALID (n1/18-llm-shape)",
-     "decision": "não mudar o framework; as ≥ 5 propostas de LLM do soak são geradas, auditadas e passam pela mesma política (não são gate, C9); registrado como achado"
+     "decision": "não mudar o framework; as ≥ 5 propostas de LLM do soak são geradas, auditadas e passam pela mesma política (não são gate, C9); registrado como achado",
+     "cycle2_status": "ciclo 2: corrigido no cain#62 (d8b8061, IS-F003), na release única rc10: a semente do LLM só entra onde a variante do contrato a declara"
+    }
+   ],
+   "proposal_overlays": {
+    "stocks:QUAL-LLM-CTRL-001": {
+     "negative_control": {
+      "kind": "SHUFFLED_LABELS",
+      "seed": 9001
+     }
+    },
+    "stocks:QUAL-LLM-CTRL-002": {
+     "negative_control": {
+      "kind": "SHUFFLED_LABELS",
+      "seed": 9002
+     }
+    },
+    "stocks:QUAL-LLM-CTRL-003": {
+     "negative_control": {
+      "kind": "SHUFFLED_LABELS",
+      "seed": 9003
+     }
+    },
+    "stocks:QUAL-LLM-CTRL-004": {
+     "negative_control": {
+      "kind": "SHUFFLED_LABELS",
+      "seed": 9004
+     }
+    },
+    "stocks:QUAL-LLM-CTRL-005": {
+     "negative_control": {
+      "kind": "SHUFFLED_LABELS",
+      "seed": 9005
+     }
+    }
+   },
+   "llm_hypotheses": {
+    "hypotheses": [
+     "stocks:QUAL-LLM-CTRL-001",
+     "stocks:QUAL-LLM-CTRL-002",
+     "stocks:QUAL-LLM-CTRL-003",
+     "stocks:QUAL-LLM-CTRL-004",
+     "stocks:QUAL-LLM-CTRL-005"
+    ],
+    "fixtures": {
+     "stocks:QUAL-LLM-CTRL-001": "fixtures/proposals/llm/01-qual-llm-ctrl-001.json",
+     "stocks:QUAL-LLM-CTRL-002": "fixtures/proposals/llm/02-qual-llm-ctrl-002.json",
+     "stocks:QUAL-LLM-CTRL-003": "fixtures/proposals/llm/03-qual-llm-ctrl-003.json",
+     "stocks:QUAL-LLM-CTRL-004": "fixtures/proposals/llm/04-qual-llm-ctrl-004.json",
+     "stocks:QUAL-LLM-CTRL-005": "fixtures/proposals/llm/05-qual-llm-ctrl-005.json"
+    },
+    "why": "com a R17, o molde de pedido do LLM de cada hipótese do rodízio repete um experimento já emitido: o CAIN não chega a perguntar ao modelo (NO_ELIGIBLE_HYPOTHESIS) e o piso da C10 (≥ 5 propostas de LLM no soak) fica inatingível; decisão do dono: cinco hipóteses de qualificação só para o LLM",
+    "experiment": "o mesmo protocolo das hipóteses REAL (backtest 12-1 no painel real do run) com parameters.negative_control SHUFFLED_LABELS de semente própria (9001–9005): um controle negativo real do domínio, nunca uma hipótese científica; cada uma roda no máximo uma vez (a segunda proposta da mesma hipótese é o mesmo experimento → R17)",
+    "template": "cain rc11: sem task própria, o molde é a última task do mesmo tipo sem as chaves de overlay, com o overlay da hipótese; com task própria, a própria task (→ R17, inelegível)",
+    "not_overlaid": "fee_bps, slippage_bps e placebo_seed nunca vêm de overlay (config.py do cain)"
+   },
+   "framework_limits_found_before_cycle2": [
+    {
+     "id": "R17-llm-floor",
+     "fact": "no cain rc10 (R17 + molde por hipótese, cain#67/#68), depois do primeiro ciclo nenhuma hipótese proponível tem molde que não repita um experimento emitido: o LLM não é chamado e o piso llm_proposals da C10 não é atingível (diagnóstico local na rc10; não é gate)",
+     "decision": "dono, 2026-09-28: \"Hipóteses para o LLM\" (proposal_overlays no cain → rc11; C14 das três integrações)"
     }
    ]
-  }
+  },
+  "policy_module": {
+   "cain_commit": "fb0e1dcb9003130c0b5d50ecd95f7d8d0829cf0c",
+   "path": "src/cain/orchestration/policy.py",
+   "sha256": "aff2f5fc6198eb49012c737aa92fd6b32fca8d9de76c9cd95575cf1ceccce262",
+   "rule": "a rc11 tem de ter estes mesmos bytes (proposal_overlays não toca a política)"
+  },
+  "rule_order": [
+   "R01 BLOCK DOMAIN_MISMATCH: proposta, pedido ou evidência de outro domínio, ou ID sem domínio (C18)",
+   "R02 BLOCK SCHEMA_INVALID: forma da proposta ou pedido fora do request_schema congelado do Stocks",
+   "R03 BLOCK FORBIDDEN_FIELD: campo fora de cain-proposal/1 (handler, comando, módulo, caminho, URL, budget, prioridade final, capital …) ou client_ref que o envelope controla",
+   "R04 BLOCK REQUEST_TYPE_NOT_ALLOWED: request_type fora da handler_allowlist do contrato, ou diferente do tipo que a configuração fixa para a hipótese proponível (proposable_request_types, cain#67; no Stocks as fixtures de proposta congeladas decidem: coleta nunca vai como backtest)",
+   "R05 BLOCK HYPOTHESIS_CLOSED: hipótese encerrada do estado científico (stocks:H1..H22) ou família congelada",
+   "R16 REQUIRE_HUMAN SEALED_SCOPE: pedido que tocaria um escopo lacrado da configuração (sealed_scopes); Stocks: nenhum lacre (lista vazia)",
+   "R06 BLOCK SYMBOL_NOT_ALLOWED / COST_MODEL_MISMATCH / REFERENCE_NOT_ALLOWED / PRIORITY_ABOVE_CAP: custos comparados só quando a variante de parameters do request_schema declara fee_bps/slippage_bps (cain#62, IS-F002): o backtest declara, a coleta não",
+   "R07 BLOCK REQUEST_ID_CONFLICT: request_id já emitido com outro conteúdo",
+   "R08 DUPLICATE DUPLICATE_REQUEST: o mesmo conteúdo já emitido no domínio",
+   "R09 REQUIRE_HUMAN DOMAIN_RECONCILIATION_PENDING: desfecho REQUIRES_HUMAN do domínio sem resolução",
+   "R10 REQUIRE_HUMAN CONTRADICTION_UNRESOLVED: estados científicos em conflito para a hipótese (nunca por maioria)",
+   "R15 REQUIRE_HUMAN HYPOTHESIS_NOT_ADMITTED_BY_DOMAIN: o domínio já recusou a hipótese com HYPOTHESIS_NOT_ADMITTED",
+   "R11 REQUIRE_HUMAN NEW_HYPOTHESIS: hipótese fora da lista proponível",
+   "R17 DUPLICATE EQUIVALENT_REQUEST: o mesmo experimento (o pedido sem request_id, hypothesis_id, research_id e client_ref) já rodou ou está aberto no domínio com outro ID (cain#68); tarefa recusada pelo domínio não conta",
+   "R12 ABSTAIN OPEN_TASK_PENDING / BUDGET_EXHAUSTED",
+   "R13 COOLDOWN NEGATIVE_STREAK: N resultados negativos seguidos da hipótese → K episódios sem task nova",
+   "R14 ALLOW"
+  ]
  },
  "n_plus_1": {
   "processes": 3,
@@ -612,7 +755,7 @@
  },
  "frozen_vectors": {
   "path": "qualification/integration-stocks/FROZEN_VECTORS.json",
-  "sha256": "3ad4d197cb79bb2f219f3dd5f1ccd25dfc45bdbde6cdbe20cb6c396f452bc066"
+  "sha256": "efba834f780f00be738a936ee68b443d70c6d6e880911ae9e462d4ee0c2085d2"
  },
  "r8_d24": {
   "source": "~/predictors/data/d16/stocks/COTAHIST_A2026.ZIP",
@@ -735,7 +878,8 @@
  ],
  "hosted_ci_rule": {
   "rule": "prompt da sessão 9.3: só o run de evento push cujo SHA é exatamente o final_commit vale (C21)",
-  "stocks_predictor_constraint": "o ci.yml do stocks-predictor (intocável pela D-24 (4c)) só dispara push em main; um final_commit de branch nunca tem run de push. A Etapa A usou workflow_dispatch no SHA exato. Pendência do dono; não é relaxado aqui"
+  "stocks_predictor_constraint": "o ci.yml do stocks-predictor (intocável pela D-24 (4c)) só dispara push em main; um final_commit de branch nunca tem run de push. A Etapa A usou workflow_dispatch no SHA exato. Pendência do dono; não é relaxado aqui",
+  "owner_decision_is_f004_f005": "dono, 2026-09-28: \"aceita o run workflow_dispatch (b) e reemite\": só para o stocks-predictor, o run workflow_dispatch do CI Pipeline no SHA exato do final_commit vale como o run de C21 / prompt 9.3; cain e ecosystem-predictor continuam só com run de push no SHA exato"
  },
  "phases": [
   "freeze-parameters",
@@ -763,5 +907,70 @@
   "holdout_use": "nenhum",
   "cain_operational_mode": "proibido",
   "broker_or_exchange_connection": "proibida"
+ },
+ "c14_cycle2": {
+  "why": "a rc11 muda a wheel do cain: pela C14 ('cain, ecosystem-predictor'), as fases que exercitam o cain são refeitas nas três integrações; integration-crypto e integration-brasileirao nas sessões delas (avisadas com a tag, o SHA e o sha256 da wheel)",
+  "this_mission_phases": [
+   "publish-candidates",
+   "cleanroom-final",
+   "contract-revalidation",
+   "e2e",
+   "n-plus-1",
+   "isolation-ids-contradiction",
+   "idempotency-failure",
+   "windows-smoke",
+   "hosted-ci",
+   "soak",
+   "attestation"
+  ],
+  "stocks_predictor": "não muda: final_commit 6f857b2 (0.3.0rc3) e o run workflow_dispatch aceito pelo dono (IS-F004/IS-F005 (b))"
+ },
+ "cycle": {
+  "number": 2,
+  "supersedes": {
+   "file": "FROZEN_PARAMETERS_cycle1_771b8a23e9b9.json",
+   "sha256": "771b8a23e9b9bde7a0e2a92b8ae92ccc01748ac9511b787cdbafdd7fcd8a7bfd"
+  },
+  "vectors_supersede": {
+   "file": "FROZEN_VECTORS_cycle1_3ad4d197cb79.json",
+   "sha256": "3ad4d197cb79bb2f219f3dd5f1ccd25dfc45bdbde6cdbe20cb6c396f452bc066"
+  },
+  "why": "C14: a DecisionPolicy (v1 → v2) e a configuração do Stocks mudaram (parâmetro congelado); a fase inteira, novo ciclo",
+  "authorized_by": [
+   {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão integration-stocks (pergunta com opções)",
+    "words": "Aprovo o ciclo novo",
+    "question": "Aprova o ciclo novo de parâmetros congelados da integration-stocks na cain v0.4.13rc10? Com o transporte 0.1.0rc5 e a política nova (R15–R17, R04 por hipótese, custos pelo contrato), mudam as decisões esperadas congeladas. Proponho: (1) 17-collection passa de BLOCK para ALLOW; (2) as 4 fixtures de contradição viram experimentos distintos (hoje a R17 barra a 2ª por ser o mesmo); (3) vetores do N+1 recalculados para a política nova; (4) as hipóteses REAL-001/002/003 passam a ser experimentos distintos, senão a R17 barra o rodízio. Perfil de soak, dados, pisos e os demais parâmetros ficam iguais. Eu gravo o FROZEN_PARAMETERS novo e te mostro antes de rodar qualquer fase."
+   },
+   {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão integration-stocks (pergunta com opções)",
+    "words": "Hipóteses para o LLM",
+    "question": "Com a rc10, o soak do Stocks não chega ao piso da C10 de ≥ 5 propostas de LLM. Em todas as tentativas, depois da semente, o CAIN não pergunta ao modelo (NO_ELIGIBLE_HYPOTHESIS), porque toda hipótese disponível já rodou aquele mesmo experimento (R17). Isso está correto como comportamento, mas deixa o piso inatingível. Como seguir?",
+    "option_text": "No ciclo 2, 5 hipóteses de qualificação novas só para o LLM, cada uma um experimento distinto (controle negativo com semente própria), admitidas pelo operador. Exige mudar a configuração do stocks no cain (nova release rc11) e refazer a C14 das três integrações."
+   }
+  ],
+  "changes": [
+   "decision_policy v2 (rule_order R01–R17, policy_module), stocks_config com as hipóteses só para o LLM e proposal_overlays",
+   "operator_env: as cinco hipóteses do LLM admitidas pelo operador",
+   "base.framework_cycle2, repos.cain, repos.ecosystem-predictor, c14_cycle2",
+   "hosted_ci_rule com a decisão do dono no IS-F004/IS-F005",
+   "e2e/02-allow-restarts e e2e/08-next com controle negativo (sementes 2 e 8)",
+   "n1/01-next com controle negativo (semente 1); n1/17-collection → ALLOW",
+   "contradição 02–04 com controle negativo (sementes 2–4)",
+   "soak: 1º ciclo sem controle; do 2º em diante, controle negativo com semente = número do ciclo",
+   "5 hipóteses stocks:QUAL-LLM-CTRL-001..005 (sementes 9001–9005)"
+  ],
+  "identity_changed_since_cycle1": [
+   {
+    "path": "qualification/DECISIONS.json",
+    "cycle1": "a0f012fb73cb026a8484c486cd83e015c0d60ef785547bed9cd31ed0106a6358",
+    "cycle2": "2dd21000573739d720a4e09d2238728f8b3a67600d5b297fec36b5e069f2c7a3"
+   }
+  ],
+  "unchanged": "perfil de soak e pisos, dados, matriz de falhas, n_plus_1 (as_of), isolation, r8_d24, protected_set_initial, gates_required, phases, absolute e as demais chaves do ciclo 1"
  }
 }
