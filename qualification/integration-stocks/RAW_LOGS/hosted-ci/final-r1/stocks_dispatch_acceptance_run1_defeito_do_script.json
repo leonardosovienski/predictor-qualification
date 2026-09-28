@@ -1,0 +1,140 @@
+{
+ "schema": "integration-stocks/HOSTED_CI_OWNER_ACCEPTANCE/1",
+ "decision_words": "aceita o run workflow_dispatch (b) e reemite",
+ "repo": "leonardosovienski/stocks-predictor",
+ "final_commit": "6f857b232eaa63f3fccda6a16f92dbfc8983ab3b",
+ "final_run": "https://github.com/leonardosovienski/stocks-predictor/actions/runs/36363108348",
+ "base_commit": "61fc017256ffea815ae96bbe02b847dccdb395cc",
+ "base_run": "https://github.com/leonardosovienski/stocks-predictor/actions/runs/35953418753",
+ "skipped_after_gitleaks": [
+  "Scan the complete tracked tree including merged code",
+  "Prove an exempted file still detects a synthetic token"
+ ],
+ "checks": [
+  {
+   "check": "IS-F004: decisão do dono registrada (ACCEPTED_LIMITATION, palavras do dono)",
+   "ok": true,
+   "status": "ACCEPTED_LIMITATION",
+   "decision": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão",
+    "words": "aceita o run workflow_dispatch (b) e reemite",
+    "applied": "só para o stocks-predictor, o run workflow_dispatch do CI Pipeline no SHA exato do final_commit (36363108348, 6f857b2) vale como o run de C21 / prompt 9.3 e de C24.3 (f); na base, o run workflow_dispatch da Etapa A (35953418753, 61fc017), como na Etapa A",
+    "evidence": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks_dispatch_acceptance.json"
+   }
+  },
+  {
+   "check": "IS-F005: decisão do dono registrada (ACCEPTED_LIMITATION, palavras do dono)",
+   "ok": true,
+   "status": "ACCEPTED_LIMITATION",
+   "decision": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão",
+    "words": "aceita o run workflow_dispatch (b) e reemite",
+    "applied": "opção (b): aceito o run workflow_dispatch com Quality 3.13/3.14 verdes e o job secrets vermelho só pelo falso positivo pré-existente fora da branch da missão; nada mudou no stocks-predictor",
+    "evidence": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks_dispatch_acceptance.json"
+   }
+  },
+  {
+   "check": "final: CI Pipeline, workflow_dispatch, headSha == final_commit",
+   "ok": true,
+   "workflow": "CI Pipeline",
+   "event": "workflow_dispatch",
+   "head_sha": "6f857b232eaa63f3fccda6a16f92dbfc8983ab3b"
+  },
+  {
+   "check": "final: jobs Quality verdes",
+   "ok": true,
+   "quality": {
+    "Quality / Python 3.14": "success",
+    "Quality / Python 3.13": "success"
+   }
+  },
+  {
+   "check": "final: o único job não verde é secrets",
+   "ok": true,
+   "not_green": [
+    "secrets"
+   ]
+  },
+  {
+   "check": "final: gitleaks acusa exatamente 1 vazamento",
+   "ok": true,
+   "leaks_found": [
+    "1"
+   ],
+   "fingerprints": [
+    "9f7cce367817fe0f91bcac779b2abacd7005a8ce:docs/evidence/2026-09-24-prompt1-segredos.md:generic-api-key:57"
+   ]
+  },
+  {
+   "check": "final: o commit do vazamento não é ancestral do final_commit (fora da branch da missão)",
+   "ok": true,
+   "leaks": [
+    {
+     "commit": "9f7cce367817fe0f91bcac779b2abacd7005a8ce",
+     "path": "docs/evidence/2026-09-24-prompt1-segredos.md",
+     "rule": "generic-api-key",
+     "line": 57,
+     "ancestor_of_final_commit": false,
+     "remote_branches_containing": [
+      "origin/evidence/prompt1-segredos-20260924"
+     ]
+    }
+   ]
+  },
+  {
+   "check": "final: passos do job secrets (o gitleaks falhou; os passos seguintes não rodaram por isso)",
+   "ok": false,
+   "steps": [
+    {
+     "name": "Set up job",
+     "conclusion": "success"
+    },
+    {
+     "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+     "conclusion": "success"
+    },
+    {
+     "name": "Run gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e",
+     "conclusion": "failure"
+    },
+    {
+     "name": "Scan the complete tracked tree including merged code",
+     "conclusion": "skipped"
+    },
+    {
+     "name": "Prove an exempted file still detects a synthetic token",
+     "conclusion": "skipped"
+    },
+    {
+     "name": "Retain complete tree scan",
+     "conclusion": "failure"
+    },
+    {
+     "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+     "conclusion": "success"
+    },
+    {
+     "name": "Complete job",
+     "conclusion": "success"
+    }
+   ]
+  },
+  {
+   "check": "base: run workflow_dispatch da Etapa A no SHA exato, todos os jobs verdes",
+   "ok": true,
+   "jobs": {
+    "Quality / Python 3.14": "success",
+    "secrets": "success",
+    "Quality / Python 3.13": "success"
+   },
+   "url": "https://github.com/leonardosovienski/stocks-predictor/actions/runs/35953418753"
+  }
+ ],
+ "passed": 8,
+ "failed": 1,
+ "accepted": false
+}

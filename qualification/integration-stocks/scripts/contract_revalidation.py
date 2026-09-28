@@ -15,6 +15,7 @@ Adaptado de qualification/integration-crypto/scripts/contract_revalidation.py (d
 As partes (c) e (d) rodam no runtime suportado (cleanroom_final.sh e contract_d.py).
 
 Uso: python contract_revalidation.py <clone do stocks-predictor> <final_commit> <qualification/integration-stocks> <out.json>
+     [<stocks_dispatch_acceptance.json>]   (reemissão 1: decisão do dono sobre IS-F004/IS-F005, opção b)
 """
 
 from __future__ import annotations
@@ -120,7 +121,18 @@ def main() -> int:
                                           "--json", "jobs"], capture_output=True, text=True, check=True).stdout)["jobs"]
         detail.append(r | {"jobs": {j["name"]: j["conclusion"] for j in jobs}})
     push_green = [r for r in detail if r["event"] == "push" and r["conclusion"] == "success"]
-    check("(f) CI of the domain green on the exact final commit (push run, prompt 9.3)", bool(push_green), runs=detail)
+    accepted = None
+    if len(sys.argv) > 5:
+        # decisão do dono (IS-F004/IS-F005, opção b): o run workflow_dispatch no SHA exato vale, conferido por
+        # scripts/hosted_ci_owner_acceptance.py
+        acc = json.loads(Path(sys.argv[5]).read_text(encoding="utf-8"))
+        run_id = int(acc["final_run"].rsplit("/", 1)[1])
+        accepted = (acc["accepted"] and acc["final_commit"] == final
+                    and any(r["databaseId"] == run_id and r["event"] == "workflow_dispatch" for r in detail))
+    check("(f) CI of the domain on the exact final commit: green push run (prompt 9.3) or the workflow_dispatch run "
+          "accepted by the owner (IS-F004/IS-F005 b)", bool(push_green) or bool(accepted), runs=detail,
+          via="push" if push_green else ("owner decision IS-F004/IS-F005 (b)" if accepted else None),
+          acceptance=sys.argv[5] if len(sys.argv) > 5 else None)
     doc = {"schema": "integration-stocks/CONTRACT_REVALIDATION_STATIC/1", "stage_a_final_commit": STAGE_A,
            "final_commit": final, "authorized_outside_adapter_paths": {
                "C24.3(a)": "versão pré-release (pyproject version, linha do projeto no uv.lock)",

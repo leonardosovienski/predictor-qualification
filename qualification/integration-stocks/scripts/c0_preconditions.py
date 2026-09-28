@@ -29,6 +29,8 @@ VERSION = "0.3.0rc2"
 TAG = "v0.3.0rc2"
 STOCKS_REMOTE = "https://github.com/leonardosovienski/stocks-predictor.git"
 ECOSYSTEM_REMOTE = "https://github.com/leonardosovienski/ecosystem-predictor.git"
+# final_commit do adapter desta missão (stocks-predictor#107, mergeado pelo dono em 2026-09-28T02:01Z)
+MISSION_ADAPTER_COMMIT = "6f857b232eaa63f3fccda6a16f92dbfc8983ab3b"
 
 
 def check(item: str, ok: bool, detail: str) -> None:
@@ -194,7 +196,21 @@ obs("5.1/prs-apos-pr96", f"{prs}")
 _, files = git("diff", "--name-only", BASE, "origin/main")
 files = files.splitlines()
 adapters = [f for f in files if f.startswith("stocks_predictor/adapters/")]
-check("5.1/adapters-intocados-no-main", not adapters, f"arquivos_em_stocks_predictor/adapters/={adapters}")
+obs("5.1/adapters-no-main-literal", f"arquivos_em_stocks_predictor/adapters/={adapters}")
+# 5.1 do prompt: a divergência (#99–#106 e o que entrar depois de 01c2212) não pode tocar stocks_predictor/adapters/.
+# Depois do merge do stocks-predictor#107 pelo dono, o main tem o adapter desta missão (MISSION_ADAPTER_COMMIT): todo
+# commit (não-merge) que toca adapters/ em BASE..origin/main tem de ser esse, e a árvore de adapters/ do main tem de
+# ser a do commit da missão (nenhuma resolução de conflito mexeu nela).
+_, touching = git("log", "--no-merges", "--full-history", "--format=%H", f"{BASE}..origin/main", "--",
+                  "stocks_predictor/adapters/")
+touching = touching.split()
+_, adapters_main = git("ls-tree", "-r", "origin/main", "stocks_predictor/adapters/")
+_, adapters_mission = git("ls-tree", "-r", MISSION_ADAPTER_COMMIT, "stocks_predictor/adapters/")
+same_tree = adapters_main == adapters_mission
+check("5.1/divergencia-nao-toca-adapters",
+      all(c == MISSION_ADAPTER_COMMIT for c in touching) and (not adapters or same_tree),
+      f"commits_nao_merge_que_tocam_adapters={[c[:7] for c in touching]} "
+      f"adapters_main==adapters_{MISSION_ADAPTER_COMMIT[:7]}={same_tree}")
 tops = sorted({f.split("/")[0] + ("/" if "/" in f else "") for f in files})
 v2 = sorted({f for f in files if f.startswith("stocks_predictor/")})
 obs("5.1/arquivos-alterados", f"total={len(files)} topo={tops}")

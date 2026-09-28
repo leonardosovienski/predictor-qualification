@@ -24,7 +24,8 @@
     }
    ],
    "status": "OPEN",
-   "owner_decision": "nenhuma exigida para esta missão (D-24); opcional: numerar o main com versão própria"
+   "owner_decision": "nenhuma exigida para esta missão (D-24); opcional: numerar o main com versão própria",
+   "update_2026_09_28": "O dono mergeou o stocks-predictor#107 (48088bd), resolvendo o conflito com um merge do main na branch (1dad4d8). O main agora declara 0.3.0rc3, com o código do v2 (#99–#106) e o selo R8 combinado. A wheel rc3 publicada é 6f857b2. É a mesma situação do achado, agora na rc3; o runtime qualificado continua fixado pela wheel."
   },
   {
    "id": "IS-F002",
@@ -76,8 +77,16 @@
      "sha256": "771b8a23e9b9bde7a0e2a92b8ae92ccc01748ac9511b787cdbafdd7fcd8a7bfd"
     }
    ],
-   "status": "OPEN_AWAITING_OWNER",
-   "owner_decision": "aceitar, só para o stocks-predictor, o run workflow_dispatch do CI Pipeline no SHA exato do final_commit como o run de C21 (precedente da Etapa A), ou indicar outro caminho"
+   "status": "ACCEPTED_LIMITATION",
+   "owner_decision": "aceitar, só para o stocks-predictor, o run workflow_dispatch do CI Pipeline no SHA exato do final_commit como o run de C21 (precedente da Etapa A), ou indicar outro caminho",
+   "owner_decision_taken": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão",
+    "words": "aceita o run workflow_dispatch (b) e reemite",
+    "applied": "só para o stocks-predictor, o run workflow_dispatch do CI Pipeline no SHA exato do final_commit (36363108348, 6f857b2) vale como o run de C21 / prompt 9.3 e de C24.3 (f); na base, o run workflow_dispatch da Etapa A (35953418753, 61fc017), como na Etapa A",
+    "evidence": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks_dispatch_acceptance.json"
+   }
   },
   {
    "id": "IS-F005",
@@ -95,8 +104,17 @@
      "sha256": "6e3bf10e3799a22322211c75dda36fd218e7702ef1de05e57bf075afe8b8a5a8"
     }
    ],
-   "status": "OPEN_AWAITING_OWNER",
-   "owner_decision": "escolher: (a) autorizar, como exceção explícita além da D-24 (4), acrescentar ao .gitleaksignore da branch do adapter a fingerprint 28f17d2…:docs/evidence/2026-09-24-prompt1-segredos.md:generic-api-key:57 (arquivo fora dos adapter_paths; muda o selo R8 ⇒ nova rc e C14 das fases do Stocks); ou (b) aceitar como CI do final_commit do stocks-predictor o run workflow_dispatch com Quality verde e secrets vermelho só por este falso positivo do main; ou (c) outro caminho"
+   "status": "ACCEPTED_LIMITATION",
+   "owner_decision": "escolher: (a) autorizar, como exceção explícita além da D-24 (4), acrescentar ao .gitleaksignore da branch do adapter a fingerprint 28f17d2…:docs/evidence/2026-09-24-prompt1-segredos.md:generic-api-key:57 (arquivo fora dos adapter_paths; muda o selo R8 ⇒ nova rc e C14 das fases do Stocks); ou (b) aceitar como CI do final_commit do stocks-predictor o run workflow_dispatch com Quality verde e secrets vermelho só por este falso positivo do main; ou (c) outro caminho",
+   "owner_decision_taken": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão",
+    "words": "aceita o run workflow_dispatch (b) e reemite",
+    "applied": "opção (b): aceito o run workflow_dispatch com Quality 3.13/3.14 verdes e o job secrets vermelho só pelo falso positivo pré-existente fora da branch da missão; nada mudou no stocks-predictor",
+    "evidence": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks_dispatch_acceptance.json"
+   },
+   "correction_2026_09_28": "O commit acusado pelo gitleaks é 9f7cce367817fe0f91bcac779b2abacd7005a8ce, da branch evidence/prompt1-segredos-20260924, não o 28f17d2 do main. A fingerprint é 9f7cce36…:docs/evidence/2026-09-24-prompt1-segredos.md:generic-api-key:57. O 28f17d2 (PR #99) tem o mesmo conteúdo no main. Nenhum dos dois é ancestral de 6f857b2. O registro anterior também omitia que, com o gitleaks vermelho, os passos seguintes do job secrets ficaram pulados: a varredura da árvore completa do commit com o .gitleaks.toml do repo e o controle do token sintético. O upload final falhou por falta dos arquivos deles. Esses dois passos foram reproduzidos localmente, como diagnóstico e não como CI hospedado, com o mesmo gitleaks 8.24.3 (RAW_LOGS/hosted-ci/final-r1/tree_scan_local.log)."
   },
   {
    "id": "IS-F006",
@@ -122,8 +140,17 @@
      "sha256": "112d18a35c7b3abfc53e67594d269d2c9ea44521edf54cd247f54cc23bc801f7"
     }
    ],
-   "status": "OPEN_AWAITING_OWNER",
-   "owner_decision": "escolher: (a) aceitar que a reemissão C14 prevista em c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ e encadeados por supersedes_sha256, satisfaz a C15.1 para este item (PROTECTED_ARTIFACTS_UNCHANGED reavaliado na reemissão desta attestation); ou (b) outro caminho"
+   "status": "ACCEPTED_LIMITATION",
+   "owner_decision": "escolher: (a) aceitar que a reemissão C14 prevista em c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ e encadeados por supersedes_sha256, satisfaz a C15.1 para este item (PROTECTED_ARTIFACTS_UNCHANGED reavaliado na reemissão desta attestation); ou (b) outro caminho",
+   "owner_decision_taken": {
+    "date": "2026-09-28",
+    "by": "dono",
+    "channel": "chat da sessão (pergunta com opções)",
+    "words": "(a) Aceitar a reemissão C14",
+    "option_text": "Decido que a reemissão prevista em c14_integration_crypto, com os bytes protegidos preservados e encadeados, satisfaz a C15.1 para esse item. A attestation reemitida sai com 30/30 gates PASS.",
+    "applied": "PROTECTED_ARTIFACTS_UNCHANGED aceita o item qualification/integration-crypto/QUALIFICATION_ATTESTATION.json só com a supersessão conferida: o _superseded_112d18a35c7b.json tem o sha256 esperado (112d18a3…), e o supersedes_sha256 da attestation atual é ele. Todo outro item alterado continua FAIL.",
+    "evidence": "qualification/integration-stocks/RAW_LOGS/protected-r1/protected_check.json"
+   }
   },
   {
    "id": "IS-F007",

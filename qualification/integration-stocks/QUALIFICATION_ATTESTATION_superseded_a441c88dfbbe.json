@@ -3,7 +3,7 @@
   "stage": "B",
   "branch": "integration-stocks",
   "envelope_version": "V2",
-  "supersedes_sha256": "a441c88dfbbeb20afdd09db1dc4d7b3cf1016c06d1b623926ebc6078ab88d516",
+  "supersedes_sha256": null,
   "common_baseline_id": "STACK_BASELINE_V2.0",
   "common_baseline_sha256": "293820ee6544876725f9bfe34bcabec45d5377360cfebd77b792719cd19038da",
   "common_core_version": "2.3",
@@ -19,11 +19,11 @@
       "attestation_sha256": "e0f2e28ddd0c1887faaba3f409dacc3c49de9854eed38ba286ed3cc501f99c2e",
       "contract_sha256": "76fa8227dd83eb9a9e74697caa73e4d61c68d207f1df5f94135c76508192d66c",
       "revalidation": {
-        "status": "PASS",
+        "status": "NOT_RUN",
         "evidence": [
           {
-            "file": "qualification/integration-stocks/RAW_LOGS/contract-revalidation-r1/static_checks.json",
-            "sha256": "bc8600e5a421b85edd1a864684a00c1adf9be6a8c62e7ddd3c75eba88862cb96"
+            "file": "qualification/integration-stocks/RAW_LOGS/contract-revalidation/static_checks.json",
+            "sha256": "63313d1d2bda0a5d58046331545c315a6d4888e27f71a134b2725e133f5d741f"
           },
           {
             "file": "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/conformance.junit.xml",
@@ -193,14 +193,14 @@
   "shared_dependency_verdicts": [],
   "gates": {
     "BLOCKERS_ZERO": {
-      "status": "PASS",
+      "status": "FAIL",
       "evidence": [
         {
           "file": "qualification/integration-stocks/FINDINGS.json",
-          "sha256": "ccf23e33c657aa9138bb55d00fdfc20057075f5a5aa0bdcb786636fb5b81ecd2"
+          "sha256": "6dceec2d346ceb9c0e47a3693f3a72bbb4a21c84447febf6ff25ce9111fbf527"
         }
       ],
-      "note": "nenhum P0/P1 aberto"
+      "note": "P0/P1 abertos: IS-F005"
     },
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
@@ -295,46 +295,30 @@
       "note": "só wheels publicadas, venvs limpos fora dos checkouts"
     },
     "HOSTED_CI": {
-      "status": "PASS",
+      "status": "NOT_RUN",
       "evidence": [
-        {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks_dispatch_acceptance.json",
-          "sha256": "ffd9b2bdb6374d7906c2fb5f85b134a9203612ead920c1a7a6479dd8e89e23d5"
-        },
         {
           "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/collection-1/HOSTED_CI_SUMMARY.json",
           "sha256": "5a655f9608a355a9b5fce90fcdda127fbad523893b78779b96abec1afd940e54"
         },
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/HOSTED_CI_SUMMARY.json",
+          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final/HOSTED_CI_SUMMARY.json",
           "sha256": "5a655f9608a355a9b5fce90fcdda127fbad523893b78779b96abec1afd940e54"
         },
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks-predictor_run36363108348.json",
+          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348.json",
           "sha256": "43f10ba3a7b5565a3cfb6f1f5722a10f91016112cc61d0ce5f3564c32df0346f"
         },
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks-predictor_run35953418753.json",
-          "sha256": "3f5870b1f5f6b4d89cc4343cb97051a511bafc534be97f99660ef9b80797a9d4"
-        },
-        {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks-predictor_run36363108348_secrets_job.log",
-          "sha256": "70e468aeb5b5c3dff899510fbb7a239fd78fca4044bbbc360ae53c87fa499308"
-        },
-        {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/secrets_job_steps.json",
-          "sha256": "3fbc1a88e2d315e233a8d59b610d0b1a39e99db79b1d8e9b76d02b89fe5ee1f8"
-        },
-        {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/tree_scan_local.log",
-          "sha256": "39152989343430f6bbff2e97a108d3b83dab2db9ee1d0335d76e10c2016f9119"
+          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348_secrets_job.log",
+          "sha256": "6e3bf10e3799a22322211c75dda36fd218e7702ef1de05e57bf075afe8b8a5a8"
         },
         {
           "file": "qualification/integration-stocks/HOSTED_CI_REPORT.md",
-          "sha256": "c4a0dd218f1009458b9cf450d5e36534b7c812749c440cd4d31c0d4c37ed02fe"
+          "sha256": "c51af57275b5c7022bf31f0a641077a355cc96698001b87cabc743fec0de637c"
         }
       ],
-      "note": "cain deccaaa e ecosystem 1304b20: run de push verde no SHA exato; stocks-predictor 6f857b2: run workflow_dispatch 36363108348 no SHA exato aceito pelo dono (\"aceita o run workflow_dispatch (b) e reemite\", IS-F004/IS-F005 ACCEPTED_LIMITATION), conferido: Quality 3.13/3.14 verdes, secrets vermelho só por 1 vazamento de um commit fora da branch da missão; com o gitleaks vermelho, a varredura da árvore e o controle não rodaram no Actions e foram reproduzidos localmente como diagnóstico (PASS); base 61fc017: run workflow_dispatch da Etapa A, verde"
+      "note": "BLOCKED: cain deccaaa e ecosystem 1304b20 com run de push verde no SHA exato; stocks-predictor 6f857b2 sem run de push (ci.yml só em main: IS-F004) e o run workflow_dispatch 36363108348 no SHA exato com Quality 3.13/3.14 verdes e o job secrets vermelho por falso positivo pré-existente no histórico do main (IS-F005); decisão do dono pendente"
     },
     "E2E": {
       "status": "PASS",
@@ -475,10 +459,10 @@
       "note": "canário FUTURE_CANARY_STOCKS_INTEGRATION_001 recusado pelo domínio; token e instantes pós-cutoff ausentes da memória do CAIN"
     },
     "PROTECTED_ARTIFACTS_UNCHANGED": {
-      "status": "PASS",
+      "status": "FAIL",
       "evidence": [
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/protected-r1/protected_check.json",
+          "file": "qualification/integration-stocks/RAW_LOGS/protected/protected_check.json",
           "sha256": "c4de734f1ebe4dbdc809a99d7bdbc1979cdfee91d2d67202cb3825b55085ee1f"
         },
         {
@@ -486,15 +470,11 @@
           "sha256": "2f47efe48d27f732ef39509c554dc97f892cfdf9526ab325968d2ddc8a5bb941"
         },
         {
-          "file": "qualification/integration-stocks/FINDINGS.json",
-          "sha256": "ccf23e33c657aa9138bb55d00fdfc20057075f5a5aa0bdcb786636fb5b81ecd2"
-        },
-        {
           "file": "qualification/integration-stocks/PROTECTED_ARTIFACT_REPORT.md",
-          "sha256": "e00947897ce2e509825dbf20f48b44b2c140433efd4aa1fa5defeb89a7f86828"
+          "sha256": "a6b5819b06f49ea5a82059ad4ad5f669a75f7e23245533b9afef1ef21e308c29"
         }
       ],
-      "note": "3386 de 3387 itens iguais; alterados: qualification/integration-crypto/QUALIFICATION_ATTESTATION.json. A attestation da integration-crypto foi reemitida pela C14 prevista em FROZEN_PARAMETERS.c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ e encadeados por supersedes_sha256 (conferido no protected_check.json); aceito pela decisão do dono sobre IS-F006 (opção a)"
+      "note": "3386 de 3387 itens iguais; alterados: qualification/integration-crypto/QUALIFICATION_ATTESTATION.json. A attestation da integration-crypto foi reemitida pela C14 prevista em FROZEN_PARAMETERS.c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ e encadeados por supersedes_sha256; FAIL pela letra da C15.1, decisão do dono pendente (IS-F006)"
     },
     "SOAK": {
       "status": "PASS",
@@ -544,8 +524,8 @@
       "status": "PASS",
       "evidence": [
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/c0/c0_preflight_81f539c.log",
-          "sha256": "895cc0ec169d481e6121fd2760c9c9313b37b8dbd04387a9af54e8e60309fded"
+          "file": "qualification/integration-stocks/RAW_LOGS/c0/c0_preflight_fd1fb5e.log",
+          "sha256": "84ee90b66051976bc65f999d44b2d66307395b8ea485a51e6234b951d85be0aa"
         },
         {
           "file": "qualification/shared/SHARED_ISSUES.json",
@@ -559,7 +539,7 @@
       "evidence": [
         {
           "file": "qualification/integration-stocks/EVIDENCE_NUMBERS.json",
-          "sha256": "d9521b2b8cc8d7f0468d05e28321bdc2cbeebbe1d39566856a40cb3bb85aa485"
+          "sha256": "7a665df52cad45510b8dc58a153fd5318a243e08cc79c566e636e0e492787b86"
         },
         {
           "file": "qualification/integration-stocks/scripts/evidence_numbers.py",
@@ -567,7 +547,7 @@
         },
         {
           "file": "qualification/integration-stocks/scripts/render_reports.py",
-          "sha256": "f6f71fe2572cef1d720a3c38ccd36ce6ab6d37a139f3e5ad675d6b5a4bd17048"
+          "sha256": "78b7921b8c5a8887c7d378e9877f5b540223ca7e7137fca339cd8ca50bc96930"
         },
         {
           "file": "qualification/integration-stocks/RAW_LOGS/final-wheels/final_wheels_check_run36365355063.json",
@@ -580,15 +560,11 @@
       "status": "PASS",
       "evidence": [
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/secrets-r1/secrets_scan.json",
-          "sha256": "dfe44fc57fd31be9e1beed40577cdf395900ebdd794e63ed0eccc682d22a7dc5"
-        },
-        {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/tree_scan_local.log",
-          "sha256": "39152989343430f6bbff2e97a108d3b83dab2db9ee1d0335d76e10c2016f9119"
+          "file": "qualification/integration-stocks/RAW_LOGS/secrets/secrets_scan.json",
+          "sha256": "031f3fbde9eb2a24e98b605d40f64b3ba3877960fe2d2a459ead77308db1b562"
         }
       ],
-      "note": "0 achados nos diffs da missão e nos arquivos da missão; o job secrets do CI do stocks-predictor acusa só 1 vazamento de um commit fora da branch da missão (IS-F005); a árvore do final_commit com o .gitleaks.toml do repo está limpa (reprodução local do passo pulado)"
+      "note": "0 achados nos diffs da missão e nos arquivos da missão; o job secrets do CI do stocks-predictor acusa só o falso positivo do main (IS-F005), fora desta branch"
     },
     "CAPITAL_FORBIDDEN": {
       "status": "PASS",
@@ -755,11 +731,11 @@
       "note": "SUPPORTED × REFUTED → REQUIRE_HUMAN; os dois fatos preservados; sem maioria"
     },
     "DOMAIN_CONTRACTS_PRESERVED": {
-      "status": "PASS",
+      "status": "NOT_RUN",
       "evidence": [
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/contract-revalidation-r1/static_checks.json",
-          "sha256": "bc8600e5a421b85edd1a864684a00c1adf9be6a8c62e7ddd3c75eba88862cb96"
+          "file": "qualification/integration-stocks/RAW_LOGS/contract-revalidation/static_checks.json",
+          "sha256": "63313d1d2bda0a5d58046331545c315a6d4888e27f71a134b2725e133f5d741f"
         },
         {
           "file": "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/conformance.junit.xml",
@@ -770,28 +746,24 @@
           "sha256": "390e243d9dca7ca3212ebe83218458154386ec6bca67776163d1a293a3cd2266"
         },
         {
-          "file": "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks_dispatch_acceptance.json",
-          "sha256": "ffd9b2bdb6374d7906c2fb5f85b134a9203612ead920c1a7a6479dd8e89e23d5"
-        },
-        {
           "file": "qualification/integration-stocks/CONTRACT_REVALIDATION_REPORT.md",
-          "sha256": "4237b56f68ec3b10a63b25daab3de98f53b3531f1e719a2ecb0e607de6179e70"
+          "sha256": "6fb47c16616e150e57d622bb4945c03fa8831036735bc1c60e6fe6169ba6285f"
         }
       ],
-      "note": "C24.3 (a)–(f) verdes; (f) pelo run workflow_dispatch aceito pelo dono (IS-F004/IS-F005 b)"
+      "note": "BLOCKED: (a), (b), (c), (d) e (e) verdes; (f) CI do domínio no SHA exato do final_commit sem run que conte: nenhum run de push (IS-F004) e o run workflow_dispatch tem o job secrets vermelho por falso positivo pré-existente no histórico do main (IS-F005); decisão do dono pendente"
     }
   },
   "findings_file": {
     "file": "qualification/integration-stocks/FINDINGS.json",
-    "sha256": "ccf23e33c657aa9138bb55d00fdfc20057075f5a5aa0bdcb786636fb5b81ecd2"
+    "sha256": "6dceec2d346ceb9c0e47a3693f3a72bbb4a21c84447febf6ff25ce9111fbf527"
   },
   "counts": {
     "P0": 0,
-    "P1": 0,
-    "P2": 4
+    "P1": 1,
+    "P2": 6
   },
   "capital_permission": false,
   "training_started": false,
-  "generated_at": "2026-09-28T02:38:26+00:00",
-  "result": "QUALIFIED"
+  "generated_at": "2026-09-28T01:48:39+00:00",
+  "result": "NOT_QUALIFIED"
 }

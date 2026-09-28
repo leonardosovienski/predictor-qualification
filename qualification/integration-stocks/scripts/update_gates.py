@@ -5,19 +5,32 @@ ambientes, estado + evidências + nota por gate). Aqui cada fase do runtime apli
 que cada ATTESTATION_PARTIAL_<fase>.json registre o ledger daquela fase (C8). As fases do runtime rodaram num só run
 do GitHub Actions (Linux primário: todas; Windows secundário: E2E + restart).
 
+Reemissão 1 (2026-09-28): decisão do dono sobre IS-F004/IS-F005, opção (b) ("aceita o run workflow_dispatch (b) e
+reemite"). HOSTED_CI e C24.3 (f) passam a ler a conferência mecânica dessa decisão; as evidências novas ficam em
+diretórios com sufixo -r1, e os raw logs citados pela attestation anterior não mudam. A attestation anterior fica
+preservada em QUALIFICATION_ATTESTATION_superseded_<sha12>.json (SUPERSEDED).
+
 Uso: python update_gates.py <fase>   (aplica, cumulativamente, todas as fases até ela, na ordem de PHASES)
 """
 
+import hashlib
 import json
 import re
 import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
 M = "qualification/integration-stocks"
 RUN = "run36365355063"
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
 W = f"{M}/RAW_LOGS/runtime/{RUN}-windows"
 FM = f"{R}/failure-matrix"
-HOSTED = f"{M}/RAW_LOGS/hosted-ci/final"
+HOSTED = f"{M}/RAW_LOGS/hosted-ci/final-r1"
+STATIC = f"{M}/RAW_LOGS/contract-revalidation-r1/static_checks.json"
+ACCEPTANCE = f"{HOSTED}/stocks_dispatch_acceptance.json"
+PREFLIGHT = f"{M}/RAW_LOGS/c0/c0_preflight_81f539c.log"
+SECRETS = f"{M}/RAW_LOGS/secrets-r1/secrets_scan.json"
+SUPERSEDED = "QUALIFICATION_ATTESTATION_superseded_a441c88dfbbe.json"
 
 
 def p(status, ev, note):
@@ -57,26 +70,54 @@ def cleanroom_final(g, gates):
 
 
 def contract_revalidation(g, gates):
-    blocked = ("BLOCKED: (a), (b), (c), (d) e (e) verdes; (f) CI do domínio no SHA exato do final_commit sem run que "
-               "conte: nenhum run de push (IS-F004) e o run workflow_dispatch tem o job secrets vermelho por falso "
-               "positivo pré-existente no histórico do main (IS-F005); decisão do dono pendente")
-    ev = [f"{M}/RAW_LOGS/contract-revalidation/static_checks.json", f"{R}/cleanroom-final/conformance.junit.xml",
-          f"{R}/contract-revalidation/SUMMARY.json"]
-    gates["DOMAIN_CONTRACTS_PRESERVED"] = p("NOT_RUN", ev + [f"{M}/CONTRACT_REVALIDATION_REPORT.md"], blocked)
-    g["domain_revalidation"] = {"status": "NOT_RUN", "evidence": ev}
-    prot = json.load(open(f"{M}/RAW_LOGS/protected/protected_check.json", encoding="utf-8"))
+    static = json.load(open(STATIC, encoding="utf-8"))
+    d = json.load(open(f"{R}/contract-revalidation/SUMMARY.json", encoding="utf-8"))
+    tree = ET.parse(f"{R}/cleanroom-final/conformance.junit.xml").getroot()
+    suites = [tree] if tree.tag == "testsuite" else list(tree.iter("testsuite"))
+    conf_ok = (sum(int(s.get("tests", 0)) for s in suites) > 0
+               and sum(int(s.get(k, 0)) for s in suites for k in ("failures", "errors")) == 0)
+    ev = [STATIC, f"{R}/cleanroom-final/conformance.junit.xml", f"{R}/contract-revalidation/SUMMARY.json"]
+    f_check = next(c for c in static["checks"] if c["check"].startswith("(f)"))
+    ok = static["failed"] == 0 and d["failed"] == 0 and conf_ok
+    via = f_check.get("via")
+    if ok:
+        note = ("C24.3 (a)–(f) verdes; (f) " + ("pelo run de push" if via == "push" else
+                                                "pelo run workflow_dispatch aceito pelo dono (IS-F004/IS-F005 b)"))
+        status = "PASS"
+    elif [c for c in static["checks"] if not c["ok"]] == [f_check] and d["failed"] == 0 and conf_ok:
+        note = ("BLOCKED: (a)–(e) verdes; (f) sem run que conte no SHA exato do final_commit (IS-F004/IS-F005); "
+                "decisão do dono pendente")
+        status = "NOT_RUN"
+    else:
+        note, status = "C24.3 com falha: ver static_checks.json e SUMMARY.json", "FAIL"
+    gates["DOMAIN_CONTRACTS_PRESERVED"] = p(status, ev + ([ACCEPTANCE] if via and via != "push" else [])
+                                            + [f"{M}/CONTRACT_REVALIDATION_REPORT.md"], note)
+    g["domain_revalidation"] = {"status": status, "evidence": ev}
+    prot = json.load(open(f"{M}/RAW_LOGS/protected-r1/protected_check.json", encoding="utf-8"))
     changed = [c for d in prot["domains"].values() for c in d["changed"]] + [s["path"] for s in prot["shared"]
                                                                              if not s["ok"]]
     note = (f"conjunto protegido do truth-map ({prot['items_total']} itens) igual no final_commit do stocks e no "
             "checkout do predictor-qualification")
+    status = "PASS"
     if changed:
+        # decisão do dono sobre IS-F006 (opção a): vale só para attestation reemitida com a supersessão conferida
+        f006 = {x["id"]: x for x in json.load(open(f"{M}/FINDINGS.json", encoding="utf-8"))["findings"]}["IS-F006"]
+        decided = f006["status"] == "ACCEPTED_LIMITATION" and "owner_decision_taken" in f006
+        chained = {s["path"] for s in prot["shared"] if not s["ok"] and "supersession" in s
+                   and s["supersession"]["superseded_file_sha256"] == s["expected"]
+                   and s["supersession"]["current_supersedes_sha256"] == s["expected"]}
+        accepted = decided and set(changed) <= chained
+        status = "PASS" if accepted else "FAIL"
         note = (f"{prot['items_total'] - len(changed)} de {prot['items_total']} itens iguais; alterados: "
                 + ", ".join(changed) + ". A attestation da integration-crypto foi reemitida pela C14 prevista em "
                 "FROZEN_PARAMETERS.c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ "
-                "e encadeados por supersedes_sha256; FAIL pela letra da C15.1, decisão do dono pendente (IS-F006)")
-    gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p("FAIL" if changed else "PASS",
-                                               [f"{M}/RAW_LOGS/protected/protected_check.json",
-                                                f"{M}/PROTECTED_SET.json", f"{M}/PROTECTED_ARTIFACT_REPORT.md"], note)
+                "e encadeados por supersedes_sha256 (conferido no protected_check.json); "
+                + ("aceito pela decisão do dono sobre IS-F006 (opção a)" if accepted else
+                   "FAIL pela letra da C15.1" + ("" if decided else ", decisão do dono pendente (IS-F006)")))
+    gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p(status,
+                                               [f"{M}/RAW_LOGS/protected-r1/protected_check.json",
+                                                f"{M}/PROTECTED_SET.json", f"{M}/FINDINGS.json",
+                                                f"{M}/PROTECTED_ARTIFACT_REPORT.md"], note)
 
 
 def e2e(g, gates):
@@ -152,10 +193,24 @@ def hosted_ci(g, gates):
     finals = {s["repo"].split("/")[1]: s["ok"] for s in hosted if s["role"] == "final"}
     others = all(ok for repo, ok in finals.items() if repo != "stocks-predictor")
     ev = [f"{M}/RAW_LOGS/hosted-ci/collection-1/HOSTED_CI_SUMMARY.json", f"{HOSTED}/HOSTED_CI_SUMMARY.json",
-          f"{M}/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348.json",
-          f"{M}/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348_secrets_job.log", f"{M}/HOSTED_CI_REPORT.md"]
+          f"{HOSTED}/stocks-predictor_run36363108348.json", f"{HOSTED}/stocks-predictor_run35953418753.json",
+          f"{HOSTED}/stocks-predictor_run36363108348_secrets_job.log", f"{HOSTED}/secrets_job_steps.json",
+          f"{HOSTED}/tree_scan_local.log", f"{M}/HOSTED_CI_REPORT.md"]
+    acc = json.load(open(ACCEPTANCE, encoding="utf-8")) if Path(ACCEPTANCE).is_file() else None
     if finals.get("stocks-predictor"):
         gates["HOSTED_CI"] = p("PASS" if others else "FAIL", ev, "runs de push nos SHAs exatos dos final_commits")
+    elif acc is not None and acc["accepted"]:
+        tree_ok = "RESULTADO PASS" in open(f"{HOSTED}/tree_scan_local.log", encoding="utf-8").read()
+        gates["HOSTED_CI"] = p(
+            "PASS" if others else "FAIL", [ACCEPTANCE] + ev,
+            "cain deccaaa e ecosystem 1304b20: run de push verde no SHA exato"
+            + ("" if others else " (NÃO: ver resumo)")
+            + "; stocks-predictor 6f857b2: run workflow_dispatch 36363108348 no SHA exato aceito pelo dono "
+            "(\"aceita o run workflow_dispatch (b) e reemite\", IS-F004/IS-F005 ACCEPTED_LIMITATION), conferido: Quality "
+            "3.13/3.14 verdes, secrets vermelho só por 1 vazamento de um commit fora da branch da missão; com o "
+            "gitleaks vermelho, a varredura da árvore e o controle não rodaram no Actions e foram reproduzidos "
+            "localmente como diagnóstico" + (" (PASS)" if tree_ok else " (FALHA)")
+            + "; base 61fc017: run workflow_dispatch da Etapa A, verde")
     else:
         gates["HOSTED_CI"] = p("NOT_RUN" if others else "FAIL", ev,
                                ("BLOCKED: " if others else "")
@@ -174,12 +229,15 @@ def soak(g, gates):
 
 
 def attestation(g, gates):
-    gates["SHARED_DEPENDENCY_CLEAR"] = p("PASS", [f"{M}/RAW_LOGS/c0/c0_preflight_fd1fb5e.log",
-                                                  "qualification/shared/SHARED_ISSUES.json"],
+    gates["SHARED_DEPENDENCY_CLEAR"] = p("PASS", [PREFLIGHT, "qualification/shared/SHARED_ISSUES.json"],
                                          "nenhum issue bloqueante para as wheels usadas (Ops 4.2.2rc1, Core 3.2.1)")
-    gates["SECRETS_CLEAN"] = p("PASS", [f"{M}/RAW_LOGS/secrets/secrets_scan.json"],
-                               "0 achados nos diffs da missão e nos arquivos da missão; o job secrets do CI do "
-                               "stocks-predictor acusa só o falso positivo do main (IS-F005), fora desta branch")
+    scan = json.load(open(SECRETS, encoding="utf-8"))
+    gates["SECRETS_CLEAN"] = p("PASS" if scan["clean"] else "FAIL", [SECRETS, f"{HOSTED}/tree_scan_local.log"],
+                               f"{len(scan['findings'])} achados nos diffs da missão e nos arquivos da missão; o job "
+                               "secrets do CI do stocks-predictor acusa só 1 vazamento de um commit fora da branch da "
+                               "missão (IS-F005); a árvore do final_commit com o .gitleaks.toml do repo está limpa "
+                               "(reprodução local do passo pulado)")
+    g["supersedes_sha256"] = hashlib.sha256(Path(M, SUPERSEDED).read_bytes()).hexdigest()
     gates["EVIDENCE_CONSISTENCY"] = p("PASS", [f"{M}/EVIDENCE_NUMBERS.json", f"{M}/scripts/evidence_numbers.py",
                                                f"{M}/scripts/render_reports.py",
                                                f"{M}/RAW_LOGS/final-wheels/final_wheels_check_{RUN}.json"],

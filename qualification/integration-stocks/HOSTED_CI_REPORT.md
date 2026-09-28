@@ -1,6 +1,6 @@
 # integration-stocks — HOSTED_CI_REPORT
 
-Gate `HOSTED_CI` (C21; prompt da sessão 9.3: só o run de **push** cujo SHA é exatamente o commit vale). Coletado por `scripts/hosted_ci.py` (`qualification/integration-stocks/RAW_LOGS/hosted-ci/final/HOSTED_CI_SUMMARY.json` (sha256 `5a655f9608a355a9…`)). Core e Ops não mudaram (CI da Etapa A, HERDADO).
+Gate `HOSTED_CI` (C21; prompt da sessão 9.3: só o run de **push** cujo SHA é exatamente o commit vale). Coletado por `scripts/hosted_ci.py` (`qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/HOSTED_CI_SUMMARY.json` (sha256 `5a655f9608a355a9…`)). Core e Ops não mudaram (CI da Etapa A, HERDADO).
 
 | Repo | Papel | Commit | Estado | Runs de push | Jobs não verdes |
 |---|---|---|---|---|---|
@@ -13,4 +13,25 @@ Gate `HOSTED_CI` (C21; prompt da sessão 9.3: só o run de **push** cujo SHA é 
 
 ## stocks-predictor
 
-O `ci.yml` do stocks-predictor dispara `push` só em `main` (intocável pela D-24 (4c)): nem a base `61fc017` nem o final_commit `6f857b2` têm run de push (IS-F004). No SHA exato do final_commit há o run `workflow_dispatch` [36363108348](https://github.com/leonardosovienski/stocks-predictor/actions/runs/36363108348): failure — secrets=failure, Quality / Python 3.14=success, Quality / Python 3.13=success (`qualification/integration-stocks/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348.json` (sha256 `43f10ba3a7b5565a…`)). O job `secrets` falha por um falso positivo que está no histórico do `main` (commit `28f17d2`, PR #99), fora desta branch (`qualification/integration-stocks/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348_secrets_job.log` (sha256 `6e3bf10e3799a223…`); IS-F005). Decisão do dono pendente; o gate fica `NOT_RUN` com BLOCKED e não é relaxado pelo agente.
+O `ci.yml` do stocks-predictor dispara `push` só em `main` (intocável pela D-24 (4c)): nem a base `61fc017` nem o final_commit `6f857b2` têm run de push (IS-F004).
+
+**Decisão do dono** (chat da sessão, 2026-09-28: "aceita o run workflow_dispatch (b) e reemite"; IS-F004 e IS-F005 `ACCEPTED_LIMITATION`): só para o stocks-predictor, o run `workflow_dispatch` do CI Pipeline no SHA exato vale como o run de C21 / prompt 9.3 e de C24.3 (f), com o job `secrets` vermelho só pelo falso positivo pré-existente fora da branch da missão.
+
+Conferência mecânica da decisão (`qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/stocks_dispatch_acceptance.json` (sha256 `ffd9b2bdb6374d79…`)): **9 OK, 0 falhas**, aceito: sim.
+
+| Conferência | Resultado |
+|---|---|
+| IS-F004: decisão do dono registrada (ACCEPTED_LIMITATION, palavras do dono) | OK |
+| IS-F005: decisão do dono registrada (ACCEPTED_LIMITATION, palavras do dono) | OK |
+| final: CI Pipeline, workflow_dispatch, headSha == final_commit | OK |
+| final: jobs Quality verdes | OK |
+| final: o único job não verde é secrets | OK |
+| final: gitleaks acusa exatamente 1 vazamento | OK |
+| final: o commit do vazamento não é ancestral do final_commit (fora da branch da missão) | OK |
+| final: passos do job secrets (gitleaks vermelho; varredura da árvore e controle pulados por isso; upload final sem os arquivos deles; nenhuma outra falha) | OK |
+| base: run workflow_dispatch da Etapa A no SHA exato, todos os jobs verdes | OK |
+
+- final_commit: run [36363108348](https://github.com/leonardosovienski/stocks-predictor/actions/runs/36363108348): secrets=failure, Quality / Python 3.14=success, Quality / Python 3.13=success.
+- base: run [35953418753](https://github.com/leonardosovienski/stocks-predictor/actions/runs/35953418753) (Etapa A), todos os jobs verdes.
+- vazamento acusado: commit `9f7cce367817` (branches origin/evidence/prompt1-segredos-20260924), `docs/evidence/2026-09-24-prompt1-segredos.md`:57 (generic-api-key), ancestral do final_commit: não.
+- com o gitleaks vermelho, não rodaram no Actions: Scan the complete tracked tree including merged code, Prove an exempted file still detects a synthetic token. Reproduzidos localmente (diagnóstico, WSL do PC 2, NÃO é CI hospedado), com o mesmo gitleaks 8.24.3 conferido pelo sha256 da release e os mesmos comandos do `ci.yml` (`qualification/integration-stocks/RAW_LOGS/hosted-ci/final-r1/tree_scan_local.log` (sha256 `39152989343430f6…`)): varredura da árvore sem achados e controle detectou o token sintético (PASS).

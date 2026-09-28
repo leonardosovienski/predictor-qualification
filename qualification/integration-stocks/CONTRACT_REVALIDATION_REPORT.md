@@ -21,7 +21,7 @@ Fora de `stocks_predictor/adapters/` só entram:
 - C24.3(a): a linha `version` do `pyproject.toml` e a linha da versão do projeto no `uv.lock` (pré-release);
 - **autorizados pela D-24 (4)** (decisão do dono, resposta ao conflito C19 entre a regra local R8 e C24.3(a)): arquivos NOVOS em `tests/adapters/`, os dois recibos R8 novos (só `.json`) em `docs/engineering/2026-09-27-integration-stocks/evidence/` e o selo `docs/engineering/current-operational-evidence.json`.
 
-Parte estática (`qualification/integration-stocks/RAW_LOGS/contract-revalidation/static_checks.json` (sha256 `63313d1d2bda0a5d…`)):
+Parte estática (`qualification/integration-stocks/RAW_LOGS/contract-revalidation-r1/static_checks.json` (sha256 `bc8600e5a421b85e…`)):
 
 | Conferência | Resultado |
 |---|---|
@@ -36,10 +36,10 @@ Parte estática (`qualification/integration-stocks/RAW_LOGS/contract-revalidatio
 | (b) nothing outside adapter_paths imports from it | OK |
 | (b) no console script or plugin entry point added (adapter_entrypoints is empty) | OK |
 | (e) every protected item of the stocks domain has the same blob at the final commit | OK |
-| (f) CI of the domain green on the exact final commit (push run, prompt 9.3) | FALHA |
+| (f) CI of the domain on the exact final commit: green push run (prompt 9.3) or the workflow_dispatch run accepted by the owner (IS-F004/IS-F005 b) | OK |
 
 (c) suíte de conformidade verde com as wheels da integração: 87 testes, 0 falhas (`qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/conformance.junit.xml` (sha256 `44c607b48cd6f79e…`)).
 
 (d) vetor congelado da Etapa A pelo adapter: 11 conferências OK, 0 falhas (`qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/contract-revalidation/SUMMARY.json` (sha256 `390e243d9dca7ca3…`)): hash canônico sem `client_ref` igual ao do vetor (`ef6472aa058a1fbb…`, o mesmo conferido contra o resultado real da Etapa A), `client_ref` devolvido igual, payload byte-idêntico ao `show` (adapter_api).
 
-(f) CI do domínio: ver `HOSTED_CI_REPORT.md` (IS-F004, IS-F005).
+(f) CI do domínio: ver `HOSTED_CI_REPORT.md` (IS-F004, IS-F005 e a decisão do dono, quando houver).
