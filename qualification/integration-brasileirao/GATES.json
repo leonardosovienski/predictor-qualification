@@ -7,7 +7,16 @@
   "freeze-parameters",
   "baseline",
   "truth-map",
-  "cleanroom-baseline"
+  "cleanroom-baseline",
+  "envelope-v2",
+  "domain-adapter",
+  "cain-wiring-decision-policy",
+  "publish-candidates",
+  "cleanroom-final",
+  "contract-revalidation",
+  "e2e",
+  "n-plus-1",
+  "freeze-parameters-c2"
  ],
  "final_commits": [],
  "final_wheels": [],
@@ -15,7 +24,11 @@
  "shared_dependency_verdicts": [],
  "domain_revalidation": {
   "status": "NOT_RUN",
-  "evidence": []
+  "evidence": [
+   "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/contract-revalidation/static.json",
+   "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/contract-revalidation/SUMMARY.json",
+   "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/cleanroom-final/conformance.junit.xml"
+  ]
  },
  "gates": {
   "BLOCKERS_ZERO": {
@@ -42,7 +55,8 @@
   },
   "CLEANROOM_FINAL": {
    "status": "NOT_RUN",
-   "evidence": []
+   "evidence": [],
+   "note": "ciclo 2: refazer contra a release única cain v0.4.13rc8 (ciclo 1, rc9, em cycle1_evidence)"
   },
   "HOSTED_CI": {
    "status": "NOT_RUN",
@@ -106,7 +120,8 @@
   },
   "ENVELOPE_V2_CONFORMANCE": {
    "status": "NOT_RUN",
-   "evidence": []
+   "evidence": [],
+   "note": "fase envelope-v2: release congelada 2.0.0rc2 conferida estaticamente (RAW_LOGS/envelope-v2/envelope_v2_check.log, 20/20); o gate depende da evidência de runtime (E2E, F11–F13, C24.3 d)"
   },
   "CAIN_INGESTION": {
    "status": "NOT_RUN",
@@ -119,7 +134,7 @@
   "DECISION_POLICY": {
    "status": "NOT_RUN",
    "evidence": [],
-   "note": "vetores do holdout (D-25 (2)) esperam REQUIRE_HUMAN; o framework qualificado não tem regra para isso (IB-F002, decisão do dono pendente)"
+   "note": "ciclo 2: vetores do holdout esperam REQUIRE_HUMAN SEALED_SCOPE (R16 da rc8); no ciclo 1 (política v1) saíram ALLOW (IB-F002)"
   },
   "N_PLUS_1_DETERMINISTIC": {
    "status": "NOT_RUN",
@@ -143,7 +158,29 @@
   },
   "DOMAIN_CONTRACTS_PRESERVED": {
    "status": "NOT_RUN",
-   "evidence": []
+   "evidence": [
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/contract-revalidation/static.json",
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/contract-revalidation/SUMMARY.json",
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/cleanroom-final/conformance.junit.xml"
+   ],
+   "note": "ciclo 2: refazer na rc8; (f) pelo caminho aceito pelo dono em 2026-09-28 (IB-F005: pull_request com head = final_commit + publication-validation por push no SHA exato)"
+  }
+ },
+ "cycle": {
+  "number": 2,
+  "why": "decisão do dono (2026-09-28): base do cain → release única v0.4.13rc8 com a R16; fases a partir do cleanroom-final refeitas na rc8 (C14); ciclo 1 preservado nos parciais e nos arquivos *_cycle1_*"
+ },
+ "cycle1_evidence": {
+  "CLEANROOM_FINAL": {
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/cleanroom-final/cleanroom_final.log",
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/cleanroom-final/conformance.junit.xml",
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/cleanroom-final/transport.junit.xml",
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/cleanroom-final/cain.junit.xml",
+    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/runtime_env.log"
+   ],
+   "note": "owner_linux (PC 2): só as wheels publicadas (brasileirao 0.3.0rc4, transporte 0.1.0rc5, protocolo 2.0.0rc2, cain 0.4.13rc9), fora dos checkouts; módulos de site-packages"
   }
  }
 }

@@ -313,8 +313,16 @@
           "sha256": "be61973d5945df927d96215d936aeba105ba97c51899d0e5b050b7a41647820e"
         }
       ],
-      "status": "OPEN_AWAITING_OWNER",
-      "owner_decision": "(a) aprovar uma regra genérica de escopo lacrado no framework (configuração com escopos lacrados por campo do pedido → REQUIRE_HUMAN SEALED_SCOPE; lista vazia para cripto e stocks), com novo ciclo da rule_order nas três integrações; ou (b) aprovar explicitamente, para o Brasileirão, BLOCK no CAIN + HOLDOUT_SEALED no domínio em lugar de REQUIRE_HUMAN. Informação recebida da sessão cripto em 2026-09-28 (não vale como aprovação nesta sessão): o dono teria escolhido reconciliar as linhas do cain no fim, incluindo essa regra"
+      "status": "OPEN",
+      "owner_decision": "(a) aprovar uma regra genérica de escopo lacrado no framework (configuração com escopos lacrados por campo do pedido → REQUIRE_HUMAN SEALED_SCOPE; lista vazia para cripto e stocks), com novo ciclo da rule_order nas três integrações; ou (b) aprovar explicitamente, para o Brasileirão, BLOCK no CAIN + HOLDOUT_SEALED no domínio em lugar de REQUIRE_HUMAN. Informação recebida da sessão cripto em 2026-09-28 (não vale como aprovação nesta sessão): o dono teria escolhido reconciliar as linhas do cain no fim, incluindo essa regra",
+      "owner_decision_taken": {
+        "date": "2026-09-28",
+        "by": "dono",
+        "channel": "chat da sessão integration-brasileirao (pergunta com opções), 2026-09-28",
+        "words": "Trocar para a rc8 (Recommended)",
+        "applied": "a base do cain da missão passa de deccaaa (rc7/rc9, política v1) para a release única cain v0.4.13rc8 (política v2 + #62 + #64 + regra genérica de escopo lacrado R16 SEALED_SCOPE, escrita pela sessão cripto), com novo ciclo da freeze-parameters e das fases a partir do cleanroom-final; o critério REQUIRE_HUMAN do holdout (D-25 (2)) continua o mesmo",
+        "status_until_rc8": "OPEN até a regra estar na rc8 publicada e o vetor do holdout passar"
+      }
     },
     {
       "id": "IB-F003",
@@ -334,6 +342,50 @@
       ],
       "status": "OPEN",
       "owner_decision": "decidir se o no_data_rows_check da Etapa A ganha o agrupamento (?:…) no padrão numérico (mudança em artefato do Brasileirão da Etapa A; esta missão não altera o verificador)"
+    },
+    {
+      "id": "IB-F004",
+      "severity": "P2",
+      "title": "a inbox do CAIN guarda o ResultV2 bruto, com o payload do domínio por jogo, como registro de auditoria",
+      "description": "O protocolo V2 congelado leva no resultado o payload do domínio byte a byte (payload_canonical), e a orquestração do CAIN (cain.orchestration.service.ingest) grava o arquivo inteiro na tabela inbox, para auditoria e releitura. No Brasileirão esse payload tem, por jogo, times, event_id, kickoff e probabilidades do dado real. A memória do domínio (fatos) e o retrieval guardam só IDs, estados e hashes (service._complete_memory), e as decisões leem só a memória. O estado do CAIN, o spool e o estado do domínio desta missão ficam só no diretório privado do runtime no PC 2 (~/predictors/runtime/integration-brasileirao/priv/), nunca em evidência; o E2E confere que o canário não aparece em nenhum arquivo do estado do CAIN e que a saída pública passa no no_data_rows_check.",
+      "classification": "C6 P2: sem efeito em resultado; nenhum dado sai do PC 2 nem do diretório privado. Registrado porque a regra D-25 (2) (memória só com referência, resumo e hash) é atendida pela memória e pelo retrieval, mas o CAIN, por desenho do protocolo, retém o resultado bruto no registro de auditoria do seu estado.",
+      "evidence": [
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/e2e/SUMMARY.json",
+          "sha256": "fb4f00fbffbc527ca88e661dd7512d2a56d52fca2d5ac0191a2d56c95ce490e1"
+        }
+      ],
+      "status": "ACCEPTED_LIMITATION",
+      "owner_decision": "aceitar a retenção do resultado bruto na inbox do CAIN, só no estado privado do PC 2, ou pedir uma mudança no framework para guardar só o sha256 do arquivo (C14 nas três integrações)",
+      "owner_decision_taken": {
+        "date": "2026-09-28",
+        "by": "dono",
+        "channel": "chat da sessão integration-brasileirao (pergunta com opções), 2026-09-28",
+        "words": "Aceitar (Recommended)",
+        "applied": "a inbox do CAIN continua guardando o ResultV2 bruto como registro de auditoria, só no estado privado do runtime no PC 2 (~/predictors/runtime/integration-brasileirao/priv/), nunca em evidência; memória e retrieval só com IDs, estados e hashes; sem mudança no framework"
+      }
+    },
+    {
+      "id": "IB-F005",
+      "severity": "P2",
+      "title": "regra 10.3 (HOSTED_CI só por run de push no SHA exato) inatingível para o ci.yml do brasileirao-predictor",
+      "description": "O .github/workflows/ci.yml do brasileirao-predictor (intocável, prompt da sessão 10.1) dispara push só em main e não tem workflow_dispatch; o final_commit desta missão é o commit da tag v0.3.0rc4 (1fc2e88) numa branch e nunca terá run de push do CI Pipeline, e o merge do PR cria outro SHA. No SHA exato existem: o run de pull_request do CI Pipeline do PR #81 (head 1fc2e88; Python 3.13 e 3.14, .NET 10, Compose, cross-OS ubuntu × windows: 7/7 verdes) e o run de push do publication-validation.yml (branch publication-validation-integration-brasileirao, gatilho do próprio workflow; 4/4 verdes). A Etapa A do Brasileirão aceitou esse mesmo par (pull_request com head = final_commit + publication-validation por push) e o main depois do merge com a mesma árvore (qualification/brasileirao/HOSTED_CI_REPORT.md). Mesmo fato do IS-F004 da integration-stocks.",
+      "classification": "C6 P2 (processo; sem efeito em resultado): HOSTED_CI e a parte (f) de DOMAIN_CONTRACTS_PRESERVED ficam NOT_RUN com BLOCKED até a decisão; o critério não é relaxado pelo agente (prompt da sessão 13).",
+      "evidence": [
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T034216Z-br/contract-revalidation/static.json",
+          "sha256": "d6bcd5084e4ef8fbd34a80e1fc37b545fa6e0f9540ed985c93d57b2ec847cc56"
+        }
+      ],
+      "status": "ACCEPTED_LIMITATION",
+      "owner_decision": "aceitar, só para o brasileirao-predictor, o run de pull_request do CI Pipeline com head = final_commit + o run de push do publication-validation no SHA exato (precedente da Etapa A) como o CI de C21 / 10.3 / C24.3 (f), ou indicar outro caminho",
+      "owner_decision_taken": {
+        "date": "2026-09-28",
+        "by": "dono",
+        "channel": "chat da sessão integration-brasileirao (pergunta com opções), 2026-09-28",
+        "words": "Aceitar precedente (Recommended)",
+        "applied": "só para o brasileirao-predictor: o run de pull_request do CI Pipeline com head = final_commit + o run de push do publication-validation no SHA exato (ambos verdes) valem como o CI de C21 / prompt 10.3 / C24.3 (f), como na Etapa A"
+      }
     }
   ]
 }
