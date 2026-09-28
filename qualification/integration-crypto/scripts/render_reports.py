@@ -4,7 +4,7 @@ Nenhum número é digitado: cada tabela vem de um arquivo de RAW_LOGS/ (citado c
   CORE_IDENTITY_REPORT.md, CAIN_ROUNDTRIP_REPORT.md, CONTRACT_REVALIDATION_REPORT.md, HOSTED_CI_REPORT.md,
   PROTECTED_ARTIFACT_REPORT.md, SOAK_REPORT.md e a seção cleanroom-final do CLEANROOM_REPORT.md.
 Uso: python render_reports.py <qualification/integration-crypto> <run do runtime> <run do soak> [sufixo]
-  sufixo (ex.: -c14, -c14s, -ciclo2, -ciclo3): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
+  sufixo (ex.: -c14, -c14s, -ciclo2, -ciclo3, -rc13): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
   diretórios da reemissão; os raw logs da attestation anterior ficam como estão.
 """
 
@@ -144,7 +144,8 @@ def main() -> int:
             "0.1.0rc4). Ciclo 2: cain `fb0e1dc` (0.4.13rc10, release única; vale o run mais recente naquele SHA, o do "
             "push da tag, e o run do push no main também está verde) e ecosystem `b11494a` (transporte 0.1.0rc5). "
             "Ciclo 3: cain `302a5c8` (0.4.13rc12; de novo vale o run da tag, e o do "
-            "main também está verde). A "
+            "main também está verde). C14 da rc13: cain `960fb25` (0.4.13rc13) e ecosystem `bac1f7b` (transporte "
+            "0.1.0rc6), com o run da tag e o do main. A "
             "attestation NOT_QUALIFIED registrou o vermelho em `a19655f`.\n")
            if final_ok else
            "**Há final_commit com job não verde:** ver a tabela e os JSON brutos.\n"),

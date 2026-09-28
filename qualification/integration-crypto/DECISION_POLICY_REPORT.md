@@ -15,7 +15,7 @@ Gate `DECISION_POLICY` (C12, prompt comum §2 e §6.3, prompt do cripto §3). Os
 
 ## 2. Regras (primeira que casar vence)
 
-Política **v2** (`POLICY_VERSION = 2`): ciclo 2 na cain 0.4.13rc10 e ciclo 3 na 0.4.13rc12, com o `policy.py` byte a byte igual nas duas; o ciclo 3 só acrescenta `result_metrics` à configuração. Os IDs das regras são
+Política **v2** (`POLICY_VERSION = 2`): ciclo 2 na cain 0.4.13rc10 e ciclo 3 na 0.4.13rc12 e, pela C14, na 0.4.13rc13, com o `policy.py` byte a byte igual nas três; o ciclo 3 só acrescenta `result_metrics` à configuração. Os IDs das regras são
 estáveis, e a tabela está na ordem em que as regras são avaliadas; por isso R15, R16 e R17 aparecem no meio.
 
 | Regra | Decisão | Motivo |
@@ -87,7 +87,7 @@ A orquestração nova é o caminho qualificado: proposta → política → task 
 
 ## 5. Evidência de execução
 
-Wheels publicadas, Linux primário (GitHub Actions), ciclo 3 (cain 0.4.13rc12, run `run36439656179` com todas as fases, inclusive o soak). Chaves de `EVIDENCE_NUMBERS.json`:
+Wheels publicadas, Linux primário (GitHub Actions), ciclo 3 na cain 0.4.13rc13 com o transporte 0.1.0rc6 (run `run36439656179` com todas as fases, inclusive o soak). Chaves de `EVIDENCE_NUMBERS.json`:
 
 - testes da política contra a wheel publicada: `runtime/run36439656179/cleanroom-final/cain.junit.xml:junit`;
 - N+1 (receipts byte a byte iguais em processos novos): `runtime/run36439656179/n-plus-1:checks_passed`,

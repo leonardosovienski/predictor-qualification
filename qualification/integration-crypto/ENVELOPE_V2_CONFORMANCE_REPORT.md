@@ -6,8 +6,8 @@ Gate `ENVELOPE_V2_CONFORMANCE` (prompt comum §6.1). Os números estão em `EVID
 
 - `predictor-research-protocol` **2.0.0rc2** (`ENVELOPE_V2_FREEZE.json`): wheel `34a1e412…`, conferida por URL + sha256 no pré-voo (`RAW_LOGS/c0/c0_preflight.log`).
 - Consumidores V2 criados nesta missão, todos pinando essa wheel pelo `uv.lock`:
-  - `cain` 0.4.13rc12 (ciclo 3: métricas do resultado na memória e no modelo, dentro do orçamento de contexto; antes 0.4.13rc10, a release única do ciclo 2, e 0.4.13rc6 e 0.4.13rc7);
-  - `predictor-research-transport` 0.1.0rc5 (ciclo 2: entradas `stocks` e `brasileirao` na allowlist; antes 0.1.0rc3,
+  - `cain` 0.4.13rc13 (C14 da rc13; ciclo 3 desde a 0.4.13rc12: métricas do resultado na memória e no modelo, dentro do orçamento de contexto; antes 0.4.13rc10, a release única do ciclo 2, e 0.4.13rc6 e 0.4.13rc7);
+  - `predictor-research-transport` 0.1.0rc6 (trava exclusiva por domínio no consumidor, CONSUMER_BUSY; antes 0.1.0rc5 com as entradas `stocks` e `brasileirao` na allowlist; antes 0.1.0rc3,
     o mesmo código do 0.1.0rc2 republicado de um commit com CI verde pelo IC-F004, e 0.1.0rc4).
 - `packages/research-protocol` não mudou.
 
