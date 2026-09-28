@@ -2,7 +2,7 @@
   "schema": "integration-brasileirao/QUALIFICATION_PROFILE/1",
   "profile_id": "QUALIFICATION_PROFILE_INTEGRATION_BR_V1",
   "frozen_before": "fase soak (e antes de qualquer execução de gate da missão)",
-  "environment": "Linux primário: owner_linux = PC 2 (Ubuntu 24.04, WSL2, ~/predictors; PROVISION_RECEIPT.json; D-19, D-25). Runtime suportado: venvs limpos em ~/predictors/runtime/integration-brasileirao/, só com as final_wheels (CAIN: cain-research da release única v0.4.13rc8 + protocolo + transporte; consumidor do Brasileirão: brasileirao-predictor + Core + Ops + protocolo + transporte; consumidores do cripto e do stocks para os ciclos intercalados), requisitos exportados dos uv.lock com --require-hashes, uv e Python 3.13 gerenciados de ~/predictors/tools, execução pelos entrypoints `cain`, `predictor-research-consumer` e `brasileirao-research`. Dado real privado: cópia hash-conferida de ~/predictors/data/d16/brasileirao/matches_source_copy.sqlite3 (sha256 31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43), capturada pelo `brasileirao-research put-dataset` com as_of 2026-09-08T19:31:32Z; saídas com conteúdo por jogo só no diretório privado do runtime.",
+  "environment": "Linux primário: owner_linux = PC 2 (Ubuntu 24.04, WSL2, ~/predictors; PROVISION_RECEIPT.json; D-19, D-25). Runtime suportado: venvs limpos em ~/predictors/runtime/integration-brasileirao/, só com as final_wheels (CAIN: cain-research + protocolo + transporte; consumidor do Brasileirão: brasileirao-predictor + Core + Ops + protocolo + transporte; consumidores do cripto e do stocks para os ciclos intercalados), requisitos exportados dos uv.lock com --require-hashes, uv e Python 3.13 gerenciados de ~/predictors/tools, execução pelos entrypoints `cain`, `predictor-research-consumer` e `brasileirao-research`. Dado real privado: cópia hash-conferida de ~/predictors/data/d16/brasileirao/matches_source_copy.sqlite3 (sha256 31f30a4dcf33867d1f3aa3d12337a9a66047e6bff10b9a3fa86aae9ef06c9e43), capturada pelo `brasileirao-research put-dataset` com as_of 2026-09-08T19:31:32Z; saídas com conteúdo por jogo só no diretório privado do runtime.",
   "floors_source": "COMMON_QUALIFICATION_CORE.md C10 (Etapa B, por domínio) + prompt_etapa_b_comum_rev9.md §10 + prompt da sessão 8.3",
   "minimums": {
     "cycles": 20,
@@ -20,7 +20,7 @@
     "domain_restart": "o processo do consumidor (que hospeda o circuito do domínio) é morto num ponto nomeado (transporte ou BRASILEIRAO_RESEARCH_FAULT) ou parado, e volta em processo novo",
     "cain_restart": "o processo `cain` é morto num ponto nomeado da orquestração, e o próximo comando roda em processo novo sobre o mesmo estado",
     "interleaved_cycle_other_domain": "entre dois ciclos do brasileirao, um ciclo real de outro domínio (crypto ou stocks) roda pelo runtime integrado dele no mesmo CAIN (mesmo estado, cubo e spool do domínio dele), e o resultado V2 real desse ciclo e uma proposta com o domínio dele são entregues também ao spool/inbox e à orquestração do brasileirao; todos têm de ser recusados no brasileirao sem efeito, e o ciclo do outro domínio não pode ver nada do brasileirao",
-    "llm_proposal": "proposta gerada por um modelo local (Ollama no WSL do PC 2) pelo modo de proposta do `cain research explain`; passa pela mesma DecisionPolicy e a decisão é a que ela der; auditada (prompt, resposta, modelo e digest no log, sem dado real); conta toda proposta que chega a uma decisão; não é prova de gate (C9). A rc8 inclui o cain#62 (semente do LLM pelas variantes do contrato)"
+    "llm_proposal": "proposta gerada por um modelo local (Ollama no WSL do PC 2) pelo modo de proposta do `cain research explain`; passa pela mesma DecisionPolicy; auditada (prompt, resposta, modelo e digest no log, sem dado real); conta toda proposta que chega a uma decisão; não é prova de gate (C9). Limite conhecido antes do congelamento: o framework grava parameters.placebo_seed, que o request_schema do Brasileirão recusa (additionalProperties false), então a decisão esperada é BLOCK SCHEMA_INVALID (FROZEN_PARAMETERS → framework_limits_found_before_freeze; mesmo fato do IS-F003 da integration-stocks)"
   },
   "plan": {
     "cycles": "24 ciclos em rodízio de 3 hipóteses de qualificação admitidas pela policy de operador da missão (brasileirao:QUAL-SERVING-REAL-001..003), pedidos distintos por request_id (brasileirao:REQ-IB-SOAK-<nnn>), dataset real-20260908 v1, só temporadas 2021–2024 (FROZEN_VECTORS.json → soak_generator)",
@@ -28,12 +28,7 @@
     "domain_restarts": "6: F08 × 2, F16 × 2 e F07 × 2",
     "cain_restarts": "6: F01, F02, F03, F04, F05 e F06, uma vez cada, mais os reinícios naturais (cada comando é um processo novo)",
     "interleaved_cycles_other_domain": "6: 3 ciclos reais do crypto e 3 do stocks pelos runtimes integrados (final_wheels das integrações deles com o cain e o transporte desta missão), cada um seguido da entrega cruzada ao brasileirao",
-    "failure_classes": {
-      "cain_process_death": 3,
-      "consumer_process_death": 3,
-      "delivery_anomaly": 3,
-      "domain_retryable": 3
-    },
+    "failure_classes": {"cain_process_death": 3, "consumer_process_death": 3, "delivery_anomaly": 3, "domain_retryable": 3},
     "llm_proposals": "5 propostas pelo modelo local; se o modelo não estiver disponível, o piso falha (nunca pulado) e o SOAK não passa"
   },
   "zero_tolerance": [
@@ -60,10 +55,5 @@
     "budget, prioridade e escopo não aumentam depois de resultados negativos (NEGATIVE_RESULT_NEUTRALITY)",
     "no_data_rows_check clean em toda exportação de memória, receipt e log que vira evidência"
   ],
-  "harness": "qualification/integration-brasileirao/scripts/soak.py (criado na fase soak; lê este perfil, não o altera)",
-  "cycle": {
-    "number": 2,
-    "supersedes": "QUALIFICATION_PROFILE_INTEGRATION_BR_V1_cycle1_0ee535048e05.json",
-    "why": "base do cain → release única v0.4.13rc8 (decisão do dono, 2026-09-28); só a definição de llm_proposal e a menção ao cain mudam"
-  }
+  "harness": "qualification/integration-brasileirao/scripts/soak.py (criado na fase soak; lê este perfil, não o altera)"
 }

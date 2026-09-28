@@ -225,7 +225,8 @@ def main() -> int:
     for number, (name, req) in enumerate(holdout.items(), start=1):
         rel = put(f"fixtures/proposals/holdout/{name}.json",
                   proposal(f"IB-HOLDOUT-{number:02d}", req, rationale="exigiria o holdout 2025 (D-25 (2))"))
-        holdout_plan.append({"proposal": rel, "expected_decision": "REQUIRE_HUMAN", "dispatch": "nunca"})
+        holdout_plan.append({"proposal": rel, "expected_decision": "REQUIRE_HUMAN", "expected_reason": "SEALED_SCOPE",
+                             "dispatch": "nunca"})
     # ------------------------------------------------------------------ contradição (derivada, declarada)
     stage_a = json.loads((CRYPTO_FIXTURES / "brasileirao/result-etapa-a.json").read_bytes())
     base_result = json.loads(stage_a["result"]["payload_canonical"])
@@ -287,6 +288,7 @@ def main() -> int:
             "candidates": n1_plan,
         },
         "holdout": {
+            "cycle": "2: a política v2 da rc8 tem a R16 SEALED_SCOPE (FROZEN_PARAMETERS → sealed_scopes)",
             "rule": "D-25 (2): proposta que exigiria acesso ao holdout 2025 resulta em REQUIRE_HUMAN; leitura "
                     "conservadora: temporada 2025, janela de kickoff que entra em 2025 ou temporada 2026 (treina com "
                     "resultados de 2025). Só decision-receipt no estado do N+1; nunca despachadas. Gate DECISION_POLICY",

@@ -62,3 +62,22 @@ conteúdo por jogo só no diretório privado `~/predictors/runtime/integration-b
 | `scripts/contract_revalidation.py`, `scripts/contract_d.py` | C24.3: (a)(b)(c)(d)(e) verdes; (f) IB-F005 |
 | `scripts/harness.py`, `scripts/run_scenario.sh`, `scripts/e2e.py`, `scripts/n_plus_1.py` | E2E real 79/79; N+1 78/81 (as 3 falhas são o holdout, IB-F002) |
 | `FINDINGS.json` | IB-F004 (inbox do CAIN com o ResultV2 bruto) e IB-F005 (CI do domínio × regra 10.3), ambos aguardando o dono |
+
+## Ciclo 2 da freeze-parameters (decisão do dono, 2026-09-28)
+
+Decisão no chat desta sessão (pergunta com opções, "Trocar para a rc8"): a base do cain passa de `deccaaa`
+(rc7/rc9, política v1) para a release única **cain v0.4.13rc8**, que junta a política v2 (#59), o #62, a configuração
+do Brasileirão (#64 e o PR que materializa os lacres) e a regra genérica **R16 REQUIRE_HUMAN SEALED_SCOPE** (#65, escrita
+pela sessão cripto e revisada aqui). Pela C14 ("Parâmetro/vetor/perfil congelado"), a fase inteira é um novo ciclo, e as
+fases a partir do cleanroom-final são refeitas na rc8.
+
+| Arquivo | Mudança |
+|---|---|
+| `FROZEN_PARAMETERS.json` | `brasileirao_config.sealed_scopes` em formato de máquina (season 2025/2026; janela em 2025; fixtures em 2025, opcional); política v2 com `rule_order` (R16 depois da R05); ciclo 2 e decisão do dono; cada sessão requalifica a sua integração na rc8 |
+| `FROZEN_VECTORS.json` | plano do holdout com `expected_reason: SEALED_SCOPE` (as 60 fixtures com os mesmos bytes) |
+| `QUALIFICATION_PROFILE_INTEGRATION_BR_V1.json` | definição de proposta de LLM (a rc8 inclui o #62) e menção à release rc8 |
+| `*_cycle1_<sha12>.json` | os três arquivos do ciclo 1 preservados byte a byte |
+| `GATES.json` | ciclo 2; o CLEANROOM_FINAL do ciclo 1 (rc9) guardado em `cycle1_evidence` e o gate volta a NOT_RUN até a rc8 |
+
+Diagnóstico com o código da R16 (cain#65, `1e49bd0`): os três lacres passam na validação da configuração e as três
+propostas de holdout congeladas dão REQUIRE_HUMAN SEALED_SCOPE (R16); os controles continuam ALLOW (R14).

@@ -149,14 +149,22 @@ def main() -> int:
             "rule": "o CAIN não lê métrica nenhuma para decidir: estados científico/econômico entram como registro, "
                     "nunca aumentam budget, prioridade ou escopo; nenhuma baseline de mercado financeiro",
         },
-        "sealed_scopes": {
+        "sealed_scopes": [
+            {"field": "season", "any_of": [2025, 2026]},
+            {"window": {"from": "events.kickoff_from", "to": "events.kickoff_to"},
+             "intersects": ["2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"]},
+            {"field": "events.fixtures[].kickoff_at", "within": ["2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+             "optional": True},
+        ],
+        "sealed_scopes_criterion": {
             "criterion": "D-25 (2): proposta que exigiria acesso ao holdout 2025 → REQUIRE_HUMAN (a admission do "
-                         "domínio continua podendo recusar). Leitura conservadora: season 2025, events com kickoff_to > "
-                         "2025-01-01T00:00:00Z e kickoff_from < 2026-01-01T00:00:00Z, ou season 2026 (treina com "
-                         "resultados de 2025)",
-            "materialized_in_cain_config": False,
-            "why_not": "cain-domain-config/1 em deccaaa tem chaves fixas e a política R01–R14 não lê season, events "
-                       "nem data_cutoff; a regra exige mudança do framework (IB-F002, decisão do dono)",
+                         "domínio continua podendo recusar). Leitura conservadora: season 2025 ou 2026 (2026 treina com "
+                         "resultados de 2025); janela [events.kickoff_from, events.kickoff_to) que intersecta "
+                         "[2025-01-01T00:00:00Z, 2026-01-01T00:00:00Z); ou algum events.fixtures[].kickoff_at dentro "
+                         "dela. Campo lacrado ausente ou mal formado retém o pedido (fail closed)",
+            "rule": "R16 REQUIRE_HUMAN SEALED_SCOPE da política v2 do cain (cain#65), avaliada logo depois da R05",
+            "materialized_in_cain_config": True,
+            "cycle_1": "no ciclo 1 (base deccaaa, política v1) o critério não era materializável (IB-F002)",
         },
     }
     doc = {
@@ -248,6 +256,22 @@ def main() -> int:
             "core-predictor": {"role": "congelado (wheel 3.2.1)", "base": fc["core-predictor"]},
             "predictor-ops": {"role": "congelado (wheel 4.2.2rc1)", "base": fc["predictor-ops"]},
         },
+        "cycle": {
+            "number": 2,
+            "supersedes": {"path": f"{M}/FROZEN_PARAMETERS_cycle1_e5f254bd5d44.json",
+                           "sha256_prefix": "e5f254bd5d44"},
+            "why": "decisão do dono no chat desta sessão, 2026-09-28 (pergunta com opções): 'Trocar para a rc8 "
+                   "(Recommended)': a base do cain passa de deccaaa (rc7/rc9, política v1) para a release única "
+                   "v0.4.13rc8 com a R16; C14 'Parâmetro/vetor/perfil congelado' ⇒ a fase inteira como novo ciclo e as "
+                   "fases dependentes refeitas a partir do cleanroom-final",
+            "unchanged": "base do Brasileirão (25cdf4d / rc3 → adapter rc4), contrato, dado, operador, ambientes, "
+                         "matriz de falhas, conjunto protegido e todos os vetores fora do holdout",
+        },
+        "c14_other_integrations_cycle2": {
+            "rule": "a release única rc8 muda o cain de todas as integrações; pela decisão do dono (sessões cripto e "
+                    "STOCKS, 2026-09-28) cada sessão requalifica a sua integração na rc8; esta missão não refaz as fases "
+                    "da integration-crypto nem da integration-stocks",
+        },
         "c14_other_integrations": {
             "why": "a configuração do domínio vive na wheel do cain e a allowlist do transporte é fixa no código: "
                    "acrescentar o Brasileirão publica cain e predictor-research-transport novos; C14 ('cain, "
@@ -316,21 +340,33 @@ def main() -> int:
             "seasons_requested": [2021, 2022, 2023, 2024],
         },
         "decision_policy": {
-            "id": "cain-decision-policy", "version": 1,
-            "framework": "sem mudança (cain deccaaa, final_commit da integration-stocks); regras R01–R14 do "
-                         "DECISION_POLICY_REPORT.md herdado",
+            "id": "cain-decision-policy", "version": 2,
+            "framework": "release única do cain v0.4.13rc8 (decisão do dono de 2026-09-28): política v2 (cain#59, "
+                         "R15), custos e semente do LLM pelas variantes do contrato (cain#62), configuração do "
+                         "Brasileirão (cain#64 e o PR que materializa os sealed_scopes) e a regra genérica de escopo "
+                         "lacrado R16 (cain#65); o commit e a wheel da release vão para runtime_targets.json na "
+                         "publicação",
+            "rule_order": ["R01 BLOCK DOMAIN_MISMATCH", "R02 BLOCK SCHEMA_INVALID", "R03 BLOCK FORBIDDEN_FIELD",
+                           "R04 BLOCK REQUEST_TYPE_NOT_ALLOWED", "R05 BLOCK HYPOTHESIS_CLOSED",
+                           "R16 REQUIRE_HUMAN SEALED_SCOPE",
+                           "R06 BLOCK SYMBOL_NOT_ALLOWED / COST_MODEL_MISMATCH / REFERENCE_NOT_ALLOWED / "
+                           "PRIORITY_ABOVE_CAP", "R07 BLOCK REQUEST_ID_CONFLICT", "R08 DUPLICATE",
+                           "R09 REQUIRE_HUMAN DOMAIN_RECONCILIATION_PENDING", "R10 REQUIRE_HUMAN CONTRADICTION_UNRESOLVED",
+                           "R15 REQUIRE_HUMAN HYPOTHESIS_NOT_ADMITTED_BY_DOMAIN", "R11 REQUIRE_HUMAN NEW_HYPOTHESIS",
+                           "R12 ABSTAIN OPEN_TASK_PENDING / BUDGET_EXHAUSTED", "R13 COOLDOWN NEGATIVE_STREAK",
+                           "R14 ALLOW"],
             "brasileirao_config": brasileirao_config,
             "framework_limits_found_before_freeze": [
                 {"id": "holdout-require-human", "finding": "IB-F002",
-                 "fact": "nenhuma regra R01–R14 lê season/events/data_cutoff; proposta da temporada 2025 com hipótese "
-                         "propunhável sai ALLOW (R14)",
-                 "decision": "critério do dono mantido (REQUIRE_HUMAN, FROZEN_VECTORS → holdout); o vetor falha até a "
-                             "regra existir; nenhuma proposta de 2025+ é despachada pelos vetores desta missão"},
+                 "fact": "no ciclo 1 nenhuma regra R01–R14 lia season/events/data_cutoff (o holdout saía ALLOW, R14)",
+                 "decision": "ciclo 2: resolvido pela R16 SEALED_SCOPE na release rc8 (decisão do dono); os vetores do "
+                             "holdout esperam REQUIRE_HUMAN SEALED_SCOPE; nenhuma proposta de 2025+ é despachada"},
                 {"id": "llm-placebo-seed",
-                 "fact": "cain.orchestration.llm grava parameters.placebo_seed (parâmetro do cripto); o request_schema do "
-                         "Brasileirão recusa campo extra ⇒ proposta de LLM = BLOCK SCHEMA_INVALID (n1/21-llm-shape)",
-                 "decision": "não mudar o framework; mesmo fato do IS-F003 da integration-stocks; as ≥ 5 propostas de "
-                             "LLM do soak passam pela mesma política (não são gate, C9)"},
+                 "fact": "no ciclo 1 o caminho de LLM gravava parameters.placebo_seed (IS-F003); a rc8 inclui o cain#62 "
+                         "(semente pelas variantes do contrato); o vetor n1/21-llm-shape (pedido com parameters) continua "
+                         "SCHEMA_INVALID porque o request_schema do Brasileirão não tem parameters",
+                 "decision": "as ≥ 5 propostas de LLM do soak passam pela mesma política e a decisão é a que ela der; "
+                             "não são gate (C9)"},
             ],
         },
         "n_plus_1": {"processes": 3, "equality": "receipt byte a byte", "as_of": "2026-09-27T00:00:00Z",
