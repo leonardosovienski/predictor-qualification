@@ -122,3 +122,32 @@ dono no chat desta sessão, 2026-09-28: "1 hipótese por ciclo".
 O mesmo diagnóstico achou o IB-F006: na rc10, o modo de proposta do LLM quebra para o Brasileirão (`KeyError
 'parameters'` em `llm.py:204`, o pedido do Brasileirão não tem parameters). A correção é da sessão STOCKS e entra na
 rc11 junto com o brasileirao.json deste ciclo. Conferência mecânica: `scripts/freeze_cycle4.py check`.
+
+## Fases de runtime na cain v0.4.13rc12 (run `run-20260928T145525Z-br12`, PC 2)
+
+A release que as três integrações usam é a **cain v0.4.13rc12** (tag → `302a5c8`, adotada por
+`scripts/adopt_release.py`, 7/7). As rc10 e rc11 foram adotadas antes e trocadas pela C14: a rc11 levou o brasileirao.json
+do ciclo 4 e a correção do LLM (cain#72, IB-F006); a rc12, o contexto do LLM dentro do orçamento (cain#75). O
+cleanroom-final da rc11 (`run-20260928T142258Z-br11`) ficou como registro. Configurações da rc12 iguais às da rc11.
+
+| Fase | Resultado |
+|---|---|
+| cleanroom-final | conformidade 89, transporte 15, cain 90 testes, 0 falhas |
+| contract-revalidation | estática 10/10 ((f) pelo IB-F005, conferido por `ib_f005_acceptance.py`); (d) 11/11 |
+| e2e | 79/79 |
+| n-plus-1 | congelado 84/84, integrado 85/85; holdout 2025 → REQUIRE_HUMAN SEALED_SCOPE (IB-F002 FIXED) |
+| isolation-ids-contradiction | 30/30; contradição 9/9 |
+| idempotency-failure | F01–F16: 65 conferências, 0 falhas |
+| windows-smoke (PC 2) | E2E 79/79; dado real devolvido ao WSL: 141 arquivos conferidos |
+| soak | 61/62: todos os pisos, menos o de LLM (IB-F009, waiver do dono) |
+
+Decisões do dono neste trecho (chat da sessão, perguntas com opções):
+- "Cadeia preservada (Recommended)": PROTECTED_ARTIFACTS_UNCHANGED com a regra da cadeia preservada (IB-F008).
+- "Waiver do piso de LLM (Recommended)": o piso de ≥ 5 propostas de LLM dispensado só para o Brasileirão (IB-F009). O
+  dono decidiu depois de saber que a alternativa (rc13 com sobreposição de campos do pedido) obrigaria o cripto e o stocks,
+  já QUALIFIED na rc12, a refazer as fases.
+
+Registro no Windows do PC 2: o console da primeira execução do `windows_smoke.ps1` foi gravado em `%TEMP%`, fora da pasta
+autorizada. Só havia mensagens do script e o resumo do E2E, sem linha do dado. O arquivo foi movido para o diretório privado
+do runtime no WSL (sha256 conferido) e removido do `%TEMP%`. A pasta `C:\QUALIFICACAO\runtime\integration-brasileirao\`
+ficou sem nenhum banco do dado real fora de tools/venv.

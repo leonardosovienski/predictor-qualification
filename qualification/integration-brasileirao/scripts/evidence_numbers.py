@@ -58,6 +58,13 @@ def main() -> int:
         doc = json.loads(path.read_text(encoding="utf-8"))
         put(f"{path.relative_to(raw).as_posix()}:hosted_ci", path,
             [{k: s[k] for k in ("repo", "commit", "role", "ok", "runs", "non_success_jobs")} for s in doc])
+    for name in ("static.json", "release_check.json", "cycle3_check.json", "cycle4_check.json"):
+        for path in sorted(raw.rglob(name)):
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            put(f"{path.relative_to(raw).as_posix()}:checks", path, {"passed": doc["passed"], "failed": doc["failed"]})
+    for path in sorted(raw.rglob("ib_f005_acceptance.json")):
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        put(f"{path.relative_to(raw).as_posix()}:accepted", path, {"accepted": doc["accepted"], "runs": doc["runs"]})
     for name in ("core_identity.json", "final_wheels_check*.json"):
         for path in sorted(raw.rglob(name)):
             doc = json.loads(path.read_text(encoding="utf-8"))

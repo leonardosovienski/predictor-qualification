@@ -320,9 +320,17 @@
         {
           "file": "qualification/integration-brasileirao/RAW_LOGS/freeze/cycle3_check.json",
           "sha256": "975d8097176d95182504f7b7c4ee176bc59920b1739921d464ab9c34af2ecd20"
+        },
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T145525Z-br12/n-plus-1/frozen/SUMMARY.json",
+          "sha256": "6e06d7bc902d45b8dba4a641705db702c78e9fe4ce735b741ac2d62610b4f201"
+        },
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T145525Z-br12/n-plus-1/integrated/SUMMARY.json",
+          "sha256": "30877eb1b865e5b8c27140388a2c0e3f1012dc7c8c897f0cc99a4b3b8bd379b0"
         }
       ],
-      "status": "OPEN",
+      "status": "FIXED",
       "owner_decision": "(a) aprovar uma regra genérica de escopo lacrado no framework (configuração com escopos lacrados por campo do pedido → REQUIRE_HUMAN SEALED_SCOPE; lista vazia para cripto e stocks), com novo ciclo da rule_order nas três integrações; ou (b) aprovar explicitamente, para o Brasileirão, BLOCK no CAIN + HOLDOUT_SEALED no domínio em lugar de REQUIRE_HUMAN. Informação recebida da sessão cripto em 2026-09-28 (não vale como aprovação nesta sessão): o dono teria escolhido reconciliar as linhas do cain no fim, incluindo essa regra",
       "owner_decision_taken": {
         "date": "2026-09-28",
@@ -338,7 +346,8 @@
         "wheel_sha256": "752de98d385528b0bd90c950d117c46af0522125a2274ea9a7064461786b85e5",
         "config": "brasileirao.json da wheel com os 3 sealed_scopes, byte a byte o regenerado de 417024e (cycle3_check.json)",
         "closes_when": "os 3 vetores do holdout derem REQUIRE_HUMAN SEALED_SCOPE (R16) no N+1 da rc10, sem despacho"
-      }
+      },
+      "resolution": "cain v0.4.13rc12 (R16 SEALED_SCOPE, brasileirao.json com os 3 sealed_scopes): os vetores holdout 01-season-2025, 02-window-into-2025 e 03-season-2026 dão REQUIRE_HUMAN SEALED_SCOPE, receipts iguais em 3 processos novos, no N+1 congelado e no integrado; nunca despachados"
     },
     {
       "id": "IB-F003",
@@ -411,16 +420,17 @@
       "classification": "C6 P1: defeito real do framework, sem violação observada (nenhuma proposta sai; nada é despachado); torna o piso de ≥ 5 propostas de LLM do perfil inatingível na rc10.",
       "evidence": [
         {
-          "file": "qualification/integration-brasileirao/RAW_LOGS/freeze/freeze_parameters_cycle4.log",
-          "sha256": "9a04e14469e78dd115c4e1eed8aedd16506a012e7c732a3dc12813c8888e0676"
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T145525Z-br12/soak/commands.log",
+          "sha256": "6716dc2afdf42f9d54a382208c16ebe2e986817faeeb99d7d854da90f95db83e"
         },
         {
-          "file": "qualification/integration-brasileirao/RAW_LOGS/freeze/cycle4_check.json",
-          "sha256": "52609666335bc99a790f1c3e1067dc099573ef164b17e5d928d1d2c2b28d75a6"
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T145525Z-br12/soak/SUMMARY.json",
+          "sha256": "06e4810cdec5ccc46d6e1586c6f86b12c5c8aed9440a1641f1f437c48ac83210"
         }
       ],
-      "status": "OPEN",
-      "fix": "sessão STOCKS, commit f7b56c0 do cain (branch integration-stocks/proposal-overlays-20260928): p.get('parameters', {}) nos 4 acessos do caminho do LLM + teste tests/integration/test_orchestration.py::test_llm_proposal_for_a_domain_whose_request_has_no_parameters; entra na rc11. Fecha quando o soak na rc11 fizer as propostas de LLM chegarem a uma decisão."
+      "status": "FIXED",
+      "fix": "sessão STOCKS, commit f7b56c0 do cain (branch integration-stocks/proposal-overlays-20260928): p.get('parameters', {}) nos 4 acessos do caminho do LLM + teste tests/integration/test_orchestration.py::test_llm_proposal_for_a_domain_whose_request_has_no_parameters; entra na rc11. Fecha quando o soak na rc11 fizer as propostas de LLM chegarem a uma decisão.",
+      "resolution": "cain#72 (na rc11 e na rc12): o caminho do LLM aceita pedido sem parameters; no soak da rc12 o explain responde com o erro fechado LLM_PROPOSAL_FAILED/NO_ELIGIBLE_HYPOTHESIS, sem traceback (a causa do piso é o IB-F009)"
     },
     {
       "id": "IB-F007",
@@ -446,6 +456,52 @@
         "words": "1 hipótese por ciclo (Recommended)"
       },
       "resolution": "ciclo 4 da freeze-parameters: uma hipótese de qualificação por ciclo do soak (brasileirao:QUAL-SOAK-001..024), definidas antes da execução, no brasileirao.json da rc11; pisos e critérios sem mudança"
+    },
+    {
+      "id": "IB-F008",
+      "severity": "P2",
+      "title": "artefatos protegidos compartilhados mudaram por novo ciclo/reemissão das missões donas",
+      "description": "Sete itens de PROTECTED_SET.json → shared têm sha256 diferente do truth-map: integration-crypto QUALIFICATION_ATTESTATION.json e FROZEN_PARAMETERS.json; integration-stocks FROZEN_PARAMETERS.json e FROZEN_VECTORS.json; integration-brasileirao FROZEN_PARAMETERS.json, FROZEN_VECTORS.json e QUALIFICATION_PROFILE_INTEGRATION_BR_V1.json. Em todos, os bytes do truth-map estão preservados byte a byte num arquivo _cycle<N>_ ou _superseded_ do mesmo diretório. Nenhum item de código protegido dos domínios mudou.",
+      "classification": "C6 P2: mudanças legítimas e registradas das missões donas; sem efeito em resultado ou operação. A leitura estrita da C15.1 (item alterado = P0) exigia decisão do dono sobre o critério (FROZEN_PARAMETERS → c14_other_integrations.protected_attestations).",
+      "evidence": [
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/protected/protected_check.json",
+          "sha256": "59edebcdb62746f08e701a2bf67b8502820b3fb84440da22a3d69d354d18d255"
+        }
+      ],
+      "status": "ACCEPTED_LIMITATION",
+      "owner_decision_taken": {
+        "date": "2026-09-28",
+        "by": "dono",
+        "channel": "chat da sessão integration-brasileirao (pergunta com opções)",
+        "words": "Cadeia preservada (Recommended)"
+      },
+      "applied": "scripts/protected_check.py: um artefato compartilhado alterado conta como inalterado só se os bytes do truth-map estão, com sha256 conferido, num <nome>_cycle<N>_<sha12>.json ou QUALIFICATION_ATTESTATION_superseded_<sha12>.json do mesmo diretório; qualquer outra diferença é FAIL; os itens de código dos domínios são conferidos sem exceção"
+    },
+    {
+      "id": "IB-F009",
+      "severity": "P1",
+      "title": "piso de ≥ 5 propostas de LLM do soak inatingível para o Brasileirão na cain v0.4.13rc12",
+      "description": "No soak na rc12, os 6 pedidos `cain research explain --propose-for-domain brasileirao` terminam com LLM_PROPOSAL_FAILED: NO_ELIGIBLE_HYPOTHESIS ('DUPLICATE EQUIVALENT_REQUEST'), sem chamar o modelo. O molde do LLM é sempre uma task já emitida com a hipótese trocada; o pedido do Brasileirão não tem parameters, então proposal_overlays não gera outro experimento, e a R17 segura todas as hipóteses. Todos os outros pisos e conferências do soak passaram.",
+      "classification": "C6 P1: limite real do framework para domínio sem parameters, sem violação observada (nenhuma proposta sai, nada é despachado); a saída seria uma rc13 com sobreposição de campos do pedido (o que obrigaria o cripto e o stocks, já QUALIFIED na rc12, a refazer as fases pela C14).",
+      "evidence": [
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T145525Z-br12/soak/SUMMARY.json",
+          "sha256": "06e4810cdec5ccc46d6e1586c6f86b12c5c8aed9440a1641f1f437c48ac83210"
+        },
+        {
+          "file": "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T145525Z-br12/soak/commands.log",
+          "sha256": "6716dc2afdf42f9d54a382208c16ebe2e986817faeeb99d7d854da90f95db83e"
+        }
+      ],
+      "status": "ACCEPTED_LIMITATION",
+      "owner_decision_taken": {
+        "date": "2026-09-28",
+        "by": "dono",
+        "channel": "chat da sessão integration-brasileirao (pergunta com opções)",
+        "words": "Waiver do piso de LLM (Recommended)"
+      },
+      "applied": "o gate SOAK conta o piso de LLM como dispensado pelo dono só para o Brasileirão; a conferência que falhou continua no SUMMARY.json do soak (61 de 62) e é citada na nota do gate"
     }
   ]
 }
