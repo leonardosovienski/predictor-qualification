@@ -1,0 +1,119 @@
+{
+ "schema": "integration-stocks/CONTRACT_REVALIDATION_STATIC/1",
+ "stage_a_final_commit": "61fc017256ffea815ae96bbe02b847dccdb395cc",
+ "final_commit": "6f857b232eaa63f3fccda6a16f92dbfc8983ab3b",
+ "authorized_outside_adapter_paths": {
+  "C24.3(a)": "versão pré-release (pyproject version, linha do projeto no uv.lock)",
+  "D-24 (4)": "arquivos novos em tests/adapters/; recibos R8 novos (.json) e o selo current-operational-evidence.json"
+ },
+ "checks": [
+  {
+   "check": "(a) outside adapter_paths only: version files, new tests/adapters/, new R8 receipts (.json) and the seal",
+   "ok": true,
+   "changed": {
+    "docs/engineering/2026-09-27-integration-stocks/evidence/operational-capacity.json": "A",
+    "docs/engineering/2026-09-27-integration-stocks/evidence/operational-real.json": "A",
+    "docs/engineering/current-operational-evidence.json": "M",
+    "pyproject.toml": "M",
+    "stocks_predictor/adapters/research_v2.py": "A",
+    "tests/adapters/__init__.py": "A",
+    "tests/adapters/conftest.py": "A",
+    "tests/adapters/test_research_v2.py": "A",
+    "uv.lock": "M"
+   },
+   "tests_adapters_new": [
+    "tests/adapters/__init__.py",
+    "tests/adapters/conftest.py",
+    "tests/adapters/test_research_v2.py"
+   ],
+   "r8_receipts_new": [
+    "docs/engineering/2026-09-27-integration-stocks/evidence/operational-capacity.json",
+    "docs/engineering/2026-09-27-integration-stocks/evidence/operational-real.json"
+   ],
+   "other": [
+    "docs/engineering/current-operational-evidence.json",
+    "pyproject.toml",
+    "uv.lock"
+   ]
+  },
+  {
+   "check": "(a) no existing test changed (tests/ outside tests/adapters/ untouched)",
+   "ok": true
+  },
+  {
+   "check": "(a) no new Markdown and nothing under tools/, .github/, research/, policy/ or the rest of docs/",
+   "ok": true
+  },
+  {
+   "check": "(a) pyproject.toml: only the pre-release version line changed",
+   "ok": true,
+   "lines": [
+    "-version = \"0.3.0rc2\"",
+    "+version = \"0.3.0rc3\""
+   ]
+  },
+  {
+   "check": "(a) uv.lock: only the pre-release version line changed",
+   "ok": true,
+   "lines": [
+    "-version = \"0.3.0rc2\"",
+    "+version = \"0.3.0rc3\""
+   ]
+  },
+  {
+   "check": "(a) uv.lock identical apart from the project version (no dependency change)",
+   "ok": true
+  },
+  {
+   "check": "(a) the seal points to the new R8 receipts and never enables capital or certifies profit",
+   "ok": true,
+   "real": "docs/engineering/2026-09-27-integration-stocks/evidence/operational-real.json",
+   "capacity": "docs/engineering/2026-09-27-integration-stocks/evidence/operational-capacity.json"
+  },
+  {
+   "check": "(a) previous R8 receipts intact",
+   "ok": true,
+   "previous": 29
+  },
+  {
+   "check": "(b) nothing outside adapter_paths imports from it",
+   "ok": true,
+   "offenders": []
+  },
+  {
+   "check": "(b) no console script or plugin entry point added (adapter_entrypoints is empty)",
+   "ok": true,
+   "scripts": {
+    "stocks-research": "stocks_predictor.research_runner:main"
+   }
+  },
+  {
+   "check": "(e) every protected item of the stocks domain has the same blob at the final commit",
+   "ok": true,
+   "items": 89,
+   "changed": []
+  },
+  {
+   "check": "(f) CI of the domain green on the exact final commit (push run, prompt 9.3)",
+   "ok": false,
+   "runs": [
+    {
+     "conclusion": "failure",
+     "databaseId": 36363108348,
+     "event": "workflow_dispatch",
+     "headSha": "6f857b232eaa63f3fccda6a16f92dbfc8983ab3b",
+     "name": "CI Pipeline",
+     "status": "completed",
+     "url": "https://github.com/leonardosovienski/stocks-predictor/actions/runs/36363108348",
+     "jobs": {
+      "secrets": "failure",
+      "Quality / Python 3.14": "success",
+      "Quality / Python 3.13": "success"
+     }
+    }
+   ]
+  }
+ ],
+ "passed": 11,
+ "failed": 1
+}

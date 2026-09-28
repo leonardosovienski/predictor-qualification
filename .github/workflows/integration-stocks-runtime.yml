@@ -1,0 +1,105 @@
+# Missão integration-stocks (Etapa B): runtime suportado no Linux primário (GitHub Actions ubuntu-latest × 3.13, D-9,
+# D-16) e no Windows secundário (windows-latest × 3.13, D-1, D-24). Instala só as wheels publicadas listadas em
+# qualification/integration-stocks/runtime_targets.json (C3.1) em venvs limpos, a partir dos uv.lock dos commits finais
+# (--require-hashes). Dados públicos B3/CVM baixados no job pela URL oficial e conferidos contra o pin do run
+# (qualification/integration-stocks/data/SOURCES.json, fixado e commitado antes de cada run: D-16, D-21); o cripto
+# integrado usa os dados públicos da Binance da Etapa A (.CHECKSUM). Nada disso é versionado nem publicado como artefato
+# (o artefato leva logs, hashes, manifestos e resultados). Sem segredos.
+#
+# Disparo: manual (quando este arquivo estiver no main) ou push numa branch integration-stocks/runtime-<fases>-<n>.
+# <fases> = nomes separados por "+": cleanroom contract e2e n1 isolation failures soak windows ("windows" = job
+# windows-latest com E2E + restart). Não entra no CI de push/PR do repositório: só roda nessas branches (D-15).
+name: integration-stocks runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      phases:
+        description: "fases separadas por espaço: cleanroom contract e2e n1 isolation failures soak windows"
+        required: true
+        default: "cleanroom contract e2e n1 isolation failures"
+  push:
+    branches:
+      - "integration-stocks/runtime-*"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      linux: ${{ steps.p.outputs.linux }}
+      windows: ${{ steps.p.outputs.windows }}
+    steps:
+      - id: p
+        shell: bash
+        env:
+          INPUT_PHASES: ${{ inputs.phases }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -n "$INPUT_PHASES" ]; then PHASES="$INPUT_PHASES"; else
+            spec="${REF_NAME#integration-stocks/runtime-}"; spec="${spec%-*}"; PHASES="${spec//+/ }"
+          fi
+          linux=""; windows=false
+          for p in $PHASES; do if [ "$p" = windows ]; then windows=true; else linux="$linux $p"; fi; done
+          echo "linux=${linux# }" >> "$GITHUB_OUTPUT"; echo "windows=$windows" >> "$GITHUB_OUTPUT"
+          echo "linux=[${linux# }] windows=$windows"
+  linux:
+    needs: plan
+    if: needs.plan.outputs.linux != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: fases
+        shell: bash
+        env:
+          PHASES: ${{ needs.plan.outputs.linux }}
+        run: bash qualification/integration-stocks/scripts/ci_runtime.sh "$PHASES" "$RUNNER_TEMP/work" "$RUNNER_TEMP/out"
+      - name: sem dados versionáveis no artefato
+        if: always()
+        shell: bash
+        run: |
+          find "$RUNNER_TEMP/out" \( -name '*.zip' -o -name 'dataset-*.json' -o -name 'panel*.json' -o -name 'vlmo_source.json' \) -delete
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-stocks-runtime-linux
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
+  windows:
+    needs: plan
+    if: needs.plan.outputs.windows == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: E2E + restart (WINDOWS_SMOKE)
+        shell: bash
+        run: |
+          mkdir -p /c/q && export TMPDIR=/c/q   # raiz curta (MAX_PATH, como qualification/stocks/d16/d16_run.sh)
+          bash qualification/integration-stocks/scripts/ci_runtime.sh "e2e" /c/q/w "$RUNNER_TEMP/out"
+      - name: sem dados versionáveis no artefato
+        if: always()
+        shell: bash
+        run: |
+          find "$RUNNER_TEMP/out" \( -name '*.zip' -o -name 'dataset-*.json' -o -name 'panel*.json' -o -name 'vlmo_source.json' \) -delete
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-stocks-runtime-windows
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
