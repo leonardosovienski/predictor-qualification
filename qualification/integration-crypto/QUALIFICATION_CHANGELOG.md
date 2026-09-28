@@ -140,3 +140,19 @@ Decisão do dono: "Registrar + regra". A attestation é reemitida só pelos acha
 | `RAW_LOGS/ops-disputa-windows/`, `RAW_LOGS/ops-disputa-linux/` | resumo, comandos e scripts das duas disputas, com SHA256SUMS | evidência | — |
 | `FINDINGS.json` (`scripts/add_findings_disputa.py`) | IC-F016 (P2, ACCEPTED_LIMITATION): no Windows, 1/20, o perdedor morre com PermissionError em `durable_io.atomic_write`, na escrita de `reference-materialization.json` antes do `run_job` do Ops. IC-F017 (P2, ACCEPTED_LIMITATION): o perdedor publica OPS_FAILED_RETRYABLE para uma task concluída (39/40). Regra operacional nos dois: um consumidor por domínio por vez. Correção anotada para a próxima versão do cripto (C24.4) | teste de ecossistema; C6 | — |
 | `scripts/update_gates.py`, `QUALIFICATION_ATTESTATION_superseded_dc4b9cf9946e.json`, `ATTESTATION_PARTIAL_achados-disputa-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, ciclo 3) é preservada. A nova tem os mesmos gates e evidências de fase e os achados novos na contagem | C7.1 regra 8 | — |
+
+## 2026-09-28 — C14 na cain 0.4.13rc13 e no transporte 0.1.0rc6 (sessão cripto, PC 2)
+
+A sessão STOCKS publicou a cain 0.4.13rc13, por decisão do dono lá: molde do LLM sem task recusada, `allowed_requests`, `refusal_mismatches`, linter e findings v2. Ela também publicou o transporte 0.1.0rc6, com a trava exclusiva por domínio no consumidor (`CONSUMER_BUSY`); é a correção dos achados da disputa, decidida pelo dono ("Só o transporte").
+
+`policy.py` e `crypto.json` estão iguais aos da rc12, e os congelados do ciclo 3 não mudam. Pela C14, as fases foram refeitas com as wheels finais novas. O cripto não mudou (`ee3d3d1`).
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `runtime_targets.json`, `hosted_ci_final_targets_rc13.json`, `scripts/{secrets_scan,update_gates,render_reports,rc13_edits}.py`, `DECISION_POLICY_REPORT.md`, `ENVELOPE_V2_CONFORMANCE_REPORT.md` | alvos na cain `960fb25` (wheel `a1d94fd5…`) e no transporte `bac1f7b` (wheel `6c7e83c4…`), os dois conferidos por download anônimo | C14 | cain#77/#78/#79; ecosystem-predictor#36 |
+| `FINDINGS.json` | IC-F016 e IC-F017 passam a FIXED pelo transporte 0.1.0rc6 | correção decidida pelo dono na sessão STOCKS | ecosystem-predictor#36 |
+| `RAW_LOGS/transport-rc6-disputa/` | conferência da correção com o código do PR, que é igual ao publicado. Disputa: 20/20 no WSL e 20/20 no Windows (1 RESULT, 0 envelope falso, 0 queda). Morte do dono da trava com retomada: 6/6 | evidência do FIXED | — |
+| `RAW_LOGS/runtime/run36462444590/` | run de push único, com todas as fases do runtime: cleanroom-final 48/19/65, C24.3 (d) 10/10, e2e 56/56, N+1 21/21, isolamento 22/22, F01–F15 sem falha, soak 48/48 (6 propostas do LLM, `allowed_requests` nas 6) | C14 | — |
+| `RAW_LOGS/windows-smoke-rc13/` | E2E + restart no PC 2: 56/56. `logs`/`out` da rc12 renomeados para `logs-rc12-ciclo3`/`out-rc12-ciclo3`; nada apagado | C14, WINDOWS_SMOKE | — |
+| `RAW_LOGS/{core-identity,contract-revalidation,protected,final-wheels,secrets}-rc13/`, `RAW_LOGS/hosted-ci/final-rc13/` | conferências com os final_commits `960fb25`/`bac1f7b`/`ee3d3d1`; CI de push verde nos três (no cain, main e tag) | C14, C21 | — |
+| `QUALIFICATION_ATTESTATION_superseded_a071fe2ca22e.json`, `ATTESTATION_PARTIAL_rc13-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, rc12) é preservada. A nova aponta para ela | C7.1 regra 8 | — |

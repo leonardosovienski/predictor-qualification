@@ -87,14 +87,14 @@ A orquestração nova é o caminho qualificado: proposta → política → task 
 
 ## 5. Evidência de execução
 
-Wheels publicadas, Linux primário (GitHub Actions), ciclo 3 na cain 0.4.13rc13 com o transporte 0.1.0rc6 (run `run36439656179` com todas as fases, inclusive o soak). Chaves de `EVIDENCE_NUMBERS.json`:
+Wheels publicadas, Linux primário (GitHub Actions), ciclo 3 na cain 0.4.13rc13 com o transporte 0.1.0rc6 (run `run36462444590` com todas as fases, inclusive o soak). Chaves de `EVIDENCE_NUMBERS.json`:
 
-- testes da política contra a wheel publicada: `runtime/run36439656179/cleanroom-final/cain.junit.xml:junit`;
-- N+1 (receipts byte a byte iguais em processos novos): `runtime/run36439656179/n-plus-1:checks_passed`,
+- testes da política contra a wheel publicada: `runtime/run36462444590/cleanroom-final/cain.junit.xml:junit`;
+- N+1 (receipts byte a byte iguais em processos novos): `runtime/run36462444590/n-plus-1:checks_passed`,
   `:checks_failed`, `:receipts`;
-- decisões do E2E: `runtime/run36439656179/e2e:decisions`;
-- isolamento, IDs com domínio e contradição: `runtime/run36439656179/isolation:checks_passed` e `:checks_failed`;
-- soak com propostas do LLM local pela mesma política: `runtime/run36439656179/soak:counters` (`decisions`,
+- decisões do E2E: `runtime/run36462444590/e2e:decisions`;
+- isolamento, IDs com domínio e contradição: `runtime/run36462444590/isolation:checks_passed` e `:checks_failed`;
+- soak com propostas do LLM local pela mesma política: `runtime/run36462444590/soak:counters` (`decisions`,
   `llm_proposals`).
 
 Tabelas por conferência em `CAIN_ROUNDTRIP_REPORT.md` e `SOAK_REPORT.md`, geradas por `scripts/render_reports.py`.
