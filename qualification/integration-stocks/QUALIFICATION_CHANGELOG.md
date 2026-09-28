@@ -175,3 +175,24 @@ A cain v0.4.13rc12 foi publicada pela sessão cripto: `302a5c8`, rc11 + cain#75,
 | relatórios, `scripts/render_reports.py`, `scripts/update_gates.py`, `scripts/evidence_numbers.py` | Relatórios do ciclo 2: política v2 e `rule_order` lidas dos congelados; cadeias do IS-F008; hipóteses só para o LLM; limites do framework com o estado do ciclo 2. `update_gates.py` aponta para as evidências do ciclo 2; as do ciclo 1 ficam em `GATES.json → cycle1_evidence` e no histórico |
 | `QUALIFICATION_ATTESTATION_superseded_12411b51d527.json`, `ATTESTATION_PARTIAL_ciclo2-attestation.json`, `QUALIFICATION_ATTESTATION.json` | A attestation da reemissão 1 do ciclo 1 (QUALIFIED, cain rc7) fica preservada. A nova é **QUALIFIED**: 30/30 gates PASS, P0=0, P1=0, P2=0, `supersedes_sha256` = `12411b51…` |
 | `RAW_LOGS/c0/c0_preflight_8817b7c.log` | Pré-voo 4.1–4.7 no main atual: 0 falhas |
+
+## 2026-09-28 — depois da attestation do ciclo 2: disputa de consumidores (registro + regra, decisão do dono)
+
+Isto não é fase nem gate. A attestation QUALIFIED do ciclo 2 (`9979d19b…`, PR #80, merge `957b13b`) continua como está. O `FINDINGS.json` é evidência dela (sha256), por isso o achado entra nele só na próxima reemissão, como **IS-F009 (P2)**.
+
+**Teste** (`scripts/race.py`; evidência em `RAW_LOGS/pos-attestation-c2/race/RACE.json` e `race.log`):
+- Sugerido pela sessão cripto, rodado numa rodada de uso real do CAIN com o stocks no WSL do PC 2.
+- Runtime qualificado do ciclo 2: cain 0.4.13rc12, stocks-predictor 0.3.0rc3, transporte 0.1.0rc5, painel real.
+- Em cada uma das 20 repetições, com estado novo: a semente (backtest real) é despachada, e dois `predictor-research-consumer` idênticos começam juntos sobre a mesma task.
+
+**O que o teste mostrou:**
+- **Nas 20:** um experimento no journal do domínio, uma admissão aceita, RESULT terminal ingerido e nenhuma queda de processo. Sem efeito duplicado nem perdido.
+- **Também nas 20, o consumidor perdedor publica um envelope falso ao lado do RESULT do vencedor:**
+  - **16×** `OPS_FAILED_RETRYABLE`, motivo `OPS_SKIPPED lock_not_acquired`: a trava do Ops funciona, mas a perda é anunciada como falha;
+  - **4×** `RECONCILIATION_REQUIRED`, motivo `REFERENCE: materialized reference changed after materialization: readiness`: o stocks materializa as referências no estado do domínio antes do `run_job` do Ops, fora da trava, e o perdedor vê o arquivo reescrito pelo vencedor.
+- **Efeito no CAIN:** nos 4 casos de `RECONCILIATION_REQUIRED`, o CAIN ingere o `REQUIRES_HUMAN` e segura o domínio. A proposta seguinte vira `REQUIRE_HUMAN DOMAIN_RECONCILIATION_PENDING` (R09), com o experimento feito uma vez e certo. É uma parada falsa, fail-closed.
+- **Mesmo padrão no cripto:** IC-F016 e IC-F017, na integration-crypto.
+
+**Decisão do dono** no chat da sessão, pergunta com opções: **"Registrar + regra (Recomendado)"**.
+- **Regra:** um consumidor por domínio por vez, o que o agendador do Ops já garante. É a mesma regra decidida no cripto, que a sessão cripto põe no documento do stack da Etapa B no ecosystem-predictor.
+- **Código:** não muda. A correção de fundo (tomar a trava antes de materializar) é código de domínio fora dos adapter_paths; pela C24.4 ela reabriria a Etapa A do stocks.
