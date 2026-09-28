@@ -7,7 +7,7 @@ diretórios *-c14s e o run 36365192302 (todas as fases, inclusive o soak, num ru
 Ciclo 2 (C14, cain 0.4.13rc10: política v2 e configurações das três integrações; transporte 0.1.0rc5): diretórios
 *-ciclo2 e o run 36426935949 (todas as fases num run só); FROZEN_PARAMETERS.json reemitido e encadeado (IC-F011).
 Ciclo 3 (C14, cain 0.4.13rc12 (a rc11 falhou no soak, #75): result_metrics na memória e no modelo; FROZEN_PARAMETERS ciclo 3 encadeado ao 2 e ao 1):
-diretórios *-ciclo3 e o run 36435382707.
+diretórios *-ciclo3 e o run 36439656179.
 """
 
 import hashlib
@@ -36,7 +36,7 @@ for lk, name in ((cl, "predictor-research-snapshot"), (cl, "predictor-research-b
                  (kl, "predictor-ops")):
     (w,) = lk[name]["wheels"]
     wheels.append({"name": name, "version": lk[name]["version"], "url": w["url"], "sha256": w["hash"].split(":", 1)[1]})
-R = f"{M}/RAW_LOGS/runtime/run36435382707"
+R = f"{M}/RAW_LOGS/runtime/run36439656179"
 FM = f"{R}/failure-matrix"
 W = f"{M}/RAW_LOGS/windows-smoke-ciclo3"
 g = json.load(open(f"{M}/GATES.json", encoding="utf-8"))
@@ -137,7 +137,7 @@ gates["HOSTED_CI"] = p("PASS" if hosted_ok else "FAIL",
                        [f"{M}/RAW_LOGS/hosted-ci/baseline/HOSTED_CI_SUMMARY.json",
                         f"{M}/RAW_LOGS/hosted-ci/final-ciclo3/HOSTED_CI_SUMMARY.json", f"{M}/HOSTED_CI_REPORT.md"],
                        "runs de push nos SHAs exatos dos final_commits (cain 302a5c8, ecosystem b11494a, cripto ee3d3d1) " + ("todos verdes" if hosted_ok else "com job não verde: ver resumo") + "; o ecosystem da base (49ffb16) ficou vermelho depois só pelo IC-F004, que 61d3430 corrige")
-S = f"{M}/RAW_LOGS/runtime/run36435382707"
+S = f"{M}/RAW_LOGS/runtime/run36439656179"
 if "soak" not in g["phases_completed"]:
     g["phases_completed"].append("soak")
 gates["SOAK"] = p("PASS", [f"{S}/run.json", f"{S}/soak/SUMMARY.json", f"{S}/soak/commands.log",
@@ -155,7 +155,7 @@ gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p("PASS" if protected["all_unchanged_or
                                            "1, o ciclo 1 byte a byte), por decisão do dono (IC-F011)")
 gates["EVIDENCE_CONSISTENCY"] = p("PASS", [f"{M}/EVIDENCE_NUMBERS.json", f"{M}/scripts/evidence_numbers.py",
                                            f"{M}/scripts/render_reports.py",
-                                           f"{M}/RAW_LOGS/final-wheels-ciclo3/final_wheels_check_run36435382707.json"],
+                                           f"{M}/RAW_LOGS/final-wheels-ciclo3/final_wheels_check_run36439656179.json"],
                                   "números dos relatórios gerados de RAW_LOGS por script versionado; RAW_LOGS "
                                   "-text no .gitattributes (bytes preservados); final_wheels conferidas contra os "
                                   "assets e contra o instalado no run (C7.1 regra 4)")

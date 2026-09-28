@@ -98,3 +98,29 @@ O cripto não mudou: o final_commit continua `ee3d3d1` (1.2.0rc3), e o perfil, o
 | `RAW_LOGS/{core-identity,contract-revalidation,protected,final-wheels,secrets}-ciclo2/`, `RAW_LOGS/hosted-ci/final-ciclo2/` | conferências refeitas com os final_commits `fb0e1dc`/`b11494a`/`ee3d3d1`; CI de push verde nos três (no cain, o run do main e o da tag) | C14, C21 | — |
 | `DECISION_POLICY_REPORT.md`, `ENVELOPE_V2_CONFORMANCE_REPORT.md` | tabela de regras da v2 na ordem de avaliação, campos novos da configuração, versões dos consumidores e chaves de evidência do run novo | C14, C20 | — |
 | `QUALIFICATION_ATTESTATION_superseded_2d588e3df966.json`, `ATTESTATION_PARTIAL_ciclo2-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, cain rc7 / transporte rc4) é preservada. A nova aponta para ela por `supersedes_sha256` | C7.1 regra 8, C14 | — |
+
+## 2026-09-28 — ciclo 3 (C14): validação prática, métricas na memória e no modelo, cain 0.4.13rc12 (sessão cripto, PC 2)
+
+O dono pediu uma validação prática do CAIN × cripto na rc10 (`RAW_LOGS/pratica-rc10`), para ver se o CAIN tem as informações que deveria:
+- auditoria da configuração contra as fontes pinadas;
+- histórico do cripto no arquivo de achados;
+- paráfrases de hipóteses fechadas;
+- ciclo real de 21 rodadas com dados reais e o modelo local.
+
+Decisões do dono: "Código + config"; sobre a config, "Manter e registrar"; ciclo 3 dos congelados mostrado antes de congelar, "Aprovo"; sobre o soak, "Soak conta a recusa". O cripto não mudou: o final_commit continua `ee3d3d1`.
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `RAW_LOGS/pratica-rc10/` | validação prática: config 10 OK / 3 divergências; findings check (ID qualificado e paráfrases); ciclo real de 21 rodadas; mini-ciclo com o código corrigido. 67 arquivos com SHA256SUMS | pedido do dono | — |
+| `FINDINGS.json` (`scripts/add_findings_pratica.py`, `scripts/update_ic_f012_soak.py`) | IC-F012: config aceita QUAL-SHADOW-001 e datasets da Etapa A que a admissão real não aceita (ACCEPTED_LIMITATION, duas decisões do dono). IC-F013: memória e modelo sem métricas (FIXED). IC-F014: ID qualificado no findings check (FIXED). IC-F015: paráfrase não detectada (OPEN_AWAITING_OWNER, P2) | validação prática | cain#73 |
+| `cain` | `result_metrics` opcional (números finitos nos fatos, no view e no contexto do LLM); ID qualificado no findings check; `crypto.json` do ciclo 3 | IC-F013, IC-F014 | cain#73 (`c3a28d9`) |
+| `cain` | contexto do modo de proposta dentro do orçamento do provider (os mais antigos saem; `results_omitted`) | regressão da rc11 (o #73 levava o contexto além de 7680 bytes e o soak ficava sem propostas) | cain#75 (`2148334`); versão cain#76; pré-release `v0.4.13rc12` (`302a5c8`, wheel `988a0fb9…`) publicada por esta sessão (`RAW_LOGS/publish-candidates/publish_cain_0.4.13rc12.log`) |
+| `FROZEN_PARAMETERS.json`, `FROZEN_PARAMETERS_cycle2_2ee84f572c1f.json`, `scripts/freeze_cycle3.py` | ciclo 3: só `crypto_config.result_metrics` (retorno líquido, IC 95%, amostra). O ciclo 2 fica no mesmo blob, e `cycle.chain` aponta o ciclo 1 | C14, C15 | `73cab73` |
+| `scripts/protected_check.py`, `scripts/render_reports.py` | a cadeia `cycle.supersedes` + `cycle.chain` é seguida até os bytes protegidos (ciclo 1), com cada elo conferido | C15.1, IC-F011 | — |
+| `scripts/soak.py` | a recusa do domínio com código fechado, registrada nos dois lados, conta como desfecho terminal. Conferência nova: hipótese recusada nunca volta (R15) | IC-F012, decisão do dono | — |
+| `RAW_LOGS/runtime/run36435382707/`, `RAW_LOGS/windows-smoke-ciclo3-rc11/` | rodada da rc11, preservada. Todas as fases passaram, menos o soak (llm_proposals 0/5, contexto acima do orçamento). Windows E2E 56/56 | C14 | — |
+| `RAW_LOGS/runtime/run36439656179/` | run de push único na rc12, com todas as fases: cleanroom-final, C24.3 (d), e2e, N+1, isolamento, F01–F15 e soak com LLM local (6 propostas) | C14 | — |
+| `RAW_LOGS/windows-smoke-ciclo3/` | E2E + restart no PC 2 com a rc12, na mesma pasta autorizada (D-23). As rodadas anteriores ficam renomeadas (`logs-rc10-ciclo2`, `logs-rc11-ciclo3`); nada apagado | C14, WINDOWS_SMOKE | — |
+| `RAW_LOGS/{core-identity,contract-revalidation,protected,final-wheels,secrets}-ciclo3/`, `RAW_LOGS/hosted-ci/final-ciclo3/` | conferências refeitas com os final_commits `302a5c8`/`b11494a`/`ee3d3d1`; CI de push verde nos três (no cain, main e tag) | C14, C21 | — |
+| `runtime_targets.json`, `hosted_ci_final_targets_ciclo3.json`, `scripts/{secrets_scan,update_gates}.py`, `DECISION_POLICY_REPORT.md`, `ENVELOPE_V2_CONFORMANCE_REPORT.md` | alvos, ledger e relatórios na rc12 | C14, C20 | — |
+| `QUALIFICATION_ATTESTATION_superseded_d1c76b4eedb9.json`, `ATTESTATION_PARTIAL_ciclo3-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, cain rc10) é preservada. A nova aponta para ela por `supersedes_sha256` | C7.1 regra 8, C14 | — |
