@@ -1,0 +1,25 @@
+{"n": 1, "label": "propose 1", "at": "2026-09-28T14:24:21Z", "seconds": 0.137, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F01/proposals/1.json", "--as-of", "2026-09-28T14:24:21Z"], "fault_env": {"CAIN_ORCHESTRATION_FAULT": "after_outbox_commit"}, "exit": 86}
+--- stdout
+--- stderr
+--- end
+{"n": 2, "label": "dispatch after restart", "at": "2026-09-28T14:24:21Z", "seconds": 0.133, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F01/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-d68de9e75c03e87e3c10a1f03858dc4a.json", "spool": "WRITTEN", "task_id": "crypto:TASK-d68de9e75c03e87e3c10a1f03858dc4a"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer", "at": "2026-09-28T14:24:21Z", "seconds": 0.464, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "crypto", "--spool", "/home/runner/work/_temp/work/failures/F01/spool", "--ledger", "/home/runner/work/_temp/work/failures/F01/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F01/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-d68de9e75c03e87e3c10a1f03858dc4a.964ce0a8edbc61fc.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-d68de9e75c03e87e3c10a1f03858dc4a"}
+--- stderr
+{"duration_ms": 209, "event": "job_finished", "job_id": "crypto-research-8bc3ad4121c563a9e72f3303", "level": "INFO", "run_id": "af65557d623a491ea1daf9a84c53e3b8", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-28T14:24:21.700909Z"}
+--- end
+{"n": 4, "label": "ingest", "at": "2026-09-28T14:24:21Z", "seconds": 0.139, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F01/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:fc2d5c234bee431cb70c173e10ceb86e", "file": "TASK-d68de9e75c03e87e3c10a1f03858dc4a.964ce0a8edbc61fc.json", "status": "RESULT", "task_id": "crypto:TASK-d68de9e75c03e87e3c10a1f03858dc4a"}
+--- stderr
+--- end
+{"n": 5, "label": "recovered exactly once", "at": "2026-09-28T14:24:22Z", "seconds": 0.128, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-28T14:24:21Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-d68de9e75c03e87e3c10a1f03858dc4a"}, "proposal_id": "cain:FM-F01-1", "reason_code": "ALLOWED", "receipt_sha256": "da9fc9076d5ca930865405a7adcceb901131e661718f1f9d37a0b4d1548420a4", "source": "operator", "task_id": "crypto:TASK-d68de9e75c03e87e3c10a1f03858dc4a"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:fc2d5c234bee431cb70c173e10ceb86e", "payload_sha256": "d6a7fb7a7027e23c1a5736aa6a1975aa0b8a4e778fec82f4b8c2cf98fdb2b51f", "status": "RESULT", "task_id": "crypto:TASK-d68de9e75c03e87e3c10a1f03858dc4a"}], "memory": {"broken_at": null, "entries": 1, "head": "292cda08a67e46a9b42266a3fac8bbd3c7b7b665c533cef6f937e13fdc101ecb", "head_recorded_at": "2026-09-28T14:24:21.857510Z", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end

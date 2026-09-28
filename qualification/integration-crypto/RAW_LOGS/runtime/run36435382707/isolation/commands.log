@@ -1,0 +1,68 @@
+{"n": 1, "label": "protocol probe", "at": "2026-09-28T14:24:19Z", "seconds": 0.061, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/python", "-I", "/home/runner/work/_temp/work/isolation/probe.py", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto"], "fault_env": {}, "exit": 0}
+--- stdout
+{"brasileirao->brasileirao": "ACCEPTED", "brasileirao->crypto": "DOMAIN_MISMATCH", "brasileirao->stocks": "DOMAIN_MISMATCH", "crypto->brasileirao": "DOMAIN_MISMATCH", "crypto->crypto": "ACCEPTED", "crypto->stocks": "DOMAIN_MISMATCH", "episode_ids": {"brasileirao": "brasileirao:episode-2", "crypto": "crypto:episode-2", "stocks": "stocks:episode-2"}, "hypothesis_ids": {"brasileirao": "brasileirao:H9", "crypto": "crypto:H9", "stocks": "stocks:H9"}, "stocks->brasileirao": "DOMAIN_MISMATCH", "stocks->crypto": "DOMAIN_MISMATCH", "stocks->stocks": "ACCEPTED", "task_ids": {"brasileirao": "brasileirao:TASK-a217b64758a0bb915918e79a09d87ac7", "crypto": "crypto:TASK-45b3afb3f4c777ae5aa52020f98afc6a", "stocks": "stocks:TASK-09f813296679d4ab76c537177cd98368"}, "unqualified": "ID_NOT_QUALIFIED"}
+--- stderr
+--- end
+{"n": 2, "label": "propose to an orchestration of a domain outside the protocol", "at": "2026-09-28T14:24:19Z", "seconds": 0.121, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "forex", "--state", "/home/runner/work/_temp/work/isolation/forex-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/e2e/06-stocks-h9.json"], "fault_env": {}, "exit": 1}
+--- stdout
+{"detail": "unknown domain 'forex'", "error": "CONFIG_INVALID"}
+--- stderr
+--- end
+{"n": 3, "label": "propose stocks H9 to the brasileirao orchestration", "at": "2026-09-28T14:24:19Z", "seconds": 0.145, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "brasileirao", "--state", "/home/runner/work/_temp/work/isolation/brasileirao-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/e2e/06-stocks-h9.json"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "BLOCK", "episode_id": "brasileirao:episode-1", "reason_code": "DOMAIN_MISMATCH", "receipt_sha256": "67b917d64594fc8cef48ad0b9e2c857988238ca892262159ccb7674783c42748", "rule": "R01", "status": "RECORDED", "task": null}
+--- stderr
+--- end
+{"n": 4, "label": "propose 01-supported", "at": "2026-09-28T14:24:19Z", "seconds": 0.141, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/contradiction/01-supported.json", "--as-of", "2026-09-27T00:00:00Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "c69345efee4c6862e6bc36b81bb5664a709b1f4743d527d8267fda09d17df772", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "838ec3114160088bd1ae66a5fe6be98c84268ee7dc048c4ba6c22f4f127d7d42", "previous_task_id": null, "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"}}
+--- stderr
+--- end
+{"n": 5, "label": "dispatch 01-supported", "at": "2026-09-28T14:24:19Z", "seconds": 0.12, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc.json", "spool": "WRITTEN", "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"}
+--- stderr
+--- end
+{"n": 6, "label": "ingest 01-supported", "at": "2026-09-28T14:24:20Z", "seconds": 0.128, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:cb0e35530f5f46068e4117debe4c62f9", "file": "contradiction-supported-result.json", "status": "RESULT", "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"}
+--- stderr
+--- end
+{"n": 7, "label": "propose 02-refuted", "at": "2026-09-28T14:24:20Z", "seconds": 0.132, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/contradiction/02-refuted.json", "--as-of", "2026-09-27T00:00:00Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-2", "reason_code": "ALLOWED", "receipt_sha256": "1b6ce086ffe93deba4495f332c1a70405a84ce28d76ead34ecbbe7c3eb336244", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "7b5153fdbb8a2cb83da5d8fea39254b8fa3dced0c14e8d441a171522f4111761", "previous_task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc", "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"}}
+--- stderr
+--- end
+{"n": 8, "label": "dispatch 02-refuted", "at": "2026-09-28T14:24:20Z", "seconds": 0.127, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-21309f32e5653eec990938406ee86c9b.json", "spool": "WRITTEN", "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"}
+--- stderr
+--- end
+{"n": 9, "label": "ingest 02-refuted", "at": "2026-09-28T14:24:20Z", "seconds": 0.131, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:4ea863c204ec478a9d567030320187e7", "file": "contradiction-refuted-result.json", "status": "RESULT", "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"}
+{"action": "duplicate", "file": "contradiction-supported-result.json"}
+--- stderr
+--- end
+{"n": 10, "label": "propose 03-refuted-again", "at": "2026-09-28T14:24:20Z", "seconds": 0.127, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/contradiction/03-refuted-again.json", "--as-of", "2026-09-27T00:00:00Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "REQUIRE_HUMAN", "episode_id": "crypto:episode-3", "reason_code": "CONTRADICTION_UNRESOLVED", "receipt_sha256": "6d77ac9e329426f00e47846d9081a17dcf97d735c84c6e23d0dd208168775267", "rule": "R10", "status": "RECORDED", "task": null}
+--- stderr
+--- end
+{"n": 11, "label": "ingest 03-refuted-again", "at": "2026-09-28T14:24:20Z", "seconds": 0.128, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--spool", "/home/runner/work/_temp/work/isolation/spool"], "fault_env": {}, "exit": 2}
+--- stdout
+{"action": "rejected", "code": "TASK_NOT_FOUND", "file": "contradiction-refuted-again-result.json", "reason": "crypto:TASK-1e0520f466efcb0179abe2de4120f33c was not emitted by this CAIN"}
+{"action": "duplicate", "file": "contradiction-refuted-result.json"}
+{"action": "duplicate", "file": "contradiction-supported-result.json"}
+--- stderr
+--- end
+{"n": 12, "label": "propose 04-after", "at": "2026-09-28T14:24:20Z", "seconds": 0.13, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state", "--proposal", "/home/runner/work/predictor-qualification/predictor-qualification/qualification/integration-crypto/fixtures/proposals/contradiction/04-after.json", "--as-of", "2026-09-27T00:00:00Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "REQUIRE_HUMAN", "episode_id": "crypto:episode-4", "reason_code": "CONTRADICTION_UNRESOLVED", "receipt_sha256": "708e4df7a574c4d37029a6c1a879f70737a1c20ab040754903fee930598cbf93", "rule": "R10", "status": "RECORDED", "task": null}
+--- stderr
+--- end
+{"n": 13, "label": "episodes contradiction", "at": "2026-09-28T14:24:20Z", "seconds": 0.128, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/isolation/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-27T00:00:00Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"}, "proposal_id": "cain:CONTRA-1", "reason_code": "ALLOWED", "receipt_sha256": "c69345efee4c6862e6bc36b81bb5664a709b1f4743d527d8267fda09d17df772", "source": "operator", "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"}, {"as_of": "2026-09-27T00:00:00Z", "decision": "ALLOW", "number": 2, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"}, "proposal_id": "cain:CONTRA-2", "reason_code": "ALLOWED", "receipt_sha256": "1b6ce086ffe93deba4495f332c1a70405a84ce28d76ead34ecbbe7c3eb336244", "source": "operator", "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"}, {"as_of": "2026-09-27T00:00:00Z", "decision": "REQUIRE_HUMAN", "number": 3, "outbox": null, "proposal_id": "cain:CONTRA-3", "reason_code": "CONTRADICTION_UNRESOLVED", "receipt_sha256": "6d77ac9e329426f00e47846d9081a17dcf97d735c84c6e23d0dd208168775267", "source": "operator", "task_id": null}, {"as_of": "2026-09-27T00:00:00Z", "decision": "REQUIRE_HUMAN", "number": 4, "outbox": null, "proposal_id": "cain:CONTRA-4", "reason_code": "CONTRADICTION_UNRESOLVED", "receipt_sha256": "708e4df7a574c4d37029a6c1a879f70737a1c20ab040754903fee930598cbf93", "source": "operator", "task_id": null}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:cb0e35530f5f46068e4117debe4c62f9", "payload_sha256": "1dc1743ca78d35316be10a3fa18d6736098acfd99fb79288811a13b50190b9b8", "status": "RESULT", "task_id": "crypto:TASK-d50eb69b4bfcb4f41ebb63ff0d19f3cc"}, {"class": "TERMINAL_RESULT", "fact_id": "fact:4ea863c204ec478a9d567030320187e7", "payload_sha256": "46b3af04fc64c4dda4d75de366753bfb81f4cfbcdd1ca917ce4e2b4f366c2788", "status": "RESULT", "task_id": "crypto:TASK-21309f32e5653eec990938406ee86c9b"}], "memory": {"broken_at": null, "entries": 2, "head": "6cc3c5528476428d5eb8cb31860bbf95b9355a566f7a3217db674dcbf408643f", "head_recorded_at": "2026-09-28T14:24:20.437429Z", "projection": "consistent", "status": "intact"}, "rejections": [{"code": "TASK_NOT_FOUND", "file": "contradiction-refuted-again-result.json"}]}
+--- stderr
+--- end

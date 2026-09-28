@@ -15,7 +15,7 @@ Gate `DECISION_POLICY` (C12, prompt comum §2 e §6.3, prompt do cripto §3). Os
 
 ## 2. Regras (primeira que casar vence)
 
-Política **v2** (`POLICY_VERSION = 2`, cain 0.4.13rc10, ciclo 2 dos parâmetros congelados). Os IDs das regras são
+Política **v2** (`POLICY_VERSION = 2`): ciclo 2 na cain 0.4.13rc10 e ciclo 3 na 0.4.13rc12, com o `policy.py` byte a byte igual nas duas; o ciclo 3 só acrescenta `result_metrics` à configuração. Os IDs das regras são
 estáveis, e a tabela está na ordem em que as regras são avaliadas; por isso R15, R16 e R17 aparecem no meio.
 
 | Regra | Decisão | Motivo |
@@ -39,7 +39,7 @@ estáveis, e a tabela está na ordem em que as regras são avaliadas; por isso R
 | R14 | ALLOW | nenhuma regra acima casou |
 
 Os vetores congelados (e2e, N+1, contradição) não mudam de decisão esperada na v2: os duplicados deles são
-cópias exatas (R08, antes da R17), a H9 continua fechada (R05) e a hipótese nova continua em R11. O run do ciclo 2
+cópias exatas (R08, antes da R17), a H9 continua fechada (R05) e a hipótese nova continua em R11. O run do ciclo 3
 confere isso contra a wheel publicada (§5).
 
 Por construção, nenhum resultado aumenta budget, prioridade ou escopo, e nenhum estado econômico
@@ -62,7 +62,7 @@ O framework não muda. Os campos são estes:
 | `allowed_request_types` | as chaves da `handler_allowlist` do contrato |
 | `proposable_request_types` | o tipo de pedido de cada hipótese propunhável (R04 por hipótese; molde do pedido no modo LLM) |
 | `sealed_scopes` | escopos lacrados (R16); lista vazia no cripto |
-| `result_metrics` (opcional; ciclo 3, cain 0.4.13rc11) | números do resultado que o CAIN guarda nos fatos da memória e mostra ao modelo no modo de proposta (cripto: `net_return_bps`, `net_ci_low_bps`, `net_ci_high_bps`, `sample_size` de `domain_facts.metrics`); só números finitos, nunca texto (FUTURE_CANARY). A DecisionPolicy não os lê |
+| `result_metrics` (opcional; ciclo 3, cain 0.4.13rc11+) | números do resultado que o CAIN guarda nos fatos da memória e mostra ao modelo no modo de proposta (cripto: `net_return_bps`, `net_ci_low_bps`, `net_ci_high_bps`, `sample_size` de `domain_facts.metrics`); só números finitos, nunca texto (FUTURE_CANARY). A DecisionPolicy não os lê |
 | `closed_hypotheses`, `frozen_families` | nunca são reabertas |
 | `proposable_hypotheses` | o que pode ser proposto sem o dono |
 | `allowed_symbols`, `costs`, `allowed_references`, `max_priority_hint` | o que o pedido pode conter |
@@ -87,14 +87,14 @@ A orquestração nova é o caminho qualificado: proposta → política → task 
 
 ## 5. Evidência de execução
 
-Wheels publicadas, Linux primário (GitHub Actions), ciclo 2 (cain 0.4.13rc10, run `run36426935949` com todas as fases, inclusive o soak). Chaves de `EVIDENCE_NUMBERS.json`:
+Wheels publicadas, Linux primário (GitHub Actions), ciclo 3 (cain 0.4.13rc12, run `run36435382707` com todas as fases, inclusive o soak). Chaves de `EVIDENCE_NUMBERS.json`:
 
-- testes da política contra a wheel publicada: `runtime/run36426935949/cleanroom-final/cain.junit.xml:junit`;
-- N+1 (receipts byte a byte iguais em processos novos): `runtime/run36426935949/n-plus-1:checks_passed`,
+- testes da política contra a wheel publicada: `runtime/run36435382707/cleanroom-final/cain.junit.xml:junit`;
+- N+1 (receipts byte a byte iguais em processos novos): `runtime/run36435382707/n-plus-1:checks_passed`,
   `:checks_failed`, `:receipts`;
-- decisões do E2E: `runtime/run36426935949/e2e:decisions`;
-- isolamento, IDs com domínio e contradição: `runtime/run36426935949/isolation:checks_passed` e `:checks_failed`;
-- soak com propostas do LLM local pela mesma política: `runtime/run36426935949/soak:counters` (`decisions`,
+- decisões do E2E: `runtime/run36435382707/e2e:decisions`;
+- isolamento, IDs com domínio e contradição: `runtime/run36435382707/isolation:checks_passed` e `:checks_failed`;
+- soak com propostas do LLM local pela mesma política: `runtime/run36435382707/soak:counters` (`decisions`,
   `llm_proposals`).
 
 Tabelas por conferência em `CAIN_ROUNDTRIP_REPORT.md` e `SOAK_REPORT.md`, geradas por `scripts/render_reports.py`.

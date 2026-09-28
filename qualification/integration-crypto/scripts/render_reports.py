@@ -142,7 +142,9 @@ def main() -> int:
             "a esta missão; a reemissão genuína do harness (`61d3430`) está nos final_commits do ecosystem. Reemissão "
             "C14 pela integration-stocks: final_commits cain `deccaaa` (0.4.13rc7) e ecosystem `1304b20` (transporte "
             "0.1.0rc4). Ciclo 2: cain `fb0e1dc` (0.4.13rc10, release única; vale o run mais recente naquele SHA, o do "
-            "push da tag, e o run do push no main também está verde) e ecosystem `b11494a` (transporte 0.1.0rc5). A "
+            "push da tag, e o run do push no main também está verde) e ecosystem `b11494a` (transporte 0.1.0rc5). "
+            "Ciclo 3: cain `302a5c8` (0.4.13rc12; de novo vale o run da tag, e o do "
+            "main também está verde). A "
             "attestation NOT_QUALIFIED registrou o vermelho em `a19655f`.\n")
            if final_ok else
            "**Há final_commit com job não verde:** ver a tabela e os JSON brutos.\n"),

@@ -235,7 +235,7 @@
    "id": "IC-F012",
    "severity": "P2",
    "title": "config do CAIN aceita o que a admissão real do cripto não aceita: QUAL-SHADOW-001 e os datasets positive v1 e future-canary v1",
-   "description": "Auditoria do crypto.json da wheel rc10 contra as fontes pinadas: 10 conferências OK e 2 divergências com a admissão do domínio no ambiente real. (1) crypto:QUAL-SHADOW-001 é proponível no CAIN, mas o cripto não a admite: no ciclo real custou 1 tarefa recusada (HYPOTHESIS_NOT_ADMITTED), e depois a R15 a barrou. (2) Os datasets 'positive v1' e 'future-canary v1' são referências permitidas no CAIN e não existem no registro do domínio; o modo LLM não escolhe referências (reusa o molde), então não chegaram a ser pedidos. Os três itens vêm do vetor sintético da Etapa A, do qual partem os vetores congelados de N+1 (00/01/02) e de contradição (01): tirá-los muda decisões esperadas congeladas.",
+   "description": "Auditoria do crypto.json da wheel rc10 contra as fontes pinadas: 10 conferências OK e 2 divergências com a admissão do domínio no ambiente real. (1) crypto:QUAL-SHADOW-001 é proponível no CAIN, mas o cripto não a admite: no ciclo real custou 1 tarefa recusada (HYPOTHESIS_NOT_ADMITTED), e depois a R15 a barrou. (2) Os datasets 'positive v1' e 'future-canary v1' são referências permitidas no CAIN e não existem no registro do domínio; o modo LLM não escolhe referências (reusa o molde), então não chegaram a ser pedidos. Os três itens vêm do vetor sintético da Etapa A, do qual partem os vetores congelados de N+1 (00/01/02) e de contradição (01): tirá-los muda decisões esperadas congeladas. Efeito no soak, achado depois (runtime da rc11 e soak local com a correção do orçamento, cain#75): quando o modelo escolhe a QUAL-SHADOW-001, o domínio recusa, e duas conferências de tolerância zero contavam a recusa como tarefa não admitida e resultado perdido; no CI da rc10 o modelo de 0,5B não a escolheu (passou por acaso nesse ponto).",
    "classification": "C6 P2: contido pela política (R15) e sem efeito em resultado ou operação; decisão do dono",
    "evidence": [
     {
@@ -249,12 +249,22 @@
    ],
    "status": "ACCEPTED_LIMITATION",
    "owner_decision": "escolher: (a) manter e registrar (a R15 contém); (b) tirar os três itens e reconstruir os vetores de N+1 e contradição com hipóteses reais (novo ciclo com vetores novos)",
-   "owner_decision_taken": {
-    "date": "2026-09-28",
-    "by": "dono",
-    "channel": "chat da sessão cripto (pergunta com opções)",
-    "words": "Manter e registrar (Recomendado)"
-   }
+   "owner_decision_taken": [
+    {
+     "date": "2026-09-28",
+     "by": "dono",
+     "channel": "chat da sessão cripto (pergunta com opções)",
+     "words": "Manter e registrar (Recomendado)"
+    },
+    {
+     "date": "2026-09-28",
+     "by": "dono",
+     "channel": "chat da sessão cripto (pergunta com opções)",
+     "words": "Soak conta a recusa (Recomendado)",
+     "option_text": "Ajusto as duas conferências do harness do soak para aceitar a recusa do domínio com código fechado (ex.: HYPOTHESIS_NOT_ADMITTED) como desfecho terminal registrado, e não como resultado perdido. Emitidas = admitidas + recusadas. As demais conferências de tolerância zero ficam iguais.",
+     "applied": "scripts/soak.py: uma recusa só conta quando os dois lados a registram (TERMINAL_REFUSAL/REJECTED no CAIN e REJECTED com código fechado na admissão do domínio, para o request_id da própria task); conferência nova: hipótese recusada nunca é emitida de novo (R15)"
+    }
+   ]
   },
   {
    "id": "IC-F013",
