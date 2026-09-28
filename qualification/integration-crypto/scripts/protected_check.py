@@ -6,6 +6,10 @@ Recalcula cada item de PROTECTED_SET.json:
     nenhum commit desta missão existe neles (as branches da missão estão só em cain, ecosystem, cripto e
     predictor-qualification);
   * artefatos compartilhados do predictor-qualification: sha256 no checkout atual.
+Ciclo 2 (IC-F011, decisão do dono de 2026-09-28): o FROZEN_PARAMETERS.json desta missão reemitido como novo ciclo
+conta como alterado pela letra da C15.1; fica registrado como encadeado só se o arquivo do ciclo anterior
+(FROZEN_PARAMETERS_cycle<n>_<sha12>.json) tiver os bytes protegidos e o bloco cycle.supersedes do atual apontar
+para eles. ``all_unchanged`` continua sendo a letra; ``all_unchanged_or_chained`` é o que o gate usa, pela decisão.
 Uso: python protected_check.py <checkout do predictor-qualification> <clones> <final_commit do cripto> <out.json>
 """
 
@@ -16,6 +20,20 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+
+
+CHAINED_ITEM = "qualification/integration-crypto/FROZEN_PARAMETERS.json"
+
+
+def chain(path: Path, expected: str) -> dict:
+    """The reissued frozen parameters point, by cycle.supersedes, to a kept file with exactly the protected bytes."""
+    supersedes = json.loads(path.read_text(encoding="utf-8")).get("cycle", {}).get("supersedes", {})
+    kept = path.with_name(supersedes.get("file", "")) if supersedes.get("file") else None
+    kept_sha = hashlib.sha256(kept.read_bytes()).hexdigest() if kept and kept.is_file() else None
+    return {"superseded_file": kept.name if kept else None, "superseded_file_sha256": kept_sha,
+            "current_supersedes_sha256": supersedes.get("sha256"),
+            "ok": kept_sha == expected and supersedes.get("sha256") == expected,
+            "decision": "IC-F011 (dono, 2026-09-28: \"Aprovo; reemissão encadeada\")"}
 
 
 def ls_tree(repo: Path, commit: str) -> dict[str, str]:
@@ -36,19 +54,27 @@ def main() -> int:
         report["domains"][domain] = {"repo": entry["repo"], "commit": commit, "items": len(entry["entries"]),
                                      "changed": changed}
         ok &= not changed
+    chained_ok = ok
     for item in protected["shared"]:
-        current = hashlib.sha256((qual / item["path"]).read_bytes()).hexdigest()
-        report["shared"].append({"path": item["path"], "expected": item["sha256"], "current": current,
-                                 "ok": current == item["sha256"]})
-        ok &= current == item["sha256"]
+        path = qual / item["path"]
+        current = hashlib.sha256(path.read_bytes()).hexdigest()
+        entry = {"path": item["path"], "expected": item["sha256"], "current": current, "ok": current == item["sha256"]}
+        if not entry["ok"] and item["path"] == CHAINED_ITEM:
+            entry["chain"] = chain(path, item["sha256"])
+        report["shared"].append(entry)
+        ok &= entry["ok"]
+        chained_ok &= entry["ok"] or entry.get("chain", {}).get("ok", False)
     report["all_unchanged"] = ok
+    report["all_unchanged_or_chained"] = chained_ok
+    report["chained_items"] = [s["path"] for s in report["shared"] if "chain" in s]
     report["items_total"] = sum(d["items"] for d in report["domains"].values()) + len(report["shared"])
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(json.dumps({"all_unchanged": ok, "items_total": report["items_total"],
+    print(json.dumps({"all_unchanged": ok, "all_unchanged_or_chained": chained_ok,
+                      "chained_items": report["chained_items"], "items_total": report["items_total"],
                       "changed": {d: v["changed"] for d, v in report["domains"].items()},
                       "shared_changed": [s["path"] for s in report["shared"] if not s["ok"]]}))
-    return 0 if ok else 1
+    return 0 if chained_ok else 1
 
 
 if __name__ == "__main__":

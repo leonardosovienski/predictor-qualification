@@ -4,7 +4,7 @@ Nenhum número é digitado: cada tabela vem de um arquivo de RAW_LOGS/ (citado c
   CORE_IDENTITY_REPORT.md, CAIN_ROUNDTRIP_REPORT.md, CONTRACT_REVALIDATION_REPORT.md, HOSTED_CI_REPORT.md,
   PROTECTED_ARTIFACT_REPORT.md, SOAK_REPORT.md e a seção cleanroom-final do CLEANROOM_REPORT.md.
 Uso: python render_reports.py <qualification/integration-crypto> <run do runtime> <run do soak> [sufixo]
-  sufixo (ex.: -c14, -c14s): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
+  sufixo (ex.: -c14, -c14s, -ciclo2): lê core-identity, windows-smoke, contract-revalidation, protected e hosted-ci/final dos
   diretórios da reemissão; os raw logs da attestation anterior ficam como estão.
 """
 
