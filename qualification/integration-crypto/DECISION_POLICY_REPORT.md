@@ -62,6 +62,7 @@ O framework não muda. Os campos são estes:
 | `allowed_request_types` | as chaves da `handler_allowlist` do contrato |
 | `proposable_request_types` | o tipo de pedido de cada hipótese propunhável (R04 por hipótese; molde do pedido no modo LLM) |
 | `sealed_scopes` | escopos lacrados (R16); lista vazia no cripto |
+| `result_metrics` (opcional; ciclo 3, cain 0.4.13rc11) | números do resultado que o CAIN guarda nos fatos da memória e mostra ao modelo no modo de proposta (cripto: `net_return_bps`, `net_ci_low_bps`, `net_ci_high_bps`, `sample_size` de `domain_facts.metrics`); só números finitos, nunca texto (FUTURE_CANARY). A DecisionPolicy não os lê |
 | `closed_hypotheses`, `frozen_families` | nunca são reabertas |
 | `proposable_hypotheses` | o que pode ser proposto sem o dono |
 | `allowed_symbols`, `costs`, `allowed_references`, `max_priority_hint` | o que o pedido pode conter |
