@@ -11,7 +11,16 @@
   "envelope-v2",
   "domain-adapter",
   "cain-wiring-decision-policy",
-  "publish-candidates"
+  "publish-candidates",
+  "cleanroom-final",
+  "contract-revalidation",
+  "e2e",
+  "n-plus-1",
+  "isolation-ids-contradiction",
+  "idempotency-failure",
+  "windows-smoke",
+  "hosted-ci",
+  "soak"
  ],
  "final_commits": [
   {
@@ -95,16 +104,50 @@
    "sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3"
   }
  ],
- "environments": [],
+ "environments": [
+  {
+   "os": "linux",
+   "python": "3.13.14",
+   "role": "primary",
+   "where": "github_actions",
+   "result": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/run.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/ci_runtime.log",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/env/runtime_env.log",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json"
+   ]
+  },
+  {
+   "os": "windows",
+   "python": "3.13.14",
+   "role": "secondary",
+   "where": "github_actions",
+   "result": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/run.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/ci_runtime.log",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/env/runtime_env.log",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/e2e/SUMMARY.json"
+   ]
+  }
+ ],
  "shared_dependency_verdicts": [],
  "domain_revalidation": {
   "status": "NOT_RUN",
-  "evidence": []
+  "evidence": [
+   "qualification/integration-stocks/RAW_LOGS/contract-revalidation/static_checks.json",
+   "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/conformance.junit.xml",
+   "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/contract-revalidation/SUMMARY.json"
+  ]
  },
  "gates": {
   "BLOCKERS_ZERO": {
-   "status": "NOT_RUN",
-   "note": "avaliado na attestation a partir de FINDINGS.json"
+   "status": "FAIL",
+   "evidence": [
+    "qualification/integration-stocks/FINDINGS.json"
+   ],
+   "note": "P0/P1 abertos: IS-F005"
   },
   "STACK_BASELINE_FROZEN": {
    "status": "PASS",
@@ -118,90 +161,262 @@
    "note": "baseline coletado antes de qualquer mudança da missão (2026-09-28T00:24Z): igual ao STACK_BASELINE_V2.0 exceto cain e ecosystem-predictor, cujas bases são os final_commits da integration-crypto (10744a9, 61f3ac4); final_wheels 6/6 conferidas; cripto-predictor só com estado remoto novo (main 905ab7a, release v1.2.0rc3)"
   },
   "LOCK_INTEGRITY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/core-identity/core_identity.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/env/runtime_env.log",
+    "qualification/integration-stocks/CORE_IDENTITY_REPORT.md"
+   ],
+   "note": "runtimes só de uv.lock --require-hashes + wheels publicadas conferidas por sha256"
   },
   "CORE_IDENTITY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/core-identity/core_identity.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/cleanroom_final.log",
+    "qualification/integration-stocks/CORE_IDENTITY_REPORT.md"
+   ],
+   "note": "pyproject ↔ uv.sources ↔ uv.lock ↔ wheel ↔ instalado ↔ site-packages; Core 3.2.1 e Ops 4.2.2rc1 os mesmos da Etapa A do Stocks"
   },
   "CLEANROOM_FINAL": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/cleanroom_final.log",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/conformance.junit.xml",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/adapters.junit.xml",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/transport.junit.xml",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/cain.junit.xml",
+    "qualification/integration-stocks/CLEANROOM_REPORT.md"
+   ],
+   "note": "só wheels publicadas, venvs limpos fora dos checkouts"
   },
   "HOSTED_CI": {
    "status": "NOT_RUN",
-   "note": "BLOCKED: regra 9.3 do prompt da sessão × ci.yml do stocks-predictor (push só em main); decisão do dono pendente (IS-F004)"
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/hosted-ci/collection-1/HOSTED_CI_SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final/HOSTED_CI_SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348.json",
+    "qualification/integration-stocks/RAW_LOGS/hosted-ci/stocks-predictor_6f857b2_run36363108348_secrets_job.log",
+    "qualification/integration-stocks/HOSTED_CI_REPORT.md"
+   ],
+   "note": "BLOCKED: cain deccaaa e ecosystem 1304b20 com run de push verde no SHA exato; stocks-predictor 6f857b2 sem run de push (ci.yml só em main: IS-F004) e o run workflow_dispatch 36363108348 no SHA exato com Quality 3.13/3.14 verdes e o job secrets vermelho por falso positivo pré-existente no histórico do main (IS-F005); decisão do dono pendente"
   },
   "E2E": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/commands.log",
+    "qualification/integration-stocks/CAIN_ROUNDTRIP_REPORT.md"
+   ],
+   "note": "entrypoints cain e predictor-research-consumer, dados reais públicos (B3/CVM), restart do consumidor e do CAIN, outros domínios intercalados"
   },
   "IDEMPOTENCY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/FAILURE_MATRIX_RESULTS.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F09/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F10/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F12/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json"
+   ],
+   "note": "retry, reentrega e reproposta sem segundo efeito"
   },
   "RESTART_RECOVERY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F01/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F02/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F03/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F04/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F05/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F06/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F07/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F08/SUMMARY.json"
+   ],
+   "note": "morte real (exit 86) em cada ponto crítico do CAIN e do consumidor"
   },
   "FAILURE_INJECTION": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/FAILURE_MATRIX_RESULTS.json",
+    "qualification/integration-stocks/FAILURE_MATRIX.json"
+   ],
+   "note": "F01–F15 na borda, fail closed"
   },
   "PROVENANCE": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F08/SUMMARY.json"
+   ],
+   "note": "envelope ↔ show ↔ admission ↔ journal ↔ Ops ↔ task ↔ adapter em cada resultado"
   },
   "AUTHORITY_SEPARATION": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F14/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F15/SUMMARY.json"
+   ],
+   "note": "estados copiados como vieram; RETRYABLE não é resultado; RECONCILIATION_REQUIRED para o domínio; capital sempre false"
   },
   "FUTURE_CANARY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json"
+   ],
+   "note": "canário FUTURE_CANARY_STOCKS_INTEGRATION_001 recusado pelo domínio; token e instantes pós-cutoff ausentes da memória do CAIN"
   },
   "PROTECTED_ARTIFACTS_UNCHANGED": {
-   "status": "NOT_RUN"
+   "status": "FAIL",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/protected/protected_check.json",
+    "qualification/integration-stocks/PROTECTED_SET.json",
+    "qualification/integration-stocks/PROTECTED_ARTIFACT_REPORT.md"
+   ],
+   "note": "3386 de 3387 itens iguais; alterados: qualification/integration-crypto/QUALIFICATION_ATTESTATION.json. A attestation da integration-crypto foi reemitida pela C14 prevista em FROZEN_PARAMETERS.c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ e encadeados por supersedes_sha256; FAIL pela letra da C15.1, decisão do dono pendente (IS-F006)"
   },
   "SOAK": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/run.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/soak/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/soak/commands.log",
+    "qualification/integration-stocks/QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json",
+    "qualification/integration-stocks/SOAK_REPORT.md"
+   ],
+   "note": "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais"
   },
   "WINDOWS_SMOKE": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/e2e/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/e2e/commands.log",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063-windows/ci_runtime.log"
+   ],
+   "note": "GitHub Actions windows-latest (D-1: nada instalado no Windows do PC 2), E2E + restart com as wheels publicadas"
   },
   "SHARED_DEPENDENCY_CLEAR": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/c0/c0_preflight_fd1fb5e.log",
+    "qualification/shared/SHARED_ISSUES.json"
+   ],
+   "note": "nenhum issue bloqueante para as wheels usadas (Ops 4.2.2rc1, Core 3.2.1)"
   },
   "EVIDENCE_CONSISTENCY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/EVIDENCE_NUMBERS.json",
+    "qualification/integration-stocks/scripts/evidence_numbers.py",
+    "qualification/integration-stocks/scripts/render_reports.py",
+    "qualification/integration-stocks/RAW_LOGS/final-wheels/final_wheels_check_run36365355063.json"
+   ],
+   "note": "números dos relatórios gerados de RAW_LOGS por script versionado; final_wheels conferidas contra os assets e contra o instalado no run (C7.1 regra 4)"
   },
   "SECRETS_CLEAN": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/secrets/secrets_scan.json"
+   ],
+   "note": "0 achados nos diffs da missão e nos arquivos da missão; o job secrets do CI do stocks-predictor acusa só o falso positivo do main (IS-F005), fora desta branch"
   },
   "CAPITAL_FORBIDDEN": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/n-plus-1/frozen/SUMMARY.json",
+    "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
+   ],
+   "note": "nenhum caminho concede capital; receipts e resultados com capital_permission=false"
   },
   "ENVELOPE_V2_CONFORMANCE": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/contract-revalidation/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F11/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F13/SUMMARY.json",
+    "qualification/integration-stocks/ENVELOPE_V2_CONFORMANCE_REPORT.md"
+   ],
+   "note": "release congelada 2.0.0rc2; adapter só pela adapter_api; payload byte-idêntico"
   },
   "CAIN_INGESTION": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F11/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F12/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/failure-matrix/F13/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json"
+   ],
+   "note": "só V2 conhecido, task existente do mesmo domínio, correlação e provenance válidas"
   },
   "CAIN_CONTAINMENT": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/cain.junit.xml",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/env/runtime_env.log",
+    "qualification/integration-stocks/CAIN_ROUNDTRIP_REPORT.md"
+   ],
+   "note": "modo operacional do CAIN fora do runtime; venv do CAIN sem domínio; o loop só propõe pela DecisionPolicy"
   },
   "DECISION_POLICY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/cain.junit.xml",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/n-plus-1/frozen/SUMMARY.json",
+    "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
+   ],
+   "note": "determinística, versionada (código + configuração do stocks), receipt sem LLM; limites do framework registrados em IS-F002 e IS-F003 (P2)"
   },
   "N_PLUS_1_DETERMINISTIC": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/n-plus-1/frozen/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/n-plus-1/integrated/SUMMARY.json"
+   ],
+   "note": "candidatas congeladas × 3 processos novos, receipts byte a byte iguais, estado inalterado; variante integrada com resultado real no spool"
   },
   "NEGATIVE_RESULT_NEUTRALITY": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/cain.junit.xml",
+    "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
+   ],
+   "note": "budget, prioridade e escopo são constantes da configuração do stocks; teste de neutralidade contra a wheel publicada"
   },
   "CROSS_DOMAIN_ISOLATION": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/isolation/SUMMARY.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/e2e/SUMMARY.json"
+   ],
+   "note": "cripto integrado no mesmo estado do CAIN e fixtures V2 congeladas do brasileirao recusadas nos dois sentidos"
   },
   "DOMAIN_QUALIFIED_IDS": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/isolation/SUMMARY.json"
+   ],
+   "note": "mesmo H<n> em domínios diferentes, IDs distintos; ID sem domínio recusado"
   },
   "CONTRADICTION_PRESERVATION": {
-   "status": "NOT_RUN"
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/isolation/contradiction/SUMMARY.json"
+   ],
+   "note": "SUPPORTED × REFUTED → REQUIRE_HUMAN; os dois fatos preservados; sem maioria"
   },
   "DOMAIN_CONTRACTS_PRESERVED": {
-   "status": "NOT_RUN"
+   "status": "NOT_RUN",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/contract-revalidation/static_checks.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/cleanroom-final/conformance.junit.xml",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36365355063/contract-revalidation/SUMMARY.json",
+    "qualification/integration-stocks/CONTRACT_REVALIDATION_REPORT.md"
+   ],
+   "note": "BLOCKED: (a), (b), (c), (d) e (e) verdes; (f) CI do domínio no SHA exato do final_commit sem run que conte: nenhum run de push (IS-F004) e o run workflow_dispatch tem o job secrets vermelho por falso positivo pré-existente no histórico do main (IS-F005); decisão do dono pendente"
   }
  },
- "final_result": null
+ "final_result": "NOT_QUALIFIED"
 }

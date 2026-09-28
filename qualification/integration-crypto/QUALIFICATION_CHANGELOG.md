@@ -63,3 +63,18 @@ Decisão do dono no chat da sessão: "tenta renovar se nao coloca como expired".
 | `RAW_LOGS/runtime/run36360075557/`, `run36360088636/`, `windows-smoke-c14/`, `hosted-ci/final-c14/`, `core-identity-c14/`, `contract-revalidation-c14/`, `protected-c14/`, `final-wheels-c14/`, `secrets-c14/` | fases refeitas com as wheels finais: cleanroom-final, C24.3, e2e, N+1, isolamento, F01–F15, soak, Windows (PC 2, mesma pasta autorizada; `logs`/`out` da rodada rc5 renomeados para `logs-rc5`/`out-rc5`, nada apagado), HOSTED_CI, core identity, conjunto protegido, final wheels, segredos | C14 (`cain`/`ecosystem-predictor` mudaram) | #62 |
 | `FINDINGS.json` | IC-F004 `FIXED` | decisão do dono executada | #62 |
 | `QUALIFICATION_ATTESTATION_superseded_3dce62a9d3d6.json`, `ATTESTATION_PARTIAL_c14-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (NOT_QUALIFIED) é preservada; a nova é **QUALIFIED**, com `supersedes_sha256` apontando para ela | C7.1 regra 8, C7.3 | #62 |
+
+## 2026-09-28 — reemissão C14 pela integration-stocks (sessão no PC 2)
+
+A integration-stocks mudou `cain` (configuração do domínio stocks) e `ecosystem-predictor` (entrada `stocks` na allowlist do transporte). Pela C14, as fases da integration-crypto foram refeitas com as wheels finais novas e a attestation foi reemitida. Nada do cripto mudou: o final_commit continua `ee3d3d1`, e o perfil, os vetores e o conjunto protegido são os mesmos.
+
+| Onde | O quê | Por quê | Commit / PR |
+|---|---|---|---|
+| `cain` `src/cain/orchestration/data/stocks.json`, `tools/build_domain_config.py`, testes | configuração do stocks; `crypto.json` regerado byte a byte igual | integration-stocks | `581b760`; pré-release `v0.4.13rc7` (`deccaaa`, com o transporte 0.1.0rc4) |
+| `ecosystem-predictor` `packages/research-transport` | entrada `stocks` na allowlist `ADAPTERS`, 0.1.0rc4 | integration-stocks | `1304b20`; pré-release `predictor-research-transport-v0.1.0rc4` |
+| `runtime_targets.json`, `hosted_ci_final_targets_c14s.json`, `scripts/isolation.py` | alvos novos. No isolamento, o domínio não configurado do teste CONFIG_INVALID passa de `stocks` (agora configurado) para `brasileirao`, com a mesma conferência | C14 | integration-stocks |
+| `scripts/{update_gates,render_reports,secrets_scan}.py` | ledger e relatórios leem os diretórios `-c14s`. Correção: com sufixo, o `render_reports.py` citava `core-identity/` e `windows-smoke/` sem o sufixo, embora os números viessem do diretório da reemissão (defeito desde a `-c14`; os números eram iguais). Agora cita o arquivo lido | C14, C20 | integration-stocks |
+| `RAW_LOGS/runtime/run36365192302/` | run de push único, com todas as fases do runtime: cleanroom-final, C24.3 (d), e2e, N+1, isolamento, F01–F15 e soak | C14 | integration-stocks |
+| `RAW_LOGS/windows-smoke-c14s/` | E2E + restart no PC 2, na mesma pasta autorizada (D-23), com o novo `stage-c14s`. `logs`/`out` da rodada anterior renomeados para `logs-rc6-final`/`out-rc6-final`; nada apagado | C14, WINDOWS_SMOKE | integration-stocks |
+| `RAW_LOGS/{core-identity,contract-revalidation,protected,final-wheels,secrets}-c14s/`, `RAW_LOGS/hosted-ci/final-c14s/` | conferências refeitas com os final_commits `deccaaa`/`1304b20`, todas verdes; CI de push verde nos dois | C14 | integration-stocks |
+| `QUALIFICATION_ATTESTATION_superseded_112d18a35c7b.json`, `ATTESTATION_PARTIAL_c14s-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, cain rc6 / transporte rc3) é preservada. A nova é **QUALIFIED**, com `supersedes_sha256` apontando para ela | C7.1 regra 8, C14 | integration-stocks |

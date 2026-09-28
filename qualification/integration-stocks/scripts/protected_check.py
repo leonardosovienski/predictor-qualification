@@ -4,6 +4,8 @@ Recalcula cada item de PROTECTED_SET.json:
   * stocks: hash do blob no final_commit desta missão (o domínio que mudou, só em adapter_paths e D-24 (4));
   * crypto e brasileirao: hash do blob no commit base do truth-map (repos que esta missão não altera);
   * artefatos compartilhados do predictor-qualification: sha256 no checkout atual.
+  Um QUALIFICATION_ATTESTATION.json alterado ganha, só como registro, o arquivo _superseded_ com os bytes esperados
+  e o supersedes_sha256 da attestation atual (o item continua contado como alterado).
 Adaptado de qualification/integration-crypto/scripts/protected_check.py (mesma lógica; missão integration-stocks).
 Uso: python protected_check.py <checkout do predictor-qualification> <clones> <final_commit do stocks> <out.json>
 """
@@ -36,10 +38,18 @@ def main() -> int:
                                      "changed": changed}
         ok &= not changed
     for item in protected["shared"]:
-        current = hashlib.sha256((qual / item["path"]).read_bytes()).hexdigest()
-        report["shared"].append({"path": item["path"], "expected": item["sha256"], "current": current,
-                                 "ok": current == item["sha256"]})
-        ok &= current == item["sha256"]
+        path = qual / item["path"]
+        current = hashlib.sha256(path.read_bytes()).hexdigest()
+        row = {"path": item["path"], "expected": item["sha256"], "current": current, "ok": current == item["sha256"]}
+        if not row["ok"] and path.name == "QUALIFICATION_ATTESTATION.json":
+            # só registro (não muda o ok): attestation reemitida (C7.1 regra 8) com os bytes esperados preservados
+            kept = path.with_name(f"QUALIFICATION_ATTESTATION_superseded_{item['sha256'][:12]}.json")
+            row["supersession"] = {
+                "superseded_file": kept.relative_to(qual).as_posix(),
+                "superseded_file_sha256": hashlib.sha256(kept.read_bytes()).hexdigest() if kept.is_file() else None,
+                "current_supersedes_sha256": json.loads(path.read_text(encoding="utf-8")).get("supersedes_sha256")}
+        report["shared"].append(row)
+        ok &= row["ok"]
     report["all_unchanged"] = ok
     report["items_total"] = sum(d["items"] for d in report["domains"].values()) + len(report["shared"])
     out.parent.mkdir(parents=True, exist_ok=True)

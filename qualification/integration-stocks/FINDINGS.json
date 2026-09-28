@@ -97,6 +97,52 @@
    ],
    "status": "OPEN_AWAITING_OWNER",
    "owner_decision": "escolher: (a) autorizar, como exceção explícita além da D-24 (4), acrescentar ao .gitleaksignore da branch do adapter a fingerprint 28f17d2…:docs/evidence/2026-09-24-prompt1-segredos.md:generic-api-key:57 (arquivo fora dos adapter_paths; muda o selo R8 ⇒ nova rc e C14 das fases do Stocks); ou (b) aceitar como CI do final_commit do stocks-predictor o run workflow_dispatch com Quality verde e secrets vermelho só por este falso positivo do main; ou (c) outro caminho"
+  },
+  {
+   "id": "IS-F006",
+   "severity": "P2",
+   "title": "parâmetros congelados contraditórios: a reemissão C14 da attestation da integration-crypto (prevista) altera um item do conjunto protegido desta missão",
+   "description": "FROZEN_PARAMETERS.json manda, em c14_integration_crypto, refazer as fases da integration-crypto e reemitir a attestation dela no mesmo ciclo (C14: cain e ecosystem-predictor mudaram), e põe essa mesma attestation (sha256 112d18a3…) em protected_set_initial.integration_crypto; o PROTECTED_SET.json de truth-map a herdou. A reemissão foi feita: o arquivo qualification/integration-crypto/QUALIFICATION_ATTESTATION.json tem agora outro sha256 (QUALIFIED, cain 0.4.13rc7 e transporte 0.1.0rc4). Os bytes protegidos estão preservados, iguais, em QUALIFICATION_ATTESTATION_superseded_112d18a35c7b.json, e a nova attestation aponta para eles por supersedes_sha256 (C7.1 regra 8). Os outros 3386 itens estão iguais. O gate PROTECTED_ARTIFACTS_UNCHANGED (C15.1: hashes iguais de truth-map até a attestation) fica FAIL pela letra; o agente não reinterpreta o critério. Correção: a nota 'rule' do PROTECTED_SET.json resume a C15.1 como 'item alterado = P0', mas o núcleo diz 'item descoberto depois já alterado = P0', que não é este caso.",
+   "classification": "C6 P2: sem efeito em resultado ou operação (a mudança é a prevista, com os bytes originais preservados e encadeados); conflito de especificação para o dono resolver.",
+   "evidence": [
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/protected/protected_check.json",
+     "sha256": "c4de734f1ebe4dbdc809a99d7bdbc1979cdfee91d2d67202cb3825b55085ee1f"
+    },
+    {
+     "file": "qualification/integration-stocks/FROZEN_PARAMETERS.json",
+     "sha256": "771b8a23e9b9bde7a0e2a92b8ae92ccc01748ac9511b787cdbafdd7fcd8a7bfd"
+    },
+    {
+     "file": "qualification/integration-stocks/PROTECTED_SET.json",
+     "sha256": "2f47efe48d27f732ef39509c554dc97f892cfdf9526ab325968d2ddc8a5bb941"
+    },
+    {
+     "file": "qualification/integration-crypto/QUALIFICATION_ATTESTATION_superseded_112d18a35c7b.json",
+     "sha256": "112d18a35c7b3abfc53e67594d269d2c9ea44521edf54cd247f54cc23bc801f7"
+    }
+   ],
+   "status": "OPEN_AWAITING_OWNER",
+   "owner_decision": "escolher: (a) aceitar que a reemissão C14 prevista em c14_integration_crypto, com os bytes protegidos preservados no arquivo _superseded_ e encadeados por supersedes_sha256, satisfaz a C15.1 para este item (PROTECTED_ARTIFACTS_UNCHANGED reavaliado na reemissão desta attestation); ou (b) outro caminho"
+  },
+  {
+   "id": "IS-F007",
+   "severity": "P2",
+   "title": "cain: o main declara 0.4.13rc7 com código diferente da pré-release v0.4.13rc7 publicada por esta missão",
+   "description": "A pré-release v0.4.13rc7 do cain foi publicada por esta missão em 2026-09-28T00:51:59Z a partir de deccaaa: framework da integration-crypto sem mudança, configuração do Stocks e transporte 0.1.0rc4. É o final_wheel das duas integrações. Às 00:55:44Z entrou no main do cain o PR #59 (305a2d7: política v2 com R15 e propostas por LLM ancoradas no estado do domínio), fora desta missão, que também declara 0.4.13rc7 ('não publicada'). São duas árvores com a mesma versão, como no IS-F001 do stocks-predictor. Nenhum resultado de qualificação muda: o runtime instala a wheel pela URL e pelo sha256, e o main do cain não entra no runtime, logo não há C14. A branch desta missão (integration-stocks/stocks-config-20260927) faz merge textual limpo com o main (git merge-tree), e a suíte do cain na árvore do merge passa (diagnóstico no WSL: 1365 passed, 4 skipped). Mergeada, porém, o main continuaria declarando 0.4.13rc7 com um código diferente das duas árvores.",
+   "classification": "C6 P2: sem efeito em resultado ou operação (runtime fixado por sha256); é versionamento do main do cain, fora do escopo desta missão.",
+   "evidence": [
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/pr-merge-check/pr_merge_check.log",
+     "sha256": "fa32c85beab0b96ab1726762efe9843e604f3e9249f40ea71f3592a38d82d287"
+    },
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/publish-candidates/publish_cain_0.4.13rc7.log",
+     "sha256": "ce51362265e075b9e164a9de6835b43324620e2e674727ec908e3c351bd77232"
+    }
+   ],
+   "status": "OPEN_AWAITING_OWNER",
+   "owner_decision": "escolher a próxima versão do main do cain (por exemplo, 0.4.13rc8) antes de publicar a política v2. Pôr a política v2 no runtime qualificado exige um ciclo C14 novo nas duas integrações, com parâmetros novos (nota do próprio PR #59)."
   }
  ],
  "c0": {
