@@ -40,9 +40,11 @@ N1_AS_OF = "2026-09-27T00:00:00Z"
 # distintos levam um controle negativo com semente própria (parameters.negative_control, do request_schema do Stocks;
 # o backtest real não tem semente). As hipóteses de qualificação só para o LLM têm, cada uma, o seu (overlay).
 CONTROL_KIND = "SHUFFLED_LABELS"
-LLM = tuple(f"stocks:QUAL-LLM-CTRL-{k:03d}" for k in range(1, 6))
+# ciclo 3: 8 hipóteses só para o LLM (5 do ciclo 2 + 3), folga no piso llm_proposals do soak
+LLM = tuple(f"stocks:QUAL-LLM-CTRL-{k:03d}" for k in range(1, 9))
 LLM_SEED = {h: 9000 + k for k, h in enumerate(LLM, start=1)}
 CYCLE1 = "FROZEN_VECTORS_cycle1_3ad4d197cb79.json"  # ciclo 1 preservado byte a byte (C15.1, encadeamento)
+CYCLE2 = "FROZEN_VECTORS_cycle2_efba834f780f.json"  # ciclo 2 preservado byte a byte (aponta para o ciclo 1)
 
 
 def control(request: dict, seed: int) -> dict:
@@ -289,8 +291,13 @@ def main() -> int:
                                                        "integração não admite) repete esse experimento (R17)"},
                            "llm_hypotheses": list(LLM), "dataset": "b3-cvm-real v1", "cycles": 24},
         "llm_hypotheses": llm,
-        "cycle": {"number": 2,
-                  "supersedes": {"file": CYCLE1, "sha256": sha((MISSION / CYCLE1).read_bytes())},
+        "cycle": {"number": 3,
+                  "supersedes": {"file": CYCLE2, "sha256": sha((MISSION / CYCLE2).read_bytes())},
+                  "why": "decisão do dono (2026-09-28, \"cain rc13 + ciclo 3 (Recomendado)\"): correções da rodada "
+                         "de utilidade no cain 0.4.13rc13 e 3 hipóteses só para o LLM a mais, para dar folga ao piso "
+                         "llm_proposals do soak (no ciclo 2 ele passou com exatamente 5)",
+                  "changes": ["3 hipóteses stocks:QUAL-LLM-CTRL-006..008 (sementes 9006–9008): 8 no total"],
+                  "cycle2": {"supersedes": {"file": CYCLE1, "sha256": sha((MISSION / CYCLE1).read_bytes())},
                   "why": "decisão do dono (2026-09-28): ciclo novo dos congelados na release única do cain com a "
                          "política v2 (R15–R17, R04 por hipótese, custos e semente pelo contrato) e hipóteses de "
                          "qualificação só para o LLM (overlay com controle negativo)",
@@ -298,7 +305,7 @@ def main() -> int:
                               "n1/01-next com controle negativo (semente 1); n1/17-collection → ALLOW",
                               "contradição 02–04 com controle negativo (sementes 2–4)",
                               "soak: 1º ciclo sem controle; do 2º em diante, controle negativo com semente = número do ciclo",
-                              "5 hipóteses stocks:QUAL-LLM-CTRL-001..005 (sementes 9001–9005)"]},
+                              "5 hipóteses stocks:QUAL-LLM-CTRL-001..005 (sementes 9001–9005)"]}},
         "files": dict(sorted({**files, **crypto_files}.items())),
     }
     raw = json.dumps(doc, indent=1, ensure_ascii=False).encode("utf-8") + b"\n"

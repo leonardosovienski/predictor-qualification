@@ -3,7 +3,7 @@
 É a fronteira do operador do Stocks (não do CAIN): a mesma de qualification/stocks/d16/real_env.py da Etapa A
 (PROTOCOL_REAL.json, painel stocks-pit-panel/1 do construtor, matriz de prontidão do final_commit, fonte VLMO), com os
 valores congelados em FROZEN_PARAMETERS.json → operator_env: três hipóteses de qualificação no lugar de uma (rodízio
-exigido pelo cooldown da política), as cinco hipóteses só para o LLM do ciclo 2 (o mesmo protocolo com controle
+exigido pelo cooldown da política), as hipóteses só para o LLM (5 no ciclo 2, 8 no ciclo 3; o mesmo protocolo com controle
 negativo de semente própria; FROZEN_VECTORS.json → llm_hypotheses) e o painel canário (FROZEN_PARAMETERS.json →
 data.future_canary). Roda com o
 stocks-predictor INSTALADO (ReferenceStore real, canonical do domínio). Não cria pedidos: na Etapa B os pedidos vêm
@@ -27,7 +27,7 @@ from stocks_predictor.research_contract import canonical
 from stocks_predictor.research_execution import ReferenceStore
 
 HYPOTHESES = ("stocks:QUAL-PIT-MOM-REAL-001", "stocks:QUAL-PIT-MOM-REAL-002", "stocks:QUAL-PIT-MOM-REAL-003")
-LLM_HYPOTHESES = tuple(f"stocks:QUAL-LLM-CTRL-{k:03d}" for k in range(1, 6))
+LLM_HYPOTHESES = tuple(f"stocks:QUAL-LLM-CTRL-{k:03d}" for k in range(1, 9))  # ciclo 3: 8 (ciclo 2: 5)
 COLLECTION_HYPOTHESIS = "stocks:QUAL-EI-COLLECTION-001"
 POLICY_ID = "stocks-integration-qualification"
 CANARY = "FUTURE_CANARY_STOCKS_INTEGRATION_001"

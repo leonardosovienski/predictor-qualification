@@ -196,3 +196,56 @@ Isto não é fase nem gate. A attestation QUALIFIED do ciclo 2 (`9979d19b…`, P
 **Decisão do dono** no chat da sessão, pergunta com opções: **"Registrar + regra (Recomendado)"**.
 - **Regra:** um consumidor por domínio por vez, o que o agendador do Ops já garante. É a mesma regra decidida no cripto, que a sessão cripto põe no documento do stack da Etapa B no ecosystem-predictor.
 - **Código:** não muda. A correção de fundo (tomar a trava antes de materializar) é código de domínio fora dos adapter_paths; pela C24.4 ela reabriria a Etapa A do stocks.
+
+## 2026-09-28 — ciclo 3 da freeze-parameters (C14): cain 0.4.13rc13 e 8 hipóteses só para o LLM
+
+**Decisão do dono** no chat da sessão, pergunta com opções, depois da segunda rodada de utilidade prática do CAIN com o stocks na rc12: **"cain rc13 + ciclo 3 (Recomendado)"**. Isso cobre:
+- no cain, as correções da rodada;
+- no stocks, mais 3 hipóteses só para o LLM, para dar folga ao piso do soak;
+- ciclo 3 dos congelados citando a rc13;
+- IS-F009 no FINDINGS;
+- C14 nas três integrações.
+
+Família (D-24) e disputa no código do stocks ficam como estão. **Nenhuma fase roda antes do merge deste PR pelo dono (C15).**
+
+| Onde | O quê |
+|---|---|
+| `FROZEN_PARAMETERS.json`, `FROZEN_PARAMETERS_cycle2_11ad4cb7f255.json`, `scripts/freeze_cycle3.py` | O ciclo 2 fica byte a byte no arquivo de supersedes, que aponta para o ciclo 1. Mudanças: `stocks_config` e `operator_env` com **8 hipóteses só para o LLM** (`QUAL-LLM-CTRL-001..008`, sementes 9001–9008); `decision_policy.framework` na rc13; `policy_module` conferido de novo no commit do cain#77, com os mesmos bytes; `base.framework_cycle3`; `repos.cain`; `c14_cycle3`; decisões do dono com as palavras |
+| `FROZEN_VECTORS.json`, `FROZEN_VECTORS_cycle2_efba834f780f.json`, `scripts/build_vectors.py`, `fixtures/proposals/llm/06..08` | 3 fixtures novas. O bloco `cycle` aponta para o ciclo 2 e guarda o histórico do ciclo 2 |
+| `scripts/operator_env.py` | O operador admite as 8 |
+| `FINDINGS.json`, `scripts/add_finding_is_f009.py` | **IS-F009 (P2, ACCEPTED_LIMITATION):** disputa de consumidores, com as contagens do `RACE.json` (16× `OPS_FAILED_RETRYABLE`, 4× `RECONCILIATION_REQUIRED`) e a decisão "Registrar + regra (Recomendado)" |
+| `GATES.json`, `scripts/cycle3_gates.py`, `ATTESTATION_PARTIAL_freeze-parameters-c3.json` | Gates do ciclo 3 voltam a NOT_RUN, com o ciclo 2 em `cycle2_evidence`. Parcial com P0=P1=P2=0 |
+| `RAW_LOGS/freeze/freeze_parameters_cycle3.log` | Execução, com os sha256 do ciclo 2 e a igualdade do blob git |
+| `RAW_LOGS/freeze/diag-c3/` | Diagnóstico antes de congelar (abaixo) |
+
+**O que a rc13 junta:**
+- a rc12 (`302a5c8`);
+- o **cain#77**, aprovado na revisão independente da sessão integration-brasileirao, com o soak da missão cripto conferido pela sessão cripto;
+- o `stocks.json` regenerado do merge deste ciclo e a versão.
+
+**O que muda no cain#77:**
+- o molde do LLM nunca é task recusada;
+- `allowed_requests` no contexto do modelo;
+- `refusal_mismatches` na justificativa;
+- linter: números de identificador entre crases são nomes, número solto continua checado, 95% ↔ 0.95, e número colado a unidade é número;
+- `findings-policy` v2: nome de família ou trial no enunciado, e candidatos por embedding só para revisão.
+
+**Diagnóstico local** (WSL, não é gate; `RAW_LOGS/freeze/diag-c3/`), com a wheel candidata (cain#77 + `stocks.json` destes congelados) e o runtime da missão:
+- **Fases:**
+  - e2e 55/0; N+1 63/0 e integrado 64/0;
+  - isolamento 28/0; contradição 9/0; F01–F15 sem falha;
+  - **soak 44/0 com 6 propostas de LLM** (piso 5; no ciclo 2 foram exatamente 5).
+- **Rodada de utilidade 3** (10 chamadas ao modelo, `utility-round3/`):
+  - **8 experimentos distintos**, depois NO_ELIGIBLE;
+  - depois das guardas, **nenhuma reproposta do canário** (na rc12, o molde emprestado era a task recusada);
+  - guardas 12/12;
+  - memória = fonte autoritativa 10/10;
+  - `allowed_requests` no prompt; o modelo descreveu o experimento certo ("controle negativo de rótulos embaralhados");
+  - `refusal_mismatches` acusou a frase falsa "001 a 005 foram recusadas";
+  - findings: `momentum 12-1 cross-sectional` agora reconhecida como encerrada;
+  - linter: 5/5 casos.
+- **Limites que continuam:**
+  - paráfrase sem nome não é decidida;
+  - os candidatos por embedding acertam 1 de 3;
+  - IS-F009 fica pela regra;
+  - famílias do main do stocks ficam pela D-24.
