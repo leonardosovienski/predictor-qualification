@@ -170,6 +170,95 @@
    ],
    "status": "OPEN_AWAITING_OWNER",
    "owner_decision": "escolher a próxima versão do main do cain (por exemplo, 0.4.13rc8) antes de publicar a política v2. Pôr a política v2 no runtime qualificado exige um ciclo C14 novo nas duas integrações, com parâmetros novos (nota do próprio PR #59)."
+  },
+  {
+   "id": "IS-F008",
+   "severity": "P2",
+   "title": "ciclo 2 dos parâmetros congelados troca itens do conjunto protegido desta missão (os congelados dela e dois da integration-crypto)",
+   "description": "O ciclo 2 (decisões do dono de 2026-09-28: \"Aprovo o ciclo novo\" e \"Hipóteses para o LLM\") troca o FROZEN_PARAMETERS.json e o FROZEN_VECTORS.json desta missão; a integration-crypto, no ciclo 2 dela, trocou o FROZEN_PARAMETERS.json dela (IC-F011) e reemitiu a attestation de novo. Os quatro estão no PROTECTED_SET.json de truth-map. Pela letra da C15.1 (hashes iguais de truth-map até a attestation), PROTECTED_ARTIFACTS_UNCHANGED fica FAIL no ciclo 2. Os bytes protegidos de cada item ficam iguais num arquivo preservado, e o arquivo atual aponta para eles por sha256 (a attestation da integration-crypto em dois saltos). A decisão do IS-F006 cobre só um salto da attestation da integration-crypto e diz que todo outro item alterado continua FAIL. Nada mais do conjunto protegido muda por este ciclo (conferido na fase protected do ciclo 2). O agente não reinterpreta o critério: a decisão é do dono.",
+   "classification": "C6 P2: sem efeito em resultado ou operação (mudanças previstas pela C14, bytes protegidos preservados e encadeados); conflito de especificação para o dono resolver.",
+   "chains": [
+    {
+     "item": "qualification/integration-stocks/FROZEN_PARAMETERS.json",
+     "protected_sha256": "771b8a23e9b9bde7a0e2a92b8ae92ccc01748ac9511b787cdbafdd7fcd8a7bfd",
+     "kept_in": "qualification/integration-stocks/FROZEN_PARAMETERS_cycle1_771b8a23e9b9.json",
+     "pointer": "cycle.supersedes do arquivo atual",
+     "pointer_sha256": "771b8a23e9b9bde7a0e2a92b8ae92ccc01748ac9511b787cdbafdd7fcd8a7bfd",
+     "current_sha256": "11ad4cb7f255da063cc40d9191f3e7ed1a50c43ad4124da19feef0953be5ab7b",
+     "kept_sha256": "771b8a23e9b9bde7a0e2a92b8ae92ccc01748ac9511b787cdbafdd7fcd8a7bfd"
+    },
+    {
+     "item": "qualification/integration-stocks/FROZEN_VECTORS.json",
+     "protected_sha256": "3ad4d197cb79bb2f219f3dd5f1ccd25dfc45bdbde6cdbe20cb6c396f452bc066",
+     "kept_in": "qualification/integration-stocks/FROZEN_VECTORS_cycle1_3ad4d197cb79.json",
+     "pointer": "cycle.supersedes do arquivo atual",
+     "pointer_sha256": "3ad4d197cb79bb2f219f3dd5f1ccd25dfc45bdbde6cdbe20cb6c396f452bc066",
+     "current_sha256": "efba834f780f00be738a936ee68b443d70c6d6e880911ae9e462d4ee0c2085d2",
+     "kept_sha256": "3ad4d197cb79bb2f219f3dd5f1ccd25dfc45bdbde6cdbe20cb6c396f452bc066"
+    },
+    {
+     "item": "qualification/integration-crypto/FROZEN_PARAMETERS.json",
+     "protected_sha256": "c428e4b769e3a6f932bda166d54f92d76b95680d8e689a612dbf4f3426dae760",
+     "kept_in": "qualification/integration-crypto/FROZEN_PARAMETERS_cycle1_c428e4b769e3.json",
+     "pointer": "cycle.supersedes do arquivo atual (ciclo 2 da integration-crypto, IC-F011)",
+     "pointer_sha256": "c428e4b769e3a6f932bda166d54f92d76b95680d8e689a612dbf4f3426dae760",
+     "current_sha256": "2ee84f572c1f678b7c0ae6f5c1aadee3fb3de8f529b97281389085b4cb12ac14",
+     "kept_sha256": "c428e4b769e3a6f932bda166d54f92d76b95680d8e689a612dbf4f3426dae760"
+    },
+    {
+     "item": "qualification/integration-crypto/QUALIFICATION_ATTESTATION.json",
+     "protected_sha256": "112d18a35c7b3abfc53e67594d269d2c9ea44521edf54cd247f54cc23bc801f7",
+     "kept_in": "qualification/integration-crypto/QUALIFICATION_ATTESTATION_superseded_112d18a35c7b.json",
+     "pointer": "supersedes_sha256 em dois saltos: a atual aponta para o _superseded_2d588e3df966 (reemissão do ciclo 2 da integration-crypto), que aponta para o _superseded_112d18a35c7b",
+     "pointer_sha256": "2d588e3df966bdf1409f768a0d3d53bb2bc9b306186c0508bd04b6586a3dbef4",
+     "current_sha256": "d1c76b4eedb9671016b9e94e2c9409612791b7bf5bd5081b5f9c47fe06b4eaa4",
+     "kept_sha256": "112d18a35c7b3abfc53e67594d269d2c9ea44521edf54cd247f54cc23bc801f7"
+    }
+   ],
+   "evidence": [
+    {
+     "file": "qualification/integration-stocks/PROTECTED_SET.json",
+     "sha256": "2f47efe48d27f732ef39509c554dc97f892cfdf9526ab325968d2ddc8a5bb941"
+    },
+    {
+     "file": "qualification/integration-stocks/FROZEN_PARAMETERS.json",
+     "sha256": "11ad4cb7f255da063cc40d9191f3e7ed1a50c43ad4124da19feef0953be5ab7b"
+    },
+    {
+     "file": "qualification/integration-stocks/FROZEN_PARAMETERS_cycle1_771b8a23e9b9.json",
+     "sha256": "771b8a23e9b9bde7a0e2a92b8ae92ccc01748ac9511b787cdbafdd7fcd8a7bfd"
+    },
+    {
+     "file": "qualification/integration-stocks/FROZEN_VECTORS.json",
+     "sha256": "efba834f780f00be738a936ee68b443d70c6d6e880911ae9e462d4ee0c2085d2"
+    },
+    {
+     "file": "qualification/integration-stocks/FROZEN_VECTORS_cycle1_3ad4d197cb79.json",
+     "sha256": "3ad4d197cb79bb2f219f3dd5f1ccd25dfc45bdbde6cdbe20cb6c396f452bc066"
+    },
+    {
+     "file": "qualification/integration-crypto/FROZEN_PARAMETERS.json",
+     "sha256": "2ee84f572c1f678b7c0ae6f5c1aadee3fb3de8f529b97281389085b4cb12ac14"
+    },
+    {
+     "file": "qualification/integration-crypto/FROZEN_PARAMETERS_cycle1_c428e4b769e3.json",
+     "sha256": "c428e4b769e3a6f932bda166d54f92d76b95680d8e689a612dbf4f3426dae760"
+    },
+    {
+     "file": "qualification/integration-crypto/QUALIFICATION_ATTESTATION.json",
+     "sha256": "d1c76b4eedb9671016b9e94e2c9409612791b7bf5bd5081b5f9c47fe06b4eaa4"
+    },
+    {
+     "file": "qualification/integration-crypto/QUALIFICATION_ATTESTATION_superseded_2d588e3df966.json",
+     "sha256": "2d588e3df966bdf1409f768a0d3d53bb2bc9b306186c0508bd04b6586a3dbef4"
+    },
+    {
+     "file": "qualification/integration-crypto/QUALIFICATION_ATTESTATION_superseded_112d18a35c7b.json",
+     "sha256": "112d18a35c7b3abfc53e67594d269d2c9ea44521edf54cd247f54cc23bc801f7"
+    }
+   ],
+   "status": "OPEN_AWAITING_OWNER",
+   "owner_decision": "escolher: (a) reemissão encadeada: o gate aceita cada um dos quatro itens só com a cadeia conferida byte a byte até o sha256 protegido (arquivo preservado com esses bytes e ponteiro do atual, salto a salto); todo outro item alterado continua FAIL; (b) manter a letra: o gate fica FAIL e a attestation do ciclo 2 sai NOT_QUALIFIED; (c) refazer o truth-map no ciclo 2, com um conjunto protegido novo (só cresce) e hashes a partir dele"
   }
  ],
  "c0": {

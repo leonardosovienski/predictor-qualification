@@ -36,6 +36,18 @@ REAL_REFS = {"dataset": ("b3-cvm-real", "v1"), "universe": ("real", "v1"), "feat
              "model": ("quintile-real", "v1"), "baseline": ("ew-universe", "v1"), "cost_model": ("h1-frozen", "v1"),
              "readiness": ("matrix-20260921", "v1")}
 N1_AS_OF = "2026-09-27T00:00:00Z"
+# ciclo 2 (cain com R17: o mesmo experimento com outro ID não roda de novo): pedidos que precisam ser experimentos
+# distintos levam um controle negativo com semente própria (parameters.negative_control, do request_schema do Stocks;
+# o backtest real não tem semente). As hipóteses de qualificação só para o LLM têm, cada uma, o seu (overlay).
+CONTROL_KIND = "SHUFFLED_LABELS"
+LLM = tuple(f"stocks:QUAL-LLM-CTRL-{k:03d}" for k in range(1, 6))
+LLM_SEED = {h: 9000 + k for k, h in enumerate(LLM, start=1)}
+CYCLE1 = "FROZEN_VECTORS_cycle1_3ad4d197cb79.json"  # ciclo 1 preservado byte a byte (C15.1, encadeamento)
+
+
+def control(request: dict, seed: int) -> dict:
+    request["parameters"] = dict(request["parameters"], negative_control={"kind": CONTROL_KIND, "seed": seed})
+    return request
 
 
 def sha(raw: bytes) -> str:
@@ -91,7 +103,7 @@ def main() -> int:
     e2e = {
         "01-allow": (proposal("IS-E2E-01", real_request("stocks:REQ-IS-E2E-001", REAL[0]),
                               rationale="primeiro episódio"), "ALLOW", None),
-        "02-allow-restarts": (proposal("IS-E2E-02", real_request("stocks:REQ-IS-E2E-002", REAL[1]),
+        "02-allow-restarts": (proposal("IS-E2E-02", control(real_request("stocks:REQ-IS-E2E-002", REAL[1]), 2),
                                        rationale="consumidor morto depois do domínio; CAIN morto na ingestão"),
                               "ALLOW", None),
         "03-canary": (proposal("IS-E2E-03", real_request("stocks:REQ-IS-E2E-003", REAL[2], dataset="b3-cvm-real-canary"),
@@ -105,7 +117,7 @@ def main() -> int:
                                       hypothesis_family="momentum_12_1",
                                       rationale="família congelada da H1 com hipótese de qualificação"), "BLOCK",
                              "HYPOTHESIS_CLOSED"),
-        "08-next": (proposal("IS-E2E-08", real_request("stocks:REQ-IS-E2E-008", REAL[0]),
+        "08-next": (proposal("IS-E2E-08", control(real_request("stocks:REQ-IS-E2E-008", REAL[0]), 8),
                              rationale="N+1 depois dos resultados"), "ALLOW", None),
     }
     plan = []
@@ -141,7 +153,7 @@ def main() -> int:
                   "parameters": {"collector": "cvm-vlmo", "period": "2026", "observed_at": "2026-09-24T03:00:00Z"},
                   "priority_hint": "NORMAL"}
     n1 = {
-        "01-next": (variant("stocks:REQ-IS-N1-001"), {}, "ALLOW", None),
+        "01-next": (control(variant("stocks:REQ-IS-N1-001"), 1), {}, "ALLOW", None),
         "02-duplicate": (copy.deepcopy(seed), {}, "DUPLICATE", "DUPLICATE_REQUEST"),
         "03-crypto-h9": (crypto_h9, {"domain": "crypto"}, "BLOCK", "DOMAIN_MISMATCH"),
         "04-stocks-h9": (stocks_h9, {}, "BLOCK", "HYPOTHESIS_CLOSED"),
@@ -166,7 +178,8 @@ def main() -> int:
         "15-watch-high-priority": (variant("stocks:REQ-IS-N1-020", priority_hint="HIGH"), {}, "BLOCK",
                                    "PRIORITY_ABOVE_CAP"),
         "16-cost-mismatch": (fee_zero, {}, "BLOCK", "COST_MODEL_MISMATCH"),
-        "17-collection": (collection, {}, "BLOCK", "COST_MODEL_MISMATCH"),
+        # ciclo 2: a R06 só compara custos onde a variante do contrato os declara (cain#62; IS-F002)
+        "17-collection": (collection, {}, "ALLOW", None),
         "18-llm-shape": (llm_shape, {}, "BLOCK", "SCHEMA_INVALID"),
         "19-unqualified-id": (variant("stocks:REQ-IS-N1-021", hypothesis_id="H9"), {}, "BLOCK", "DOMAIN_MISMATCH"),
         "20-reference-not-allowed": (other_ref, {}, "BLOCK", "REFERENCE_NOT_ALLOWED"),
@@ -194,6 +207,8 @@ def main() -> int:
         start=1,
     ):
         req = variant(f"stocks:REQ-IS-CONTRA-00{number}")
+        if number > 1:  # ciclo 2: cada resultado vem de um experimento distinto (senão a R17 barra o 2º)
+            control(req, number)
         prop_rel = put(f"fixtures/proposals/contradiction/{number:02d}-{label}.json", proposal(f"IS-CONTRA-{number}", req))
         task = v2.build_task("stocks", req, episode_id=v2.episode_id_for("stocks", number),
                              proposal_id=f"cain:IS-CONTRA-{number}", created_at=N1_AS_OF, previous_task_id=previous)
@@ -216,9 +231,20 @@ def main() -> int:
                          "result_expected": "TASK_NOT_FOUND (nenhuma task emitida: a maioria não se forma)"})
         contradiction.append(step)
     contradiction.append({"proposal": put("fixtures/proposals/contradiction/04-after.json",
-                                          proposal("IS-CONTRA-4", variant("stocks:REQ-IS-CONTRA-004"),
+                                          proposal("IS-CONTRA-4", control(variant("stocks:REQ-IS-CONTRA-004"), 4),
                                                    rationale="depois de 1 SUPPORTED e 2 REFUTED")),
                           "expected_decision": "REQUIRE_HUMAN", "expected_reason": "CONTRADICTION_UNRESOLVED"})
+    # ------------------------------------------------------------------ ciclo 2: hipóteses só para o LLM
+    # cada uma é um experimento distinto (controle negativo com semente própria); a fixture fixa o tipo de pedido
+    # (o tools/build_domain_config.py do cain lê o tipo daqui) e o experimento que o molde do CAIN monta
+    # (último backtest emitido, sem controle, + o overlay da hipótese)
+    llm = {}
+    for number, hypothesis in enumerate(LLM, start=1):
+        req = control(real_request(f"stocks:REQ-IS-LLM-{number:03d}", hypothesis), LLM_SEED[hypothesis])
+        rel = put(f"fixtures/proposals/llm/{number:02d}-{hypothesis.split(':')[1].lower()}.json",
+                  proposal(f"IS-LLM-{number:02d}", req, rationale="hipótese de qualificação só para o LLM"))
+        llm[hypothesis] = {"fixture": rel,
+                           "overlay": {"negative_control": {"kind": CONTROL_KIND, "seed": LLM_SEED[hypothesis]}}}
     crypto_files = {f"../integration-crypto/fixtures/v2/{rel}": {"sha256": e["sha256"]}
                     for rel, e in manifest["files"].items()}
     crypto_files["../integration-crypto/fixtures/v2/FIXTURES_MANIFEST.json"] = {"sha256": CRYPTO_MANIFEST_SHA256}
@@ -253,7 +279,26 @@ def main() -> int:
         },
         "soak_generator": {"hypotheses": list(REAL), "request_id": "stocks:REQ-IS-SOAK-<nnn>",
                            "template": "real_request(request_id, hypotheses[(n-1) % 3]) com as_of do painel do run",
-                           "dataset": "b3-cvm-real v1", "cycles": 24},
+                           "negative_control": {"kind": CONTROL_KIND, "seed": "n (o número do ciclo), a partir do 2º",
+                                                "first_cycle": "o backtest real sem controle (como no ciclo 1)",
+                                                "why": "ciclo 2: com a R17, sem semente o backtest real é um só "
+                                                       "experimento e o soak não passaria do 3º ciclo; o 1º ciclo "
+                                                       "sem controle deixa o experimento real emitido, e o molde "
+                                                       "emprestado de uma hipótese proponível sem task própria e sem "
+                                                       "overlay (stocks:QUAL-PIT-MOM-001, que o operador desta "
+                                                       "integração não admite) repete esse experimento (R17)"},
+                           "llm_hypotheses": list(LLM), "dataset": "b3-cvm-real v1", "cycles": 24},
+        "llm_hypotheses": llm,
+        "cycle": {"number": 2,
+                  "supersedes": {"file": CYCLE1, "sha256": sha((MISSION / CYCLE1).read_bytes())},
+                  "why": "decisão do dono (2026-09-28): ciclo novo dos congelados na release única do cain com a "
+                         "política v2 (R15–R17, R04 por hipótese, custos e semente pelo contrato) e hipóteses de "
+                         "qualificação só para o LLM (overlay com controle negativo)",
+                  "changes": ["e2e/02-allow-restarts e e2e/08-next com controle negativo (sementes 2 e 8)",
+                              "n1/01-next com controle negativo (semente 1); n1/17-collection → ALLOW",
+                              "contradição 02–04 com controle negativo (sementes 2–4)",
+                              "soak: 1º ciclo sem controle; do 2º em diante, controle negativo com semente = número do ciclo",
+                              "5 hipóteses stocks:QUAL-LLM-CTRL-001..005 (sementes 9001–9005)"]},
         "files": dict(sorted({**files, **crypto_files}.items())),
     }
     raw = json.dumps(doc, indent=1, ensure_ascii=False).encode("utf-8") + b"\n"

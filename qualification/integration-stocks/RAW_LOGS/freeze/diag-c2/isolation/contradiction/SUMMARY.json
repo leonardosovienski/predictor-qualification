@@ -1,0 +1,132 @@
+{
+ "scenario": "contradiction",
+ "finished_at": "2026-09-28T13:50:24Z",
+ "checks": [
+  {
+   "check": "contradiction 01-supported: ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "stocks:episode-1",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "ad5ce66692a4895da99aefb9cdbe5c827528c4c0ecdd95dc97ad889d11fca9be",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "402db2ef030e0edaf4433d319f97c60ef85bfe47d729e4440688278979ca53c9",
+     "previous_task_id": null,
+     "task_id": "stocks:TASK-430e98ec9aa29b58665f25f693fbde21"
+    }
+   }
+  },
+  {
+   "check": "contradiction 01-supported: result ingested",
+   "ok": true,
+   "got": [
+    {
+     "action": "ingested",
+     "class": "TERMINAL_RESULT",
+     "fact": "fact:317dc9b47ae24dce9e8b700db81598a8",
+     "file": "contradiction-supported-result.json",
+     "status": "RESULT",
+     "task_id": "stocks:TASK-430e98ec9aa29b58665f25f693fbde21"
+    }
+   ]
+  },
+  {
+   "check": "contradiction 02-refuted: ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "stocks:episode-2",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "2d8d83b856c570c434589a1d3023be14721c93dce3a9829b4c9998e1092a6c01",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "42a180e726b8c83b780375c56578e53026677e80b20a7546e4b991b4695d6612",
+     "previous_task_id": "stocks:TASK-430e98ec9aa29b58665f25f693fbde21",
+     "task_id": "stocks:TASK-a73d0a06e7a425504f25288eacc27926"
+    }
+   }
+  },
+  {
+   "check": "contradiction 02-refuted: result ingested",
+   "ok": true,
+   "got": [
+    {
+     "action": "ingested",
+     "class": "TERMINAL_RESULT",
+     "fact": "fact:701aa78aaf534fd48482d4a6f11c5e9a",
+     "file": "contradiction-refuted-result.json",
+     "status": "RESULT",
+     "task_id": "stocks:TASK-a73d0a06e7a425504f25288eacc27926"
+    }
+   ]
+  },
+  {
+   "check": "contradiction 03-refuted-again: REQUIRE_HUMAN CONTRADICTION_UNRESOLVED",
+   "ok": true,
+   "got": {
+    "decision": "REQUIRE_HUMAN",
+    "episode_id": "stocks:episode-3",
+    "reason_code": "CONTRADICTION_UNRESOLVED",
+    "receipt_sha256": "cc39d409730b124b6f205ae4279703044dfdd92843217e3a772039531fb19632",
+    "rule": "R10",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "contradiction 03-refuted-again: result TASK_NOT_FOUND",
+   "ok": true,
+   "got": [
+    {
+     "action": "rejected",
+     "code": "TASK_NOT_FOUND",
+     "file": "contradiction-refuted-again-result.json",
+     "reason": "stocks:TASK-cc62d429f3e6feabf07ff822455a6372 was not emitted by this CAIN"
+    }
+   ]
+  },
+  {
+   "check": "contradiction 04-after: REQUIRE_HUMAN CONTRADICTION_UNRESOLVED",
+   "ok": true,
+   "got": {
+    "decision": "REQUIRE_HUMAN",
+    "episode_id": "stocks:episode-4",
+    "reason_code": "CONTRADICTION_UNRESOLVED",
+    "receipt_sha256": "15eb2c473fc55e99e94d1557f67d19cdcf25eeb0b3789df5535f551e4e3c5648",
+    "rule": "R10",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "both conflicting facts preserved in memory (SUPPORTED and REFUTED), nothing superseded",
+   "ok": true
+  },
+  {
+   "check": "no third result entered: exactly two contradiction results in the inbox",
+   "ok": true,
+   "inbox": [
+    {
+     "class": "TERMINAL_RESULT",
+     "fact_id": "fact:317dc9b47ae24dce9e8b700db81598a8",
+     "payload_sha256": "d702651c7ac9abf50d2c8ee5326714efc34388581a704034c5cb615a92520a25",
+     "status": "RESULT",
+     "task_id": "stocks:TASK-430e98ec9aa29b58665f25f693fbde21"
+    },
+    {
+     "class": "TERMINAL_RESULT",
+     "fact_id": "fact:701aa78aaf534fd48482d4a6f11c5e9a",
+     "payload_sha256": "5f3079a0feb2332201aa65d139b60c75dd4ede1146ec49ec90f1285bd68113a4",
+     "status": "RESULT",
+     "task_id": "stocks:TASK-a73d0a06e7a425504f25288eacc27926"
+    }
+   ]
+  }
+ ],
+ "passed": 9,
+ "failed": 0
+}
