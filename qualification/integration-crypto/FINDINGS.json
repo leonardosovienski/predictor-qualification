@@ -350,7 +350,7 @@
      "sha256": "aee46c8cf4abe17e2cad8513843369aff0cb23cdaabe91a824e8b5b6040e4c02"
     }
    ],
-   "status": "ACCEPTED_LIMITATION",
+   "status": "FIXED",
    "owner_decision_taken": {
     "date": "2026-09-28",
     "by": "dono",
@@ -359,7 +359,27 @@
     "option_text": "Registro os dois como achados P2 do cripto (IC-F016 e IC-F017), com a regra operacional \"um consumidor por domínio por vez\" (o agendador do Ops já serializa). Reemito a attestation só pelos achados, sem refazer fases, e deixo anotada a correção para a próxima versão do cripto."
    },
    "operational_rule": "regra operacional: um consumidor por domínio por vez (uma execução do predictor-research-consumer por estado de domínio); o agendador do Ops já serializa os jobs",
-   "fix_plan": "próxima versão do cripto: tomar a trava do Ops (ou uma trava do pedido) antes da materialização das referências, ou repetir o os.replace no Windows quando o destino está aberto por outro processo. É código fora dos adapter_paths: pela C24.4, reabre a Etapa A do cripto quando for feito."
+   "fix_plan": "próxima versão do cripto: tomar a trava do Ops (ou uma trava do pedido) antes da materialização das referências, ou repetir o os.replace no Windows quando o destino está aberto por outro processo. É código fora dos adapter_paths: pela C24.4, reabre a Etapa A do cripto quando for feito.",
+   "fix": "predictor-research-transport 0.1.0rc6 (ecosystem-predictor#36, merge bac1f7b; publicada pela sessão STOCKS, wheel 6c7e83c4…), decisão do dono na sessão STOCKS (\"Só o transporte\"): o consumidor toma uma trava exclusiva por domínio (<spool>/<domínio>/.consumer.lock; msvcrt no Windows) antes de ler o ledger ou chamar o domínio; o segundo sai com exit 6 CONSUMER_BUSY, sem publicar. Sem mudança em código de domínio. Conferido pela sessão cripto com o código publicado: disputa 20/20 no WSL e 20/20 no Windows (1 RESULT, 0 envelope falso, 0 queda); morte do dono da trava com retomada 6/6 nos pontos before_domain e after_domain_before_result_write",
+   "evidence_refs": [
+    "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/linux/SUMMARY.json",
+    "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/windows/SUMMARY.json",
+    "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/morte-windows/SUMMARY.json"
+   ],
+   "fix_evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/linux/SUMMARY.json",
+     "sha256": "fb20de01b6a6bb51cbfede72feef49d547300aa583d172dd9ebc741f3b33a995"
+    },
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/windows/SUMMARY.json",
+     "sha256": "a2fff106679d2c05ce7c8d0a9a32313e541d1a1490fbe8254bf617662809f96b"
+    },
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/morte-windows/SUMMARY.json",
+     "sha256": "05d4e3499ffaddd72d58b138cb24e9eed56b413d3214005fba22625c3f093d35"
+    }
+   ]
   },
   {
    "id": "IC-F017",
@@ -381,7 +401,7 @@
      "sha256": "0a3585d9759d7076647820678913bd13112158b1906cc592dc1fdb176bb51ef6"
     }
    ],
-   "status": "ACCEPTED_LIMITATION",
+   "status": "FIXED",
    "owner_decision_taken": {
     "date": "2026-09-28",
     "by": "dono",
@@ -390,7 +410,27 @@
     "option_text": "Registro os dois como achados P2 do cripto (IC-F016 e IC-F017), com a regra operacional \"um consumidor por domínio por vez\" (o agendador do Ops já serializa). Reemito a attestation só pelos achados, sem refazer fases, e deixo anotada a correção para a próxima versão do cripto."
    },
    "operational_rule": "regra operacional: um consumidor por domínio por vez (uma execução do predictor-research-consumer por estado de domínio); o agendador do Ops já serializa os jobs",
-   "fix_plan": "próxima versão: o perdedor da trava informa a task como já em execução ou concluída (DUPLICATE ou SKIPPED), não como falha retryable; ponto de correção a localizar entre o adapter do cripto e o consumidor do transporte"
+   "fix_plan": "próxima versão: o perdedor da trava informa a task como já em execução ou concluída (DUPLICATE ou SKIPPED), não como falha retryable; ponto de correção a localizar entre o adapter do cripto e o consumidor do transporte",
+   "fix": "predictor-research-transport 0.1.0rc6 (ecosystem-predictor#36, merge bac1f7b; publicada pela sessão STOCKS, wheel 6c7e83c4…), decisão do dono na sessão STOCKS (\"Só o transporte\"): o consumidor toma uma trava exclusiva por domínio (<spool>/<domínio>/.consumer.lock; msvcrt no Windows) antes de ler o ledger ou chamar o domínio; o segundo sai com exit 6 CONSUMER_BUSY, sem publicar. Sem mudança em código de domínio. Conferido pela sessão cripto com o código publicado: disputa 20/20 no WSL e 20/20 no Windows (1 RESULT, 0 envelope falso, 0 queda); morte do dono da trava com retomada 6/6 nos pontos before_domain e after_domain_before_result_write",
+   "evidence_refs": [
+    "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/linux/SUMMARY.json",
+    "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/windows/SUMMARY.json",
+    "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/morte-windows/SUMMARY.json"
+   ],
+   "fix_evidence": [
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/linux/SUMMARY.json",
+     "sha256": "fb20de01b6a6bb51cbfede72feef49d547300aa583d172dd9ebc741f3b33a995"
+    },
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/windows/SUMMARY.json",
+     "sha256": "a2fff106679d2c05ce7c8d0a9a32313e541d1a1490fbe8254bf617662809f96b"
+    },
+    {
+     "file": "qualification/integration-crypto/RAW_LOGS/transport-rc6-disputa/morte-windows/SUMMARY.json",
+     "sha256": "05d4e3499ffaddd72d58b138cb24e9eed56b413d3214005fba22625c3f093d35"
+    }
+   ]
   }
  ]
 }
