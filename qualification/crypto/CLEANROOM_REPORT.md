@@ -53,3 +53,19 @@ Execuções anteriores preservadas como erro de método:
 - Wheels: cripto-predictor 1.2.0rc2 `6e62f67f…` (build reprodutível de `341d270`, `RAW_LOGS/v1.1/build_rc2_341d270.log`), predictor-ops 4.2.2rc1 `0be70bfb…` (release oficial do Ops), predictor-core 3.2.1.
 - Linux primário e windows-latest (run 35925914768): conformidade 48/48; suíte completa 1647 passed + as **mesmas** 17 T de antes (CR-F016); E2E 20/20 checagens.
 - Windows local (`RAW_LOGS/v1.1/windows-local/`): conformidade 48/48; E2E real 10/10.
+
+## V1.2 (reabertura D-27: cripto 1.2.0rc4 / 21f8b182)
+
+Run [36646241688](https://github.com/leonardosovienski/predictor-qualification/actions/runs/36646241688)
+(`crypto-reopening.yml`), saída devolvida por branch e copiada sem edição para `RAW_LOGS/v1.2/run36646241688/` (SHA256SUMS por job).
+
+- Wheels instaladas fora do checkout, só do lock exportado com `--require-hashes` + wheel da release conferida por sha256: predictor-core 3.2.1 (`10ef42f3…`), predictor-ops 4.2.2rc1 (`0be70bfb…`), cripto-predictor 1.2.0rc4 (`32a4bd6d…`).
+- Linux primário (`ubuntu-latest`, Python 3.13.14): conformidade **48/48**; suíte completa pela wheel
+  **1748 passed, 32 falhas** (1780 testes). As 32 falhas são todas da classe T (testes que leem
+  o checkout: 16 das 17 da CR-F016 e 16 dos testes novos dos PRs #128–#134, que leem `docs/evidence`, `docs/research_ledger` ou
+  `GarimpoInvestimentos/h6_status.json` pelo caminho do repo); nenhuma exercita código instalado de forma diferente. Detalhe em `FINDINGS.json` (CR-F016).
+- E2E sintético pelo entrypoint instalado: 20 checagens, all_ok=True. Soak sintético (diagnóstico): zero_tolerance_ok=True.
+- windows-latest (informação adicional; o secundário do crypto é o Windows local, D-3): conformidade 48/48; suíte 1748 passed, 32 falhas (as mesmas do Linux: True); E2E 20 checagens, all_ok=True.
+- Job `d16` (mesmo run, runtime idêntico): conformidade 48/48.
+
+`CLEANROOM_FINAL` V1.2: **PASS** (Linux primário). Fonte: `EVIDENCE_NUMBERS_V1.2.json`.

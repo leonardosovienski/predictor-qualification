@@ -1,280 +1,293 @@
 {
-  "schema": "crypto/FINDINGS/1",
-  "severity_scale": "C6 (P0/P1/P2)",
-  "status_values": [
-    "OPEN",
-    "OPEN_BLOCKED",
-    "FIXED",
-    "CLOSED_NOT_A_DEFECT",
-    "ACCEPTED_BY_OWNER"
-  ],
-  "findings": [
-    {
-      "id": "CR-F001",
-      "severity": "P2",
-      "status": "OPEN",
-      "phase": "freeze-parameters",
-      "title": "Branches antigas ainda existem e tags archive/* não existem",
-      "description": "O contexto do dono diz que as branches antigas dos 8 repos foram arquivadas como tags archive/<nome> e apagadas. git ls-remote em 2026-09-23 mostra 0 tags archive/* e as branches antigas presentes: cripto-predictor 7 (claude/bold-keller-0bybfk, docs/corrigir-continuidade-20260917, fix/audit-remediation-20260917, fix/opportunity-detection, hygiene/HYG-003-protocol-source-lock, hygiene/HYG-015-retire-v1-workflows, profit-recovery-20260919), predictor-qualification 6, core-predictor 2, predictor-ops 1. O agente não apaga branch não arquivada.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/freeze-parameters/ls_remote.log"
-      ],
-      "owner_action": "arquivar e apagar (ou autorizar) as branches antigas"
-    },
-    {
-      "id": "CR-F002",
-      "severity": "P2",
-      "status": "FIXED",
-      "phase": "baseline",
-      "title": "Suíte do Cripto no Windows depende de CRIPTO_ROOT ancestral do TEMP",
-      "description": "tests/conftest.py cria CRIPTO_ROOT = tempdir próprio quando CRIPTO_ROOT não está definido; tests/test_output_dir_bootstrap.py e tests/test_mode_composition.py passam tmp_path (fora desse tempdir) como diretório operacional, e local_runtime.within_root recusa. Com TEMP em C:\\Cripto\\qualificacao\\tmp e sem CRIPTO_ROOT: 2 falhas; com CRIPTO_ROOT ancestral do TEMP: passam (A/B). Defeito só de teste/ambiente, sem efeito no código de produção. Também: 2 testes de distribuição exigem `uv build` antes da suíte (como o ci.yml faz).",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b.log",
-        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log"
-      ],
-      "resolution_plan": "método documentado em qualification/crypto/scripts/win_suite.sh",
-      "fixed_in": "método documentado em scripts/win_suite.sh; suíte Windows do baseline 1618 passed",
-      "proof": "—"
-    },
-    {
-      "id": "CR-F003",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "truth-map",
-      "title": "AdmissionStore: max_pending_tasks nunca libera",
-      "description": "AdmissionStore conta todo ACCEPTED como pendente para sempre (não existe API de conclusão). Reproduzido em 5fd4e1b com max_pending_tasks=2: o 3º pedido é REJECTED GLOBAL_PENDING_QUOTA. No soak (≥20 ciclos) o domínio pararia de admitir.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
-      ],
-      "fixed_in": "33fed6b",
-      "proof": "tests/test_research_domain_units.py::test_pending_quota_is_released_when_the_request_terminates"
-    },
-    {
-      "id": "CR-F004",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "truth-map",
-      "title": "Handler reporta custo líquido errado (1 perna, sem funding) e sem IC do líquido",
-      "description": "research_worker.evaluate reporta net_return_bps = gross_bps − (fee+slippage) = 1 perna e sem funding. O CostModel congelado cobra 2 pernas (30 bps) + funding. Reproduzido em 5fd4e1b: bruto +15 bps, líquido reportado 0 bps, líquido pelo CostModel −36 bps. Nenhum IC do líquido. Esconde prejuízo: resultado econômico errado.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
-      ],
-      "fixed_in": "33fed6b",
-      "proof": "tests/test_research_domain_units.py::test_net_return_uses_the_frozen_cost_model_and_has_its_own_interval"
-    },
-    {
-      "id": "CR-F005",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "cleanroom-baseline",
-      "title": "GarimpoInvestimentos/output fora da wheel",
-      "description": ".gitignore com `output/` sem âncora exclui GarimpoInvestimentos/output (reporter.py) da wheel; o caminho padrão de análise quebra no runtime instalado (SHARED-002).",
-      "evidence": [
-        "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
-      ],
-      "fixed_in": "33fed6b/9844976 (.gitignore /output/)",
-      "proof": "wheel 1.2.0rc1 contém GarimpoInvestimentos/output/reporter.py (RAW_LOGS/publish-candidates/build_rc_2bc63eb.log)"
-    },
-    {
-      "id": "CR-F006",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "truth-map",
-      "title": "Circuito de pesquisa não alcançável de entrypoint",
-      "description": "AdmissionStore, ReferenceStore, ResearchExecutor, ResultOutbox, research_worker e research_recovery não são alcançados por nenhum [project.scripts] nem entry-point (grafo AST + trace em runtime). Não existe entrypoint que leia pedidos em arquivo (C24.1).",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/truth-map/import_graph_baseline.json",
-        "qualification/crypto/RAW_LOGS/truth-map/runtime_trace_checkout.log"
-      ],
-      "fixed_in": "33fed6b (cripto-research)",
-      "proof": "tests/conformance/test_import_closure.py; E2E pela wheel (RAW_LOGS/cleanroom-final/run35885023422)"
-    },
-    {
-      "id": "CR-F007",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "truth-map",
-      "title": "Admission/execução/resultado acoplados ao envelope V1",
-      "description": "research_admission, research_execution e research_results importam research_protocol (verify_task, validate_result, sign_result) e usam ResearchTaskV1/ResearchResultV1 com autenticação HMAC do CAIN. O prompt §8 exige domínio sem envelope.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/truth-map/envelope_coupling_grep.log"
-      ],
-      "fixed_in": "33fed6b",
-      "proof": "tests/conformance/test_import_closure.py::test_no_entrypoint_reaches_envelope_cain_or_adapter_paths"
-    },
-    {
-      "id": "CR-F008",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "truth-map",
-      "title": "Estado científico e validação temporal decididos no domínio, não no Core",
-      "description": "O worker decide SUPPORTED/REFUTED/INCONCLUSIVE e valida o tempo com código próprio; o Core só fornece bootstrap e o registro de trial. CORE_PARTICIPATION exige estado científico e validação temporal do Core real.",
-      "evidence": [
-        "qualification/crypto/ARCHITECTURE_TRUTH_MAP.json"
-      ],
-      "fixed_in": "33fed6b",
-      "proof": "e2e_runtime.py: 'Core trial registry holds the trial and the scientific state'; conformance canário (LookaheadError do replay do Core)"
-    },
-    {
-      "id": "CR-F009",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "ops-failure",
-      "title": "SHARED-005: lock local do Ops falha no Windows sob concorrência (bloqueante)",
-      "description": "predictor-ops 4.2.1 _mutation_guard: corrida na inicialização da guarda; o processo perdedor morre com PermissionError dentro de run_job. Veredito flaky/bloqueante (C13). Correção exige mudança no Ops congelado: decisão do dono.",
-      "evidence": [
-        "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json"
-      ],
-      "fixed_in": "predictor-ops 9831b0d (PR #26), release v4.2.2rc1 (0be70bfb…), D-17; cripto 341d270 aponta para ela",
-      "proof": "tests_v2/test_runtime.py::test_empty_guard_locked_by_another_process_waits_instead_of_crashing (falha antes, passa depois); corrida real 50/50 em Windows local, Linux source/wheel e windows-latest (qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json)"
-    },
-    {
-      "id": "CR-F010",
-      "severity": "P2",
-      "status": "OPEN",
-      "phase": "ops-failure",
-      "title": "Ops CLI `provenance --source-root` com fonte suja responde VALIDATED (identidade da wheel)",
-      "description": "Observação da SHARED-004; nenhuma missão usa o caminho. Proposta ao dono do Ops.",
-      "evidence": [
-        "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT.json"
-      ]
-    },
-    {
-      "id": "CR-F011",
-      "severity": "P2",
-      "status": "OPEN",
-      "phase": "cleanroom-baseline",
-      "title": "crypto-research-export exige predictor-research-snapshot fora do lock",
-      "description": "Pacote separado (packages/research-export), fora da wheel cripto-predictor e do circuito da Etapa A; exportação para CAIN é assunto da Etapa B.",
-      "evidence": [
-        "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
-      ]
-    },
-    {
-      "id": "CR-F012",
-      "severity": "P2",
-      "status": "FIXED",
-      "phase": "contract-wiring",
-      "title": "GarimpoInvestimentos.__version__ divergente da distribuição",
-      "description": "__init__.__version__ = '1.1.1rc2' enquanto pyproject/metadata = '1.1.1rc4' em 5fd4e1b. Ninguém usa internamente, mas expõe versão errada.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/truth-map/core_identity_checkout_baseline.json"
-      ],
-      "fixed_in": "6f73051",
-      "proof": "tests/test_package_version_contract.py"
-    },
-    {
-      "id": "CR-F013",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "contract-wiring",
-      "title": "Circuito de pesquisa quebra no Windows com raiz de estado profunda (MAX_PATH)",
-      "description": "Achado na suíte Windows: caminhos internos (experiments/EXP-<32hex>/.reference-materialization.json.<uuid>.tmp; ops-runtime/idempotency/.economic-<sha256>.json.<uuid>.tmp do predictor_ops) passam de 260 caracteres sob raízes longas; o job falha (fecha como OPS_FAILED_RETRYABLE/exit 3), nunca produz resultado. Defeito de operação no Windows.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/contract-wiring/windows_pytest_9844976.log"
-      ],
-      "fixed_in": "6f73051",
-      "proof": "tests/test_research_domain_units.py::test_windows_state_root_longer_than_max_path_budget_fails_fast; suíte Windows 1664 passed em 2bc63eb"
-    },
-    {
-      "id": "CR-F014",
-      "severity": "P2",
-      "status": "FIXED",
-      "phase": "contract-wiring",
-      "title": "Coverage: subprocessos da conformidade herdavam o pytest-cov",
-      "description": "Os subprocessos cripto-research rodavam fora do repo com as variáveis COV_CORE_* e gravavam dados sem branch; o combine do pytest-cov falhava (exit 3) com todos os testes passando. Encanamento de teste, sem efeito no produto.",
-      "evidence": [
-        "https://github.com/leonardosovienski/cripto-predictor/actions/runs/35876787921 (job quality: 1661 passed, INTERNALERROR Can't combine statement coverage data with branch data)"
-      ],
-      "fixed_in": "6f73051",
-      "proof": "job quality do CI verde em 2bc63eb (run 35881545740)"
-    },
-    {
-      "id": "CR-F015",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "contract-wiring",
-      "title": "Duplicata depois de mudança de policy devolvia REJECTED em vez do resultado autoritativo",
-      "description": "execute() revalidava a policy antes de procurar o resultado armazenado; reenviar um pedido concluído depois de mudar a policy voltava REJECTED (POLICY_CHANGED). Quebra de idempotência. Reproduzido em 2bafad9 pelo teste novo; corrigido em 2bc63eb; a mesma prova passa.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/contract-wiring/repro_duplicate_after_policy_change.log"
-      ],
-      "fixed_in": "2bc63eb",
-      "proof": "tests/conformance/test_contract_conformance.py::test_duplicate_after_policy_change_returns_the_stored_result"
-    },
-    {
-      "id": "CR-F016",
-      "severity": "P2",
-      "status": "OPEN",
-      "phase": "cleanroom-final",
-      "title": "17 testes da suíte dependem do checkout (não rodam contra a wheel instalada)",
-      "description": "Com a wheel publicada e a árvore sem o pacote-fonte: 13 leem GarimpoInvestimentos/trials.json, main.py ou analyzers/* pelo caminho do repo; 2 exigem dist/ construído; 2 checam higiene do checkout. Todos passam no CI do checkout em 2bc63eb. Defeito só de teste (classe T do SHARED-002); a conformidade (48/48) e o E2E rodam contra a wheel.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/full_suite.junit.xml"
-      ]
-    },
-    {
-      "id": "CR-F017",
-      "severity": "P2",
-      "status": "OPEN",
-      "phase": "v1-1-ops-failure",
-      "title": "predictor-ops: teste windows_integration do Agendador de Tarefas falha neste host Windows",
-      "description": "windows_integration/test_windows_real.py::test_real_present_never_run_disabled_and_failed_task falha 3/3 no Windows local tanto no main intocado (7bd99eb) quanto no branch da correção; passa no windows-latest do CI. Ambiente do Agendador de Tarefas deste host; adaptador transicional que o Cripto não usa. Observação para o dono do Ops.",
-      "evidence": [
-        "qualification/shared/SHARED-005/RAW_LOGS/windows_integration_ab.log"
-      ]
-    },
-    {
-      "id": "CR-F018",
-      "severity": "P2",
-      "status": "OPEN",
-      "phase": "v1-1-contract-wiring",
-      "title": "Host Windows entra em Modern Standby durante execuções longas",
-      "description": "A suíte de 341d270 levou 2h19 e 1 teste estourou 600 s: o host esteve em Modern Standby (Kernel-Power 506/507) de 16:02 a 18:07; nova janela 18:19–18:45 derrubou 1 de 10 reexecuções. Fora dessas janelas, 9/10 e a suíte completa (1664/1664) passam. Mitigação: scripts/keep_awake.ps1 (SetThreadExecutionState por processo) durante as execuções. Sem efeito no produto.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/v1.1/host_standby_events.log",
-        "qualification/crypto/RAW_LOGS/v1.1/after_result_write_10x.log",
-        "qualification/crypto/RAW_LOGS/v1.1/windows_pytest_341d270_run2.log"
-      ]
-    },
-    {
-      "id": "CR-F019",
-      "severity": "P1",
-      "status": "FIXED",
-      "phase": "d16",
-      "title": "Soak não executava 2 das 6 classes de falha do perfil congelado; d16_finalize fecharia SOAK sem essa cobertura",
-      "description": "QUALIFICATION_PROFILE_CRYPTO_V1.plan.failure_classes exige 3 execuções de 6 classes, e checks_at_end exige que o reconcile acuse só as corrupções injetadas. scripts/soak.py executava 4 classes: faltavam 'host do Ops morto durante o job' e 'corrupção (arquivo de resultado alterado)', ambas definidas na FAILURE_MATRIX. No run D-16 35976569248 (main 3983de1), o soak_real.jsonl tem 0 execuções das duas e reconcile_findings vazio; o d16_finalize.py fecharia SOAK=PASS só por zero_tolerance_ok, ou seja, PASS sem evidência. Os SOAK_REPORT V1.0/V1.1 (diagnóstico) listavam só 4 classes. Corrigido no kit (PR #17): o soak.py executa as 6 pelo método dos testes de conformidade, e o d16_finalize exige ≥ minimums.runs_per_relevant_failure_class por classe. Com o log do run 1, o finalize corrigido dá SOAK FAIL; o run definitivo 35978221282 executa as 6 (3/3/3/4/3/3). Perfil, vetores e limiares não mudaram.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/d16/35976569248/soak_real.jsonl",
-        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl",
-        "qualification/crypto/RAW_LOGS/d16-conferencia/finalize_ensaio_runs.log"
-      ],
-      "fixed_in": "predictor-qualification c5d627a + 8693f5d (PR #17)",
-      "proof": "qualification/crypto/RAW_LOGS/d16-conferencia/finalize_ensaio_runs.log: run 35976569248 -> SOAK FAIL (host_killed_during_ops_job 0, result_file_corruption 0); run 35978221282 -> SOAK PASS"
-    },
-    {
-      "id": "CR-F020",
-      "severity": "P2",
-      "status": "OPEN",
-      "phase": "d16",
-      "title": "Parciais V1.0 declaram sha256 de evidência que não confere no próprio commit",
-      "description": "d16_crosscheck.py attestations (cada attestation no commit em que foi gravada): (a) os 9 parciais gravados em cd7e71d (cleanroom-final, contract-wiring, e2e, hosted-ci, idempotency-failure, publish-candidates, science, soak, windows-smoke) declaram E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json = daedb69a…, mas o blob em cd7e71d é 7f7b4b1e…. O .gitattributes ainda normalizava CRLF->LF em E2E_EVIDENCE; e4c1566, 19 s depois, pôs -text e regravou os bytes originais (daedb69a…), e no main o arquivo confere. (b) ATTESTATION_PARTIAL_baseline.json (f4b22ee) declara FINDINGS.json = 26f5bb51…, que não existe em nenhum commit: o parcial foi gerado às 07:35 UTC e o FINDINGS editado antes do commit das 07:43 UTC. Sem efeito nos gates atuais: os 12 parciais V1.1 e a attestation V1.0 (eb3e79f4…) conferem no próprio commit. C8 proíbe reescrever parciais; fica registrado.",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log"
-      ]
-    },
-    {
-      "id": "CR-F021",
-      "severity": "P2",
-      "status": "FIXED",
-      "phase": "d16",
-      "title": "attest.py check não confere environments, vereditos compartilhados nem findings_file",
-      "description": "A C7.1 regra 3 diz 'todo arquivo de evidência existe e o sha256 confere no commit da attestation'. O check() do scripts/attest.py só confere as evidências dos gates, e só na árvore atual. Não confere environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 nem findings_file, e foi isso que deixou passar o item (b) do CR-F020. O d16_crosscheck.py attestations cobre esses campos, no commit de cada attestation. Correção sugerida: estender check() do attest.py. Corrigido em 2026-09-24 (C14 do núcleo v2.2, autorizado pelo dono): check() confere também environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 e findings_file; cópias adulteradas nos três campos são acusadas (RAW_LOGS/c14-nucleo-v2.2/check.log). A conferência é na árvore atual; no commit de cada attestation segue valendo o d16_crosscheck.py.",
-      "evidence": [
-        "qualification/crypto/scripts/attest.py",
-        "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log",
-        "qualification/crypto/RAW_LOGS/c14-nucleo-v2.2/check.log"
-      ]
-    }
-  ]
+ "schema": "crypto/FINDINGS/1",
+ "severity_scale": "C6 (P0/P1/P2)",
+ "status_values": [
+  "OPEN",
+  "OPEN_BLOCKED",
+  "FIXED",
+  "CLOSED_NOT_A_DEFECT",
+  "ACCEPTED_BY_OWNER"
+ ],
+ "findings": [
+  {
+   "id": "CR-F001",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "freeze-parameters",
+   "title": "Branches antigas ainda existem e tags archive/* não existem",
+   "description": "O contexto do dono diz que as branches antigas dos 8 repos foram arquivadas como tags archive/<nome> e apagadas. git ls-remote em 2026-09-23 mostra 0 tags archive/* e as branches antigas presentes: cripto-predictor 7 (claude/bold-keller-0bybfk, docs/corrigir-continuidade-20260917, fix/audit-remediation-20260917, fix/opportunity-detection, hygiene/HYG-003-protocol-source-lock, hygiene/HYG-015-retire-v1-workflows, profit-recovery-20260919), predictor-qualification 6, core-predictor 2, predictor-ops 1. O agente não apaga branch não arquivada.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/freeze-parameters/ls_remote.log"
+   ],
+   "owner_action": "arquivar e apagar (ou autorizar) as branches antigas"
+  },
+  {
+   "id": "CR-F002",
+   "severity": "P2",
+   "status": "FIXED",
+   "phase": "baseline",
+   "title": "Suíte do Cripto no Windows depende de CRIPTO_ROOT ancestral do TEMP",
+   "description": "tests/conftest.py cria CRIPTO_ROOT = tempdir próprio quando CRIPTO_ROOT não está definido; tests/test_output_dir_bootstrap.py e tests/test_mode_composition.py passam tmp_path (fora desse tempdir) como diretório operacional, e local_runtime.within_root recusa. Com TEMP em C:\\Cripto\\qualificacao\\tmp e sem CRIPTO_ROOT: 2 falhas; com CRIPTO_ROOT ancestral do TEMP: passam (A/B). Defeito só de teste/ambiente, sem efeito no código de produção. Também: 2 testes de distribuição exigem `uv build` antes da suíte (como o ci.yml faz).",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b.log",
+    "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log"
+   ],
+   "resolution_plan": "método documentado em qualification/crypto/scripts/win_suite.sh",
+   "fixed_in": "método documentado em scripts/win_suite.sh; suíte Windows do baseline 1618 passed",
+   "proof": "—"
+  },
+  {
+   "id": "CR-F003",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "truth-map",
+   "title": "AdmissionStore: max_pending_tasks nunca libera",
+   "description": "AdmissionStore conta todo ACCEPTED como pendente para sempre (não existe API de conclusão). Reproduzido em 5fd4e1b com max_pending_tasks=2: o 3º pedido é REJECTED GLOBAL_PENDING_QUOTA. No soak (≥20 ciclos) o domínio pararia de admitir.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
+   ],
+   "fixed_in": "33fed6b",
+   "proof": "tests/test_research_domain_units.py::test_pending_quota_is_released_when_the_request_terminates"
+  },
+  {
+   "id": "CR-F004",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "truth-map",
+   "title": "Handler reporta custo líquido errado (1 perna, sem funding) e sem IC do líquido",
+   "description": "research_worker.evaluate reporta net_return_bps = gross_bps − (fee+slippage) = 1 perna e sem funding. O CostModel congelado cobra 2 pernas (30 bps) + funding. Reproduzido em 5fd4e1b: bruto +15 bps, líquido reportado 0 bps, líquido pelo CostModel −36 bps. Nenhum IC do líquido. Esconde prejuízo: resultado econômico errado.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/truth-map/repro_baseline_defects.log"
+   ],
+   "fixed_in": "33fed6b",
+   "proof": "tests/test_research_domain_units.py::test_net_return_uses_the_frozen_cost_model_and_has_its_own_interval"
+  },
+  {
+   "id": "CR-F005",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "cleanroom-baseline",
+   "title": "GarimpoInvestimentos/output fora da wheel",
+   "description": ".gitignore com `output/` sem âncora exclui GarimpoInvestimentos/output (reporter.py) da wheel; o caminho padrão de análise quebra no runtime instalado (SHARED-002).",
+   "evidence": [
+    "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
+   ],
+   "fixed_in": "33fed6b/9844976 (.gitignore /output/)",
+   "proof": "wheel 1.2.0rc1 contém GarimpoInvestimentos/output/reporter.py (RAW_LOGS/publish-candidates/build_rc_2bc63eb.log)"
+  },
+  {
+   "id": "CR-F006",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "truth-map",
+   "title": "Circuito de pesquisa não alcançável de entrypoint",
+   "description": "AdmissionStore, ReferenceStore, ResearchExecutor, ResultOutbox, research_worker e research_recovery não são alcançados por nenhum [project.scripts] nem entry-point (grafo AST + trace em runtime). Não existe entrypoint que leia pedidos em arquivo (C24.1).",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/truth-map/import_graph_baseline.json",
+    "qualification/crypto/RAW_LOGS/truth-map/runtime_trace_checkout.log"
+   ],
+   "fixed_in": "33fed6b (cripto-research)",
+   "proof": "tests/conformance/test_import_closure.py; E2E pela wheel (RAW_LOGS/cleanroom-final/run35885023422)"
+  },
+  {
+   "id": "CR-F007",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "truth-map",
+   "title": "Admission/execução/resultado acoplados ao envelope V1",
+   "description": "research_admission, research_execution e research_results importam research_protocol (verify_task, validate_result, sign_result) e usam ResearchTaskV1/ResearchResultV1 com autenticação HMAC do CAIN. O prompt §8 exige domínio sem envelope.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/truth-map/envelope_coupling_grep.log"
+   ],
+   "fixed_in": "33fed6b",
+   "proof": "tests/conformance/test_import_closure.py::test_no_entrypoint_reaches_envelope_cain_or_adapter_paths"
+  },
+  {
+   "id": "CR-F008",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "truth-map",
+   "title": "Estado científico e validação temporal decididos no domínio, não no Core",
+   "description": "O worker decide SUPPORTED/REFUTED/INCONCLUSIVE e valida o tempo com código próprio; o Core só fornece bootstrap e o registro de trial. CORE_PARTICIPATION exige estado científico e validação temporal do Core real.",
+   "evidence": [
+    "qualification/crypto/ARCHITECTURE_TRUTH_MAP.json"
+   ],
+   "fixed_in": "33fed6b",
+   "proof": "e2e_runtime.py: 'Core trial registry holds the trial and the scientific state'; conformance canário (LookaheadError do replay do Core)"
+  },
+  {
+   "id": "CR-F009",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "ops-failure",
+   "title": "SHARED-005: lock local do Ops falha no Windows sob concorrência (bloqueante)",
+   "description": "predictor-ops 4.2.1 _mutation_guard: corrida na inicialização da guarda; o processo perdedor morre com PermissionError dentro de run_job. Veredito flaky/bloqueante (C13). Correção exige mudança no Ops congelado: decisão do dono.",
+   "evidence": [
+    "qualification/shared/SHARED-005/SHARED_DEPENDENCY_VERDICT.json"
+   ],
+   "fixed_in": "predictor-ops 9831b0d (PR #26), release v4.2.2rc1 (0be70bfb…), D-17; cripto 341d270 aponta para ela",
+   "proof": "tests_v2/test_runtime.py::test_empty_guard_locked_by_another_process_waits_instead_of_crashing (falha antes, passa depois); corrida real 50/50 em Windows local, Linux source/wheel e windows-latest (qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json)"
+  },
+  {
+   "id": "CR-F010",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "ops-failure",
+   "title": "Ops CLI `provenance --source-root` com fonte suja responde VALIDATED (identidade da wheel)",
+   "description": "Observação da SHARED-004; nenhuma missão usa o caminho. Proposta ao dono do Ops.",
+   "evidence": [
+    "qualification/shared/SHARED-004/SHARED_DEPENDENCY_VERDICT.json"
+   ]
+  },
+  {
+   "id": "CR-F011",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "cleanroom-baseline",
+   "title": "crypto-research-export exige predictor-research-snapshot fora do lock",
+   "description": "Pacote separado (packages/research-export), fora da wheel cripto-predictor e do circuito da Etapa A; exportação para CAIN é assunto da Etapa B.",
+   "evidence": [
+    "qualification/shared/SHARED-002/CLEANROOM_REPORT.md"
+   ]
+  },
+  {
+   "id": "CR-F012",
+   "severity": "P2",
+   "status": "FIXED",
+   "phase": "contract-wiring",
+   "title": "GarimpoInvestimentos.__version__ divergente da distribuição",
+   "description": "__init__.__version__ = '1.1.1rc2' enquanto pyproject/metadata = '1.1.1rc4' em 5fd4e1b. Ninguém usa internamente, mas expõe versão errada.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/truth-map/core_identity_checkout_baseline.json"
+   ],
+   "fixed_in": "6f73051",
+   "proof": "tests/test_package_version_contract.py"
+  },
+  {
+   "id": "CR-F013",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "contract-wiring",
+   "title": "Circuito de pesquisa quebra no Windows com raiz de estado profunda (MAX_PATH)",
+   "description": "Achado na suíte Windows: caminhos internos (experiments/EXP-<32hex>/.reference-materialization.json.<uuid>.tmp; ops-runtime/idempotency/.economic-<sha256>.json.<uuid>.tmp do predictor_ops) passam de 260 caracteres sob raízes longas; o job falha (fecha como OPS_FAILED_RETRYABLE/exit 3), nunca produz resultado. Defeito de operação no Windows.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/contract-wiring/windows_pytest_9844976.log"
+   ],
+   "fixed_in": "6f73051",
+   "proof": "tests/test_research_domain_units.py::test_windows_state_root_longer_than_max_path_budget_fails_fast; suíte Windows 1664 passed em 2bc63eb"
+  },
+  {
+   "id": "CR-F014",
+   "severity": "P2",
+   "status": "FIXED",
+   "phase": "contract-wiring",
+   "title": "Coverage: subprocessos da conformidade herdavam o pytest-cov",
+   "description": "Os subprocessos cripto-research rodavam fora do repo com as variáveis COV_CORE_* e gravavam dados sem branch; o combine do pytest-cov falhava (exit 3) com todos os testes passando. Encanamento de teste, sem efeito no produto.",
+   "evidence": [
+    "https://github.com/leonardosovienski/cripto-predictor/actions/runs/35876787921 (job quality: 1661 passed, INTERNALERROR Can't combine statement coverage data with branch data)"
+   ],
+   "fixed_in": "6f73051",
+   "proof": "job quality do CI verde em 2bc63eb (run 35881545740)"
+  },
+  {
+   "id": "CR-F015",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "contract-wiring",
+   "title": "Duplicata depois de mudança de policy devolvia REJECTED em vez do resultado autoritativo",
+   "description": "execute() revalidava a policy antes de procurar o resultado armazenado; reenviar um pedido concluído depois de mudar a policy voltava REJECTED (POLICY_CHANGED). Quebra de idempotência. Reproduzido em 2bafad9 pelo teste novo; corrigido em 2bc63eb; a mesma prova passa.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/contract-wiring/repro_duplicate_after_policy_change.log"
+   ],
+   "fixed_in": "2bc63eb",
+   "proof": "tests/conformance/test_contract_conformance.py::test_duplicate_after_policy_change_returns_the_stored_result"
+  },
+  {
+   "id": "CR-F016",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "cleanroom-final",
+   "title": "Testes da suíte dependem do checkout (não rodam contra a wheel instalada): 17 na V1.0/V1.1, 32 na V1.2 (rc4)",
+   "description": "Com a wheel publicada e a árvore sem o pacote-fonte: 13 leem GarimpoInvestimentos/trials.json, main.py ou analyzers/* pelo caminho do repo; 2 exigem dist/ construído; 2 checam higiene do checkout. Todos passam no CI do checkout em 2bc63eb. Defeito só de teste (classe T do SHARED-002); a conformidade (48/48) e o E2E rodam contra a wheel. V1.2 (D-27, cripto 1.2.0rc4 = main 21f8b182, run 36646241688): 32 falhas na suíte pela wheel, todas da mesma classe T: 16 das 17 anteriores (1 passou a passar) e 16 novas dos testes acrescentados pelos PRs #128–#134 — 7 em test_evaluation_protocol_3c leem docs/evidence/2026-09-24-prompt3c/preregistro.json pelo caminho do pacote (site-packages/docs/...), 8 em test_evaluation_protocol_4 leem GarimpoInvestimentos/h6_status.json pelo caminho do repo (a wheel contém o arquivo), 1 (test_versioned_research_ledgers_are_intact) lê docs/research_ledger/ pelo caminho do pacote. Nenhuma exercita código instalado de forma diferente; a conformidade (48/48) e o E2E (20/20) passam pela wheel, e o CI do checkout em 21f8b182 é verde (1780 passed no job all-extras).",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/cleanroom-final/run35885023422/crypto-runtime-linux-primary/full_suite.junit.xml",
+    "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/full_suite.junit.xml"
+   ]
+  },
+  {
+   "id": "CR-F017",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "v1-1-ops-failure",
+   "title": "predictor-ops: teste windows_integration do Agendador de Tarefas falha neste host Windows",
+   "description": "windows_integration/test_windows_real.py::test_real_present_never_run_disabled_and_failed_task falha 3/3 no Windows local tanto no main intocado (7bd99eb) quanto no branch da correção; passa no windows-latest do CI. Ambiente do Agendador de Tarefas deste host; adaptador transicional que o Cripto não usa. Observação para o dono do Ops.",
+   "evidence": [
+    "qualification/shared/SHARED-005/RAW_LOGS/windows_integration_ab.log"
+   ]
+  },
+  {
+   "id": "CR-F018",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "v1-1-contract-wiring",
+   "title": "Host Windows entra em Modern Standby durante execuções longas",
+   "description": "A suíte de 341d270 levou 2h19 e 1 teste estourou 600 s: o host esteve em Modern Standby (Kernel-Power 506/507) de 16:02 a 18:07; nova janela 18:19–18:45 derrubou 1 de 10 reexecuções. Fora dessas janelas, 9/10 e a suíte completa (1664/1664) passam. Mitigação: scripts/keep_awake.ps1 (SetThreadExecutionState por processo) durante as execuções. Sem efeito no produto.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/v1.1/host_standby_events.log",
+    "qualification/crypto/RAW_LOGS/v1.1/after_result_write_10x.log",
+    "qualification/crypto/RAW_LOGS/v1.1/windows_pytest_341d270_run2.log"
+   ]
+  },
+  {
+   "id": "CR-F019",
+   "severity": "P1",
+   "status": "FIXED",
+   "phase": "d16",
+   "title": "Soak não executava 2 das 6 classes de falha do perfil congelado; d16_finalize fecharia SOAK sem essa cobertura",
+   "description": "QUALIFICATION_PROFILE_CRYPTO_V1.plan.failure_classes exige 3 execuções de 6 classes, e checks_at_end exige que o reconcile acuse só as corrupções injetadas. scripts/soak.py executava 4 classes: faltavam 'host do Ops morto durante o job' e 'corrupção (arquivo de resultado alterado)', ambas definidas na FAILURE_MATRIX. No run D-16 35976569248 (main 3983de1), o soak_real.jsonl tem 0 execuções das duas e reconcile_findings vazio; o d16_finalize.py fecharia SOAK=PASS só por zero_tolerance_ok, ou seja, PASS sem evidência. Os SOAK_REPORT V1.0/V1.1 (diagnóstico) listavam só 4 classes. Corrigido no kit (PR #17): o soak.py executa as 6 pelo método dos testes de conformidade, e o d16_finalize exige ≥ minimums.runs_per_relevant_failure_class por classe. Com o log do run 1, o finalize corrigido dá SOAK FAIL; o run definitivo 35978221282 executa as 6 (3/3/3/4/3/3). Perfil, vetores e limiares não mudaram.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/d16/35976569248/soak_real.jsonl",
+    "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl",
+    "qualification/crypto/RAW_LOGS/d16-conferencia/finalize_ensaio_runs.log"
+   ],
+   "fixed_in": "predictor-qualification c5d627a + 8693f5d (PR #17)",
+   "proof": "qualification/crypto/RAW_LOGS/d16-conferencia/finalize_ensaio_runs.log: run 35976569248 -> SOAK FAIL (host_killed_during_ops_job 0, result_file_corruption 0); run 35978221282 -> SOAK PASS"
+  },
+  {
+   "id": "CR-F020",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "d16",
+   "title": "Parciais V1.0 declaram sha256 de evidência que não confere no próprio commit",
+   "description": "d16_crosscheck.py attestations (cada attestation no commit em que foi gravada): (a) os 9 parciais gravados em cd7e71d (cleanroom-final, contract-wiring, e2e, hosted-ci, idempotency-failure, publish-candidates, science, soak, windows-smoke) declaram E2E_EVIDENCE/windows-local-real/E2E_SUMMARY.json = daedb69a…, mas o blob em cd7e71d é 7f7b4b1e…. O .gitattributes ainda normalizava CRLF->LF em E2E_EVIDENCE; e4c1566, 19 s depois, pôs -text e regravou os bytes originais (daedb69a…), e no main o arquivo confere. (b) ATTESTATION_PARTIAL_baseline.json (f4b22ee) declara FINDINGS.json = 26f5bb51…, que não existe em nenhum commit: o parcial foi gerado às 07:35 UTC e o FINDINGS editado antes do commit das 07:43 UTC. Sem efeito nos gates atuais: os 12 parciais V1.1 e a attestation V1.0 (eb3e79f4…) conferem no próprio commit. C8 proíbe reescrever parciais; fica registrado.",
+   "evidence": [
+    "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log"
+   ]
+  },
+  {
+   "id": "CR-F021",
+   "severity": "P2",
+   "status": "FIXED",
+   "phase": "d16",
+   "title": "attest.py check não confere environments, vereditos compartilhados nem findings_file",
+   "description": "A C7.1 regra 3 diz 'todo arquivo de evidência existe e o sha256 confere no commit da attestation'. O check() do scripts/attest.py só confere as evidências dos gates, e só na árvore atual. Não confere environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 nem findings_file, e foi isso que deixou passar o item (b) do CR-F020. O d16_crosscheck.py attestations cobre esses campos, no commit de cada attestation. Correção sugerida: estender check() do attest.py. Corrigido em 2026-09-24 (C14 do núcleo v2.2, autorizado pelo dono): check() confere também environments[*].evidence, shared_dependency_verdicts[*].verdict_sha256 e findings_file; cópias adulteradas nos três campos são acusadas (RAW_LOGS/c14-nucleo-v2.2/check.log). A conferência é na árvore atual; no commit de cada attestation segue valendo o d16_crosscheck.py.",
+   "evidence": [
+    "qualification/crypto/scripts/attest.py",
+    "qualification/crypto/RAW_LOGS/d16-conferencia/attestations_at_commit.log",
+    "qualification/crypto/RAW_LOGS/c14-nucleo-v2.2/check.log"
+   ]
+  },
+  {
+   "id": "CR-F022",
+   "severity": "P2",
+   "status": "OPEN",
+   "phase": "v1-2-truth-map",
+   "title": "DOMAIN_RESEARCH_CONTRACT.json descreve o layout de resultado antigo e a implementação da rc1",
+   "description": "O contrato aprovado (sha256 0831fe3d…) diz em authoritative_result_source.store que o arquivo imutável fica em <state>/execution/experiments/EXP-*/research-result.json, enquanto o próprio contrato (state_layout.experiments) e a implementação desde a 1.2.0rc1 usam x/e/<logical_hash[:16]>/ (CR-F013, MAX_PATH). implementation.final_commit/version/wheel ainda apontam para 2bc63eb/1.2.0rc1, embora os final_commits vigentes sejam outros (341d270/rc2 na V1.1; 21f8b182/rc4 na V1.2). Sem efeito funcional: a suíte de conformidade e o E2E releem o resultado pelo ResultStore e pelo caminho real (show, hash do blob). Não corrigido nesta reabertura porque o hash do contrato é parte das attestations da Etapa A e da Etapa B (domain_attestations.contract_sha256) e mudar o texto reabre DOMAIN_CONTRACT e o congelamento do V2 (C14). Fica para o dono decidir se o texto é corrigido numa revisão de contrato.",
+   "evidence": [
+    "qualification/crypto/DOMAIN_RESEARCH_CONTRACT.json",
+    "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/e2e/E2E_SUMMARY.json"
+   ]
+  }
+ ]
 }

@@ -103,3 +103,39 @@ Núcleo v2.3 (PR #49): a Etapa B passa a ser três missões, uma por domínio (`
 - Prova em `RAW_LOGS/c14-nucleo-v2.3/check.log`.
 
 **Observação para o dono (P2):** o `check()` estendido pela CR-F021 compara os parciais históricos com o `FINDINGS.json` **atual**. Por isso os 29 `ATTESTATION_PARTIAL_*.json` falham na C7.1(3) (`findings_file`). Parcial é imutável (C8), e o `check` só vale para a attestation vigente. Se o dono quiser `check` de parciais, o `attest.py` precisa comparar com o `FINDINGS.json` do commit de cada parcial.
+
+## V1.2 — reabertura da Etapa A (D-27, C24.4, C14; sessão de 2026-09-29/30, Linux na nuvem + GitHub Actions)
+
+Por quê: o `main` do `cripto-predictor` avançou depois do `final_commit` `341d270` (1.2.0rc2) com pesquisa fora dos `adapter_paths`
+(PRs #128–#134) e com as correções de 2026-09-29, publicadas como pré-release **v1.2.0rc4** (`21f8b182`, wheel `32a4bd6d…`, build duplo
+do workflow Release). C14 ("código do domínio depois de `cleanroom-final`") + C24.4 → Etapa A do crypto reaberta para esse alvo, por
+decisão delegada pelo dono (D-27). `core-predictor` e `predictor-ops` continuam nas mesmas wheels (3.2.1 e 4.2.2rc1; `src/`, `pyproject`
+e `uv.lock` iguais aos commits das wheels). Nenhum parâmetro, vetor, perfil, matriz ou limiar congelado mudou; os blobs da suíte de
+conformidade em `21f8b182` são os de `341d270` (`FROZEN_VECTORS.json`). Nenhum código de produto foi alterado por esta reabertura.
+
+| Onde | O quê | Por quê |
+|---|---|---|
+| `runtime_target.json` | alvo = `21f8b182` / v1.2.0rc4 (`previous` guarda `341d270` / rc2) | C3.1, C5 |
+| `.github/workflows/crypto-reopening.yml` | runtime (linux-primary + windows-latest informativo) e d16 num só workflow; cada job devolve a saída bruta numa branch `crypto/raw-<run>-<job>` com `SHA256SUMS` (a sessão não baixa artefatos do Actions); `crypto-runtime.yml` não dispara em `crypto/reopening-*` | D-9, D-16, C20 |
+| `RAW_LOGS/v1.2/run36646241688/{runtime-linux-primary,runtime-windows-latest,d16}/` | saída dos três jobs do run [36646241688](https://github.com/leonardosovienski/predictor-qualification/actions/runs/36646241688), sem edição | evidência |
+| `RAW_LOGS/v1.2/{baseline,truth-map,protected,lock,hosted-ci,secrets}/` | coletas locais (git + API pública + `scan_secrets.py`) | C3, C4, C15.1, C21, SECRETS_CLEAN |
+| `STACK_BASELINE_V1.2.json`, `qualification/shared/STACK_BASELINE_V1.2.json` | baseline da reabertura (`collect_mission_baseline_v12.py` + `gh_api_shim.sh`; `build_stack_baseline_v1_2.py`) | C3, C24.4 |
+| `PROTECTED_SET_V1.2.json` | conjunto protegido refeito em `21f8b182`: 1445 itens (V1.0: 1382, todos com o mesmo blob; +63 arquivos novos de `docs/evidence/`) | C15.1 (só cresce) |
+| `scripts/{collect_mission_baseline_v12,protected_set_check,evidence_numbers_v12,v12_gates,render_v12_reports}.py`, `scripts/gh_api_shim.sh` | kit da V1.2; `attest.py` lê o conjunto protegido do ciclo pelo ledger (`protected_set_file`) | C20 |
+| `EVIDENCE_NUMBERS_V1.2.json` | todos os números da V1.2, de `RAW_LOGS/v1.2` | C20 |
+| `GATES.json`, `ATTESTATION_PARTIAL_v1-2-*.json` (10 parciais) | ledger atualizado fase a fase; `common_baseline_id = STACK_BASELINE_V1.2`; `supersedes_sha256` = attestation V1.1 vigente (`2b1491a0…`) | C7, C8 |
+| `CLEANROOM_REPORT.md`, `CORE_IDENTITY_REPORT.md`, `HOSTED_CI_REPORT.md`, `PROTECTED_ARTIFACT_REPORT.md`, `SOAK_REPORT.md`, `SCIENTIFIC_INTEGRITY_REPORT.md` | seção "V1.2" gerada por `render_v12_reports.py` | C20 |
+| `FINDINGS.json` | CR-F016 atualizado (32 testes classe T na rc4: 16 dos 17 antigos + 16 dos testes novos dos PRs #128–#134, que leem `docs/evidence`, `docs/research_ledger` ou `h6_status.json` pelo caminho do repo); **CR-F022** (P2): texto do contrato com layout antigo em `authoritative_result_source.store` e `implementation` na rc1 | C6 |
+| `REABERTURA_V1.2.md` | runbook: o que rodou, o que falta (Windows local) e como fechar | — |
+
+Resultado da sessão: **30/31 gates `PASS`**, `WINDOWS_SMOKE` `NOT_RUN` (`BLOCKED`: o secundário do crypto é o Windows local do dono, D-3);
+P0 = P1 = 0, P2 = 8. Estado terminal **`BLOCKED`** (C7.3): só parciais; a `QUALIFICATION_ATTESTATION.json` vigente continua sendo a V1.1
+(`QUALIFIED` para `341d270` / rc2) e não é reemitida até o Windows fechar. Números principais (`EVIDENCE_NUMBERS_V1.2.json`): conformidade
+48/48 nos três runtimes (Linux, windows-latest, d16); E2E 20/20 (sintético, Linux e windows-latest) e 10/10 (real); casos A/B/C 20/20; soak
+real 77 chamadas, 43 resultados, 0 perdidos, 0 violações, 6 classes de falha ≥ 3, `zero_tolerance_ok`; bruto −45 bps IC [−214, 112], líquido
+−83 bps IC [−253, 76], `INCONCLUSIVE`/`NO_EDGE` (iguais à D-16 de 24/09); controles negativos 0/0/3 de 100; canário 0 vazamentos; suíte pela wheel
+1748 passed / 32 classe T; CI do cripto verde em `21f8b182`.
+
+Limitação registrada: `attest.py check` da attestation V1.1 vigente agora acusa `counts` e o sha256 de `FINDINGS.json`/`CORE_IDENTITY_REPORT.md`
+(arquivos que evoluíram nesta reabertura). É o mesmo efeito já descrito na observação do C14 v2.3 acima: a attestation vale no commit em
+que foi emitida; o `check` só é exato para a attestation mais recente e para os parciais do ciclo corrente.

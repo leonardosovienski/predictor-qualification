@@ -63,3 +63,31 @@ Nada para o gate: a D-16 foi decidida e executada (seção D-16 acima).
 ## V1.1
 
 Mesmo perfil, mesmo diagnóstico sintético no Linux (run 35925914768): `zero_tolerance_ok = true` (`EVIDENCE_NUMBERS_V1.1.json`). Na V1.1 o gate ficou **NOT_RUN — BLOCKED: D-16 pendente**; fechou depois pela D-16 (seção acima).
+
+## V1.2 (reabertura D-27: cripto 1.2.0rc4 / 21f8b182)
+
+Perfil `QUALIFICATION_PROFILE_CRYPTO_V1` inalterado. Dados reais (D-16) no Linux primário: run
+[36646241688](https://github.com/leonardosovienski/predictor-qualification/actions/runs/36646241688), job `d16`, log bruto `qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl`
+(sha256 `182bf1a3f705…`). Dados: 45/46 arquivos da Binance conferidos pelo `.CHECKSUM`
+publicado (1 indisponível na origem, como na D-16 original); dataset in-sample `0d04cf7c11e8…`
+(52 observações), o mesmo da D-16 de 2026-09-24.
+
+| Classe de falha do perfil (mínimo 3) | Executado |
+|---|---|
+| `ops_worker_crash` | 3 |
+| `ops_worker_hang` | 3 |
+| `host_killed_during_ops_job` | 3 |
+| `before_admission_commit` | 4 |
+| `during_result_write` | 3 |
+| `result_file_corruption` | 3 |
+
+- chamadas ao entrypoint: **77**; resultados armazenados: **43** (43 pedidos com resultado); perdidos: **0**; inesperados: **0**;
+- efeitos de domínio: **43**; jobs do Ops: **43**; máximo de `SUCCEEDED` por job: **1**;
+- releitura por `show`: divergências **0**; corrupções injetadas 3, recusadas sem reparo 3;
+- `reconcile`: exit 5, 6 achados, estranhos 0, corrupções não acusadas 0;
+- violações: **0**; `zero_tolerance_ok = true`.
+
+Soak sintético do mesmo run (job `runtime linux-primary`, diagnóstico): 80 chamadas, 46 resultados, perdidos 0,
+violações 0, `zero_tolerance_ok = true`.
+
+`SOAK` V1.2: **PASS**.

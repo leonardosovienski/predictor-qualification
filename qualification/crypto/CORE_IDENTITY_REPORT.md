@@ -43,3 +43,18 @@ qualquer checkout); `RAW_LOGS/final/uv_lock_check_2bc63eb.log`.
 ## 3. V1.1
 
 `uv.lock` de `341d270`: predictor-ops `4.2.2rc1` pela URL da release, sha256 `0be70bfb…` = digest do asset (a wheel oficial foi construída pelo workflow Release do Ops e substituiu, com o mesmo conteúdo e outros carimbos de data, o upload manual feito um minuto antes). Range `predictor-ops>=4.2.2rc1,<5`. `uv lock --check` exit 0 (`RAW_LOGS/v1.1/uv_lock_check_341d270.log`). Nos 3 runtimes, `core_identity.json` mostra Ops 4.2.2rc1, cripto 1.2.0rc2 e Core 3.2.1 não editable, do site-packages.
+
+## V1.2 (reabertura D-27: cripto 1.2.0rc4 / 21f8b182)
+
+`uv.lock` de `21f8b182`: `uv lock --check` exit 0 (`qualification/crypto/RAW_LOGS/v1.2/lock/uv_lock_check_21f8b182.log`) e job `quality` do CI verde
+(`qualification/crypto/RAW_LOGS/v1.2/hosted-ci/jobs_cripto-predictor_36642919823.json`). Runtime do run 36646241688 (`qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/core_identity.json`,
+sha256 `98ecccd12c16…`; o job `d16` tem a mesma cadeia em `qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/core_identity.json`):
+
+| Pacote | pyproject | tool.uv.sources | uv.lock sha256 | Instalado (direct_url) | Módulo |
+|---|---|---|---|---|---|
+| predictor-core | `predictor-core>=3.2.1,<4` | release (`tool.uv.sources`) | `10ef42f3…` | 3.2.1 `10ef42f3…` | site-packages=True |
+| predictor-ops | `predictor-ops>=4.2.2rc1,<5` | release (`tool.uv.sources`) | `0be70bfb…` | 4.2.2rc1 `0be70bfb…` | site-packages=True |
+| cripto-predictor | — (o próprio projeto) | — | — | 1.2.0rc4 `32a4bd6d…` (asset da release v1.2.0rc4) | site-packages=True |
+
+Nenhum pacote do stack vem de índice público, `vendor/` ou checkout; `research_protocol`/`cain` ausentes (import_graph: nenhuma raiz os alcança).
+`LOCK_INTEGRITY` V1.2: **PASS**. `CORE_IDENTITY` V1.2: **PASS**.
