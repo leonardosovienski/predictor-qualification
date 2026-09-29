@@ -33,3 +33,16 @@ Fonte: `RAW_LOGS/v1.1/hosted-ci/`. Todos os jobs com sucesso; nenhum pulado.
 | predictor-ops | `9831b0d` | CI (push, tag `v4.2.2rc1`) | [35905678198](https://github.com/leonardosovienski/predictor-ops/actions/runs/35905678198) |
 | predictor-ops | `9831b0d` | Release (tag) | [35905678109](https://github.com/leonardosovienski/predictor-ops/actions/runs/35905678109) — build com attestation + validação da wheel publicada |
 | core-predictor | `5a08415` | inalterado (ver acima) | |
+
+## V1.2 (reabertura D-27: cripto 1.2.0rc4 / 21f8b182)
+
+Fonte: `RAW_LOGS/v1.2/hosted-ci/` (API pública do GitHub, sem edição). Baseline = final desta reabertura (`21f8b182`, `main`).
+
+| Repo | Commit | Papel | Workflow (evento) | Run | Jobs |
+|---|---|---|---|---|---|
+| cripto-predictor | `21f8b182` | baseline = final_commit V1.2 | CI (push, main) | [36642919823](https://github.com/leonardosovienski/cripto-predictor/actions/runs/36642919823) | quality: success, all-extras: success, python-314-experimental: success, container: success |
+| cripto-predictor | `21f8b182` | release v1.2.0rc4 | Release (workflow_dispatch) | [36643518795](https://github.com/leonardosovienski/cripto-predictor/actions/runs/36643518795) | release: success |
+| core-predictor | `5a08415` | final (congelado; wheel inalterada) | herdado da V1.0 (mesmo commit) | [35823003554](https://github.com/leonardosovienski/core-predictor/actions/runs/35823003554) | success |
+| predictor-ops | `9831b0d` | final (congelado; wheel inalterada) | herdado da V1.1 (mesmo commit) | [35905678198](https://github.com/leonardosovienski/predictor-ops/actions/runs/35905678198) | success |
+
+`HOSTED_CI` V1.2: **PASS**. Nenhum job pulado.

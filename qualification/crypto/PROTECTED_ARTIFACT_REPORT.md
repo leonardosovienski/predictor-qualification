@@ -18,3 +18,14 @@
 ## V1.1
 
 No `final_commit` `341d270`: 1382/1382 blobs iguais ao truth-map (`RAW_LOGS/v1.1/protected_set_check_341d270.json`).
+
+## V1.2 (reabertura D-27: cripto 1.2.0rc4 / 21f8b182)
+
+- Conjunto V1.0 (`PROTECTED_SET.json`, 1382 blobs de `5fd4e1b`) conferido em `21f8b182`: **1382/1382 iguais,
+  0 alterados ou ausentes** (`qualification/crypto/RAW_LOGS/v1.2/protected/protected_set_check_21f8b182.json`). Nada do que estava protegido em `341d270` mudou nos PRs #128–#134 nem nas correções de 2026-09-29.
+- Conjunto refeito pelo `truth_map.py` em `21f8b182` (`PROTECTED_SET_V1.2.json`): **1445 itens** (só cresce: +63 arquivos novos em `docs/evidence/`,
+  cobertos pelos globs do prompt §5); 1445/1445 iguais no alvo (`qualification/crypto/RAW_LOGS/v1.2/protected/protected_set_v1_2_check_21f8b182.json`).
+- `charters/scientific_state.json` continua com o mesmo blob: H1–H3, H5 `CLOSED_NO_GO`; H4, H6, H9 `CLOSED_INSUFFICIENT_SAMPLE`; H7, H8
+  `REGISTERED_NOT_ACTIVATED`; família congelada `funding_oi_hmm_v3`; `capital_authorized: false`. Nada foi reaberto.
+
+`PROTECTED_ARTIFACTS_UNCHANGED` V1.2: **PASS**.

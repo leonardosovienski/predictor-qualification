@@ -1,0 +1,519 @@
+{
+  "baseline_id": "STACK_BASELINE_V1.2",
+  "note": "D-27 (C24.4): reabertura da Etapa A do crypto. cripto-predictor no main 21f8b182 (1.2.0rc4, pré-release v1.2.0rc4 publicada pelo workflow Release com build duplo); core-predictor e predictor-ops com as MESMAS wheels do V1.1 (3.2.1 e 4.2.2rc1; final_commits 5a08415 e 9831b0d), embora o main dos dois tenha avançado só em CI/README/Dockerfile (nenhum arquivo de src/, pyproject.toml ou uv.lock mudou desde o commit da wheel). Os demais repos (cain, ecosystem-predictor, brasileirao-predictor, stocks-predictor) não fazem parte desta base e ficam registrados só como no V1.1 (a base da Etapa B continua sendo STACK_BASELINE_V2.0 até revisão).",
+  "supersedes": "STACK_BASELINE_V1.1",
+  "common_core_version": "2.3",
+  "common_core_sha256": "beaa5feed193356f554922439936ad401c8f177bfd18d8864ca329fae94216fc",
+  "decisions": [
+    "D-9",
+    "D-16",
+    "D-17",
+    "D-27"
+  ],
+  "mission_prompt": "prompts/prompt_etapa_a_cripto_rev8.md",
+  "collected_at": "2026-09-29T23:49:19+00:00",
+  "collector": "qualification/shared/scripts/build_stack_baseline_v1_2.py sobre qualification/crypto/STACK_BASELINE_V1.2.json",
+  "environments": {
+    "collector_host": {
+      "role": "coletor (Linux na nuvem da sessão de 2026-09-29; só git e API pública do GitHub; nada dos repos é executado aqui como prova)",
+      "os": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+      "python_collector": "3.11.15",
+      "uv": "uv 0.8.17"
+    },
+    "linux_primary": {
+      "role": "primary (GitHub Actions, D-9/D-16)",
+      "source": "crypto-reopening.yml"
+    },
+    "windows_secondary": {
+      "role": "secondary (Windows local, D-3)",
+      "status": "pendente nesta reabertura"
+    }
+  },
+  "repos": [
+    {
+      "repo": "cripto-predictor",
+      "remote": "https://github.com/leonardosovienski/cripto-predictor",
+      "branch": "main",
+      "head": "21f8b182286248859e1b2cb8fa2bab0138a58e2a",
+      "origin_main": "21f8b182286248859e1b2cb8fa2bab0138a58e2a",
+      "head_equals_origin_main": true,
+      "clean": true,
+      "project": {
+        "name": "cripto-predictor",
+        "version": "1.2.0rc4",
+        "requires_python": ">=3.13,<3.15",
+        "scripts": {
+          "cripto-predictor": "GarimpoInvestimentos.cli:main",
+          "cripto-predictor-job": "GarimpoInvestimentos.jobs:main",
+          "cripto-research": "GarimpoInvestimentos.research_runner:main"
+        },
+        "entry_points": {
+          "predictor.plugins": {
+            "cripto": "GarimpoInvestimentos.plugin:PLUGIN"
+          }
+        },
+        "uv_sources": {
+          "predictor-core": {
+            "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl"
+          },
+          "predictor-ops": {
+            "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl"
+          }
+        }
+      },
+      "uv_lock": {
+        "sha256": "bbe95fdb3ebcf1f1c8791370981e1fc69f795282b3adab82b3c4ef1a8d33f40c",
+        "git_blob": "b603d1e19c48efadc3410c0c396a38009844f56a",
+        "worktree_equals_head": true,
+        "requires_python": ">=3.13, <3.15",
+        "packages_total": 79
+      },
+      "stack_wheels_consumed": [
+        {
+          "name": "cripto-predictor",
+          "version": "1.2.0rc4",
+          "source_kind": "editable",
+          "source": ".",
+          "wheel_url": null,
+          "wheel_sha256": null
+        },
+        {
+          "name": "predictor-core",
+          "version": "3.2.1",
+          "source_kind": "url",
+          "source": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+          "wheel_url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+          "wheel_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"
+        },
+        {
+          "name": "predictor-ops",
+          "version": "4.2.2rc1",
+          "source_kind": "url",
+          "source": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl",
+          "wheel_url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl",
+          "wheel_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3"
+        }
+      ],
+      "published_wheels": [
+        {
+          "tag": "v1.2.0rc4",
+          "prerelease": true,
+          "tag_commit": "21f8b182286248859e1b2cb8fa2bab0138a58e2a",
+          "asset": "cripto_predictor-1.2.0rc4-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc4/cripto_predictor-1.2.0rc4-py3-none-any.whl",
+          "sha256": "32a4bd6d86719070e1a5d1e418c46034cfbf4ee292da11f17af2f60081fa9bf6",
+          "package_files_changed_tag_to_head": 0
+        },
+        {
+          "tag": "v1.2.0rc3",
+          "prerelease": true,
+          "tag_commit": "ee3d3d17de0b76cf731808243ffa838a0f5ee8cc",
+          "asset": "cripto_predictor-1.2.0rc3-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc3/cripto_predictor-1.2.0rc3-py3-none-any.whl",
+          "sha256": "02b5e5dbbc60cfb5ed6bb6458331047d7d6de9d55914fb9b1644d78fd0d2b82d",
+          "package_files_changed_tag_to_head": 18
+        },
+        {
+          "tag": "v1.2.0rc2",
+          "prerelease": true,
+          "tag_commit": "341d270e4d709150c581c3cd93f4518d483009eb",
+          "asset": "cripto_predictor-1.2.0rc2-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc2/cripto_predictor-1.2.0rc2-py3-none-any.whl",
+          "sha256": "6e62f67f0779aef7e913d34b4d3d3d6ed5f88ad882e8fa8372f54c4ab59bc8ee",
+          "package_files_changed_tag_to_head": 19
+        },
+        {
+          "tag": "v1.2.0rc1",
+          "prerelease": true,
+          "tag_commit": "2bc63ebdc47f93661a4f37cb988b06939de060fe",
+          "asset": "cripto_predictor-1.2.0rc1-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc1/cripto_predictor-1.2.0rc1-py3-none-any.whl",
+          "sha256": "1f76b8c4dbcb2ca145c053a7dc84d98d30c49859d95c1e1a78ad4d5916b3df49",
+          "package_files_changed_tag_to_head": 19
+        },
+        {
+          "tag": "v1.1.0",
+          "prerelease": false,
+          "tag_commit": "6ea0d2ccdcfc6a3858083acb6ded5cb39e178586",
+          "asset": "cripto_predictor-1.1.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.1.0/cripto_predictor-1.1.0-py3-none-any.whl",
+          "sha256": "41e48e0dd74cb28d5367257495a3fd51048a5c66e594d1d50cf5e854c74a82fe",
+          "package_files_changed_tag_to_head": 63
+        },
+        {
+          "tag": "v1.1.0",
+          "prerelease": false,
+          "tag_commit": "6ea0d2ccdcfc6a3858083acb6ded5cb39e178586",
+          "asset": "crypto_research_export-1.0.1-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.1.0/crypto_research_export-1.0.1-py3-none-any.whl",
+          "sha256": "f5b9f254e1058895e4b25fe978d3f82b5248e52a008fa26bc814adde2c1cd86b",
+          "package_files_changed_tag_to_head": 63
+        }
+      ],
+      "ci_runs_at_head": [
+        {
+          "workflow": "CI",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36642919823,
+          "url": "https://github.com/leonardosovienski/cripto-predictor/actions/runs/36642919823"
+        },
+        {
+          "workflow": "Delete branches",
+          "event": "workflow_dispatch",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36643521302,
+          "url": "https://github.com/leonardosovienski/cripto-predictor/actions/runs/36643521302"
+        },
+        {
+          "workflow": "Release",
+          "event": "workflow_dispatch",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36643518795,
+          "url": "https://github.com/leonardosovienski/cripto-predictor/actions/runs/36643518795"
+        }
+      ]
+    },
+    {
+      "repo": "core-predictor",
+      "remote": "https://github.com/leonardosovienski/core-predictor",
+      "branch": "main",
+      "head": "e5ac0d87afe875c87c515b2d87ee0e559ab2fe84",
+      "origin_main": "e5ac0d87afe875c87c515b2d87ee0e559ab2fe84",
+      "head_equals_origin_main": true,
+      "clean": true,
+      "project": {
+        "name": "predictor-core",
+        "version": "3.2.1",
+        "requires_python": ">=3.13",
+        "scripts": {},
+        "entry_points": {},
+        "uv_sources": {}
+      },
+      "uv_lock": {
+        "sha256": "8818bc64957e3eee07ab6055a2eee14f615fd84d491c74cfa555f32602a8348b",
+        "git_blob": "53cd83167784687c5d99be603f92aaafd350022e",
+        "worktree_equals_head": true,
+        "requires_python": ">=3.13",
+        "packages_total": 43
+      },
+      "stack_wheels_consumed": [
+        {
+          "name": "predictor-core",
+          "version": "3.2.1",
+          "source_kind": "editable",
+          "source": ".",
+          "wheel_url": null,
+          "wheel_sha256": null
+        }
+      ],
+      "published_wheels": [
+        {
+          "tag": "v3.2.1",
+          "prerelease": false,
+          "tag_commit": "7bb212cfa06333886e11e849b209c5aab801c04b",
+          "asset": "predictor_core-3.2.1-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+          "sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3",
+          "package_files_changed_tag_to_head": 0
+        },
+        {
+          "tag": "v3.2.0",
+          "prerelease": false,
+          "tag_commit": "9fd83179c800302be50d1c47a38d677656505625",
+          "asset": "predictor_core-3.2.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.0/predictor_core-3.2.0-py3-none-any.whl",
+          "sha256": "9166dd6bd3be99668c0eb8bd3c59a92061e765186608465c0caf48a2417e3009",
+          "package_files_changed_tag_to_head": 3
+        },
+        {
+          "tag": "v3.1.0",
+          "prerelease": false,
+          "tag_commit": "29eb8b73cc10d4599109a7dec7177a944fa730cc",
+          "asset": "predictor_core-3.1.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.1.0/predictor_core-3.1.0-py3-none-any.whl",
+          "sha256": "b4ef7d4723c8255f93a3e47f54af292195e913fca60e7b7e9c6de90ebdd5a491",
+          "package_files_changed_tag_to_head": 6
+        },
+        {
+          "tag": "v3.0.0",
+          "prerelease": false,
+          "tag_commit": "628b509d55b62cfdece94ad7fbae9737f2446048",
+          "asset": "predictor_core-3.0.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.0.0/predictor_core-3.0.0-py3-none-any.whl",
+          "sha256": "fdc1d3e27b6805a1d125702b6e3bb88f6fa3483791c22ea310bf6c56d5581c4d",
+          "package_files_changed_tag_to_head": 8
+        },
+        {
+          "tag": "v2.3.0",
+          "prerelease": false,
+          "tag_commit": "f6754957eaed619a9a0e800668d845aec4c227f1",
+          "asset": "predictor_core-2.3.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v2.3.0/predictor_core-2.3.0-py3-none-any.whl",
+          "sha256": "e0d29eac348e2be4092dde1b629c101d54973b54b5d43014cdaee69e4e17b3b9",
+          "package_files_changed_tag_to_head": 17
+        },
+        {
+          "tag": "v2.2.1",
+          "prerelease": false,
+          "tag_commit": "7933e4aca0ceabf4e55b4922e2ffd53a9812957e",
+          "asset": "predictor_core-2.2.1-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v2.2.1/predictor_core-2.2.1-py3-none-any.whl",
+          "sha256": "e9ff0783d451ba63f06540ca7e89368b83449953ad3bc005ab777e48d14a9095",
+          "package_files_changed_tag_to_head": 16
+        },
+        {
+          "tag": "v2.2.0",
+          "prerelease": false,
+          "tag_commit": "b6dc482bf77b4e9a522183ca07292ca5a54c8d78",
+          "asset": "predictor_core-2.2.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v2.2.0/predictor_core-2.2.0-py3-none-any.whl",
+          "sha256": "fe95dece93a2c91436ffd60058cea1d9192022d2170abb7e8e8512ccb76f9fdd",
+          "package_files_changed_tag_to_head": 17
+        },
+        {
+          "tag": "v2.1.0",
+          "prerelease": false,
+          "tag_commit": "be1aba338909747a26adf9c2b1cf4bfcd65781c0",
+          "asset": "predictor_core-2.1.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v2.1.0/predictor_core-2.1.0-py3-none-any.whl",
+          "sha256": "83de1d4415700dedaf387bc46dd9685e046de1fa47f37367bf2167462b09761b",
+          "package_files_changed_tag_to_head": 19
+        }
+      ],
+      "ci_runs_at_head": [
+        {
+          "workflow": "CI",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36640672846,
+          "url": "https://github.com/leonardosovienski/core-predictor/actions/runs/36640672846"
+        },
+        {
+          "workflow": "Delete branches",
+          "event": "workflow_dispatch",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36640783154,
+          "url": "https://github.com/leonardosovienski/core-predictor/actions/runs/36640783154"
+        },
+        {
+          "workflow": "Push on main",
+          "event": "dynamic",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36640673150,
+          "url": "https://github.com/leonardosovienski/core-predictor/actions/runs/36640673150"
+        }
+      ],
+      "frozen_final_commit": {
+        "commit": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d",
+        "package_files_changed_to_head": [],
+        "wheel_source_unchanged": true
+      }
+    },
+    {
+      "repo": "predictor-ops",
+      "remote": "https://github.com/leonardosovienski/predictor-ops",
+      "branch": "main",
+      "head": "dddf0ceb0be6fc301781a667c1f95f809278180f",
+      "origin_main": "dddf0ceb0be6fc301781a667c1f95f809278180f",
+      "head_equals_origin_main": true,
+      "clean": true,
+      "project": {
+        "name": "predictor-ops",
+        "version": "4.2.2rc1",
+        "requires_python": ">=3.13",
+        "scripts": {
+          "predictor-ops": "predictor_ops.cli:main"
+        },
+        "entry_points": {},
+        "uv_sources": {}
+      },
+      "uv_lock": {
+        "sha256": "96bd49898bc9b73f21d8f3b405d912ba7c29f86bc05ba78569b5a38226799fc7",
+        "git_blob": "66f2679391f928cdbb1f35fa45742963e28bdc59",
+        "worktree_equals_head": true,
+        "requires_python": ">=3.13",
+        "packages_total": 47
+      },
+      "stack_wheels_consumed": [
+        {
+          "name": "predictor-ops",
+          "version": "4.2.2rc1",
+          "source_kind": "editable",
+          "source": ".",
+          "wheel_url": null,
+          "wheel_sha256": null
+        }
+      ],
+      "published_wheels": [
+        {
+          "tag": "v4.2.2rc1",
+          "prerelease": true,
+          "tag_commit": "9831b0d5e727972b1d85ff48be14ffa58677898b",
+          "asset": "predictor_ops-4.2.2rc1-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl",
+          "sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3",
+          "package_files_changed_tag_to_head": 0
+        },
+        {
+          "tag": "v4.2.1",
+          "prerelease": false,
+          "tag_commit": "ddd91444282569ae8282e7c96e0ec372ef4e5144",
+          "asset": "predictor_ops-4.2.1-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.1/predictor_ops-4.2.1-py3-none-any.whl",
+          "sha256": "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e",
+          "package_files_changed_tag_to_head": 1
+        },
+        {
+          "tag": "v4.2.0",
+          "prerelease": false,
+          "tag_commit": "e804ac8b5173156737e2212d9bd47cd3f2072700",
+          "asset": "predictor_ops-4.2.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.0/predictor_ops-4.2.0-py3-none-any.whl",
+          "sha256": "a6108ee1c6fe9c14752766a435109f9b6bcf98102ee178330512efbcac984000",
+          "package_files_changed_tag_to_head": 3
+        },
+        {
+          "tag": "v4.1.0",
+          "prerelease": false,
+          "tag_commit": "a9a47437abc30dffaad39d9518d39805752d0cb9",
+          "asset": "predictor_ops-4.1.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.1.0/predictor_ops-4.1.0-py3-none-any.whl",
+          "sha256": "6d428a4d3d4fbd3f692725bf684024131f0fa65cc11d0e739e9ccb82ba9834e4",
+          "package_files_changed_tag_to_head": 5
+        },
+        {
+          "tag": "v4.0.0",
+          "prerelease": false,
+          "tag_commit": "6b695ea108cf23d90064b9299ce7993e67b4db26",
+          "asset": "predictor_ops-4.0.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.0.0/predictor_ops-4.0.0-py3-none-any.whl",
+          "sha256": "a79b895492181c88c428ee8984a38d5f3da0d0105f060f89a061376d5cfe2b2b",
+          "package_files_changed_tag_to_head": 5
+        },
+        {
+          "tag": "v3.1.0",
+          "prerelease": false,
+          "tag_commit": "eff6fc795a12132c1a87b606bbf951b05623d3b2",
+          "asset": "predictor_ops-3.1.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v3.1.0/predictor_ops-3.1.0-py3-none-any.whl",
+          "sha256": "490ece696f9173bbaa56c2c53a1ff6e5ffab1a7625fb00ac0a5f896c37081b37",
+          "package_files_changed_tag_to_head": 11
+        },
+        {
+          "tag": "v3.0.0",
+          "prerelease": false,
+          "tag_commit": "3ca6995e3be1624b38976c638becdc3f897a7219",
+          "asset": "predictor_ops-3.0.0-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v3.0.0/predictor_ops-3.0.0-py3-none-any.whl",
+          "sha256": "9574d5fa4d17232a9d7dbd1aaff0131b65f341974508c5457b8d570bf41e8945",
+          "package_files_changed_tag_to_head": 11
+        },
+        {
+          "tag": "v2.0.1",
+          "prerelease": false,
+          "tag_commit": "8d0ac13d265cb8483902edceecd83391dc5d88bd",
+          "asset": "predictor_ops-2.0.1-py3-none-any.whl",
+          "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v2.0.1/predictor_ops-2.0.1-py3-none-any.whl",
+          "sha256": "77ca2eb3f1090226dfef23b84d7fb2f9a61bd858c970d433d28303e637a8903e",
+          "package_files_changed_tag_to_head": 13
+        }
+      ],
+      "ci_runs_at_head": [
+        {
+          "workflow": "CI",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36640497843,
+          "url": "https://github.com/leonardosovienski/predictor-ops/actions/runs/36640497843"
+        },
+        {
+          "workflow": "Delete branches",
+          "event": "workflow_dispatch",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36640590271,
+          "url": "https://github.com/leonardosovienski/predictor-ops/actions/runs/36640590271"
+        },
+        {
+          "workflow": "Push on main",
+          "event": "dynamic",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 36640497454,
+          "url": "https://github.com/leonardosovienski/predictor-ops/actions/runs/36640497454"
+        }
+      ],
+      "frozen_final_commit": {
+        "commit": "9831b0d5e727972b1d85ff48be14ffa58677898b",
+        "package_files_changed_to_head": [],
+        "wheel_source_unchanged": true
+      }
+    }
+  ],
+  "final_commits_stage_a_crypto": [
+    {
+      "repo": "cripto-predictor",
+      "commit_sha": "21f8b182286248859e1b2cb8fa2bab0138a58e2a"
+    },
+    {
+      "repo": "core-predictor",
+      "commit_sha": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d"
+    },
+    {
+      "repo": "predictor-ops",
+      "commit_sha": "9831b0d5e727972b1d85ff48be14ffa58677898b"
+    }
+  ],
+  "stack_wheel_verification": [
+    {
+      "name": "predictor-core",
+      "version": "3.2.1",
+      "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+      "lock_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3",
+      "release_asset_sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3",
+      "match": true,
+      "consumers": [
+        "cripto-predictor"
+      ]
+    },
+    {
+      "name": "predictor-ops",
+      "version": "4.2.2rc1",
+      "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl",
+      "lock_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3",
+      "release_asset_sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3",
+      "match": true,
+      "consumers": [
+        "cripto-predictor"
+      ]
+    }
+  ],
+  "other_repos_as_in_v1_1": [
+    {
+      "repo": "cain",
+      "head": "8b8915aa7c9053b8f078a9fba20b7029180d114c"
+    },
+    {
+      "repo": "ecosystem-predictor",
+      "head": "0a4f87e53d3d131e449096f82ba7b0c672b91d85"
+    },
+    {
+      "repo": "brasileirao-predictor",
+      "head": "e14f3394c1908fae6d2f25754e6ab3a6792dbf1e"
+    },
+    {
+      "repo": "stocks-predictor",
+      "head": "4e98a67b68c55888a4788663f3d5bf0899966cb4"
+    }
+  ],
+  "capital_permission": false,
+  "training_started": false
+}

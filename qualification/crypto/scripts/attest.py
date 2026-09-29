@@ -105,7 +105,8 @@ def build(result: str) -> dict:
         "common_core_version": core_version(),
         "common_core_sha256": sha(CORE),
         "frozen_parameters_sha256": sha(QC / "FROZEN_PARAMETERS.json"),
-        "protected_set_sha256": optional_sha("PROTECTED_SET.json"),
+        # V1.2 (D-27): o ledger pode apontar o conjunto protegido do ciclo (PROTECTED_SET_V1.2.json, superconjunto do V1.0)
+        "protected_set_sha256": optional_sha(ledger.get("protected_set_file", "PROTECTED_SET.json")),
         "frozen_vectors_sha256": optional_sha("FROZEN_VECTORS.json"),
         "soak_profile_sha256": optional_sha("QUALIFICATION_PROFILE_CRYPTO_V1.json"),
         "domain_contract_sha256": ledger.get("domain_contract_sha256"),

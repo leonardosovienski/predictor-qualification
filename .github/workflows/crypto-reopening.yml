@@ -1,0 +1,114 @@
+# Missão crypto — reabertura da Etapa A (D-27, C24.4, C14): runtime suportado (C3.1) com as final_wheels
+# publicadas do alvo em qualification/crypto/runtime_target.json, no Linux primário (D-9, GitHub Actions):
+#   runtime  = cleanroom-final, e2e, idempotency-failure (suíte de conformidade), soak sintético (diagnóstico)
+#              + windows-latest como informação adicional (o secundário do crypto é o Windows local, D-3)
+#   d16      = dados reais públicos da Binance (D-16): E2E real, casos A/B/C, science, soak real, conformidade
+# A saída bruta de cada job é devolvida, sem edição, numa branch `crypto/raw-<run_id>-<job>` deste repositório
+# (o ambiente que conduz a missão não consegue baixar artefatos do Actions). Nada de segredo: repos e dados públicos;
+# o token do job só escreve nessa branch de evidência. Disparo: push numa branch `crypto/reopening-*` ou manual.
+name: Crypto reopening (V1.2, D-27)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "crypto/reopening-*"
+
+permissions:
+  contents: write
+
+jobs:
+  runtime:
+    name: runtime ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: linux-primary, os: ubuntu-latest, soak: 1}
+          - {label: windows-latest, os: windows-latest, soak: 0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: Runtime suportado
+        shell: bash
+        run: |
+          t=qualification/crypto/runtime_target.json
+          bash qualification/crypto/scripts/runtime_cleanroom.sh "$RUNNER_TEMP/out/${{ matrix.label }}" \
+            "$(jq -r .commit $t)" "$(jq -r .wheel_url $t)" "$(jq -r .wheel_sha256 $t)" "${{ matrix.soak }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crypto-reopening-runtime-${{ matrix.label }}
+          path: ${{ runner.temp }}/out/${{ matrix.label }}
+          if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/crypto/RAW_LOGS/v1.2/run${{ github.run_id }}/runtime-${{ matrix.label }}
+          BRANCH: crypto/raw-${{ github.run_id }}-runtime-${{ matrix.label }}
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid"
+          git checkout -q -b "$BRANCH"
+          mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/out/${{ matrix.label }}/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="crypto-reopening" -c user.email="actions@users.noreply.github.com" \
+            commit -q -m "crypto V1.2: saída bruta do run ${{ github.run_id }} (runtime ${{ matrix.label }})"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"
+
+  d16:
+    name: d16 (dados reais, Linux primário)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: D-16
+        shell: bash
+        run: bash qualification/crypto/scripts/d16_linux.sh "$RUNNER_TEMP/out" "$RUNNER_TEMP/data"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crypto-reopening-d16
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/crypto/RAW_LOGS/v1.2/run${{ github.run_id }}/d16
+          BRANCH: crypto/raw-${{ github.run_id }}-d16
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid"
+          git checkout -q -b "$BRANCH"
+          mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/out/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="crypto-reopening" -c user.email="actions@users.noreply.github.com" \
+            commit -q -m "crypto V1.2: saída bruta do run ${{ github.run_id }} (d16)"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"

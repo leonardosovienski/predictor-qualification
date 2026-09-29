@@ -90,3 +90,25 @@ Run [predictor-qualification 35978221282](https://github.com/leonardosovienski/p
 | labels embaralhados (100 seeds) | `SUPPORTED` em ≤ 10 | **3** (`INCONCLUSIVE` 94, `REFUTED` 3, `SUPPORTED` 3) |
 
 **Canário** (`FUTURE_CANARY_CRYPTO_001` e datas pós-cutoff) nos artefatos dos pedidos legítimos: **0** vazamentos.
+
+## V1.2 (reabertura D-27: cripto 1.2.0rc4 / 21f8b182)
+
+Fonte: `qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/science/SCIENCE_REAL.json` (sha256 `94ae02dbfed3…`), run 36646241688 (Linux primário, dados reais, wheel 1.2.0rc4).
+
+- **Temporal** (`TEMPORAL_INTEGRITY`): suítes DPL/WFA/permutação/PBO/poder dentro da suíte completa pela wheel no Linux (1748 passed);
+  falhas nessas suítes: 0. O `replay` do Core impõe `observed_at ≤ available_at ≤ data_cutoff` antes de qualquer estatística (conformidade 48/48).
+- **Future canary** (`FUTURE_CANARY`): vazamentos do `FUTURE_CANARY_CRYPTO_001` e das datas pós-cutoff nos artefatos dos pedidos legítimos: **0**; pass=True.
+- **Métricas econômicas** (`CRYPTO_ECONOMIC_METRICS`), pedido `crypto:REQ-REAL-E2E-001`, 52 observações, custos congelados (`GarimpoInvestimentos.v3.costs.CostModel`):
+
+| | Média (bps/semana) | IC 95% |
+|---|---|---|
+| bruto | -45 | [-214, 112] |
+| líquido | -83 | [-253, 76] |
+
+  Custo médio total 38 bps; decisão do gate econômico `NO_TRADE`; estado científico `INCONCLUSIVE`; econômico `NO_EDGE`.
+  Iguais aos da D-16 de 2026-09-24. **Descritivo: não é edge, lucro nem autorização de capital (C22).**
+- **Controles negativos** (`CRYPTO_NEGATIVE_CONTROLS`): injeção de futuro 0 aceitos (pass=True);
+  ablação temporal 0 aceitos (pass=True); labels embaralhados `SUPPORTED` em
+  **3/100** (limiar ≤ 10; pass=True).
+
+Gates V1.2: `TEMPORAL_INTEGRITY` **PASS**, `FUTURE_CANARY` **PASS**, `CRYPTO_ECONOMIC_METRICS` **PASS**, `CRYPTO_NEGATIVE_CONTROLS` **PASS**.

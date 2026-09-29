@@ -1,12 +1,12 @@
 {
-  "note": "Núcleo v2.1 (D-19): attestation revalidada no schema v2.1 e reemitida com o novo common_core_sha256, sem refazer fases (C14 'Núcleo (versão)'); gates, evidências e FINDINGS inalterados. Antes: D-16 executada (qualification/crypto/RAW_LOGS/d16/35978221282); gates fechados por d16_finalize.py a partir da evidência bruta. | C14 'Núcleo (versão)' v2.1→v2.2 (D-20, PR #30): nenhum requisito do crypto mudou; attestation reemitida com o sha256 da v2.2, sem refazer fases (supersedes ec22a085125a…).",
-  "common_baseline_id": "STACK_BASELINE_V1.1",
-  "supersedes_sha256": "ec22a085125a08c6c102c6f0d48d6ef623c5ebbd21da0629b47d96ae9765fc69",
+  "note": "Reabertura V1.2 (D-27, C24.4): alvo cripto-predictor 21f8b182 (1.2.0rc4). Ledger em atualização fase a fase; gates ainda não reexecutados nesta reabertura ficam NOT_RUN até a fase que os prova.",
+  "common_baseline_id": "STACK_BASELINE_V1.2",
+  "supersedes_sha256": "2b1491a03a6b757071d184128ebb13cc30eaaa0cb301427373ea7d4f678da406",
   "domain_contract_sha256": "0831fe3db2b7ca41a26ff7665f93c07b0edda3c937ac4ce83fe0e96720a9eb55",
   "final_commits": [
     {
       "repo": "cripto-predictor",
-      "commit_sha": "341d270e4d709150c581c3cd93f4518d483009eb"
+      "commit_sha": "21f8b182286248859e1b2cb8fa2bab0138a58e2a"
     },
     {
       "repo": "core-predictor",
@@ -20,9 +20,9 @@
   "final_wheels": [
     {
       "name": "cripto-predictor",
-      "version": "1.2.0rc2",
-      "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc2/cripto_predictor-1.2.0rc2-py3-none-any.whl",
-      "sha256": "6e62f67f0779aef7e913d34b4d3d3d6ed5f88ad882e8fa8372f54c4ab59bc8ee"
+      "version": "1.2.0rc4",
+      "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc4/cripto_predictor-1.2.0rc4-py3-none-any.whl",
+      "sha256": "32a4bd6d86719070e1a5d1e418c46034cfbf4ee292da11f17af2f60081fa9bf6"
     },
     {
       "name": "predictor-core",
@@ -66,7 +66,17 @@
     "v1-1-hosted-ci",
     "v1-1-soak",
     "d16",
-    "v2-1-core"
+    "v2-1-core",
+    "v1-2-baseline",
+    "v1-2-truth-map",
+    "v1-2-publish-candidates",
+    "v1-2-cleanroom-final",
+    "v1-2-e2e",
+    "v1-2-idempotency-failure",
+    "v1-2-science",
+    "v1-2-soak",
+    "v1-2-hosted-ci",
+    "v1-2-windows-smoke"
   ],
   "environments": [
     {
@@ -76,21 +86,21 @@
       "where": "github_actions",
       "result": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/d16/35978221282/env.log",
-        "qualification/crypto/RAW_LOGS/d16/35978221282/e2e_real/E2E_SUMMARY.json",
-        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/env.log",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/env.log",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/e2e/E2E_SUMMARY.json"
       ]
     },
     {
       "os": "windows",
-      "python": "3.13.14",
+      "python": "3.13",
       "role": "secondary",
       "where": "local_windows",
-      "result": "PASS",
+      "result": "NOT_RUN",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/env.log",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/e2e_real/E2E_SUMMARY.json",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml"
+        "qualification/crypto/REABERTURA_V1.2.md"
       ]
     }
   ],
@@ -118,148 +128,158 @@
       "evidence": [
         "qualification/crypto/FINDINGS.json"
       ],
-      "note": "P0=0, P1=0 abertos: os 10 P1 foram corrigidos com teste (CR-F009/SHARED-005 no predictor-ops 4.2.2rc1, D-17; CR-F019 no kit do soak da D-16, PR #17). Abertos só P2 (CR-F001, CR-F010, CR-F011, CR-F016, CR-F017, CR-F018, CR-F020, CR-F021)."
+      "note": "V1.2: P0=0, P1=0 abertos; P2 abertos incluem CR-F016 (atualizado: 32 testes classe T na rc4) e CR-F022 (texto do contrato)."
     },
     "STACK_BASELINE_FROZEN": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/STACK_BASELINE.json",
-        "qualification/crypto/RAW_LOGS/baseline/collect_mission_baseline.log",
-        "qualification/crypto/RAW_LOGS/baseline/windows_pytest_5fd4e1b_run2.log"
+        "qualification/crypto/STACK_BASELINE_V1.2.json",
+        "qualification/crypto/RAW_LOGS/v1.2/baseline/collect.log",
+        "qualification/shared/STACK_BASELINE_V1.2.json",
+        "qualification/crypto/runtime_target.json"
       ],
-      "note": "Baseline coletado antes de qualquer mudança: HEADs cripto 5fd4e1b, core 5a08415, ops 7bd99eb, iguais ao STACK_BASELINE_V1; clones limpos; wheels do lock = assets das releases. Windows local 1618 passed (método do CI); o run 1 (4 falhas) é erro de método preservado (sem uv build e CRIPTO_ROOT fora do TEMP, CR-F002)."
+      "note": "V1.2: baseline coletado antes de qualquer mudança da reabertura: cripto 21f8b182 (main, limpo, 1.2.0rc4), core e5ac0d87 e ops dddf0ceb (main; src/pyproject/uv.lock iguais aos commits das wheels 5a08415 e 9831b0d). Wheels do lock = assets das releases (match). Só git e API pública."
     },
     "LOCK_INTEGRITY": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/CORE_IDENTITY_REPORT.md",
-        "qualification/crypto/RAW_LOGS/v1.1/uv_lock_check_341d270.log",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/core_identity.json"
+        "qualification/crypto/RAW_LOGS/v1.2/lock/uv_lock_check_21f8b182.log",
+        "qualification/crypto/RAW_LOGS/v1.2/hosted-ci/jobs_cripto-predictor_36642919823.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/env.log",
+        "qualification/crypto/CORE_IDENTITY_REPORT.md"
       ],
-      "note": "uv lock --check exit 0 no final_commit; instalação só pelo lock (--require-hashes)."
+      "note": "V1.2: uv lock --check em 21f8b182 exit 0 (local, uv 0.8.17) e no job quality do CI (uv 0.12.1, success); runtime instalado só do lock exportado com --require-hashes + wheel rc4 conferida por sha256sum -c."
     },
     "CORE_IDENTITY": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/CORE_IDENTITY_REPORT.md",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/core_identity.json",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-windows-latest/core_identity.json",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/core_identity.json"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/core_identity.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/core_identity.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/pip_freeze.txt",
+        "qualification/crypto/CORE_IDENTITY_REPORT.md"
       ],
-      "note": "pyproject ↔ tool.uv.sources ↔ uv.lock ↔ instalação ↔ hash ↔ metadata ↔ módulo em site-packages, nos 3 runtimes."
+      "note": "V1.2: pyproject ↔ tool.uv.sources ↔ uv.lock (21f8b182) ↔ --require-hashes ↔ metadata ↔ módulo em site-packages, nos dois runtimes Linux (runtime e d16): predictor-core 3.2.1, predictor-ops 4.2.2rc1, cripto-predictor 1.2.0rc4; research_protocol/cain ausentes."
     },
     "CLEANROOM_FINAL": {
       "status": "PASS",
       "evidence": [
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/env.log",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/full_suite.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/core_identity.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/pip_freeze.txt",
         "qualification/crypto/CLEANROOM_REPORT.md",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/full_suite.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-windows-latest/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/build_rc2_341d270.log"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/full_suite.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/core_identity.json"
       ],
-      "note": "Só wheels publicadas, fora do checkout: conformidade 48/48 em Linux, windows-latest e Windows local; suíte completa 1647 passed + 17 testes que leem o checkout (CR-F016, P2)."
+      "note": "V1.2, run run36646241688 (ubuntu-latest, Python 3.13, wheels publicadas fora do checkout): conformidade 48/48; suíte completa pela wheel 1748 passed, 32 falhas, todas da classe T (testes que leem o checkout; CR-F016 atualizado). windows-latest (informação adicional, não é o secundário do crypto): conformidade 48/48, suíte 1748 passed / 32 falhas."
     },
     "HOSTED_CI": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/HOSTED_CI_REPORT.md",
-        "qualification/crypto/RAW_LOGS/hosted-ci/jobs_cripto-predictor_35822807920.json",
-        "qualification/crypto/RAW_LOGS/v1.1/hosted-ci/jobs_cripto-predictor_35906112873.json",
+        "qualification/crypto/RAW_LOGS/v1.2/hosted-ci/run_cripto-predictor_36642919823.json",
+        "qualification/crypto/RAW_LOGS/v1.2/hosted-ci/jobs_cripto-predictor_36642919823.json",
+        "qualification/crypto/RAW_LOGS/v1.2/hosted-ci/jobs_cripto-predictor_36643518795.json",
         "qualification/crypto/RAW_LOGS/hosted-ci/jobs_core-predictor_35823003554.json",
-        "qualification/crypto/RAW_LOGS/v1.1/hosted-ci/jobs_predictor-ops_35905393899.json",
-        "qualification/crypto/RAW_LOGS/v1.1/hosted-ci/jobs_cripto-predictor_35925694691.json",
-        "qualification/crypto/RAW_LOGS/v1.1/hosted-ci/jobs_predictor-ops_35905678109.json"
+        "qualification/crypto/RAW_LOGS/v1.1/hosted-ci/jobs_predictor-ops_35905678198.json",
+        "qualification/crypto/HOSTED_CI_REPORT.md"
       ],
-      "note": "Baseline (cripto 5fd4e1b, core 5a08415, ops 7bd99eb) e final_commits (cripto 341d270 branch+tag, ops 9831b0d PR+tag+Release, core 5a08415) verdes; nenhum job pulado."
+      "note": "V1.2: CI (push, main) do cripto em 21f8b182 (baseline = final desta reabertura): quality=success, all-extras=success, python-314-experimental=success, container=success; Release (workflow_dispatch) success. Core 5a08415 e Ops 9831b0d inalterados: CI herdado da V1.0/V1.1 (mesmos commits)."
     },
     "E2E": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/d16/35978221282/e2e_real/E2E_SUMMARY.json",
-        "qualification/crypto/RAW_LOGS/d16/35978221282/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/d16/35978221282/core_identity.json",
-        "qualification/crypto/RAW_LOGS/d16/35978221282/data_MANIFEST.json"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/core_identity.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/data_MANIFEST.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/e2e/E2E_SUMMARY.json"
       ],
-      "note": "Linux primário, dados reais (D-16): 10 checagens de E2E/restart/releitura/provenance todas OK; conformidade 48 testes verdes."
+      "note": "V1.2, Linux primário, dados reais (D-16, run run36646241688): 10 checagens de E2E/restart/releitura/provenance todas OK; E2E sintético 20 checagens OK; conformidade 48/48."
     },
     "IDEMPOTENCY": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/contract-wiring/repro_duplicate_after_policy_change.log"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl"
       ],
-      "note": "Pela wheel: mesma key+conteúdo → 1 experimento, 1 efeito (1 SUCCEEDED do Ops por job), 1 resultado; conteúdo diferente → CONFLICT; duplicata após mudança de policy → mesmo resultado (CR-F015)."
+      "note": "V1.2: pela wheel rc4: mesma key+conteúdo → 1 experimento, 1 efeito, 1 resultado (conformidade); 5+ duplicatas no soak real sem segundo efeito (ops_success_per_job_max=1)."
     },
     "RESTART_RECOVERY": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-windows-latest/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl",
+        "qualification/crypto/FAILURE_MATRIX.json"
       ],
-      "note": "Morte real do processo nos 9 pontos da FAILURE_MATRIX + host do Ops morto durante o job: reexecução produz exatamente 1 resultado; releitura por processo novo."
+      "note": "V1.2: morte real do processo nos pontos da FAILURE_MATRIX (conformidade) e restarts em rodízio no soak real: reexecução produz exatamente 1 resultado, releitura idêntica."
     },
     "FAILURE_INJECTION": {
       "status": "PASS",
       "evidence": [
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml",
         "qualification/crypto/FAILURE_MATRIX.json",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl"
       ],
-      "note": "Matriz congelada injetada na borda (sem mock de Core/Ops) no Linux primário e no Windows."
+      "note": "V1.2: matriz congelada injetada na borda (sem mock de Core/Ops) no Linux primário; classes por execução no soak real: {'ops_worker_crash': 3, 'ops_worker_hang': 3, 'host_killed_during_ops_job': 3, 'before_admission_commit': 4, 'during_result_write': 3, 'result_file_corruption': 3}."
     },
     "PROVENANCE": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/E2E_EVIDENCE/v1.1/linux-primary-synthetic/E2E_SUMMARY.json",
-        "qualification/crypto/E2E_EVIDENCE/v1.1/windows-local-real/E2E_SUMMARY.json"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/e2e/E2E_SUMMARY.json"
       ],
-      "note": "Cadeia pedido → admission (recibo SQLite) → experimento (journal) → trial (TrialRegistryV2) → ops_run (eventos do Ops) → efeito (sha256) → resultado, conferida contra as fontes primárias."
+      "note": "V1.2: cadeia pedido → admission (SQLite) → experimento (journal) → trial (TrialRegistryV2) → ops_run (eventos do Ops) → efeito → ResultStore conferida pelo e2e_runtime.py com a wheel rc4."
     },
     "AUTHORITY_SEPARATION": {
       "status": "PASS",
       "evidence": [
         "qualification/crypto/AUTHORITY_STATE_MATRIX.json",
-        "qualification/crypto/E2E_EVIDENCE/v1.1/linux-primary-synthetic/E2E_SUMMARY.json",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_cases/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml"
       ],
-      "note": "Invariantes no contrato (validate_result) e casos A/B/C 3× cada pela wheel: Ops ok ⇏ ciência ⇏ edge ⇏ capital."
+      "note": "V1.2: casos A/B/C ×3 pela wheel rc4 (20 checagens OK); Ops ok ⇏ ciência ⇏ edge ⇏ capital."
     },
     "FUTURE_CANARY": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/science/SCIENCE_REAL.json",
-        "qualification/crypto/SCIENTIFIC_INTEGRITY_REPORT.md"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/science/SCIENCE_REAL.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_real/E2E_SUMMARY.json"
       ],
-      "note": "Canário só depois do cutoff; falha fechada por LookaheadError do Core; 0 ocorrências em dataset/refs/efeito/trial/resultado de pedidos legítimos (sintético no Linux, real no Windows)."
+      "note": "V1.2: canário só depois do cutoff; falha fechada por LookaheadError do Core; 0 ocorrências em dataset/refs/efeito/trial/resultado."
     },
     "PROTECTED_ARTIFACTS_UNCHANGED": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/PROTECTED_ARTIFACT_REPORT.md",
-        "qualification/crypto/RAW_LOGS/v1.1/protected_set_check_341d270.json",
-        "qualification/crypto/PROTECTED_SET.json"
+        "qualification/crypto/RAW_LOGS/v1.2/protected/protected_set_check_21f8b182.json",
+        "qualification/crypto/RAW_LOGS/v1.2/protected/protected_set_v1_2_check_21f8b182.json",
+        "qualification/crypto/PROTECTED_SET.json",
+        "qualification/crypto/PROTECTED_SET_V1.2.json",
+        "qualification/crypto/PROTECTED_ARTIFACT_REPORT.md"
       ],
-      "note": "1382/1382 blobs iguais entre truth-map (5fd4e1b) e final_commit (341d270)."
+      "note": "V1.2: 1382/1382 blobs do conjunto V1.0 iguais em 21f8b182 (nada do que estava protegido em 5fd4e1b/341d270 mudou); conjunto refeito em 21f8b182 = 1445 itens (só cresce: +63 arquivos novos de docs/evidence), 1445 iguais no alvo."
     },
     "SOAK": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/soak.jsonl",
+        "qualification/crypto/QUALIFICATION_PROFILE_CRYPTO_V1.json",
+        "qualification/crypto/SOAK_REPORT.md"
       ],
-      "note": "Perfil V1 com dados reais: 43 resultados, perdidos 0, violações 0, zero_tolerance_ok=True; execuções por classe de falha (mínimo 3): {'ops_worker_crash': 3, 'ops_worker_hang': 3, 'host_killed_during_ops_job': 3, 'before_admission_commit': 4, 'during_result_write': 3, 'result_file_corruption': 3}."
+      "note": "V1.2, perfil V1 com dados reais no Linux primário (run run36646241688): 77 chamadas, 43 resultados, perdidos 0, violações 0, zero_tolerance_ok=True; execuções por classe de falha (mínimo 3): {'ops_worker_crash': 3, 'ops_worker_hang': 3, 'host_killed_during_ops_job': 3, 'before_admission_commit': 4, 'during_result_write': 3, 'result_file_corruption': 3}. Soak sintético do mesmo run: zero_tolerance_ok=True (diagnóstico)."
     },
     "WINDOWS_SMOKE": {
-      "status": "PASS",
-      "evidence": [
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/e2e_real/E2E_SUMMARY.json",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/env.log"
-      ],
-      "note": "C:\\Cripto\\qualificacao\\runtime\\ com as final_wheels: E2E + restart + releitura com dado real (10/10), conformidade 48/48."
+      "status": "NOT_RUN",
+      "evidence": [],
+      "note": "BLOCKED: o secundário do crypto é o Windows local do dono (D-3, C:\\Cripto\\qualificacao\\runtime\\); esta sessão não tem acesso a ele. O job windows-latest do run é só informação adicional. Falta o dono rodar qualification/crypto/scripts/windows_runtime.sh com o runtime_target.json da V1.2 (ver REABERTURA_V1.2.md) ou decidir, por DECISIONS.json, aceitar windows-latest como secundário do crypto (como a D-1 faz para o Stocks)."
     },
     "SHARED_DEPENDENCY_CLEAR": {
       "status": "PASS",
@@ -269,88 +289,91 @@
         "qualification/shared/SHARED-005/RESOLUTION_4.2.2rc1.json",
         "qualification/crypto/RAW_LOGS/ops-failure-v1.1/OPS_FAILURE_SUMMARY.json"
       ],
-      "note": "Wheel instalada predictor-ops 4.2.2rc1 (0be70bfb…): SHARED-003 e SHARED-004 test_only (não bloqueiam, revalidadas); SHARED-005 corrigida (D-17), corrida real 50/50 em Linux source/wheel, windows-latest e Windows local. Nenhuma falha compartilhada bloqueante para esta wheel."
+      "note": "Wheel do Ops inalterada (4.2.2rc1, 0be70bfb…): vereditos SHARED-003/004/005 continuam valendo; C14 não manda refazer ops-failure. Wheel instalada predictor-ops 4.2.2rc1 (0be70bfb…): SHARED-003 e SHARED-004 test_only (não bloqueiam, revalidadas); SHARED-005 corrigida (D-17), corrida real 50/50 em Linux source/wheel, windows-latest e Windows local. Nenhuma falha compartilhada bloqueante para esta wheel."
     },
     "EVIDENCE_CONSISTENCY": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/EVIDENCE_NUMBERS_V1.1.json",
-        "qualification/crypto/scripts/evidence_numbers.py",
-        "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json",
-        "qualification/crypto/EVIDENCE_NUMBERS_D16.json"
+        "qualification/crypto/EVIDENCE_NUMBERS_V1.2.json",
+        "qualification/crypto/scripts/evidence_numbers_v12.py",
+        "qualification/crypto/scripts/v12_gates.py",
+        "qualification/crypto/scripts/render_v12_reports.py"
       ],
-      "note": "Números dos relatórios tirados dos logs brutos por scripts versionados (evidence_numbers.py, analyze_ops_failure.py). D-16: números da seção D-16 do SOAK_REPORT e do SCIENTIFIC_INTEGRITY_REPORT em EVIDENCE_NUMBERS_D16.json (evidence_numbers.py --d16 d16/35978221282)."
+      "note": "V1.2: todos os números das seções V1.2 dos relatórios e das notas deste ledger vêm de RAW_LOGS/v1.2 por evidence_numbers_v12.py; a saída dos jobs foi devolvida por branch sem edição (SHA256SUMS por job)."
     },
     "SECRETS_CLEAN": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/secrets/scan_evidence_and_cripto_diff.log",
-        "qualification/crypto/RAW_LOGS/secrets/scan_evidence_rerun.log",
-        "qualification/crypto/RAW_LOGS/v1.1/hosted-ci/jobs_cripto-predictor_35906112873.json",
-        "qualification/crypto/RAW_LOGS/v1.1/secrets_scan_v1.1.log",
-        "qualification/crypto/RAW_LOGS/v1.1/secrets_scan_v1.1_diffs.log",
-        "qualification/crypto/RAW_LOGS/d16-conferencia/secrets_scan_d16.log"
+        "qualification/crypto/RAW_LOGS/v1.2/secrets/scan_secrets_21f8b182.log",
+        "qualification/crypto/RAW_LOGS/v1.2/secrets/diff_patterns_341d270_21f8b182.log",
+        "qualification/crypto/RAW_LOGS/v1.2/hosted-ci/jobs_cripto-predictor_36642919823.json"
       ],
-      "note": "scan_secrets.py no repo de evidência + busca por padrões de chave nos diffs cripto 5fd4e1b..341d270 e ops 7bd99eb..9831b0d: nenhum segredo. Únicos alertas = o marcador público do canário (\"token\": \"FUTURE_CANARY_CRYPTO_001\"), revisado: falso positivo. scan_secrets verde no CI do cripto em 341d270. D-16: scan_secrets.py no repo de evidência com as saídas dos runs 35978221282/35976569248 e a conferência; alertas do cripto = o mesmo marcador público do canário (falso positivo); padrões do COMUM: 0 ocorrências nos arquivos alterados desde origin/main. O workflow crypto-d16 não usa segredo (repos e dados públicos)."
+      "note": "V1.2: scan_secrets.py do cripto em 21f8b182: 0 achados; padrões de chave/token nas 32808 linhas adicionadas do diff 341d270..21f8b182: 0; nenhum arquivo .env/.pem/.key no diff; job quality do CI (scan_secrets) verde."
     },
     "CAPITAL_FORBIDDEN": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/DOMAIN_RESEARCH_CONTRACT.json"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml",
+        "qualification/crypto/DOMAIN_RESEARCH_CONTRACT.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_real/E2E_SUMMARY.json"
       ],
-      "note": "capital_permission=false no contrato (validate_result recusa true), no JobConfig (SHADOW_DECISION) e em todo resultado; nenhum caminho concede capital."
+      "note": "V1.2: capital_permission=false em contrato, JobConfig e em todo resultado/outcome (conformidade e E2E pela wheel rc4)."
     },
     "DOMAIN_CONTRACT": {
       "status": "PASS",
       "evidence": [
         "qualification/crypto/DOMAIN_RESEARCH_CONTRACT.json",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/full_suite.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml",
+        "qualification/crypto/FROZEN_VECTORS.json"
       ],
-      "note": "Contrato completo (C24.1) aprovado pelo merge do dono (predictor-qualification #8, 7148610, 2026-09-23T18:26:58Z); regras de adapter_paths testadas (test_import_closure); suíte de conformidade 48/48 no runtime suportado."
+      "note": "V1.2: contrato inalterado (sha256 0831fe3d…, aprovado por merge #8); vetores congelados (FROZEN_VECTORS) com os mesmos blobs em 21f8b182; suíte de conformidade verde com a wheel rc4 nos dois runtimes; regras de adapter_paths conferidas (import_graph). Texto do layout: CR-F022 (P2)."
     },
     "ADMISSION": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml"
       ],
-      "note": "Pelo entrypoint: pedidos válidos e inválidos; comando/handler/capital/tipo/ID sem domínio/hipótese encerrada/referência desconhecida/símbolo/limites → REJECTED antes de qualquer execução; só handler da allowlist."
+      "note": "V1.2: pedidos válidos e inválidos pelo entrypoint instalado (conformidade 48/48 pela wheel rc4)."
     },
     "OPS_RUNTIME": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/E2E_EVIDENCE/v1.1/linux-primary-synthetic/E2E_SUMMARY.json",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/e2e/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml"
       ],
-      "note": "Job real pela wheel do Ops: run_id, economic_lock_id, heartbeat, attempt/retry_count, timeout (kill da árvore), eventos terminais e idempotência produzidos pelo predictor_ops e usados na reconciliação."
+      "note": "V1.2: job real pela wheel do Ops 4.2.2rc1: run_id, lock, heartbeat, attempt, timeout e reconciliação produzidos pelo Ops (E2E real e sintético)."
     },
     "CORE_PARTICIPATION": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/E2E_EVIDENCE/v1.1/linux-primary-synthetic/E2E_SUMMARY.json",
-        "qualification/crypto/E2E_EVIDENCE/v1.1/windows-local-real/E2E_SUMMARY.json"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_real/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/e2e/E2E_SUMMARY.json"
       ],
-      "note": "Trial registrada no TrialRegistryV2 e estado científico relido dele; validação temporal pelo replay; bootstrap_ci; correlação request → experiment → trial → core facts → result."
+      "note": "V1.2: trial no TrialRegistryV2 e estado científico relido do Core; validação temporal pelo replay do Core (E2E real e sintético)."
     },
     "TEMPORAL_INTEGRITY": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/temporal_suites.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/full_suite.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/full_suite.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/science/SCIENCE_REAL.json"
       ],
-      "note": "Suítes DPL/WFA/permutação/PBO/poder pela wheel (120/120 no Windows; no Linux dentro das 1647 da suíte completa); PIT/cutoff impostos pelo Core no circuito."
+      "note": "V1.2: suítes DPL/WFA/permutação/PBO/poder dentro da suíte completa pela wheel rc4 no Linux (1748 passed; falhas dessas suítes: 0); PIT/cutoff impostos pelo replay do Core antes de qualquer estatística (conformidade, science real)."
     },
     "CRYPTO_RUNTIME_WIRING": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/runtime_trace.log",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/runtime_trace.log",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/truth-map/import_graph_21f8b182.json",
         "qualification/crypto/ARCHITECTURE_TRUTH_MAP.json"
       ],
-      "note": "AdmissionStore, ReferenceStore, ResearchExecutor, worker, ResultStore e recuperação instanciados pela composition root cripto-research, alcançáveis de [project.scripts], exercitados e PROVEN pela wheel instalada."
+      "note": "V1.2: composition root (cripto-research) e componentes instanciados pela wheel 1.2.0rc4 (runtime_trace.log, conformidade 48/48); grafo de imports em 21f8b182: nenhuma raiz alcança research_protocol/cain/research_transport nem adapter_paths (cripto-predictor=81, cripto-predictor-job=127, cripto-research=16, cripto=85 módulos)."
     },
     "CRYPTO_OPS_FAILURE_VERDICT": {
       "status": "PASS",
@@ -360,39 +383,55 @@
         "qualification/crypto/RAW_LOGS/ops-failure/OPS_FAILURE_SUMMARY.json",
         "qualification/shared/SHARED-003/SHARED_DEPENDENCY_VERDICT_4.2.2rc1.json"
       ],
-      "note": "SHARED-003 test_only não bloqueante, causa demonstrada por A/B; o job real do Ops mata a árvore e trunca no Windows (3/3 local source, 3/3 local wheel, 6/6 windows-latest)."
+      "note": "Idem: Ops inalterado na V1.2. SHARED-003 test_only não bloqueante, causa demonstrada por A/B; o job real do Ops mata a árvore e trunca no Windows (3/3 local source, 3/3 local wheel, 6/6 windows-latest)."
     },
     "CRYPTO_UNCOMFORTABLE_CASES": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/d16/35978221282/e2e_cases/E2E_SUMMARY.json",
-        "qualification/crypto/RAW_LOGS/d16/35978221282/soak_real.jsonl"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/e2e_cases/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl"
       ],
-      "note": "Casos A, B, C ×3 no runtime Linux (B com o vetor sintético congelado); A ×3 e C ×3 também sobre dados reais no soak."
+      "note": "V1.2: casos A, B, C ×3 no runtime Linux (B com o vetor sintético congelado); A ×3 e C ×3 também sobre dados reais no soak real."
     },
     "CRYPTO_ECONOMIC_METRICS": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/d16/35978221282/science/SCIENCE_REAL.json"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/science/SCIENCE_REAL.json",
+        "qualification/crypto/SCIENTIFIC_INTEGRITY_REPORT.md"
       ],
-      "note": "Dados reais, Linux: bruto -45 bps IC [-214, 112]; líquido -83 bps IC [-253, 76]; custos congelados; INCONCLUSIVE/NO_EDGE. Descritivo, sem edge nem capital."
+      "note": "V1.2, dados reais, Linux: bruto -45 bps IC [-214, 112]; líquido -83 bps IC [-253, 76]; custos congelados; INCONCLUSIVE/NO_EDGE. Descritivo, sem edge nem capital (C22)."
     },
     "CRYPTO_NEGATIVE_CONTROLS": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/d16/35978221282/science/SCIENCE_REAL.json"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/science/SCIENCE_REAL.json"
       ],
-      "note": "Injeção de futuro 0 aceitos; ablação 0; placebo SUPPORTED 3/100 (≤10); vazamentos do canário 0."
+      "note": "V1.2: injeção de futuro 0 aceitos; ablação 0; placebo SUPPORTED 3/100 (≤10); vazamentos do canário 0."
     },
     "CRYPTO_SPLIT_BRAIN_CORRUPTION": {
       "status": "PASS",
       "evidence": [
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-linux-primary/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/cleanroom-final/run35925914768/crypto-runtime-windows-latest/conformance.junit.xml",
-        "qualification/crypto/RAW_LOGS/v1.1/windows-local/conformance.junit.xml"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-linux-primary/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/d16/soak_real.jsonl"
       ],
-      "note": "DB sem FS, FS sem DB, artefato alterado, hash errado, conteúdo alterado após materializar, referência de outra pesquisa e metadata inconsistente: falha fechada (exit 5), sem reparo silencioso."
+      "note": "V1.2: DB sem FS, FS sem DB, artefato/hash alterados, referência de outra pesquisa → falha fechada (conformidade); 3/3 corrupções do soak real recusadas sem reparo."
     }
   },
-  "final_result": "QUALIFIED"
+  "final_result": "QUALIFIED",
+  "cycle": "V1.2",
+  "protected_set_file": "PROTECTED_SET_V1.2.json",
+  "previous_final": {
+    "attestation": "QUALIFICATION_ATTESTATION.json (V1.1/v2.2, QUALIFIED para 341d270 / 1.2.0rc2)",
+    "kept": true,
+    "note": "continua válida para os seus final_commits (C22); nada é apagado"
+  },
+  "publish_candidates_v1_2": {
+    "release": "https://github.com/leonardosovienski/cripto-predictor/releases/tag/v1.2.0rc4",
+    "wheel_sha256": "32a4bd6d86719070e1a5d1e418c46034cfbf4ee292da11f17af2f60081fa9bf6",
+    "sdist_sha256": "f648d45bd80c0878fd7f8cb7272fd2ff36f219ffdd5a939a536d599d5e72344d",
+    "built_by": "workflow Release do cripto-predictor (run 36643518795; build duplo, wheel byte-idêntica; tag na 21f8b182)"
+  },
+  "terminal_state_v1_2": "BLOCKED",
+  "terminal_note_v1_2": "BLOCKED: NOT_RUN em ['WINDOWS_SMOKE'] (C7.3: só parcial IN_PROGRESS; sem attestation final)"
 }
