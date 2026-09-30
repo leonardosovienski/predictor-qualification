@@ -1,6 +1,6 @@
 # integration-crypto — SOAK_REPORT
 
-Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36462444590`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/soak/SUMMARY.json` (sha256 `0e225d4d08fe302c…`); comandos brutos em `RAW_LOGS/runtime/run36462444590/soak/commands.log`.
+Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json`, lido e não alterado). Linux primário, run `run36648103793`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36648103793/soak/SUMMARY.json` (sha256 `885ed73f3f845680…`); comandos brutos em `RAW_LOGS/runtime/run36648103793/soak/commands.log`.
 
 Resultado: **48 conferências OK, 0 falhas**.
 
@@ -77,6 +77,7 @@ Execuções anteriores do soak, mantidas como evidência (não descartadas):
 - `run36426935949`: 47 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/soak/SUMMARY.json` (sha256 `bbd0a46153683657…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36426935949/soak/commands.log` (sha256 `9a8bdba024da2120…`) (bytes de entrada, limite): nenhuma.
 - `run36435382707`: 40 OK, 1 falhas — `floor llm_proposals >= 5` (obtido: 0). Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36435382707/soak/SUMMARY.json` (sha256 `a61df91088ee1662…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36435382707/soak/commands.log` (sha256 `899d58fe35e3c300…`) (bytes de entrada, limite): [(8226, 7680)].
 - `run36439656179`: 48 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36439656179/soak/SUMMARY.json` (sha256 `a1c5d8971a449875…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36439656179/soak/commands.log` (sha256 `db120f0190480be1…`) (bytes de entrada, limite): nenhuma.
+- `run36462444590`: 48 OK, 0 falhas — nenhuma. Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/soak/SUMMARY.json` (sha256 `0e225d4d08fe302c…`). Recusas do cliente LLM no `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/soak/commands.log` (sha256 `e8e3c11dd07a1bd3…`) (bytes de entrada, limite): nenhuma.
 
 A falha anterior foi de configuração do harness, não do produto: o `cain-llm.toml` do soak declarava `num_ctx = 4096`, e o orçamento de entrada do cliente LLM do cain é `min(max_input_bytes, num_ctx - num_predict - 256)` = min(6500, 4096 - 256 - 256), menor que o pedido de proposta com contexto (números da recusa acima, lidos do log). Cada proposta saiu `LLM_PROPOSAL_FAILED` (fail closed, nenhuma task emitida). O harness passou a declarar `num_ctx = 8192` e `max_input_bytes = 16000` (`scripts/soak.py`, commit `2319ed0`, cuja mensagem atribui o 3584 ao padrão do cain por engano: o padrão de `max_input_bytes` é 6500, e o limite vinha do `num_ctx` do harness). Perfil, pisos, parâmetros congelados e vetores não mudaram.
 

@@ -22,7 +22,8 @@ import sys
 import tomllib
 from pathlib import Path
 
-STAGE_A = "341d270e4d709150c581c3cd93f4518d483009eb"
+# Etapa A vigente do crypto = qualification/crypto/runtime_target.json (V1.2 = 21f8b182 depois da reabertura D-27; antes, 341d270).
+STAGE_A = json.loads((Path(__file__).resolve().parents[3] / "qualification" / "crypto" / "runtime_target.json").read_text(encoding="utf-8"))["commit"]
 ADAPTERS = "GarimpoInvestimentos/adapters/"
 
 
@@ -47,7 +48,7 @@ def main() -> int:
         lines = [line for line in diff.splitlines() if line[:1] in "+-" and not line.startswith(("+++", "---"))]
         allowed = {"pyproject.toml": ('version = "1.2.0rc2"', 'version = "1.2.0rc3"'),
                    "uv.lock": ('version = "1.2.0rc2"', 'version = "1.2.0rc3"'),
-                   "GarimpoInvestimentos/__init__.py": ('__version__ = "1.2.0rc2"', '__version__ = "1.2.0rc3"')}[path]
+                   "GarimpoInvestimentos/__init__.py": ('__version__ = "1.2.0rc2"', '__version__ = "1.2.0rc3"')}.get(path, ())
         check(f"(a) {path}: only the pre-release version line changed",
               sorted(line[1:] for line in lines) == sorted(allowed), lines=lines)
     lock_a = tomllib.loads(git(repo, "show", f"{STAGE_A}:uv.lock"))
