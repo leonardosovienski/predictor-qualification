@@ -28,7 +28,7 @@ def read(project, path, artifact=None):
     return text
 def save(path, data):
     path=ROOT/path; path.parent.mkdir(parents=True,exist_ok=True)
-    path.write_text(json.dumps(data,indent=2,ensure_ascii=False) if not isinstance(data,str) else data,encoding='utf-8')
+    path.write_text(json.dumps(data,indent=2,ensure_ascii=False) if not isinstance(data,str) else data,encoding='utf-8',newline='\n')
 def baseline(project,path):
     result={'project':project,'path':path,'timestamp_utc':stamp(),'timezone_user':'America/Sao_Paulo'}
     for key,args in [('head',['rev-parse','HEAD']),('branch',['rev-parse','--abbrev-ref','HEAD']),('status',['status','--porcelain=v1','--untracked-files=all']),('remote',['config','--get','remote.origin.url']),('origin_main_local',['rev-parse','refs/remotes/origin/main']),('submodules',['ls-files','--stage'])]:

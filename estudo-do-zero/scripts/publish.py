@@ -8,7 +8,7 @@ previous_inventories={p.name for p in (target/'relatorios').glob('INVENTARIO_*.m
 for directory in ['relatorios','evidencias','scripts']:
  for p in (r/directory).rglob('*'):
   if not p.is_file() or p.suffix.lower() not in allowed: continue
-  if p.name.startswith(('source-text','narrative-','raw-source','all-source','executable-','central-extract')): continue
+  if p.name.startswith(('source-text','narrative-','raw-source','all-source','executable-','central-extract','remaining-')): continue
   if p.name in ('remote-releases.json','ci-head-local.json','ci-main-remoto.json','release-identity-summary.json'): continue
   if any(part in ('__pycache__','.venv','node_modules','.pytest_cache') for part in p.parts):continue
   if active_inventory and p.name.startswith('INVENTARIO_') and p.name != 'INVENTARIO_'+active_inventory+'.md' and p.name not in previous_inventories: continue
@@ -35,8 +35,8 @@ if previous_manifest.exists():
    candidate.unlink(); removed.append(name)
  if removed:study.log('PUBLICACAO',target,'Retirar apenas arquivos previstos no manifesto anterior e agora excluídos; caminho resolve dentro estudo-do-zero validado',0,str(removed),limits='Somente cópia de publicação; histórico Git preservado')
 for rel,content in files:
- t=target/rel;t.parent.mkdir(parents=True,exist_ok=True);t.write_text(content,encoding='utf-8')
-t=target/'evidencias/publication-manifest.json';t.write_text(json.dumps(manifest,indent=2,ensure_ascii=False),encoding='utf-8')
+ t=target/rel;t.parent.mkdir(parents=True,exist_ok=True);t.write_text(content,encoding='utf-8',newline='\n')
+t=target/'evidencias/publication-manifest.json';t.write_text(json.dumps(manifest,indent=2,ensure_ascii=False),encoding='utf-8',newline='\n')
 study.run('PUBLICACAO',dest,['git','add','--','estudo-do-zero'],'publication-add.txt')
 code,out=study.run('PUBLICACAO',dest,['git','diff','--cached','--name-only'],'publication-staged.txt')
 if out.strip():

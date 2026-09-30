@@ -1,0 +1,99 @@
+# Revisão complementar2 Stocks
+
+12 módulos próprios integralmente lidos no agregado executável numerado; nenhumaexecução.
+
+## stocks_predictor/continuous_research.py::validate_contract/inspect_inputs/execute
+
+H19 frozenprotocol/sourceobservationSHAs; syntheticprotocol bypassscientificidentity onlyexplicitmode. Symmetricstrategy/comparison plans,nextsessionentries,datedsettlement,uniquetickers/taxclasslot,explicitliquidation; exactly matches H19frozenquarterly selections. Manifestconfinement+hash; quotetape standard/fractional date/identity/positive/no duplicates. Evidencecalendar/actions/cashknowledge gate beforecontinuouspairedcapital/costgrid. Failures suppress all completedcaseprofits; countsattempted historical separate synthetic.
+
+Limites:Blockedmissingevcode2,error1,fullhistoricalnotproofedge0; profitNone top-level. CLI write_text overwritesoutput; sourcechecks metadata notauthentication/completeeconomicproof.
+
+SHA256`16a22550a725a73a0f1a0f50cc26ff99e5fd52b4dac32762c3f918c7142efd83`;executable-06.txt.
+
+## stocks_predictor/h20_checked.py::verify_evidence/run_checked
+
+Frozenmanifest/gate/code/observationhash fixed; externallylocatedcompare_h20.pyimportexecutedaftercodehashcheck. Runresultserialized exacthash expected, evidencebeforeafter. Outputexclusivexb,claim reproducedonlyifexact.
+
+Limites:Paths root/work siblingrepo/data outsideproject. Historicalreproduce does notfreshreturnevaluation,profitNone. NOT executed; code module externalwrites unqualified by this wrapper alone.
+
+SHA256`fc806cfe39de17918662d8b189e4d235b098e94985e81ce0a656e750f0d2859d`;executable-14.txt.
+
+## stocks_predictor/h20_continuous.py::H20Policy/make_plans/historical_readiness
+
+ActualRetailBookincumbents tiebreakrank/ISIN causalavailability withrankedcommonuniverse; callsselect_members/freeze_rebalance buffer. makeplans rejectinternalfeaturegap,allowinitialomissions,allarms sameeligibleIDs,explicitterminal. Readinessverifysources/signals/manifests,unionconservativeheldcashintervals andattestationbindsignals/manifest/intervalhash,reviewer/date/sourcefilesconfined/hash.
+
+Limites:historical_readiness never callsrun_h20_book: statussourcecheckspass/nohistoricalreturn,profitNone; engineactualposition separateAPI available. Sourceattestation not authenticated revieweridentity; no capital.
+
+SHA256`569d57957e4ac4d0bdf2d6c7b38686c59d7f968e5d0f8e95c73122ad4810b095`;executable-14.txt.
+
+## stocks_predictor/paper.py::record_forward/settle_executions/settle_exits
+
+Forwarddate requires todayUTC,DBmaxprice<=asof; selectuniverse→adjust→signals→quintile→decisionsINSERTIGNOREfrozen. legacyentry bypassesforwarddate/contextguard. Settle entries nextopen COALESCE andexits nextmonthend+nextopen modeledroundtripfees/slippage,holdingdays;commitDB. Main only prints legacyinactive withoutbank/cron.
+
+Limites:Library remainsmutating andlegacybypass available; runmaininactivity notproof no callers. Countlenranked versusINSERTIGNORE actualwrites; settling changesdecisions exceptCOALESCE fields. Priceperunitnot fundedcash/tax/dividendportfolio.
+
+SHA256`2b1a2f527d43b7e6a5d0c8a50692fe07f0d5dfe83d05d7980546256050a10b96`;executable-18.txt.
+
+## stocks_predictor/profit_validation.py::entitlement_book/audit_trials/summarize_audit_periods
+
+Independentmarkedentitlementconversionbook accumulatesgrosscash/successors/splitunits withidentitycollisionguards andmodeopencloseworst. Auditsfrozenselectionmin20quintileCNPJunique/causal,agreesdiagnosticreturns/spread tolerance1e-10. Contiguousperiods requiredcompound; stationarybootstrapstressedspread72bp,block12/horizon,n10000seed20260907;issuerattribution.
+
+Limites:Unadjustedadaptivesearch,syntheticcompounding assumesmarks fundnextperiod,endpointDD only; executableprofitFalse. Cashpaymentdate/physicaldelivery not enforced in entitlementmark,not RetailBook.
+
+SHA256`47e04d5720c4dc67e987ffc80802ade82ab288c3c83abc312850b661cd210763`;executable-18.txt.
+
+## stocks_predictor/retail_cash.py::Holding/RetailBook/ordinary_month_tax/execution_readiness
+
+Decimalfinitedatecanonical/integerunits; distinct standard/fractionalprices lot; positiondelivery lockscredit/tradable andsaleavailablebyselltlement. Bookadvance checksdayflows deficits; fundable checksallpendingcash+reserve (rightsnotspendableuntilavailable); entitlements dedupebeforeexdaytrades/ISIN andex<=payment<available. Order nointradayreversal,buysunfilled ifnotfundable,salesbasisproportional,settlementpending. Rebala deepcopystages,sellfirstthenbuy,decrementsharesfundable. Conversion explicitcompletebasisallocation/intunits/no merge. Monthlytax model separatesreviewedcorporatedisposals,equitygross exemptiondefault20000 vsBDR,loss carry15%; daytrades reject. Readiness checkscoverage/fields/review/chronology/quote/action/taxattests.
+
+Limites:Taxnumbers são modelo source, não validaçãojurídica atual. Gate provenance declararreview/sources notlivebroker. Two-phase deepcopy local não crossprocesstransação. No full sourcecertification throughenginealone.
+
+SHA256`9450da3d4dbd5a88cf50ca5ed0984c2a19bc3a0e49e90b629e61b12a4d632833`;executable-20.txt.
+
+## stocks_predictor/rj_coda.py::impute_zeros/clr_matrix
+
+Rectangularmatrix;None/zero imputed delta*.minpositive percolumn default.5 withmask. No-positivecolumns dropped;clr requiresstrictpositive thenlogmean centering; failedrows markedNone,maskcolremapped.
+
+Limites:Imputation is localstatisticaltransform notrecoveredprimarydata; negativevalueskeep thenfailCLR. No runtime validationdeltabounds/numericfinite allobservations; no predictivevalidation.
+
+SHA256`7ef5b31b9a986be78f1523523e903d2aaa947fb17cb2fd83df5af30851869630`;executable-20.txt.
+
+## stocks_predictor/rj_episodes.py::point_in_time_candidates/classify_episode
+
+Localtrough fullwindow retrospective helper versusPIT rollingcandidate40dayssinceRJ requests,chosenfirstprimary/separatedsecondary. RallyfirsthitthresholdwithinNdays;classifyserieslastdate<=asoftodayassert,invalidnonpositive→invaliddata,completewindow/nohit→no_rally,censoredshortwindow.
+
+Limites:Retrospectivelocaltrough helper is notcausalcandidate; code distinguishes both. asof cutoff presumes sortedseries,backwardlookbackvalidation notbroad. Outcomes descriptive nofundedprofit.
+
+SHA256`be3d3f22dd10ea8f01728cc314a0c0c6f99471732a3a36288287a69f52d251ff`;executable-20.txt.
+
+## stocks_predictor/source_closure.py::audit/source_counts
+
+Frozenbaseline/sourceprotocol/signals hash;revisedmanifest mayonlyaltercash/corporate/evidence/tax,plans/quotesimmutable,taxrules unchangedexceptlocalrefs. Primarycataloghashbinding andderivedlocalSHAcannotrelabelprimary. Recursive sourcerefbound,duplicatecoalesce originalrows,entitlementparentchildexactset/noduplicates/identity/amount/crosspaymentrounding1e-9. Removedactiongaps onlyspecificactions;quotesloaded andconservativeH20intervalunion; beforeafterchecks.
+
+Limites:AlwaysappendsH20_CONTINUOUS_SOURCE_ATTESTATION_MISSING andreturnsBLOCKED/code2/noevaluation/profitNone. Auditing repairs não qualifica executablehistory. Some source_kind defaultUNCLASSIFIED intentional.
+
+SHA256`a3ab2e8aa6461f7ec0822117566643aa29a2ef5db281c27fa42ae59d999fac62`;executable-24.txt.
+
+## stocks_predictor/source_history.py::document_metadata/derive_fca_securities/security_links_asof/derive_reported_capital
+
+ZIPCVMFCA/FRE metadata ID,CNPJ14,ref,version>=1,receipt→availability;exactidentitymatch sourceCSV. Securityticksregex/issuesunsupported/tradinginterval;rawhash+row;selectlatestref/version/availability<=asof andactiveinterval. CapitalEmitido onlyfiniteintegralshares/classsum validate;missingrecordissues;reportedtotal orONPN classification.
+
+Limites:Capitalbasis_dateNone/eligible_for_valuationFalse. Declaredsharequantity não vincula securityclasseconomic equivalence. Sourcehash provenance notsourceexternalliveness.
+
+SHA256`30adbd37d3d1a516b74e5538f215853e648f53d3daa232e3ba8a3c1c8aa1e1cd`;executable-24.txt.
+
+## stocks_predictor/stock_events.py::import_bonus_events/bonus_events
+
+JSONbonuspayloadSHA,canonicalex/creditdatecredit>=ex,finitepositiveratio,ticker/eventsource,duplicateidentityreject;append_rows stock_bonus_events;queryex<=end orderedex/credit/id.
+
+Limites:No classconversion/cash/fractions suppliedby thisimportalone. Code supportsDBmutation,notexecuted;append_rows semantics belongcvm_pit.
+
+SHA256`2879139f85ca0213649cfdd8899ac8ebeebae6248f3d0c7a167be4a1d6eb6879`;executable-24.txt.
+
+## stocks_predictor/value_profitability.py::prepare_snapshot/rank_snapshot/select_members
+
+H20threeARMS commoneligiblecoverage. Exactaccountingkeydocument/ref/version/sourcehash/PITavailabilityreceipt+1day,<=550d,ownerearnings/equity explicit2equityrows arithmetic. Annualearnings330-400d/equity>0,preparedH18/H19 mustmatch exactnumerators tolerance;valueequity/capprofitabilityearnings/equity. Descendingmidranks/ticker tie;valueonly versusmeanvalue+profitrank. Min20 topfloor20%,retainactualincumbentmatchingISINwithinceil30% thenfillbest.
+
+Limites:SIGNAL_SELECTION_ONLY; retention signalmodel não prova savedturnover/returns. Negativeearningseligible;sectorsnotneutralized;proxycapital fromupstream remainsstale. Noauth sourcetruth.
+
+SHA256`b78279121c5e06b713fe6a1a96d3e5769559ed871c15b21bebc4854f751477b2`;executable-25.txt.

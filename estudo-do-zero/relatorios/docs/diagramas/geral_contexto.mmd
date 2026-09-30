@@ -1,0 +1,20 @@
+flowchart LR
+ U["Usuário / operador"] --> C["cain: CLI API MCP web"]
+ U --> CR["cripto-predictor: CLI jobs pesquisa"]
+ U --> BR["brasileirao-predictor: CLI API pesquisa"]
+ U --> ST["stocks-predictor: CLI análise B3"]
+ CR --> EX["Exports JSON Snapshot / Bundle"]
+ BR --> EX
+ ST --> EX
+ EX --> C
+ C --> LL["Ollama: geração e embeddings opcional"]
+ E["ecosystem-predictor: contratos e registries"] --> EX
+ E --> C
+ CO["core-predictor: contratos replay métricas"] --> CR
+ CO --> BR
+ CO --> ST
+ OP["predictor-ops: execução operacional"] --> CR
+ OP --> BR
+ Q["predictor-qualification: scripts gates logs"] -. "ET-SRC / ET-HIST de candidatos" .-> CR
+ Q -. "ET-SRC / ET-HIST de candidatos" .-> CO
+ Q -. "ET-SRC / ET-HIST de candidatos" .-> OP
