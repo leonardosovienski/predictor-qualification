@@ -1,0 +1,367 @@
+### brasileirao_predictor/kernel_redis_v2.py
+8: PROTOCOL_VERSION = "brasileirao.redis/2"
+9: INVOKE_CHANNEL = "system:invoke_kernel:v2"
+10: CURRENT_PREFIX = "kernel:v2:current:"
+11: REQUEST_PREFIX = "kernel:v2:request:"
+12: LEASE_PREFIX = "kernel:v2:lease:"
+13: PENDING_KEY = "kernel:v2:pending"
+14: READY_KEY = "kernel:v2:ready"
+15: LEASE_MS = 5000
+16: FAIR_MS = 5000
+17: RETRY_MS = 250
+18: POLL_SECONDS = 0.25
+19: POLL_LIMIT = 32
+20: HEALTH_KEY = "health:kernel"
+21: HEALTH_MS = 5000
+23: _HELPERS = """
+24: local function kind(key)
+25:     return redis.call('TYPE', key).ok
+26: end
+27: local function allowed(key, expected)
+28:     local actual = kind(key)
+29:     return actual == 'none' or actual == expected
+30: end
+31: local function now_ms()
+32:     local clock = redis.call('TIME')
+33:     return tonumber(clock[1]) * 1000 + math.floor(tonumber(clock[2]) / 1000)
+34: end
+35: """
+38: HEARTBEAT_SCRIPT = (
+39:     "-- kernel-v2:heartbeat\n"
+40:     + _HELPERS
+41:     + """
+42: if not allowed(KEYS[1], 'string') then return redis.error_reply('invalid health key type') end
+43: local valid, message = pcall(cjson.decode, ARGV[1])
+44: local ttl = tonumber(ARGV[2])
+45: local mode = ARGV[3]
+46: if not valid or type(message) ~= 'table' or message.protocol_version ~= 'brasileirao.redis/2'
+47:     or type(message.session_id) ~= 'string' or message.session_id == ''
+48:     or not ttl or ttl < 1 or ttl > 5000
+49:     or (mode ~= 'start' and mode ~= 'renew' and mode ~= 'release') then
+50:     return redis.error_reply('invalid heartbeat arguments')
+51: end
+52: local current = redis.call('GET', KEYS[1])
+53: if mode == 'release' then
+54:     if current ~= ARGV[1] then return 0 end
+55:     if not redis.acl_check_cmd('DEL', KEYS[1]) then return redis.error_reply('heartbeat release denied') end
+56:     return redis.call('DEL', KEYS[1])
+57: end
+58: if mode == 'renew' and current and current ~= ARGV[1] then return 0 end
+59: if not redis.acl_check_cmd('SET', KEYS[1], ARGV[1], 'PX', ttl) then
+60:     return redis.error_reply('heartbeat write denied')
+61: end
+62: redis.call('SET', KEYS[1], ARGV[1], 'PX', ttl)
+63: return 1
+64: """
+65: )
+67: HEALTHCHECK_SCRIPT = (
+68:     "-- kernel-v2:healthcheck\n"
+69:     + _HELPERS
+70:     + """
+71: if kind(KEYS[1]) ~= 'string' or redis.call('PTTL', KEYS[1]) <= 0 then return 0 end
+72: local valid, message = pcall(cjson.decode, redis.call('GET', KEYS[1]))
+73: if valid and type(message) == 'table' and message.protocol_version == 'brasileirao.redis/2'
+74:     and type(message.session_id) == 'string' and message.session_id ~= '' then return 1 end
+75: return 0
+76: """
+77: )
+80: CLAIM_SCRIPT = (
+81:     "-- kernel-v2:claim\n"
+82:     + _HELPERS
+83:     + """
+84: if not allowed(KEYS[1], 'string') or not allowed(KEYS[2], 'hash')
+85:     or not allowed(KEYS[3], 'string') or not allowed(KEYS[4], 'zset')
+86:     or not allowed(KEYS[5], 'string') then
+87:     return 'INVALID_STATE'
+88: end
+89: local lease_ms = tonumber(ARGV[4])
+90: if not lease_ms or lease_ms < 1 or lease_ms > 5000
+91:     or ARGV[1] == '' or ARGV[2] == '' or ARGV[3] == '' then
+92:     return 'INVALID_ARGUMENT'
+93: end
+94: if not redis.acl_check_cmd('SET', KEYS[3], ARGV[3], 'PX', lease_ms, 'NX')
+95:     or not redis.acl_check_cmd('ZADD', KEYS[4], 0, ARGV[2])
+96:     or not redis.acl_check_cmd('ZREM', KEYS[4], ARGV[2]) then return 'ACL_DENIED' end
+97: local stored = redis.call('HGET', KEYS[2], 'payload')
+98: if not stored then
+99:     redis.call('ZREM', KEYS[4], ARGV[2])
+100:     return 'EXPIRED'
+101: end
+102: if stored ~= ARGV[1] then return 'UNREGISTERED' end
+103: if redis.call('GET', KEYS[1]) ~= ARGV[1]
+104:     or not redis.call('HGET', KEYS[2], 'lineup_state')
+105:     or redis.call('GET', KEYS[5]) ~= redis.call('HGET', KEYS[2], 'lineup_state') then
+106:     redis.call('ZREM', KEYS[4], ARGV[2])
+107:     return 'STALE'
+108: end
+109: local remaining = redis.call('PTTL', KEYS[2])
+110: if remaining <= 0 then
+111:     redis.call('ZREM', KEYS[4], ARGV[2])
+112:     return 'EXPIRED'
+113: end
+114: local status = redis.call('HGET', KEYS[2], 'status')
+115: if status == 'completed' then return 'COMPLETED' end
+116: if status ~= 'pending' then return 'INVALID_STATE' end
+117: local duration = math.min(lease_ms, remaining)
+118: local accepted = redis.call('SET', KEYS[3], ARGV[3], 'PX', duration, 'NX')
+119: if not accepted then
+120:     local busy_for = redis.call('PTTL', KEYS[3])
+121:     if busy_for > 0 then
+122:         redis.call('ZADD', KEYS[4], now_ms() + busy_for, ARGV[2])
+123:     end
+124:     return 'BUSY'
+125: end
+126: redis.call('ZADD', KEYS[4], now_ms() + duration, ARGV[2])
+127: return 'CLAIMED'
+128: """
+129: )
+133: COMPLETE_SCRIPT = (
+134:     "-- kernel-v2:complete\n"
+135:     + _HELPERS
+136:     + """
+137: if not allowed(KEYS[1], 'string') or not allowed(KEYS[2], 'hash')
+138:     or not allowed(KEYS[3], 'string') or not allowed(KEYS[4], 'string')
+139:     or not allowed(KEYS[5], 'zset') or not allowed(KEYS[6], 'string')
+140:     or not allowed(KEYS[7], 'zset') then return 'INVALID_STATE' end
+141: local fair_ms = tonumber(ARGV[5])
+142: if not fair_ms or fair_ms < 1 or fair_ms > 5000
+143:     or ARGV[1] == '' or ARGV[2] == '' or ARGV[3] == '' or ARGV[6] == '' then
+144:     return 'INVALID_ARGUMENT'
+145: end
+146: local valid, result = pcall(cjson.decode, ARGV[4])
+147: local valid_input, request = pcall(cjson.decode, ARGV[1])
+148: if not valid or not valid_input or type(result) ~= 'table' or type(request) ~= 'table'
+149:     or result.protocol_version ~= 'brasileirao.redis/2'
+150:     or result.run_id ~= ARGV[2] or request.run_id ~= ARGV[2]
+151:     or result.match_id ~= request.match_id or result.job_id ~= request.job_id
+152:     or result.idempotency_key ~= request.idempotency_key
+153:     or result.state_version ~= request.state_version then return 'INVALID_ARGUMENT' end
+154: if not redis.acl_check_cmd('SET', KEYS[4], ARGV[4], 'PX', fair_ms)
+155:     or not redis.acl_check_cmd('PUBLISH', ARGV[6], ARGV[4])
+156:     or not redis.acl_check_cmd('HSET', KEYS[2], 'status', 'completed', 'result', ARGV[4])
+157:     or not redis.acl_check_cmd('ZREM', KEYS[5], ARGV[2])
+158:     or not redis.acl_check_cmd('ZADD', KEYS[7], 0, ARGV[2])
+159:     or not redis.acl_check_cmd('ZREM', KEYS[7], ARGV[2])
+160:     or not redis.acl_check_cmd('PEXPIRETIME', KEYS[4])
+161:     or not redis.acl_check_cmd('DEL', KEYS[3]) then return 'ACL_DENIED' end
+162: local stored = redis.call('HGET', KEYS[2], 'payload')
+163: if stored and stored ~= ARGV[1] then return 'UNREGISTERED' end
+164: if not stored or redis.call('GET', KEYS[1]) ~= ARGV[1]
+165:     or not redis.call('HGET', KEYS[2], 'lineup_state')
+166:     or redis.call('GET', KEYS[6]) ~= redis.call('HGET', KEYS[2], 'lineup_state') then
+167:     redis.call('ZREM', KEYS[5], ARGV[2])
+168:     redis.call('ZREM', KEYS[7], ARGV[2])
+169:     if redis.call('GET', KEYS[3]) == ARGV[3] then redis.call('DEL', KEYS[3]) end
+170:     return 'STALE'
+171: end
+172: local remaining = redis.call('PTTL', KEYS[2])
+173: if remaining <= 0 then
+174:     redis.call('ZREM', KEYS[5], ARGV[2])
+175:     redis.call('ZREM', KEYS[7], ARGV[2])
+176:     if redis.call('GET', KEYS[3]) == ARGV[3] then redis.call('DEL', KEYS[3]) end
+177:     return 'EXPIRED'
+178: end
+179: local status = redis.call('HGET', KEYS[2], 'status')
+180: if status == 'completed' then
+181:     if redis.call('PTTL', KEYS[4]) <= 0
+182:         or redis.call('GET', KEYS[4]) ~= redis.call('HGET', KEYS[2], 'result') then
+183:         redis.call('ZREM', KEYS[7], ARGV[2])
+184:     end
+185:     return 'COMPLETED'
+186: end
+187: if status ~= 'pending' then return 'INVALID_STATE' end
+188: if redis.call('GET', KEYS[3]) ~= ARGV[3] then return 'LEASE_LOST' end
+190: -- Completion and discoverability share the same atomic operation. The index
+191: -- uses the actual key deadline, never a refreshed window on replay/recovery.
+192: redis.call('SET', KEYS[4], ARGV[4], 'PX', math.min(fair_ms, remaining))
+193: redis.call('ZADD', KEYS[7], redis.call('PEXPIRETIME', KEYS[4]), ARGV[2])
+194: redis.call('HSET', KEYS[2], 'status', 'completed', 'result', ARGV[4])
+195: redis.call('ZREM', KEYS[5], ARGV[2])
+196: redis.call('DEL', KEYS[3])
+197: -- Pub/Sub is a wakeup only. Even an unexpected PUBLISH error must not delete
+198: -- a completed result or recompute it with a new economic validity window.
+199: redis.pcall('PUBLISH', ARGV[6], ARGV[4])
+200: return 'COMPLETED'
+201: """
+202: )
+205: RELEASE_SCRIPT = (
+206:     "-- kernel-v2:release\n"
+207:     + _HELPERS
+208:     + """
+209: if not allowed(KEYS[1], 'string') or not allowed(KEYS[2], 'hash')
+210:     or not allowed(KEYS[3], 'string') or not allowed(KEYS[4], 'zset')
+211:     or not allowed(KEYS[5], 'string') then
+212:     return 'INVALID_STATE'
+213: end
+214: local retry_ms = tonumber(ARGV[4])
+215: if not retry_ms or retry_ms < 1 or retry_ms > 5000 then return 'INVALID_ARGUMENT' end
+216: if not redis.acl_check_cmd('DEL', KEYS[3])
+217:     or not redis.acl_check_cmd('ZADD', KEYS[4], 0, ARGV[2])
+218:     or not redis.acl_check_cmd('ZREM', KEYS[4], ARGV[2]) then return 'ACL_DENIED' end
+219: if redis.call('GET', KEYS[3]) ~= ARGV[3] then return 'LEASE_LOST' end
+220: redis.call('DEL', KEYS[3])
+221: if redis.call('GET', KEYS[1]) == ARGV[1]
+222:     and redis.call('HGET', KEYS[2], 'payload') == ARGV[1]
+223:     and redis.call('HGET', KEYS[2], 'status') == 'pending'
+224:     and redis.call('HGET', KEYS[2], 'lineup_state')
+225:     and redis.call('GET', KEYS[5]) == redis.call('HGET', KEYS[2], 'lineup_state')
+226:     and redis.call('PTTL', KEYS[2]) > 0 then
+227:     redis.call('ZADD', KEYS[4], now_ms() + retry_ms, ARGV[2])
+228:     return 'RETRY'
+229: end
+230: redis.call('ZREM', KEYS[4], ARGV[2])
+231: return 'STALE'
+232: """
+233: )
+237: POLL_SCRIPT = (
+238:     "-- kernel-v2:poll\n"
+239:     + _HELPERS
+240:     + """
+241: if not allowed(KEYS[1], 'zset') then return redis.error_reply('invalid pending key type') end
+242: local limit = tonumber(ARGV[1])
+243: if not limit or limit < 1 or limit > 256 or limit ~= math.floor(limit) then
+244:     return redis.error_reply('invalid poll limit')
+245: end
+246: local now = now_ms()
+247: local runs = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', now, 'LIMIT', 0, limit)
+248: for _, run in ipairs(runs) do
+249:     if not redis.acl_check_cmd('ZREM', KEYS[1], run)
+250:         or not redis.acl_check_cmd('ZADD', KEYS[1], 0, run) then
+251:         return redis.error_reply('pending mutation permission denied')
+252:     end
+253: end
+254: local payloads = {}
+255: for _, run in ipairs(runs) do
+256:     local request_key = ARGV[2] .. run
+257:     local lease_key = ARGV[4] .. run
+258:     local payload = false
+259:     if kind(request_key) == 'hash' and redis.call('PTTL', request_key) > 0
+260:         and redis.call('HGET', request_key, 'status') == 'pending' then
+261:         payload = redis.call('HGET', request_key, 'payload')
+262:     end
+263:     local valid, request = false, false
+264:     if payload then valid, request = pcall(cjson.decode, payload) end
+265:     local current = false
+266:     if valid and type(request) == 'table' and request.run_id == run
+267:         and type(request.match_id) == 'string' then
+268:         local current_key = ARGV[3] .. request.match_id
+269:         if kind(current_key) == 'string' then current = redis.call('GET', current_key) end
+270:     end
+271:     if not payload or current ~= payload then
+272:         redis.call('ZREM', KEYS[1], run)
+273:     elseif allowed(lease_key, 'string') then
+274:         local busy_for = redis.call('PTTL', lease_key)
+275:         if busy_for > 0 then
+276:             redis.call('ZADD', KEYS[1], now + busy_for, run)
+277:         elseif busy_for == -2 then
+278:             table.insert(payloads, payload)
+279:         end
+280:     end
+281: end
+282: return payloads
+283: """
+284: )
+### brasileirao_predictor/market_pricer.py
+21: import math
+22: from numbers import Integral, Real
+24: import numpy as np
+27: _EPS = 1e-12
+30: def _grid(grid) -> np.ndarray:
+31:     g = np.asarray(grid, dtype=float)
+32:     if g.ndim != 2 or g.shape[0] != g.shape[1]:
+33:         raise ValueError("grid deve ser uma matriz quadrada NxN")
+34:     if not g.size or not np.isfinite(g).all() or np.any(g < 0) or not math.isclose(float(g.sum()), 1.0, abs_tol=1e-10):
+35:         raise ValueError("grid deve conter probabilidades finitas não negativas com soma 1")
+36:     return g
+39: def _margin_indices(n: int):
+41:     i = np.arange(n).reshape(-1, 1)
+42:     j = np.arange(n).reshape(1, -1)
+43:     return i, j
+51: def result_1x2(grid) -> dict:
+53:     g = _grid(grid)
+54:     p_home = float(np.tril(g, -1).sum())  # i > j
+55:     p_draw = float(np.trace(g))  # i == j
+56:     p_away = float(np.triu(g, 1).sum())  # i < j
+57:     return {"1": p_home, "X": p_draw, "2": p_away}
+60: def double_chance(grid) -> dict:
+62:     o = result_1x2(grid)
+63:     return {"1X": o["1"] + o["X"], "X2": o["X"] + o["2"], "12": o["1"] + o["2"]}
+66: def both_teams_to_score(grid) -> dict:
+68:     g = _grid(grid)
+69:     i, j = _margin_indices(g.shape[0])
+70:     yes = float(g[(i >= 1) & (j >= 1)].sum())
+71:     return {"Yes": yes, "No": 1.0 - yes}
+74: def over_under(grid, line: float) -> dict:
+78:     if isinstance(line, bool) or not isinstance(line, Real) or not math.isfinite(line) or line < 0 or line % 0.5:
+79:         raise ValueError("total exige linha não negativa inteira ou meia; quartos não implementados")
+80:     g = _grid(grid)
+81:     i, j = _margin_indices(g.shape[0])
+82:     total = i + j
+83:     over = float(g[total > line].sum())
+84:     push = float(g[total == line].sum())
+85:     under = float(g[total < line].sum())
+86:     return {"Over": over, "Under": under, "Push": push}
+89: def exact_score(grid, home_goals: int, away_goals: int) -> float:
+91:     if any(isinstance(value, bool) or not isinstance(value, Integral) for value in (home_goals, away_goals)):
+92:         raise ValueError("placar exige contagens inteiras")
+93:     g = _grid(grid)
+94:     n = g.shape[0]
+95:     if not (0 <= home_goals < n and 0 <= away_goals < n):
+96:         return 0.0
+97:     return float(g[home_goals, away_goals])
+105: def draw_no_bet(grid) -> dict:
+111:     o = result_1x2(grid)
+112:     return {
+113:         "1": {"win": o["1"], "push": o["X"], "lose": o["2"]},
+114:         "2": {"win": o["2"], "push": o["X"], "lose": o["1"]},
+115:     }
+118: def _ah_single(grid, home_line: float) -> dict:
+122:     g = _grid(grid)
+123:     i, j = _margin_indices(g.shape[0])
+124:     adj = (i - j) + home_line
+125:     win = float(g[adj > _EPS].sum())
+126:     push = float(g[np.abs(adj) <= _EPS].sum())
+127:     lose = float(g[adj < -_EPS].sum())
+128:     return {"win": win, "push": push, "lose": lose}
+131: def asian_handicap(grid, home_line: float) -> dict:
+139:     if (
+140:         isinstance(home_line, bool)
+141:         or not isinstance(home_line, Real)
+142:         or not math.isfinite(home_line)
+143:         or home_line % 0.25 != 0
+144:     ):
+145:         raise ValueError("handicap exige uma linha finita em quartos de gol")
+147:     frac = abs(home_line) % 1.0
+148:     if abs(frac - 0.25) < 1e-9 or abs(frac - 0.75) < 1e-9:
+149:         lo = home_line - 0.25
+150:         hi = home_line + 0.25
+151:         a = _ah_single(grid, lo)
+152:         b = _ah_single(grid, hi)
+153:         return {k: (a[k] + b[k]) / 2.0 for k in ("win", "push", "lose")}
+154:     return _ah_single(grid, home_line)
+### brasileirao_predictor/math_utils.py
+8: import math
+9: from typing import cast
+11: import numpy as np
+12: from scipy.optimize import brentq
+15: def implied_probabilities(odds):
+16:     return np.array([1.0 / o for o in odds], dtype=float)
+19: def shin_probabilities(odds):
+26:     for o in odds:
+27:         if o is None or not math.isfinite(o) or o <= 0:
+28:             raise ValueError(
+29:                 f"shin_probabilities: odd inválida {o!r} em {list(odds)!r} — exige odds decimais finitas e > 0"
+30:             )
+31:     pi = implied_probabilities(odds)
+32:     booksum = float(pi.sum())
+33:     if booksum <= 1.0:  # sem margem detectável
+34:         return pi / booksum, 0.0, booksum - 1.0
+36:     def p_of_z(z):
+37:         return (np.sqrt(z * z + 4 * (1 - z) * pi * pi / booksum) - z) / (2 * (1 - z))
+39:     try:
+40:         z = cast(float, brentq(lambda z: p_of_z(z).sum() - 1.0, 1e-9, 1 - 1e-9, xtol=1e-12))
+41:     except ValueError:
+42:         z = 0.0
+43:     p = p_of_z(z) if z > 0 else pi / booksum
+44:     p = p / p.sum()
+45:     return p, float(z), float(booksum - 1.0)

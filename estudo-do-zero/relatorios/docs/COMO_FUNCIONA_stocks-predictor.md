@@ -151,4 +151,8 @@ Uma cópia independente foi usada para 11 checks stdlib de execução D+1, turno
 
 ## Ordem de leitura
 
-pyproject.toml → operations.py → operational_store.py/source_catalog.py → dataset_selection.py → simulation.py; depois main.py → db.py → universe.py/factor.py → backtest.py/trials_gate.py. Para PIT: cvm_pit.py e source_history.py; para caixa: continuous_cash.py/retail_cash.py; para RJ: rj_pipeline.py → rj_episodes.py → rj_families.py → rj_judge.py. Staging externo fica em external_intelligence.py. Experimentos congelados e relatórios históricos ficam para segunda passagem, com cobertura pendente explícita.
+pyproject.toml → operations.py → operational_store.py/source_catalog.py → dataset_selection.py → simulation.py; depois main.py → db.py → universe.py/factor.py → backtest.py/trials_gate.py. Para PIT: cvm_pit.py e source_history.py; para caixa: continuous_cash.py/retail_cash.py; para RJ: rj_pipeline.py → rj_episodes.py → rj_families.py → rj_judge.py. Staging externo fica em external_intelligence.py. Experimentos congelados e relatórios históricos ficam para segunda passagem, com cobertura final discriminada em coverage.json.
+
+## Limites da revisão concluída
+
+A revisão semântica dos executáveis próprios selecionados desta árvore foi concluída. Esse estado não certifica instalação, modelo vivo, dados de mercado ou lucro. Notas e hashes por arquivo delimitam exatamente a fonte examinada; fontes remotas e versões posteriores exigem sua própria revisão. Consulte o suplemento final de cobertura para testes executados e apenas lidos.

@@ -1,0 +1,464 @@
+### brasileirao_predictor/display.py
+22: import json as _json
+24: from . import market_pricer as mp
+25: from .ingest import ROOT
+27: CACHE_PATH = ROOT / "data" / "bootstrap_cache.json"
+29: _CLV_LABELS = {
+30:     "ou25": "Over/Under 2.5",
+31:     "1x2": "1X2",
+32:     "total": "geral (todos os mercados)",
+33: }
+36: def get_clv_summary():
+40:     if not CACHE_PATH.exists():
+41:         return None
+42:     try:
+43:         data = _json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+44:         return data
+45:     except (ValueError, OSError):
+46:         return None
+49: def _clv_line(cache, market):
+52:     label = _CLV_LABELS[market]
+53:     if not cache or market not in cache.get("markets", {}):
+54:         return f"CLV ({label}): sem dado ainda (rode `python -m brasileirao_predictor.bootstrap`)"
+55:     m = cache["markets"][market]
+56:     sig = "SIGNIFICATIVO" if m["significant"] else "cruza o zero"
+57:     return f"CLV histórico ({label}): {m['mean']:+.2%} [{m['ci_low']:+.2%}, {m['ci_high']:+.2%}]  {sig}  (n={m['n']})"
+60: def compute(name_a, name_b, elo, params, cfg, neutral, conn=None, *, match_date=None):
+69:     from . import model
+70:     from .predict import _market_probs
+72:     adv = 0.0 if neutral else cfg["elo"]["home_advantage"]
+73:     r = model.predict_match(elo[name_a], elo[name_b], params, adv, max_goals=cfg["model"]["max_goals"])
+74:     from .xg_model import maybe_blend
+76:     r = maybe_blend(r, conn, cfg, name_a, name_b, neutral)
+77:     mk = _market_probs(conn, name_a, name_b, match_date=match_date) if conn is not None else None
+78:     return from_prediction(name_a, name_b, elo, params, cfg, neutral, r, mk, match_date=match_date)
+81: def from_prediction(name_a, name_b, elo, params, cfg, neutral, r, mk, *, match_date=None):
+83:     g = r["grid"]
+85:     top = sorted(
+86:         ((i, j, float(g[i, j])) for i in range(g.shape[0]) for j in range(g.shape[1])),
+87:         key=lambda x: -x[2],
+88:     )
+89:     top5 = [{"home": i, "away": j, "prob": p} for i, j, p in top[:5]]
+91:     out = {
+92:         "meta": {
+93:             "team_a": name_a,
+94:             "team_b": name_b,
+95:             "match_date": match_date,
+96:             "prediction_scope": "EXPLORATORY_LEGACY_MODEL",
+97:             "market_admissibility": "DIAGNOSTIC_AGGREGATE_ONLY" if mk else "UNAVAILABLE",
+98:             "capital_authorized": False,
+99:             "elo_a": elo[name_a],
+100:             "elo_b": elo[name_b],
+101:             "venue": "campo neutro" if neutral else f"mando de {name_a}",
+102:         },
+103:         "core": {
+104:             "p_win": r["p_win"],
+105:             "p_draw": r["p_draw"],
+106:             "p_loss": r["p_loss"],
+107:             "over_25": r["over"][2.5],
+108:             "under_25": 1.0 - r["over"][2.5],
+109:             "btts_yes": r["btts"],
+110:             "btts_no": 1.0 - r["btts"],
+111:             "top_score": top5[0],
+112:             "draw_diagnostics": r["draw_diagnostics"],
+113:             "market": mk,
+114:         },
+115:         "expand": {
+116:             "lambda_a": r["lambda_a"],
+117:             "lambda_b": r["lambda_b"],
+118:             "total_goals": r["total_goals"],
+119:             "edge_1x2": None,
+120:             "edge_ou25": None,
+121:         },
+122:         "stats": {
+123:             "top5_scores": top5,
+124:             "params": {
+125:                 "a": params[0] if not isinstance(params, dict) else params.get("a"),
+126:                 "b": params[1] if not isinstance(params, dict) else params.get("b"),
+127:                 "alpha": params[2] if not isinstance(params, dict) else params.get("alpha"),
+128:                 "rho": params[3] if not isinstance(params, dict) else params.get("rho"),
+129:             },
+130:             "over_1_5": r["over"][1.5],
+131:             "over_3_5": r["over"][3.5],
+132:         },
+133:         "full": {
+134:             "dc": mp.double_chance(g),
+135:             "dnb": mp.draw_no_bet(g),
+136:             "handicap": [],
+137:         },
+138:     }
+140:     if mk:
+141:         out["expand"]["edge_1x2"] = {
+142:             name_a: r["p_win"] - 1.0 / mk["odds_home"],
+143:             "empate": r["p_draw"] - 1.0 / mk["odds_draw"],
+144:             name_b: r["p_loss"] - 1.0 / mk["odds_away"],
+145:         }
+146:         if mk.get("odds_over") and mk.get("odds_under"):
+147:             out["expand"]["edge_ou25"] = {
+148:                 "Over": r["over"][2.5] - 1.0 / mk["odds_over"],
+149:                 "Under": (1.0 - r["over"][2.5]) - 1.0 / mk["odds_under"],
+150:             }
+152:     center = -round((r["lambda_a"] - r["lambda_b"]) * 4) / 4
+153:     for off in (-0.5, -0.25, 0.0, 0.25, 0.5):
+154:         line = center + off
+155:         ah = mp.asian_handicap(g, line)
+156:         out["full"]["handicap"].append({"line": line, **ah})
+161:     fav_label, fav_prob = max((name_a, r["p_win"]), ("empate", r["p_draw"]), (name_b, r["p_loss"]), key=lambda x: x[1])
+162:     divergence = None
+163:     if mk:
+164:         market_prob_of_fav = {name_a: mk["p_home"], "empate": mk["p_draw"], name_b: mk["p_away"]}[fav_label]
+165:         divergence = fav_prob - market_prob_of_fav
+166:     out["core"]["favorite"] = fav_label
+167:     out["core"]["favorite_divergence"] = divergence
+169:     out["core"]["confidence"] = _confidence(out["core"], out["expand"], cfg)
+170:     out["core"]["narrative"] = _narrative(out["core"])
+172:     return out
+175: def _confidence(core, expand, cfg):
+180:     if not core["market"]:
+181:         return {"level": "BAIXA", "reason": "sem odds de mercado para cross-check"}
+183:     bt = cfg.get("backtest", {})
+184:     min_edge, max_edge = float(bt.get("min_edge", 0.0)), float(bt.get("max_edge", 1.0))
+186:     edge_ou = expand.get("edge_ou25")
+187:     if edge_ou:
+188:         best_lado, best_edge = max(edge_ou.items(), key=lambda kv: kv[1])
+189:         if min_edge < best_edge <= max_edge:
+190:             return {
+191:                 "level": "NÃO VALIDADA",
+192:                 "reason": f"edge de {best_edge:+.1%} em {best_lado} (O/U 2.5) dentro da "
+193:                 "faixa configurada; isso não comprova vantagem executável",
+194:             }
+196:     div = core.get("favorite_divergence")
+197:     if div is not None and abs(div) >= 0.10:
+198:         return {
+199:             "level": "BAIXA",
+200:             "reason": f"divergência de {div:+.1%} no 1X2 é o viés de achatamento conhecido (README) — não é valor",
+201:         }
+203:     return {"level": "NÃO VALIDADA", "reason": "probabilidade exploratória; vantagem econômica não validada"}
+206: def _narrative(core):
+211:     over_side = "Over" if core["over_25"] >= 0.5 else "Under"
+212:     btts_side = "Sim" if core["btts_yes"] >= 0.5 else "Não"
+213:     coherent = (over_side == "Over") == (btts_side == "Sim")
+214:     return {"over_side": over_side, "btts_side": btts_side, "coherent": coherent}
+217: def _fmt_pct(x):
+218:     return f"{x:.1%}"
+221: def render(data, level=0, as_json=False):
+226:     if as_json:
+227:         print(_json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False))
+228:         return
+230:     meta, core = data["meta"], data["core"]
+231:     ta, tb = meta["team_a"], meta["team_b"]
+232:     cache = get_clv_summary()
+234:     print(f"\n{ta} (Elo {meta['elo_a']:.0f}) vs {tb} (Elo {meta['elo_b']:.0f}) — {meta['venue']}")
+235:     print("  Projeção exploratória. Odds agregadas sem comprovação de disponibilidade ou execução.")
+238:     print(f"  Over/Under 2.5: over {_fmt_pct(core['over_25'])} | under {_fmt_pct(core['under_25'])}")
+239:     print(f"  {_clv_line(cache, 'ou25')}")
+241:     fav = max((ta, core["p_win"]), ("empate", core["p_draw"]), (tb, core["p_loss"]), key=lambda x: x[1])
+243:     def marker(nome):
+244:         return " *" if nome == fav[0] else ""
+249:     print(
+250:         f"  modelo  1X2: {ta} {_fmt_pct(core['p_win'])}{marker(ta)} | "
+251:         f"empate {_fmt_pct(core['p_draw'])}{marker('empate')} | "
+252:         f"{tb} {_fmt_pct(core['p_loss'])}{marker(tb)}  (* favorito)"
+253:     )
+254:     draw = core["draw_diagnostics"]
+255:     modal_home, modal_away = draw["modal_score"]
+256:     print(
+257:         f"  diagnóstico empate/incerteza: moda {modal_home}x{modal_away} "
+258:         f"({_fmt_pct(draw['p_modal_score'])}) | gap dos líderes "
+259:         f"{_fmt_pct(draw['top_1x2_gap'])} | escolha robusta NÃO AVALIADA "
+260:         "(sem threshold validado)"
+261:     )
+262:     print(f"  {_clv_line(cache, '1x2')}")
+263:     print(f"  ambos marcam: sim {_fmt_pct(core['btts_yes'])} | não {_fmt_pct(core['btts_no'])}")
+265:     if core["market"]:
+266:         mk = core["market"]
+267:         print(
+268:             f"  mercado (Shin): {ta} {_fmt_pct(mk['p_home'])} | empate {_fmt_pct(mk['p_draw'])} "
+269:             f"| {tb} {_fmt_pct(mk['p_away'])}"
+270:         )
+271:     else:
+272:         print("  mercado: sem odds deste confronto no banco")
+274:     conf = core["confidence"]
+275:     print(f"  confiança: {conf['level']} — {conf['reason']}")
+277:     nar = core["narrative"]
+278:     if nar["coherent"]:
+279:         print(f"  narrativa: -> coerente ({nar['over_side']} + BTTS {nar['btts_side']})")
+280:     else:
+281:         print(f"  narrativa: -> ATENÇÃO: mercados conflitantes ({nar['over_side']} + BTTS {nar['btts_side']})")
+283:     if level < 1:
+284:         return
+287:     exp = data["expand"]
+288:     print(
+289:         f"\n[--expand] gols esperados: {exp['lambda_a']:.2f} x {exp['lambda_b']:.2f} (total {exp['total_goals']:.2f})"
+290:     )
+291:     if exp["edge_1x2"]:
+292:         print("  edge 1X2 vs preço ofertado: " + " | ".join(f"{k} {v:+.1%}" for k, v in exp["edge_1x2"].items()))
+293:     if exp["edge_ou25"]:
+294:         print("  edge O/U 2.5 vs preço ofertado: " + " | ".join(f"{k} {v:+.1%}" for k, v in exp["edge_ou25"].items()))
+295:     top = core["top_score"]
+296:     print(f"  placar mais provável: {top['home']}x{top['away']} ({_fmt_pct(top['prob'])})")
+298:     if level < 2:
+299:         return
+302:     st = data["stats"]
+303:     print(f"\n[--stats] over 1.5: {_fmt_pct(st['over_1_5'])} | over 3.5: {_fmt_pct(st['over_3_5'])}")
+304:     print(
+305:         "  placares top-5: " + ", ".join(f"{s['home']}x{s['away']} ({_fmt_pct(s['prob'])})" for s in st["top5_scores"])
+306:     )
+307:     p = st["params"]
+308:     print(f"  parâmetros do modelo: a={p['a']:.4f} b={p['b']:.4f} alpha={p['alpha']:.4f} rho={p['rho']:.4f}")
+310:     if level < 3:
+311:         return
+314:     full = data["full"]
+315:     dc, dnb = full["dc"], full["dnb"]
+316:     print(f"\n[--full] dupla chance: 1X {_fmt_pct(dc['1X'])} | 12 {_fmt_pct(dc['12'])} | X2 {_fmt_pct(dc['X2'])}")
+317:     d1, d2 = dnb["1"], dnb["2"]
+318:     print(
+319:         f"  draw no bet: {ta} {_fmt_pct(d1['win'] / (d1['win'] + d1['lose']))} | "
+320:         f"{tb} {_fmt_pct(d2['win'] / (d2['win'] + d2['lose']))} (push {_fmt_pct(d1['push'])})"
+321:     )
+322:     print(f"  handicap asiático (lado {ta}) [sem CLV próprio medido]:")
+323:     for h in full["handicap"]:
+324:         print(
+325:             f"    {h['line']:+.2f}: win {_fmt_pct(h['win'])} | push {_fmt_pct(h['push'])} | lose {_fmt_pct(h['lose'])}"
+326:         )
+327:     print(
+328:         "  escanteios/cartões: não calculados aqui (exigem histórico de match_statistics —"
+329:         " ver `scripts/prever.py`) [SEM VALIDAÇÃO — IC cruza zero, ver docs/HYPERPARAMETERS.md]"
+330:     )
+333: def _event_history(conn, stat_name, elo):
+334:     rows = conn.execute(
+335:         """
+336:         SELECT sm.home_team, sm.away_team, h.value, a.value
+337:         FROM sofascore_matches sm
+338:         JOIN match_statistics h ON h.event_id=sm.event_id AND h.period='ALL'
+339:           AND h.stat_name=? AND h.team='home'
+340:         JOIN match_statistics a ON a.event_id=sm.event_id AND a.period='ALL'
+341:           AND a.stat_name=? AND a.team='away'
+342:         WHERE sm.home_score IS NOT NULL""",
+343:         (stat_name, stat_name),
+344:     ).fetchall()
+345:     return [
+346:         {
+347:             "home_team": h,
+348:             "away_team": aw,
+349:             "home_elo": elo.get(h, 1500),
+350:             "away_elo": elo.get(aw, 1500),
+351:             "home_event": hv,
+352:             "away_event": av,
+353:         }
+354:         for h, aw, hv, av in rows
+355:     ]
+358: def _tournament_avg(conn, stat_name, competition=None):
+359:     if competition is None:
+361:         from .ingest import load_config
+363:         competition = load_config().get("league", "World Cup 2026")
+364:     row = conn.execute(
+365:         """
+366:         SELECT AVG(h.value+a.value), COUNT(*)
+367:         FROM sofascore_matches sm
+368:         JOIN match_statistics h ON h.event_id=sm.event_id AND h.period='ALL'
+369:           AND h.stat_name=? AND h.team='home'
+370:         JOIN match_statistics a ON a.event_id=sm.event_id AND a.period='ALL'
+371:           AND a.stat_name=? AND a.team='away'
+372:         WHERE sm.competition=?""",
+373:         (stat_name, stat_name, competition),
+374:     ).fetchone()
+375:     return row if row and row[1] else (None, 0)
+378: def compute_event(conn, elo, ta, tb, stat_name, lines):
+383:     from .event_models import fit_event_model, predict_event
+385:     hist = _event_history(conn, stat_name, elo)
+386:     if len(hist) < 30:
+387:         return {"insufficient": True, "n": len(hist)}
+389:     params = fit_event_model(hist, stat_name, distribution="poisson")
+390:     lh, la, probs = predict_event(elo.get(ta, 1500), elo.get(tb, 1500), params)
+391:     lam = lh + la
+392:     out = {
+393:         "insufficient": False,
+394:         "n": len(hist),
+395:         "b": params["b"],
+396:         "lh": lh,
+397:         "la": la,
+398:         "lam": lam,
+399:         "over": {ln: probs[f"over_{ln}"] for ln in lines},
+400:         "adjusted": None,
+401:     }
+403:     wc_avg, n_wc = _tournament_avg(conn, stat_name)
+404:     if wc_avg and len(hist) > n_wc:
+405:         from scipy.stats import poisson as _poisson
+407:         base_avg = sum(h["home_event"] + h["away_event"] for h in hist) / len(hist)
+408:         lam_adj = lam * (wc_avg / base_avg)
+409:         out["adjusted"] = {
+410:             "wc_avg": wc_avg,
+411:             "base_avg": base_avg,
+412:             "lam_adj": lam_adj,
+413:             "over": {ln: 1 - _poisson.cdf(ln, lam_adj) for ln in lines},
+414:         }
+415:     return out
+418: def render_event(nome, data, ta, tb, lines):
+419:     if data["insufficient"]:
+420:         print(f"\n{nome}: dados insuficientes ({data['n']} jogos) [SEM VALIDAÇÃO — ver docs/HYPERPARAMETERS.md]")
+421:         return
+422:     print(
+423:         f"\n{nome} (n={data['n']} jogos, b={data['b']:+.2f}) "
+424:         "[SEM VALIDAÇÃO — IC cruza zero, ver docs/HYPERPARAMETERS.md]:"
+425:         f"  {ta} {data['lh']:.1f} + {tb} {data['la']:.1f} = {data['lam']:.1f} esperados"
+426:     )
+427:     print("  modelo:   " + " | ".join(f"Ov{ln}: {data['over'][ln]:.0%}" for ln in lines))
+428:     if data["adjusted"]:
+429:         adj = data["adjusted"]
+430:         print(
+431:             f"  ajustado ao torneio (média Copa {adj['wc_avg']:.1f} vs base "
+432:             f"{adj['base_avg']:.1f} -> lambda {adj['lam_adj']:.1f}): "
+433:             + " | ".join(f"Ov{ln}: {adj['over'][ln]:.0%}" for ln in lines)
+434:         )
+437: def ht_goal_fraction(conn, min_games=50):
+449:     if conn is None:
+450:         return None
+451:     try:
+452:         rows = conn.execute(
+453:             "SELECT home_score_ht + away_score_ht, home_score + away_score "
+454:             "FROM sofascore_matches WHERE home_score_ht IS NOT NULL "
+455:             "AND home_score IS NOT NULL"
+456:         ).fetchall()
+457:     except Exception:  # coluna ainda não migrada
+458:         return None
+459:     n = len(rows)
+460:     gt = sum(t for _, t in rows)
+461:     if not gt or n < min_games:
+462:         return None
+463:     frac = sum(g1 for g1, _ in rows) / gt
+465:     def _frac(sample):
+466:         tot = sum(t for _, t in sample)
+467:         return (sum(g1 for g1, _ in sample) / tot) if tot else 0.0
+469:     try:
+470:         from predictor_core.measurement.bootstrap import bootstrap_ci
+472:         lo, hi, _ = bootstrap_ci(list(rows), _frac, scheme="iid", n_boot=2000, seed=13)
+473:     except Exception:  # core indisponível: fração sem IC
+474:         lo = hi = None
+475:     return {"frac1": frac, "n": n, "ci_low": lo, "ci_high": hi}
+478: def compute_live(
+479:     name_a,
+480:     name_b,
+481:     elo,
+482:     params,
+483:     cfg,
+484:     neutral,
+485:     cur_a,
+486:     cur_b,
+487:     fraction=0.5,
+488:     period_lines=(0.5, 1.5, 2.5),
+489:     final_lines=(1.5, 2.5, 3.5),
+490: ):
+504:     import numpy as np
+506:     from . import model
+508:     adv = 0.0 if neutral else cfg["elo"]["home_advantage"]
+509:     rem = model.predict_remaining(
+510:         elo[name_a],
+511:         elo[name_b],
+512:         params,
+513:         adv,
+514:         fraction=fraction,
+515:         max_goals=cfg["model"]["max_goals"],
+516:     )
+517:     g = rem["grid"]
+518:     idx = np.arange(g.shape[0])
+519:     i_idx, j_idx = idx.reshape(-1, 1), idx.reshape(1, -1)
+520:     final_a, final_b = cur_a + i_idx, cur_b + j_idx
+522:     p_a_more = 1.0 - float(g[0, :].sum())  # P(name_a marca >=1 neste periodo)
+523:     p_b_more = 1.0 - float(g[:, 0].sum())
+524:     totals_period = i_idx + j_idx
+526:     totals_final = final_a + final_b
+527:     flat = [((int(cur_a + i), int(cur_b + j)), float(g[i, j])) for i in idx for j in idx]
+528:     top_final = sorted(flat, key=lambda t: -t[1])[:5]
+530:     return {
+531:         "meta": {
+532:             "team_a": name_a,
+533:             "team_b": name_b,
+534:             "fraction": fraction,
+535:             "current_score": (cur_a, cur_b),
+536:         },
+537:         "period": {
+538:             "lambda_a": rem["lambda_a"],
+539:             "lambda_b": rem["lambda_b"],
+540:             "p_a_scores_more": p_a_more,
+541:             "p_b_scores_more": p_b_more,
+542:             "p_win": rem["p_win"],
+543:             "p_draw": rem["p_draw"],
+544:             "p_loss": rem["p_loss"],
+545:             "over": {t: float(g[totals_period > t].sum()) for t in period_lines},
+546:         },
+547:         "final": {
+548:             "p_win": float(g[final_a > final_b].sum()),
+549:             "p_draw": float(g[final_a == final_b].sum()),
+550:             "p_loss": float(g[final_a < final_b].sum()),
+551:             "over": {t: float(g[totals_final > t].sum()) for t in final_lines},
+552:             "top_scores": top_final,
+553:         },
+554:     }
+557: def render_live(data, kickoff=False, calib=None):
+562:     m, per, fin = data["meta"], data["period"], data["final"]
+563:     ta, tb = m["team_a"], m["team_b"]
+564:     ca, cb = m["current_score"]
+565:     periodo = "1º tempo" if kickoff else "2º tempo"
+566:     if calib:
+567:         ic = f" IC95 [{calib['ci_low']:.0%}, {calib['ci_high']:.0%}]" if calib.get("ci_low") is not None else ""
+568:         print(
+569:             f"\n[SEM CLV — taxa de gol do período calibrada com dado real "
+570:             f"(1º tempo = {calib['frac1']:.0%} dos gols{ic}, n={calib['n']} jogos), "
+571:             "mas nenhum mercado de tempo tem CLV medido no backtest]"
+572:         )
+573:     else:
+574:         print(
+575:             f"\n[SEM VALIDAÇÃO — projeção de {periodo} assume taxa de gol constante "
+576:             "nos 90min, não calibrada com dado de minuto real; ver docs/HYPERPARAMETERS.md]"
+577:         )
+578:     if kickoff:
+579:         print(f"Projeção do {periodo}: {ta} x {tb} (pré-jogo)")
+580:     else:
+581:         print(f"Placar do intervalo: {ta} {ca} x {cb} {tb}  (projeção pro {periodo})")
+582:     print(f"  gols esperados no {periodo}: {ta} {per['lambda_a']:.2f} + {tb} {per['lambda_b']:.2f}")
+583:     print(
+584:         f"  {ta} marca >=1 no {periodo}: {_fmt_pct(per['p_a_scores_more'])} | "
+585:         f"{tb} marca >=1 no {periodo}: {_fmt_pct(per['p_b_scores_more'])}"
+586:     )
+587:     print(
+588:         f"  vencedor do {periodo}: {ta} {_fmt_pct(per['p_win'])} | "
+589:         f"empate {_fmt_pct(per['p_draw'])} | {tb} {_fmt_pct(per['p_loss'])}"
+590:     )
+591:     print(f"  Over/Under do {periodo}: " + " | ".join(f"Ov{ln}: {_fmt_pct(p)}" for ln, p in per["over"].items()))
+593:     if kickoff:
+594:         return  # pré-jogo: "final" == "period" (cur=0-0), nao repete a mesma info
+596:     print(f"\nPlacar final projetado (intervalo + {periodo}):")
+597:     print(
+598:         f"  {ta} vence: {_fmt_pct(fin['p_win'])} | empate: {_fmt_pct(fin['p_draw'])} "
+599:         f"| {tb} vence: {_fmt_pct(fin['p_loss'])}"
+600:     )
+601:     print(
+602:         "  Over/Under 2.5 (jogo completo): over "
+603:         + _fmt_pct(fin["over"][2.5])
+604:         + " | under "
+605:         + _fmt_pct(1.0 - fin["over"][2.5])
+606:     )
+607:     print(
+608:         "  placares finais mais prováveis: " + ", ".join(f"{h}x{a} ({_fmt_pct(p)})" for (h, a), p in fin["top_scores"])
+609:     )
+612: def render_summary_table(batch):
+616:     if not batch:
+617:         return
+618:     print("\n" + "=" * 88)
+619:     print(f"{'data':<12}{'confronto':<26}{'favorito':<20}{'O/U 2.5':<14}{'BTTS':<8}{'conf.':<8}")
+620:     print("-" * 88)
+621:     for date, data in batch:
+622:         core, meta = data["core"], data["meta"]
+623:         ta, tb = meta["team_a"], meta["team_b"]
+624:         fav_label = core["favorite"]
+625:         fav_prob = {ta: core["p_win"], "empate": core["p_draw"], tb: core["p_loss"]}[fav_label]
+626:         ou_side = "Over" if core["over_25"] >= 0.5 else "Under"
+627:         ou_prob = core["over_25"] if ou_side == "Over" else core["under_25"]
+628:         btts_side = "Sim" if core["btts_yes"] >= 0.5 else "Não"
+629:         confronto = f"{ta} x {tb}"
+630:         print(
+631:             f"{str(date):<12}{confronto:<26}{fav_label + ' ' + _fmt_pct(fav_prob):<20}"
+632:             f"{ou_side + ' ' + _fmt_pct(ou_prob):<14}{btts_side:<8}{core['confidence']['level']:<8}"
+633:         )
+634:     print("=" * 88)

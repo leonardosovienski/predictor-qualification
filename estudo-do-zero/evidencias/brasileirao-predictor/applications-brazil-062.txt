@@ -1,0 +1,289 @@
+### tests/test_price_hurdle.py
+3: from copy import deepcopy
+5: import pytest
+7: from brasileirao_predictor.research.price_strength.price_hurdle import (
+8:     aggregate_price_hurdle,
+9:     audit_legacy_2025,
+10:     break_even_decimal,
+11: )
+14: def _row(**extra):
+15:     return {
+16:         "event_id": "synthetic",
+17:         "date": "2025-04-01",
+18:         "kickoff": "2025-04-01T20:00:00+00:00",
+19:         "tournament": "Brasileirão Série A",
+20:         "home": "synthetic-home",
+21:         "away": "synthetic-away",
+22:         "odds": {"1x2": [2.0, 3.0, 4.0]},
+23:         **extra,
+24:     }
+27: def test_break_even_matches_two_branch_cash_flow_with_commission():
+28:     p, cost, commission = 0.4, 0.02, 0.05
+29:     odd = break_even_decimal(p, cost_per_unit=cost, commission_on_profit=commission)
+30:     win_net = (odd - 1) * (1 - commission) - cost
+31:     loss_net = -1 - cost
+32:     assert p * win_net + (1 - p) * loss_net == pytest.approx(0, abs=1e-12)
+33:     assert odd == pytest.approx(2.631578947368421)
+36: @pytest.mark.parametrize("odds,sign", [([2, 3, 4], "positive"), ([3, 3, 3], "zero"), ([4, 4, 4], "negative")])
+37: def test_own_price_identity_preserves_sign_and_never_claims_execution(odds, sign):
+38:     result = aggregate_price_hurdle(odds)
+39:     assert result["margin_sign"] == sign
+40:     for side, probability in result["probabilities"].items():
+41:         assert probability * result["aggregate_odds"][side] - 1 == pytest.approx(result["own_price_gross_ev"])
+42:         assert probability * result["break_even_odds_scenario"][side] - 1 - 0.02 == pytest.approx(0, abs=1e-12)
+43:     assert result["executable"] is False
+46: def test_exact_hurdle_separates_embedded_margin_from_additional_cost():
+47:     result = aggregate_price_hurdle([2, 3, 4])
+48:     assert result["overround_sum"] == pytest.approx(13 / 12)
+49:     assert result["relative_price_uplift_to_break_even"] == pytest.approx(0.105)
+50:     assert result["break_even_odds_scenario"]["home"] == pytest.approx(2.21)
+53: @pytest.mark.parametrize(
+54:     "odds",
+55:     [None, [2, 3], [2, 3, 4, 5], [True, 3, 4], [1, 3, 4], [float("nan"), 3, 4], [float("inf"), 3, 4], [10**1000, 3, 4]],
+56: )
+57: def test_invalid_prices_do_not_enter_numeric_coverage(odds):
+58:     report = audit_legacy_2025([_row(odds={"1x2": odds})])
+59:     assert report["summary"]["universe_matches"] == 1
+60:     assert report["summary"]["numeric_complete_vectors"] == 0
+61:     assert report["summary"]["abstentions"] == 1
+62:     assert report["summary"]["opportunities"] is None
+63:     assert report["abstention_portfolio"]["roi_on_stakes"] is None
+66: @pytest.mark.parametrize(
+67:     "p,c,r", [(0, 0.02, 0), (1.1, 0.02, 0), (True, 0.02, 0), (0.4, -1, 0), (0.4, float("nan"), 0), (0.4, 0.02, 1)]
+68: )
+69: def test_invalid_probability_and_cost_fail_closed(p, c, r):
+70:     with pytest.raises(ValueError):
+71:         break_even_decimal(p, cost_per_unit=c, commission_on_profit=r)
+74: def test_future_rows_are_excluded_before_outcomes_or_odds_are_used():
+75:     future = {"date": "2026-04-01", "result": object(), "odds": object()}
+76:     report = audit_legacy_2025([future, _row(result=object())])
+77:     assert report["summary"]["universe_matches"] == 1
+78:     assert report["labels_accessed"] is False
+81: def test_results_do_not_affect_any_output_and_inputs_are_unchanged():
+82:     first = _row(result={"home": 7, "away": 0})
+83:     original = deepcopy(first)
+84:     report = audit_legacy_2025([first])
+85:     second = _row(result={"home": 0, "away": 7})
+86:     assert report == audit_legacy_2025([second])
+87:     assert first == original
+88:     assert report["summary"]["executable_price_pairs"] == 0
+89:     assert report["summary"]["opportunities"] is None
+90:     assert report["abstention_portfolio"]["total_business_net_result"] is None
+93: @pytest.mark.parametrize(
+94:     "mutation",
+95:     [
+96:         {"event_id": True},
+97:         {"home": "synthetic-away"},
+98:         {"kickoff": "2026-04-01T20:00:00+00:00"},
+99:         {"kickoff": "2025-04-02T20:00:00+00:00"},
+100:         {"kickoff": "2025-04-01T20:00:00"},
+101:         {"bookmaker": "new-schema"},
+102:         {"tournament": "other-league"},
+103:     ],
+104: )
+105: def test_identity_time_and_schema_conflicts_abort(mutation):
+106:     with pytest.raises(ValueError):
+107:         audit_legacy_2025([_row(**mutation)])
+110: def test_duplicate_event_is_not_an_independent_observation():
+111:     with pytest.raises(ValueError, match="duplicate_event_identity"):
+112:         audit_legacy_2025([_row(), _row()])
+115: def test_sensitivity_holds_universe_and_prices_fixed():
+116:     report = audit_legacy_2025([_row(), _row(event_id="missing", odds=None)])
+117:     scenarios = report["summary"]["relative_price_uplift_scenarios"]
+118:     assert scenarios["0.0"]["n"] == scenarios["0.05"]["n"] == 1
+119:     assert scenarios["0.05"]["median"] - scenarios["0.0"]["median"] == pytest.approx(13 / 12 * 0.05)
+120:     assert report["summary"]["universe_matches"] == 2
+121:     assert report["summary"]["abstentions"] == 2
+### tests/test_price_strength_artifacts.py
+1: from __future__ import annotations
+3: import hashlib
+4: import json
+5: from pathlib import Path
+7: import pytest
+9: from brasileirao_predictor.research.price_strength import artifacts as io
+12: @pytest.fixture
+13: def isolated(tmp_path, monkeypatch):
+14:     root = tmp_path / "repo"
+15:     root.mkdir()
+16:     package = root / "brasileirao_predictor" / "research" / "price_strength"
+17:     package.mkdir(parents=True)
+18:     (package / "candidate.py").write_bytes(b"VERSION = 'synthetic'\n")
+19:     monkeypatch.setattr(io, "REPOSITORY_ROOT", root)
+20:     monkeypatch.setattr(io, "PACKAGE_ROOT", package)
+21:     return root
+24: def input_file(tmp_path, content=b'{"x":1}\n'):
+25:     path = tmp_path / "input.jsonl"
+26:     path.write_bytes(content)
+27:     return path
+30: @pytest.mark.parametrize("content", [b'{"x":NaN}', b'{"x":Infinity}', b'{"x":-Infinity}', b'{"x":1e999}'])
+31: def test_reader_rejects_nonfinite_json_numbers(isolated, tmp_path, content):
+32:     path = input_file(tmp_path, content)
+33:     with pytest.raises(ValueError, match="non-finite"):
+34:         io.read_json(path)
+35:     with pytest.raises(ValueError, match="line 1"):
+36:         io.read_jsonl(path)
+39: @pytest.mark.parametrize("content", [b'{"x":1,"x":2}', b'{"nested":{"x":1,"x":2}}'])
+40: def test_reader_rejects_duplicate_keys_at_every_depth(isolated, tmp_path, content):
+41:     path = input_file(tmp_path, content)
+42:     with pytest.raises(ValueError, match="duplicate"):
+43:         io.read_json(path)
+44:     with pytest.raises(ValueError, match="duplicate"):
+45:         io.read_jsonl(path)
+48: def test_reader_preserves_boolean_types_and_requires_utf8_objects(isolated, tmp_path):
+49:     path = input_file(tmp_path, b'{"flag":true,"number":1,"text":"1"}\n')
+50:     assert io.read_json(path) == {"flag": True, "number": 1, "text": "1"}
+51:     assert type(io.read_jsonl(path)[0]["flag"]) is bool
+52:     path.write_bytes(b'{"text":"\xff"}')
+53:     with pytest.raises(UnicodeDecodeError):
+54:         io.read_json(path)
+55:     path.write_bytes(b"[]")
+56:     with pytest.raises(ValueError, match="object"):
+57:         io.read_json(path)
+58:     with pytest.raises(ValueError, match="object"):
+59:         io.read_jsonl(path)
+62: def test_jsonl_rejects_blank_lines_and_keeps_error_line(isolated, tmp_path):
+63:     path = input_file(tmp_path, b'{"x":1}\n\n{"x":2}\n')
+64:     with pytest.raises(ValueError, match="line 2"):
+65:         io.read_jsonl(path)
+68: @pytest.mark.parametrize("jsonl", [False, True])
+69: def test_read_hashed_parses_and_hashes_one_identical_read(isolated, tmp_path, monkeypatch, jsonl):
+70:     original = b'{"x":1}\n'
+71:     path = input_file(tmp_path, original)
+72:     read_bytes = Path.read_bytes
+73:     calls = []
+75:     def changing_read(candidate):
+76:         calls.append(candidate)
+77:         content = read_bytes(candidate)
+78:         candidate.write_bytes(b'{"x":2}\n')
+79:         return content
+81:     monkeypatch.setattr(Path, "read_bytes", changing_read)
+82:     value, fingerprint = io.read_hashed(path, jsonl=jsonl)
+83:     assert value == ([{"x": 1}] if jsonl else {"x": 1})
+84:     assert fingerprint == hashlib.sha256(original).hexdigest()
+85:     assert calls == [path]
+88: def test_jsonl_preserves_unicode_separator_inside_json_string(isolated, tmp_path):
+89:     path = input_file(tmp_path, '{"text":"a\u2028b"}\n'.encode())
+90:     assert io.read_jsonl(path) == [{"text": "a\u2028b"}]
+93: def test_repository_data_is_rejected_before_open(isolated, monkeypatch):
+94:     target = isolated / "data" / "forbidden.jsonl"
+95:     monkeypatch.setattr(Path, "read_bytes", lambda path: pytest.fail("blocked input was opened"))
+96:     with pytest.raises(ValueError, match="repository data"):
+97:         io.read_json(target)
+98:     with pytest.raises(ValueError, match="repository data"):
+99:         io.read_jsonl(target)
+102: def test_symlink_input_resolved_into_repository_data_is_rejected(isolated, tmp_path):
+103:     data = isolated / "data"
+104:     data.mkdir()
+105:     target = data / "synthetic.jsonl"
+106:     target.write_text("{}", encoding="utf-8")
+107:     linked = tmp_path / "linked.jsonl"
+108:     try:
+109:         linked.symlink_to(target)
+110:     except OSError:
+111:         pytest.skip("platform does not permit creating a synthetic symlink")
+112:     with pytest.raises(ValueError, match="repository data"):
+113:         io.read_jsonl(linked)
+116: def test_receipt_hashes_exact_inputs_artifacts_and_source_code(isolated, tmp_path):
+117:     source = input_file(tmp_path)
+118:     output = tmp_path / "run"
+119:     manifest = io.write_artifacts(
+120:         output,
+121:         inputs={"history": source},
+122:         artifacts={"rows.jsonl": [{"x": 1}], "summary.json": {"n": 1}},
+123:         metadata={"scientific_state": "SYNTHETIC_DEMONSTRATION"},
+124:     )
+125:     assert manifest["status"] == "COMPLETE"
+126:     assert manifest["inputs"]["history"]["sha256"] == hashlib.sha256(source.read_bytes()).hexdigest()
+127:     assert manifest["source_code"]["candidate.py"]["sha256"] == hashlib.sha256(b"VERSION = 'synthetic'\n").hexdigest()
+128:     for name in ("rows.jsonl", "summary.json"):
+129:         assert manifest["artifacts"][name]["sha256"] == hashlib.sha256((output / name).read_bytes()).hexdigest()
+130:     assert json.loads((output / "manifest.json").read_text(encoding="utf-8")) == manifest
+131:     assert io.read_jsonl(output / "rows.jsonl") == [{"x": 1}]
+134: @pytest.mark.parametrize("relative", ["data/run", ".git/run", "."])
+135: def test_output_cannot_target_data_git_or_repository_root(isolated, tmp_path, relative):
+136:     source = input_file(tmp_path)
+137:     with pytest.raises(ValueError):
+138:         io.write_artifacts(isolated / relative, inputs={"input": source}, artifacts={}, metadata={})
+141: def test_existing_directory_or_input_cannot_be_overwritten(isolated, tmp_path):
+142:     source = input_file(tmp_path)
+143:     for destination in (tmp_path, source):
+144:         with pytest.raises(FileExistsError):
+145:             io.write_artifacts(destination, inputs={"input": source}, artifacts={}, metadata={})
+146:     assert source.read_bytes() == b'{"x":1}\n'
+149: @pytest.mark.parametrize(
+150:     "name",
+151:     ["../escape.json", "nested/x.json", "nested\\x.json", "C:x.json", "manifest.json", "failure.json", "wrong.txt"],
+152: )
+153: def test_invalid_artifact_names_fail_before_creating_output(isolated, tmp_path, name):
+154:     output = tmp_path / "run"
+155:     with pytest.raises(ValueError, match="filename"):
+156:         io.write_artifacts(output, inputs={}, artifacts={name: {}}, metadata={})
+157:     assert not output.exists()
+160: @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+161: def test_nonfinite_output_rejected_before_directory_creation(isolated, tmp_path, value):
+162:     output = tmp_path / "run"
+163:     with pytest.raises(ValueError):
+164:         io.write_artifacts(output, inputs={}, artifacts={"bad.json": {"value": value}}, metadata={})
+165:     assert not output.exists()
+168: def test_jsonl_requires_list_of_objects_and_case_collisions_are_rejected(isolated, tmp_path):
+169:     for artifacts in ({"rows.jsonl": {}}, {"rows.jsonl": [1]}, {"A.json": {}, "a.json": {}}):
+170:         with pytest.raises(ValueError):
+171:             io.write_artifacts(tmp_path / "run", inputs={}, artifacts=artifacts, metadata={})
+172:         assert not (tmp_path / "run").exists()
+175: def test_failed_write_preserves_existing_artifact_without_success_manifest(isolated, tmp_path, monkeypatch):
+176:     original_open = Path.open
+177:     output = tmp_path / "run"
+179:     def fail_second(path, mode="r", *args, **kwargs):
+180:         if path == output / "b.json" and mode == "xb":
+181:             raise OSError("synthetic storage failure")
+182:         return original_open(path, mode, *args, **kwargs)
+184:     monkeypatch.setattr(Path, "open", fail_second)
+185:     with pytest.raises(OSError, match="synthetic"):
+186:         io.write_artifacts(output, inputs={}, artifacts={"a.json": {}, "b.json": {}}, metadata={})
+187:     assert (output / "a.json").exists()
+188:     assert not (output / "manifest.json").exists()
+189:     assert io.read_json(output / "failure.json")["status"] == "FAILED"
+192: def test_failed_manifest_publication_cannot_leave_complete_receipt(isolated, tmp_path, monkeypatch):
+193:     def fail_publish(*args):
+194:         raise OSError("synthetic publication failure")
+196:     monkeypatch.setattr(io.os, "link", fail_publish)
+197:     output = tmp_path / "run"
+198:     with pytest.raises(OSError, match="publication"):
+199:         io.write_artifacts(output, inputs={}, artifacts={"summary.json": {}}, metadata={})
+200:     assert (output / "summary.json").exists()
+201:     assert not (output / "manifest.json").exists()
+202:     assert io.read_json(output / "failure.json")["status"] == "FAILED"
+205: def test_changed_input_fails_before_artifact_write_and_records_failure(isolated, tmp_path):
+206:     source = input_file(tmp_path)
+207:     rows, fingerprint = io.read_hashed(source, jsonl=True)
+208:     source.write_bytes(b'{"x":2}\n')
+209:     output = tmp_path / "run"
+210:     with pytest.raises(ValueError, match="changed"):
+211:         io.write_artifacts(
+212:             output,
+213:             inputs={"history": source},
+214:             artifacts={"rows.jsonl": rows},
+215:             metadata={"input_hashes_used": {"history": fingerprint}},
+216:         )
+217:     assert not (output / "rows.jsonl").exists()
+218:     assert not (output / "manifest.json").exists()
+219:     assert io.read_json(output / "failure.json")["status"] == "FAILED"
+222: @pytest.mark.parametrize("expected", [{}, {"wrong": "hash"}, None])
+223: def test_input_hash_expectations_cannot_silently_omit_inputs(isolated, tmp_path, expected):
+224:     source = input_file(tmp_path)
+225:     output = tmp_path / "run"
+226:     with pytest.raises(ValueError, match="exactly"):
+227:         io.write_artifacts(output, inputs={"history": source}, artifacts={}, metadata={"input_hashes_used": expected})
+228:     assert not (output / "manifest.json").exists()
+229:     assert io.read_json(output / "failure.json")["status"] == "FAILED"
+232: def test_matching_input_hashes_connect_receipt_to_processed_bytes(isolated, tmp_path):
+233:     source = input_file(tmp_path)
+234:     rows, fingerprint = io.read_hashed(source, jsonl=True)
+235:     manifest = io.write_artifacts(
+236:         tmp_path / "run",
+237:         inputs={"history": source},
+238:         artifacts={"rows.jsonl": rows},
+239:         metadata={"input_hashes_used": {"history": fingerprint}},
+240:     )
+241:     assert manifest["inputs"]["history"]["sha256"] == fingerprint
+242:     assert manifest["metadata"]["input_hashes_used"]["history"] == fingerprint

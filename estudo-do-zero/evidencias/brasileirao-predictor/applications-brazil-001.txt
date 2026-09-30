@@ -1,0 +1,842 @@
+### brasileirao_predictor/bet_log.py
+19: import errno
+20: import json
+21: import math
+22: import os
+23: import uuid
+24: from contextlib import ExitStack, contextmanager
+25: from datetime import UTC, datetime
+26: from functools import wraps
+27: from numbers import Integral, Real
+28: from pathlib import Path
+30: ENV_PATH = "BETS_LOG_PATH"
+31: ENV_BANK_PATH = "BANKROLL_LOG_PATH"
+32: ROOT = Path(__file__).resolve().parent.parent
+33: _DEFAULT = ROOT / "data" / "bets.jsonl"
+34: _BANK_DEFAULT = ROOT / "data" / "bankroll.jsonl"
+40: MAX_UNIT_PCT = 0.02
+41: MAX_OPEN_UNITS = 10.0
+49: MARKETS = {
+50:     "ou25": (2.5, "FT"),
+51:     "ou15": (1.5, "FT"),
+52:     "ou05_1t": (0.5, "1T"),
+53:     "ou15_1t": (1.5, "1T"),
+54:     "ou25_1t": (2.5, "1T"),
+55:     "ou05_2t": (0.5, "2T"),
+56:     "ou15_2t": (1.5, "2T"),
+57:     "ou25_2t": (2.5, "2T"),
+58: }
+59: VALIDATED = {"ou25"}  # único mercado com funil de CLV desenhado
+61: TRIALS_DEFAULT = ROOT / "data" / "trials.json"
+64: _GATE_MARKET_ALIASES = {"ou25": {"ou25", "ou2.5"}}
+67: def capital_gate_status(market: str, trials_path=None) -> str | None:
+73:     aliases = _GATE_MARKET_ALIASES.get(market)
+74:     if not aliases:
+75:         return None
+76:     path = Path(trials_path or os.environ.get("TRIALS_LOG_PATH") or TRIALS_DEFAULT)
+77:     if not path.exists():
+78:         return f"trials.json não encontrado em {path} — gate de capital não verificável"
+79:     from predictor_core.contracts.registry import TrialRegistry
+81:     trials = TrialRegistry(path).load()
+82:     relevant = [t for t in trials if t.get("params", {}).get("market") in aliases]
+83:     if any(t.get("status") == "comprovada" for t in relevant):
+84:         return None
+85:     return (
+86:         f"nenhuma trial pré-registrada para o mercado {market!r} tem status='comprovada' em "
+87:         f"{path.name} — a regra 2 (aposta real só com CLV comprovado no backtest deste domínio) "
+88:         "ainda não está satisfeita"
+89:     )
+92: def _resolve(path=None) -> Path:
+93:     return Path(path or os.environ.get(ENV_PATH) or _DEFAULT)
+96: @contextmanager
+97: def _writer_lock(path: Path):
+104:     lock_path = path.with_name(path.name + ".writer.lock")
+105:     lock_path.parent.mkdir(parents=True, exist_ok=True)
+106:     with open(lock_path, "a+b") as handle:
+107:         if os.name == "nt":
+108:             import msvcrt
+110:             def acquire():
+111:                 handle.seek(0)
+112:                 msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+114:             def release():
+115:                 handle.seek(0)
+116:                 msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+118:         else:
+119:             import fcntl
+121:             def acquire():
+122:                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+124:             def release():
+125:                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+127:         try:
+128:             acquire()
+129:         except OSError as exc:
+130:             raise BlockingIOError(errno.EWOULDBLOCK, "livro indisponível para escrita exclusiva") from exc
+131:         try:
+132:             yield
+133:         finally:
+134:             release()
+137: def _single_writer(resolve):
+138:     def decorate(function):
+139:         @wraps(function)
+140:         def locked(*args, **kwargs):
+141:             path = resolve(kwargs.get("path")).resolve()
+142:             with _writer_lock(path):
+143:                 return function(*args, **{**kwargs, "path": path})
+145:         return locked
+147:     return decorate
+150: def _read_records(p: Path, kinds: set[str]) -> list[dict]:
+151:     if not p.exists():
+152:         return []
+154:     def unique_object(pairs):
+155:         result = {}
+156:         for key, value in pairs:
+157:             if key in result:
+158:                 raise ValueError("chave JSON duplicada no livro")
+159:             result[key] = value
+160:         return result
+162:     def finite_float(value):
+163:         number = float(value)
+164:         _finite_number(number, "valor JSON")
+165:         return number
+167:     def invalid_constant(value):
+168:         raise ValueError("constante JSON não finita no livro")
+170:     rows = [
+171:         json.loads(line, object_pairs_hook=unique_object, parse_float=finite_float, parse_constant=invalid_constant)
+172:         for line in p.read_text(encoding="utf-8").splitlines()
+173:         if line.strip()
+174:     ]
+175:     if any(
+176:         not isinstance(row, dict) or not isinstance(row.get("kind"), str) or row["kind"] not in kinds for row in rows
+177:     ):
+178:         raise ValueError("registro desconhecido no livro")
+179:     return rows
+182: def _read(path=None) -> list[dict]:
+183:     return _read_records(_resolve(path), {"bet", "settlement"})
+186: def _append(rec: dict, path=None) -> None:
+188:     encoded = (json.dumps(rec, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+189:     dest = _resolve(path)
+190:     dest.parent.mkdir(parents=True, exist_ok=True)
+191:     with open(dest, "a+b") as f:
+192:         f.seek(0, os.SEEK_END)
+193:         if f.tell():
+194:             f.seek(-1, os.SEEK_END)
+195:             if f.read(1) != b"\n":
+196:                 encoded = b"\n" + encoded
+197:         f.write(encoded)
+198:         f.flush()
+199:         os.fsync(f.fileno())
+202: def _finite_number(value, name):
+203:     if isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value):
+204:         raise ValueError(f"{name} deve ser um número finito")
+207: def _settlement_index(rows):
+208:     bets = {}
+209:     for row in rows:
+210:         if row["kind"] != "bet":
+211:             continue
+212:         for field in ("stake", "odds"):
+213:             _finite_number(row.get(field), field)
+214:         if row["stake"] <= 0 or row["odds"] <= 1:
+215:             raise ValueError("stake ou odd inválida no livro")
+216:         market = row.get("market")
+217:         if not isinstance(market, str) or market not in MARKETS:
+218:             raise ValueError("mercado inválido no livro")
+219:         if (row.get("line"), row.get("period")) != MARKETS[market] or row.get("selection") not in {"over", "under"}:
+220:             raise ValueError("contrato de mercado inconsistente no livro")
+221:         if any(not isinstance(row.get(field), str) or not row[field].strip() for field in ("home", "away")):
+222:             raise ValueError("identidade dos times inválida no livro")
+223:         if row.get("bet_id") is not None:
+224:             identity = row["bet_id"]
+225:             if not isinstance(identity, str) or not identity.strip() or identity in bets:
+226:                 raise ValueError("bet_id inválido ou duplicado no livro")
+227:             bets[identity] = row
+228:     by_id, by_line = {}, {}
+229:     for row in rows:
+230:         if row["kind"] != "settlement":
+231:             continue
+232:         if row.get("bet_id"):
+233:             if row["bet_id"] in by_id:
+234:                 raise ValueError("bet_id possui liquidações duplicadas; reconciliação necessária")
+235:             by_id[row["bet_id"]] = row
+236:             bet = bets.get(row["bet_id"])
+237:         else:
+238:             index = row.get("bet_line_no")
+239:             if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(rows):
+240:                 raise ValueError("linha legada inválida")
+241:             if index in by_line:
+242:                 raise ValueError("linha legada possui liquidações duplicadas")
+243:             by_line[index] = row
+244:             bet = rows[index]
+245:             if bet.get("bet_id"):
+246:                 raise ValueError("liquidação legada não pode substituir bet_id")
+247:         if bet is None or bet.get("kind") != "bet":
+248:             raise ValueError("liquidação sem aposta correspondente")
+249:         if any(row.get(field) != bet.get(field) for field in ("home", "away", "market", "selection", "odds", "stake")):
+250:             raise ValueError("liquidação diverge da aposta correspondente")
+251:         for field in ("stake", "odds", "profit"):
+252:             _finite_number(row.get(field), field)
+253:         if row.get("clv_close") is not None:
+254:             _finite_number(row["clv_close"], "clv_close")
+255:         won = row.get("won")
+256:         if "won" not in row or (won is not None and not isinstance(won, bool)):
+257:             raise ValueError("resultado da liquidação inválido")
+258:         expected = 0.0 if won is None else bet["stake"] * (bet["odds"] - 1) if won else -bet["stake"]
+259:         if not math.isclose(row["profit"], expected, rel_tol=0, abs_tol=0.000050001):
+260:             raise ValueError("lucro bruto não reconcilia com stake, odd e resultado")
+261:     return by_id, by_line
+264: def _goal_count(value):
+265:     if isinstance(value, str) and value.isascii() and value.isdecimal():
+266:         value = int(value)
+267:     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+268:         raise ValueError("placar inválido: exige contagem inteira não negativa")
+269:     return int(value)
+272: @_single_writer(_resolve)
+273: def add_bet(
+274:     home,
+275:     away,
+276:     market,
+277:     selection,
+278:     odds,
+279:     *,
+280:     book=None,
+281:     stake=1.0,
+282:     model_prob=None,
+283:     edge=None,
+284:     match_date=None,
+285:     kickoff=None,
+286:     note=None,
+287:     path=None,
+288:     logged_at=None,
+289:     bet_id=None,
+290: ) -> dict:
+297:     if market not in MARKETS:
+298:         raise ValueError(f"mercado desconhecido: {market!r} — use um de {sorted(MARKETS)}")
+299:     _finite_number(odds, "odd")
+300:     _finite_number(stake, "stake")
+301:     if not isinstance(selection, str) or selection.lower() not in {"over", "under"}:
+302:         raise ValueError("selection deve ser over ou under")
+303:     if model_prob is not None:
+304:         _finite_number(model_prob, "model_prob")
+305:         if not 0 <= model_prob <= 1:
+306:             raise ValueError("model_prob deve estar entre 0 e 1")
+307:     if edge is not None:
+308:         _finite_number(edge, "edge")
+309:     if odds <= 1.0:
+310:         raise ValueError(f"odd decimal inválida: {odds}")
+311:     if stake <= 0:
+312:         raise ValueError(f"stake inválido: {stake} — tem que ser positivo (stake negativo corrompe ROI e exposição)")
+317:     cap = os.environ.get("BETLOG_MAX_INFO_STAKE")
+318:     if cap is not None and market not in VALIDATED:
+319:         cap_value = float(cap)
+320:         _finite_number(cap_value, "BETLOG_MAX_INFO_STAKE")
+321:         if cap_value < 0:
+322:             raise ValueError("BETLOG_MAX_INFO_STAKE deve ser não negativo")
+323:     if cap is not None and market not in VALIDATED and float(stake) > float(cap):
+324:         raise ValueError(
+325:             f"stake {stake}u excede o teto de {cap}u para mercado SEM CLV "
+326:             f"validado ({market}) — teto definido em BETLOG_MAX_INFO_STAKE"
+327:         )
+328:     line, period = MARKETS[market]
+329:     now_iso = logged_at or datetime.now(UTC).isoformat(timespec="seconds")
+330:     late = None
+331:     if kickoff:
+332:         try:
+333:             ko = datetime.fromisoformat(kickoff.replace("Z", "+00:00"))
+334:             now = datetime.fromisoformat(now_iso.replace("Z", "+00:00"))
+335:             late = now >= ko
+336:         except (ValueError, TypeError):
+341:             kickoff, late = None, None  # timestamp ilegível/ambíguo: ignora, não trava
+343:     from .predict import _canon
+345:     target = frozenset((_canon(home), _canon(away)))
+346:     rows = _read(path)
+347:     if bet_id is not None and (
+348:         not isinstance(bet_id, str) or not bet_id.strip() or any(r.get("bet_id") == bet_id for r in rows)
+349:     ):
+350:         raise ValueError("bet_id inválido ou já registrado")
+351:     settled_ids, settled_lines = _settlement_index(rows)
+352:     dup = any(
+353:         r["kind"] == "bet"
+354:         and (r.get("bet_id") not in settled_ids if r.get("bet_id") else i not in settled_lines)
+355:         and frozenset((_canon(r["home"]), _canon(r["away"]))) == target
+356:         and r["market"] == market
+357:         and r["selection"] == selection.lower()
+358:         for i, r in enumerate(rows)
+359:     )
+360:     rec = {
+367:         "bet_id": bet_id or str(uuid.uuid4()),
+368:         "logged_at": now_iso,
+369:         "kind": "bet",
+370:         "status": "open",
+371:         "home": home,
+372:         "away": away,
+373:         "match_date": match_date,
+374:         "kickoff": kickoff,
+375:         "late": late,
+376:         "market": market,
+377:         "line": line,
+378:         "period": period,
+379:         "selection": selection.lower(),
+380:         "odds": float(odds),
+381:         "book": book,
+382:         "stake": float(stake),
+383:         "model_prob": model_prob,
+384:         "edge": edge,
+385:         "note": note,
+386:         "validated": market in VALIDATED,
+387:         "duplicate_of_open": dup,
+388:     }
+389:     _append(rec, path)
+390:     return rec
+393: @_single_writer(_resolve)
+394: def settle_bet(
+395:     home, away, home_score, away_score, *, ht=None, path=None, recorded_at=None, match_date=None
+396: ) -> list[dict]:
+412:     from .predict import _canon
+414:     home_score, away_score = _goal_count(home_score), _goal_count(away_score)
+415:     if isinstance(ht, str):
+416:         ht = ht.split("-")
+417:     if ht is not None:
+418:         if not isinstance(ht, (tuple, list)) or len(ht) != 2:
+419:             raise ValueError("placar inválido: intervalo exige dois valores")
+420:         ht = tuple(_goal_count(value) for value in ht)
+421:     if ht is not None and (int(ht[0]) > home_score or int(ht[1]) > away_score):
+422:         raise ValueError("placar do intervalo por time não pode exceder o placar final")
+423:     total_ft = home_score + away_score
+424:     total_ht = None if ht is None else int(ht[0]) + int(ht[1])
+425:     if total_ht is not None and total_ht > total_ft:
+426:         raise ValueError(
+427:             f"placar do intervalo ({total_ht} gols) maior que o final "
+428:             f"({total_ft}) — erro de digitação? dinheiro real exige "
+429:             "placar certo"
+430:         )
+431:     target = frozenset((_canon(home), _canon(away)))
+432:     open_ids = {}
+433:     rows = _read(path)
+434:     settled_bet_ids, settled_ids = _settlement_index(rows)
+435:     for i, r in enumerate(rows):
+436:         key = frozenset((_canon(r["home"]), _canon(r["away"])))
+437:         if r["kind"] == "bet" and key == target:
+438:             open_ids[i] = r
+440:     def _already_settled(i, b):
+446:         if b.get("bet_id"):
+447:             return b["bet_id"] in settled_bet_ids
+448:         return i in settled_ids
+450:     candidates = {i: b for i, b in open_ids.items() if not _already_settled(i, b)}
+451:     dates: set[str] = {
+452:         str(value) for bet in candidates.values() if (value := bet.get("match_date") or (bet.get("kickoff") or "")[:10])
+453:     }
+454:     if match_date is None and len(dates) > 1:
+455:         raise ValueError(
+456:             f"confronto {home} x {away} tem apostas abertas de {len(dates)} datas "
+457:             f"diferentes ({sorted(dates)}) — passe match_date para desambiguar "
+458:             "qual jogo está sendo liquidado (turno/returno ou confronto repetido)"
+459:         )
+460:     if match_date is not None:
+461:         candidates = {
+462:             i: b
+463:             for i, b in candidates.items()
+464:             if (b.get("match_date") or (b.get("kickoff") or "")[:10] or None) == match_date
+465:         }
+466:     out = []
+467:     for line_no, bet in candidates.items():
+468:         period = bet.get("period", "FT")
+469:         if period == "FT":
+470:             total = total_ft
+471:         elif total_ht is None:
+472:             continue  # 1T/2T sem HT informado: segue aberta
+473:         else:
+474:             total = total_ht if period == "1T" else total_ft - total_ht
+475:         won = (
+476:             (bet["selection"] == "over") == (total > bet["line"]) if total != bet["line"] else None
+477:         )  # push só em linha inteira
+478:         profit = 0.0 if won is None else round(bet["stake"] * (bet["odds"] - 1.0), 4) if won else -bet["stake"]
+482:         clv = None
+483:         reverse = _canon(bet["home"]) != _canon(home)
+484:         score_pair = (away_score, home_score) if reverse else (home_score, away_score)
+485:         ht_pair = None if ht is None else ht[::-1] if reverse else ht
+486:         rec = {
+487:             "recorded_at": recorded_at or datetime.now(UTC).isoformat(timespec="seconds"),
+488:             "kind": "settlement",
+489:             "bet_line_no": line_no,
+491:             "bet_id": bet.get("bet_id"),
+492:             "home": bet["home"],
+493:             "away": bet["away"],
+494:             "score": f"{score_pair[0]}-{score_pair[1]}",
+495:             "ht": None if ht_pair is None else f"{ht_pair[0]}-{ht_pair[1]}",
+496:             "total_do_periodo": total,
+497:             "market": bet["market"],
+498:             "period": period,
+499:             "selection": bet["selection"],
+500:             "odds": bet["odds"],
+501:             "stake": bet["stake"],
+502:             "won": won,
+503:             "profit": profit,
+504:             "clv_close": clv,
+505:             "clv_status": "UNAVAILABLE_NO_ADMISSIBLE_CLOSING",
+506:             "economic_evidence_eligible": False,
+507:             "costs_reconciled": False,
+508:             "validated": bet.get("validated", bet["market"] in VALIDATED),
+509:         }
+510:         _append(rec, path)
+511:         out.append(rec)
+512:     return out
+515: def _resolve_bank(path=None) -> Path:
+516:     return Path(path or os.environ.get(ENV_BANK_PATH) or _BANK_DEFAULT)
+519: def _timestamp(value) -> datetime:
+520:     if not isinstance(value, str):
+521:         raise ValueError("timestamp exige ISO-8601 com timezone")
+522:     result = datetime.fromisoformat(value.replace("Z", "+00:00"))
+523:     if result.tzinfo is None or result.utcoffset() is None:
+524:         raise ValueError("timestamp exige timezone explícito")
+525:     return result.astimezone(UTC)
+528: def _read_bank(path) -> list[dict]:
+529:     rows = _read_records(_resolve_bank(path), {"init", "deposit", "withdraw"})
+530:     previous = None
+531:     initialized = False
+532:     for row in rows:
+533:         _finite_number(row.get("amount"), "valor bancário")
+534:         if row["amount"] <= 0:
+535:             raise ValueError("valor bancário deve ser positivo")
+536:         timestamp = _timestamp(row.get("at"))
+537:         if previous is not None and timestamp < previous:
+538:             raise ValueError("cronologia bancária fora de ordem; reconciliação necessária")
+539:         previous = timestamp
+540:         if row["kind"] == "init":
+541:             initialized = True
+542:             _finite_number(row.get("unit"), "unidade")
+543:             if row["unit"] <= 0:
+544:                 raise ValueError("unidade deve ser positiva")
+545:             if not isinstance(row.get("currency"), str) or not row["currency"].strip():
+546:                 raise ValueError("moeda deve ser declarada")
+547:         elif not initialized:
+548:             raise ValueError("fluxo bancário exige abertura anterior")
+549:     return rows
+552: def _bank_clock(rows, at):
+553:     stamp = _timestamp(at)
+554:     if rows and stamp < _timestamp(rows[-1]["at"]):
+555:         raise ValueError("cronologia bancária não permite lançamento retroativo")
+556:     return stamp
+559: @_single_writer(_resolve_bank)
+560: def bank_init(amount, unit, *, currency="BRL", path=None, at=None) -> dict:
+564:     _finite_number(amount, "banca")
+565:     _finite_number(unit, "unidade")
+566:     if amount <= 0 or unit <= 0:
+567:         raise ValueError("banca e unidade devem ser positivas")
+568:     if not isinstance(currency, str) or not currency.strip():
+569:         raise ValueError("moeda deve ser declarada")
+570:     rows = _read_bank(path)
+571:     rec = {
+572:         "at": at or datetime.now(UTC).isoformat(timespec="seconds"),
+573:         "kind": "init",
+574:         "amount": float(amount),
+575:         "unit": float(unit),
+576:         "currency": currency,
+577:     }
+578:     _bank_clock(rows, rec["at"])
+579:     _append(rec, _resolve_bank(path))
+580:     return rec
+583: @_single_writer(_resolve_bank)
+584: def bank_flow(kind, amount, *, path=None, at=None) -> dict:
+586:     if kind not in ("deposit", "withdraw"):
+587:         raise ValueError(f"kind inválido: {kind}")
+588:     _finite_number(amount, "valor")
+589:     if amount <= 0:
+590:         raise ValueError("valor deve ser positivo")
+591:     rows = _read_bank(path)
+592:     if not rows:
+593:         raise ValueError("fluxo bancário exige abertura anterior")
+594:     rec = {
+595:         "at": at or datetime.now(UTC).isoformat(timespec="seconds"),
+596:         "kind": kind,
+597:         "amount": float(amount),
+598:     }
+599:     _bank_clock(rows, rec["at"])
+600:     _append(rec, _resolve_bank(path))
+601:     return rec
+604: def bank_state(bank_path=None, bets_path=None) -> dict | None:
+611:     bank, bets = _resolve_bank(bank_path).resolve(), _resolve(bets_path).resolve()
+612:     if bank == bets:
+613:         raise ValueError("banca e apostas exigem livros distintos")
+614:     with ExitStack() as locks:
+615:         for path in sorted({bank, bets}, key=lambda item: str(item).casefold()):
+616:             locks.enter_context(_writer_lock(path))
+617:         bank_rows = _read_bank(bank)
+618:         if not bank_rows:
+619:             return None
+620:         all_rows = _read(bets)
+621:     return _bank_snapshot(bank_rows, all_rows)
+624: def _bank_snapshot(bank_rows, all_rows):
+625:     inits = [row for row in bank_rows if row["kind"] == "init"]
+626:     init = inits[-1]
+627:     init_at = _timestamp(init["at"])
+628:     init_index = max(i for i, row in enumerate(bank_rows) if row["kind"] == "init")
+629:     flows = bank_rows[init_index + 1 :]
+630:     net_flows = sum(row["amount"] * (1 if row["kind"] == "deposit" else -1) for row in flows)
+631:     settled_ids, settled_lines = _settlement_index(all_rows)
+632:     issues, settlements, open_positions = [], [], []
+634:     def value_unit(bet):
+635:         try:
+636:             at = _timestamp(bet.get("logged_at"))
+637:         except ValueError:
+638:             issues.append("aposta sem horário de registro válido")
+639:             return None
+640:         regimes = [row for row in inits if _timestamp(row["at"]) <= at]
+641:         if not regimes:
+642:             issues.append("aposta anterior à primeira unidade monetária declarada")
+643:             return None
+644:         last_at = _timestamp(regimes[-1]["at"])
+645:         values = {(row["currency"], row["unit"]) for row in regimes if _timestamp(row["at"]) == last_at}
+646:         if len(values) != 1:
+647:             issues.append("unidades conflitantes no mesmo horário de registro")
+648:             return None
+649:         currency, unit = values.pop()
+650:         if currency != init["currency"]:
+651:             issues.append("moeda histórica diferente; conversão não comprovada")
+652:             return None
+653:         return unit
+655:     for index, bet in enumerate(all_rows):
+656:         if bet["kind"] != "bet":
+657:             continue
+658:         settlement = settled_ids.get(bet["bet_id"]) if bet.get("bet_id") else settled_lines.get(index)
+659:         if settlement is None:
+660:             open_positions.append((bet, value_unit(bet)))
+661:         elif _timestamp(settlement["recorded_at"]) >= init_at:
+662:             if _timestamp(settlement["recorded_at"]) < _timestamp(bet.get("logged_at")):
+663:                 raise ValueError("liquidação anterior ao registro da aposta")
+664:             settlements.append((settlement, value_unit(bet)))
+665:     profit_units = sum(row["profit"] for row, _ in settlements)
+666:     open_units = sum(row["stake"] for row, _ in open_positions)
+667:     result = {
+668:         "currency": init["currency"],
+669:         "initial": init["amount"],
+670:         "unit": init["unit"],
+671:         "unit_pct": init["unit"] / init["amount"],
+672:         "flows": net_flows,
+673:         "accounting_scope": "gross_manual_reports_at_historically_declared_unit",
+674:         "drawdown_scope": "cash_flow_adjusted_gross_pnl_and_unitized_nav",
+675:         "economic_evidence_eligible": False,
+676:         "costs_reconciled": False,
+677:         "profit_units": round(profit_units, 4),
+678:         "n_settled": len(settlements),
+679:         "open_units": round(open_units, 4),
+680:         "since": init["at"],
+681:         "valuation_status": "PENDING_RECONCILIATION" if issues else "MANUAL_DECLARATIONS_ONLY",
+682:         "valuation_issues": sorted(set(issues)),
+683:     }
+684:     if issues:
+685:         return {
+686:             **result,
+687:             **dict.fromkeys(
+688:                 ("balance", "available_money", "profit_money", "open_money", "max_drawdown_money", "max_drawdown_pct")
+689:             ),
+690:         }
+691:     profit_money = sum(row["profit"] * unit for row, unit in settlements)
+692:     open_money = sum(row["stake"] * unit for row, unit in open_positions)
+693:     equity = peak = float(init["amount"])
+694:     shares, nav_peak, mdd, mdd_pct = equity, 1.0, 0.0, 0.0
+695:     events = [
+696:         (_timestamp(row["at"]), 0, i, row["amount"] * (1 if row["kind"] == "deposit" else -1))
+697:         for i, row in enumerate(flows)
+698:     ]
+699:     events += [
+700:         (_timestamp(row["recorded_at"]), 1, i, row["profit"] * unit) for i, (row, unit) in enumerate(settlements)
+701:     ]
+702:     flow_times = {at for at, kind, _, _ in events if kind == 0}
+703:     nav_known = not any(at in flow_times for at, kind, _, _ in events if kind == 1)
+704:     for _, kind, _, amount in sorted(events):
+705:         if kind == 0:
+706:             if equity <= 0 or shares <= 0 or equity + amount <= 0:
+707:                 nav_known = False
+708:             elif nav_known:
+709:                 shares += amount / (equity / shares)
+710:             equity += amount
+711:             peak += amount
+712:         else:
+713:             equity += amount
+714:             peak = max(peak, equity)
+715:             mdd = max(mdd, peak - equity)
+716:             if equity < 0 or shares <= 0:
+717:                 nav_known = False
+718:             elif nav_known:
+719:                 nav = equity / shares
+720:                 nav_peak = max(nav_peak, nav)
+721:                 mdd_pct = max(mdd_pct, 1 - nav / nav_peak)
+722:     balance = init["amount"] + net_flows + profit_money
+723:     for value in (balance, profit_money, open_money, mdd, mdd_pct):
+724:         _finite_number(value, "reconciliação monetária")
+725:     if not math.isclose(equity, balance, rel_tol=1e-12, abs_tol=1e-8):
+726:         raise ArithmeticError("saldo não reconcilia com os eventos")
+727:     return {
+728:         **result,
+729:         "balance": round(balance, 2),
+730:         "available_money": round(balance - open_money, 2),
+731:         "profit_money": round(profit_money, 2),
+732:         "open_money": round(open_money, 2),
+733:         "max_drawdown_money": round(mdd, 2),
+734:         "max_drawdown_pct": mdd_pct if nav_known else None,
+735:         "nav_status": "COMPUTED" if nav_known else "UNDEFINED_ORDER_OR_NONPOSITIVE_CAPITAL",
+736:     }
+739: def list_bets(path=None) -> list[dict]:
+742:     rows = _read(path)
+743:     settled_ids, settled_lines = _settlement_index(rows)
+744:     out = []
+745:     for i, r in enumerate(rows):
+746:         if r["kind"] != "bet":
+747:             continue
+748:         result = settled_ids.get(r["bet_id"]) if r.get("bet_id") else settled_lines.get(i)
+749:         out.append({**r, "result": result})
+750:     return out
+753: def _countdown(kickoff: str | None) -> str:
+755:     if not kickoff:
+756:         return ""
+757:     try:
+758:         ko = datetime.fromisoformat(kickoff.replace("Z", "+00:00"))
+759:         if ko.tzinfo is None or ko.utcoffset() is None:
+760:             return ""
+761:     except ValueError:
+762:         return ""
+763:     delta = (ko - datetime.now(UTC)).total_seconds()
+764:     if delta <= 0:
+765:         return "JÁ COMEÇOU"
+766:     d, rem = divmod(int(delta), 86400)
+767:     h, rem = divmod(rem, 3600)
+768:     m = rem // 60
+769:     return f"em {d}d {h:02d}h" if d else (f"em {h}h{m:02d}" if h else f"em {m}min")
+772: def summary(path=None) -> dict:
+776:     tally: dict = {}
+777:     rows = _read(path)
+778:     _settlement_index(rows)
+779:     for r in rows:
+780:         if r["kind"] != "settlement":
+781:             continue
+782:         t = tally.setdefault(
+783:             r["market"],
+784:             {
+785:                 "n": 0,
+786:                 "staked": 0.0,
+787:                 "profit": 0.0,
+788:                 "clv_sum": 0.0,
+789:                 "clv_n": 0,
+790:                 "validated": r.get("validated", False),
+791:                 "accounting_scope": "gross_manual_reports",
+792:                 "economic_evidence_eligible": False,
+793:                 "costs_reconciled": False,
+794:                 "clv_scope": "legacy_unverified_reports",
+795:             },
+796:         )
+797:         t["n"] += 1
+798:         t["staked"] += r["stake"]
+799:         t["profit"] += r["profit"]
+800:         if r.get("clv_close") is not None:
+801:             t["clv_sum"] += r["clv_close"]
+802:             t["clv_n"] += 1
+803:     for t in tally.values():
+804:         t["roi"] = t["profit"] / t["staked"] if t["staked"] else 0.0
+805:         t["clv_medio"] = t["clv_sum"] / t["clv_n"] if t["clv_n"] else None
+806:     return tally
+809: def main():
+810:     import argparse
+812:     ap = argparse.ArgumentParser(description="Livro-caixa de apostas (append-only)")
+813:     sub = ap.add_subparsers(dest="cmd", required=True)
+815:     a = sub.add_parser("add", help="registra aposta ANTES do jogo")
+816:     a.add_argument("home")
+817:     a.add_argument("away")
+818:     a.add_argument("market", choices=sorted(MARKETS))
+819:     a.add_argument("selection", choices=["over", "under"])
+820:     a.add_argument("odds", type=float)
+821:     a.add_argument("--casa", dest="book")
+822:     a.add_argument("--stake", type=float, default=1.0)
+823:     a.add_argument("--prob", type=float, dest="model_prob")
+824:     a.add_argument("--edge", type=float)
+825:     a.add_argument("--date", dest="match_date")
+826:     a.add_argument(
+827:         "--kickoff",
+828:         help="ISO-8601 UTC do apito (habilita contagem regressiva e o carimbo de aposta tardia)",
+829:     )
+830:     a.add_argument("--nota", dest="note")
+832:     sub.add_parser("list", help="todas as apostas: abertas com contagem regressiva, fechadas com resultado")
+834:     s = sub.add_parser("settle", help="fecha apostas do confronto no placar final")
+835:     s.add_argument("home")
+836:     s.add_argument("away")
+837:     s.add_argument("home_score", type=int)
+838:     s.add_argument("away_score", type=int)
+839:     s.add_argument("--ht", help="placar do intervalo 'H-A' (obrigatório pra fechar apostas de 1T/2T)")
+840:     s.add_argument(
+841:         "--date",
+842:         dest="match_date",
+843:         help="data do jogo (YYYY-MM-DD) — obrigatório se houver "
+844:         "apostas abertas do mesmo confronto em datas diferentes "
+845:         "(turno/returno)",
+846:     )
+848:     sub.add_parser("summary", help="ROI/CLV acumulado por mercado")
+850:     b = sub.add_parser("banca", help="painel da banca (saldo/exposição/drawdown)")
+851:     b.add_argument("--init", type=float, metavar="VALOR", help="abre a banca com este valor total")
+852:     b.add_argument("--unidade", type=float, help="valor da unidade em dinheiro (com --init)")
+853:     b.add_argument("--deposito", type=float, metavar="VALOR")
+854:     b.add_argument("--saque", type=float, metavar="VALOR")
+855:     b.add_argument("--moeda", default="BRL")
+857:     args = ap.parse_args()
+858:     if args.cmd == "add":
+859:         rec = add_bet(
+860:             args.home,
+861:             args.away,
+862:             args.market,
+863:             args.selection,
+864:             args.odds,
+865:             book=args.book,
+866:             stake=args.stake,
+867:             model_prob=args.model_prob,
+868:             edge=args.edge,
+869:             match_date=args.match_date,
+870:             kickoff=args.kickoff,
+871:             note=args.note,
+872:         )
+873:         aviso = "" if rec["validated"] else "  [mercado SEM CLV validado]"
+874:         gate = capital_gate_status(args.market)
+875:         if gate:
+876:             print(f"  AVISO: {gate} — isto NÃO bloqueia o registro, a banca é do operador")
+877:         print(
+878:             f"registrada [{rec['bet_id'][:8]}]: {rec['selection']} {rec['line']} "
+879:             f"({rec['period']}) @ {rec['odds']} "
+880:             f"({rec['book'] or 'casa nao informada'}) "
+881:             f"stake {rec['stake']}u — {rec['home']} x {rec['away']}{aviso}"
+882:         )
+883:         if rec["late"]:
+884:             print(
+885:                 "  ALERTA: registrada APÓS o kickoff — o edge pré-jogo desta "
+886:                 "aposta NÃO vale e ela ficou carimbada late=True no livro."
+887:             )
+888:         if rec["duplicate_of_open"]:
+889:             print(
+890:                 "  ALERTA: já existe aposta ABERTA idêntica (mesmo jogo/mercado/"
+891:                 "lado) — se foi sem querer, a exposição dobrou."
+892:             )
+893:     elif args.cmd == "list":
+894:         st = bank_state()
+895:         unit = st["unit"] if st else None
+896:         bets = list_bets()
+897:         if not bets:
+898:             print("nenhuma aposta no livro ainda")
+899:             return
+900:         abertas = [b for b in bets if b["result"] is None]
+901:         fechadas = [b for b in bets if b["result"] is not None]
+902:         if abertas:
+903:             print(f"\n=== ABERTAS ({len(abertas)}) ===")
+904:             for b in abertas:
+905:                 v = "funil legado" if b.get("validated", b["market"] in VALIDATED) else "informativo"
+906:                 money = f" = R$ {b['stake'] * unit:.0f}" if unit else ""
+907:                 extra = " ".join(
+908:                     x
+909:                     for x in (
+910:                         _countdown(b.get("kickoff")) or (b.get("match_date") or ""),
+911:                         "[LATE]" if b.get("late") else "",
+912:                         "[DUP?]" if b.get("duplicate_of_open") else "",
+913:                     )
+914:                     if x
+915:                 )
+916:                 print(
+917:                     f"  [{v}] {b['home']} x {b['away']}: {b['selection']} "
+918:                     f"{b['line']} ({b.get('period', 'FT')}) @ {b['odds']} "
+919:                     f"{b['book'] or ''} | {b['stake']}u{money} | {extra}"
+920:                 )
+921:         if fechadas:
+922:             print(f"\n=== FECHADAS ({len(fechadas)}) ===")
+923:             for b in fechadas:
+924:                 r = b["result"]
+925:                 res = "PUSH" if r["won"] is None else ("GANHOU" if r["won"] else "PERDEU")
+926:                 money = f" = R$ {r['profit'] * unit:+.0f}" if unit else ""
+927:                 clv = f" | CLV {r['clv_close']:+.1%}" if r.get("clv_close") is not None else ""
+928:                 print(
+929:                     f"  [{res}] {b['home']} x {b['away']}: {b['selection']} "
+930:                     f"{b['line']} ({b.get('period', 'FT')}) @ {b['odds']} "
+931:                     f"-> {r['profit']:+.2f}u{money}{clv}"
+932:                 )
+933:         if st:
+934:             print(
+935:                 f"\n  banca: R$ {st['balance']:.2f} | em jogo: {st['open_units']:.1f}u "
+936:                 f"= R$ {st['open_money']:.2f} | unidade R$ {st['unit']:.2f}"
+937:             )
+938:     elif args.cmd == "settle":
+939:         recs = settle_bet(
+940:             args.home,
+941:             args.away,
+942:             args.home_score,
+943:             args.away_score,
+944:             ht=args.ht,
+945:             match_date=args.match_date,
+946:         )
+947:         if not recs:
+948:             print("nenhuma aposta aberta para este confronto")
+949:         for r in recs:
+950:             res = "PUSH" if r["won"] is None else ("GANHOU" if r["won"] else "PERDEU")
+951:             clv = "" if r["clv_close"] is None else f" | CLV {r['clv_close']:+.2%}"
+952:             print(f"{res}: {r['selection']} {r['market']} ({r['period']}) @ {r['odds']} -> {r['profit']:+.2f}u{clv}")
+953:         if recs and args.ht is None:
+954:             print("(apostas de 1T/2T, se houver, seguem abertas — repita com --ht H-A)")
+955:     elif args.cmd == "banca":
+956:         if args.init is not None:
+957:             if args.unidade is None:
+958:                 ap.error("--init exige --unidade (valor da unidade em dinheiro)")
+959:             rec = bank_init(args.init, args.unidade, currency=args.moeda)
+960:             pct = args.unidade / args.init
+961:             print(
+962:                 f"banca aberta: {rec['amount']:.2f} {rec['currency']} | "
+963:                 f"unidade = {rec['unit']:.2f} ({pct:.1%} da banca)"
+964:             )
+965:             if pct > MAX_UNIT_PCT:
+966:                 print(
+967:                     f"  AVISO: unidade acima de {MAX_UNIT_PCT:.0%} da banca — "
+968:                     "3 derrotas em 8 apostas é variância NORMAL do O/U; "
+969:                     "unidade grande transforma variância em ruína."
+970:                 )
+971:         if args.deposito:
+972:             bank_flow("deposit", args.deposito)
+973:             print(f"depósito: +{args.deposito:.2f}")
+974:         if args.saque:
+975:             bank_flow("withdraw", args.saque)
+976:             print(f"saque: -{args.saque:.2f}")
+977:         st = bank_state()
+978:         if st is None:
+979:             print(
+980:                 "banca não aberta — use: python -m brasileirao_predictor.bet_log banca "
+981:                 "--init VALOR --unidade VALOR_DA_UNIDADE"
+982:             )
+983:             return
+984:         cur = st["currency"]
+985:         print(f"\n=== BANCA ({cur}) — desde {st['since'][:10]} ===")
+986:         if st["valuation_status"] == "PENDING_RECONCILIATION":
+987:             print("Valores monetários indisponíveis: " + "; ".join(st["valuation_issues"]))
+988:             return
+989:         fluxos = f", fluxos {st['flows']:+.2f}" if st["flows"] else ""
+990:         print(f"  saldo atual:      {st['balance']:.2f}  (inicial {st['initial']:.2f}{fluxos})")
+991:         print(f"  unidade:          {st['unit']:.2f}  ({st['unit_pct']:.1%} da banca inicial)")
+992:         print(
+993:             f"  resultado:        {st['profit_units']:+.2f}u = {st['profit_money']:+.2f} {cur}"
+994:             f"  em {st['n_settled']} apostas fechadas"
+995:         )
+996:         print(f"  em jogo (aberto): {st['open_units']:.1f}u = {st['open_money']:.2f} {cur}")
+997:         print(f"  drawdown máximo:  {st['max_drawdown_money']:.2f} {cur}")
+998:         if st["unit_pct"] > MAX_UNIT_PCT:
+999:             print(f"  AVISO: unidade > {MAX_UNIT_PCT:.0%} da banca inicial")
+1000:         if st["open_units"] > MAX_OPEN_UNITS:
+1001:             print(f"  AVISO: exposição aberta > {MAX_OPEN_UNITS:.0f}u")
+1002:     else:
+1003:         tally = summary()
+1004:         print("Relatos manuais brutos: sem comprovação de aceitação, custos ou rentabilidade.")
+1005:         if not tally:
+1006:             print("nenhuma aposta fechada ainda (data/bets.jsonl)")
+1007:         for grupo, ok in (
+1008:             ("MERCADO DO FUNIL LEGADO (flag técnica, sem certificação econômica)", True),
+1009:             ("OUTROS MERCADOS REGISTRADOS", False),
+1010:         ):
+1011:             linhas = {m: t for m, t in tally.items() if t["validated"] == ok}
+1012:             if not linhas:
+1013:                 continue
+1014:             print(f"\n{grupo}:")
+1015:             for m, t in linhas.items():
+1016:                 clv = "sem odd de fechamento" if t["clv_medio"] is None else f"CLV médio {t['clv_medio']:+.2%}"
+1017:                 print(
+1018:                     f"  {m}: {t['n']} apostas | staked {t['staked']:.1f}u | "
+1019:                     f"lucro {t['profit']:+.2f}u | ROI {t['roi']:+.1%} | {clv}"
+1020:                 )
+1023: if __name__ == "__main__":
+1024:     main()

@@ -7,4 +7,4 @@ if len(sys.argv)==1:
 else:
  for i,r in enumerate(rows):
   if int(sys.argv[1])<=i<=int(sys.argv[2]):
-   print('FILE',i,r['path']);print(study.read('brasileirao-shared',pathlib.Path(b['path'])/r['path']))
+   print('FILE',i,r['path']);print(study.read('brasileirao-shared',pathlib.Path(b['path'])/r['path']).replace('\r',''))

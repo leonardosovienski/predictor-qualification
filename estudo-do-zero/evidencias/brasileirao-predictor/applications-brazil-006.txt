@@ -1,0 +1,257 @@
+### brasileirao_predictor/data/missingness_audit.py
+3: import sqlite3
+4: from typing import Any
+6: from .xg_quality import classify_xg_pair, is_numeric_xg
+8: _COUNTS = (
+9:     "played",
+10:     "home_xg_present",
+11:     "away_xg_present",
+12:     "paired_xg_present",
+13:     "home_xg_numeric",
+14:     "away_xg_numeric",
+15:     "paired_xg_numeric",
+16:     "zero_pair_unattested",
+17:     "numeric_nonzero_pair",
+18:     "missing_pair",
+19:     "partial_pair",
+20:     "invalid_pair",
+21: )
+24: def _summary(counts: dict[str, int]) -> dict[str, Any]:
+25:     played = counts["played"]
+26:     present = counts["paired_xg_present"]
+27:     return {
+28:         **counts,
+30:         "home_xg_valid": counts["home_xg_present"],
+31:         "away_xg_valid": counts["away_xg_present"],
+32:         "paired_xg_valid": present,
+33:         "paired_coverage": present / played if played else 0.0,
+34:         "paired_numeric_coverage": counts["paired_xg_numeric"] / played if played else 0.0,
+35:         "numeric_nonzero_pair_coverage": counts["numeric_nonzero_pair"] / played if played else 0.0,
+36:         "all_reported_pairs_zero": bool(present and counts["zero_pair_unattested"] == present),
+37:     }
+40: def xg_coverage(conn: sqlite3.Connection) -> dict[str, Any]:
+42:     rows = conn.execute(
+43:         """SELECT COALESCE(season, 'unknown'), home_xg, away_xg
+44:            FROM sofascore_matches
+45:            WHERE home_score IS NOT NULL AND away_score IS NOT NULL"""
+46:     )
+47:     seasons: dict[str, dict[str, int]] = {}
+48:     for season, home, away in rows:
+49:         counts = seasons.setdefault(str(season), dict.fromkeys(_COUNTS, 0))
+50:         category = classify_xg_pair(home, away)
+51:         home_numeric, away_numeric = is_numeric_xg(home), is_numeric_xg(away)
+52:         updates = {
+53:             "played": 1,
+54:             "home_xg_present": home is not None,
+55:             "away_xg_present": away is not None,
+56:             "paired_xg_present": home is not None and away is not None,
+57:             "home_xg_numeric": home_numeric,
+58:             "away_xg_numeric": away_numeric,
+59:             "paired_xg_numeric": home_numeric and away_numeric,
+60:             "zero_pair_unattested": category == "ZERO_PAIR_UNATTESTED",
+61:             "numeric_nonzero_pair": category == "NUMERIC_PAIR",
+62:             "missing_pair": category == "MISSING_PAIR",
+63:             "partial_pair": category == "PARTIAL_PAIR",
+64:             "invalid_pair": category == "INVALID_PAIR",
+65:         }
+66:         for key, value in updates.items():
+67:             counts[key] += int(value)
+68:     return {
+69:         "schema_version": "xg-missingness-audit/v2",
+70:         "source_provenance_attested": False,
+71:         "semantics": {
+72:             "observed_xg": "reported presence only; source and availability are not attested",
+73:             "legacy_valid_aliases": "*_xg_valid and paired_coverage mean v1 presence counts, not certified quality",
+74:             "numeric_xg": "finite nonnegative numeric value, including zero; not proof of provider coverage",
+75:             "zero_pair_unattested": "both values exactly zero; ambiguous until checked against source evidence",
+76:             "numeric_nonzero_pair": "numeric pair with at least one positive value; still not authenticated",
+77:             "legacy_xg_model_fallback": "missing provider xG replaced by realized goals in frozen xg_model lineage",
+78:             "feature_builder_policy": "missing xG remains None and is never zero-imputed",
+79:         },
+80:         "seasons": [{"season": key, **_summary(value)} for key, value in sorted(seasons.items())],
+81:         "total": _summary({key: sum(counts[key] for counts in seasons.values()) for key in _COUNTS}),
+82:     }
+### brasileirao_predictor/data/odds_api_snapshot.py
+8: from __future__ import annotations
+10: import argparse
+11: import hashlib
+12: import json
+13: import math
+14: from datetime import UTC, datetime
+15: from pathlib import Path
+16: from typing import Any
+18: SPORT = "soccer_brazil_campeonato"
+19: VERSION = "the-odds-api-receipt/2"
+22: def _utc(value: str) -> datetime:
+23:     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+24:     if parsed.tzinfo is None or parsed.utcoffset() is None:
+25:         raise ValueError("timezone required")
+26:     return parsed.astimezone(UTC)
+29: def _object(pairs):
+30:     result = {}
+31:     for key, value in pairs:
+32:         if key in result:
+33:             raise ValueError("duplicate JSON key")
+34:         result[key] = value
+35:     return result
+38: def _nonfinite(value):
+39:     raise ValueError("non-finite JSON number")
+42: def _number(value: Any) -> bool:
+43:     return type(value) in (int, float) and math.isfinite(value)
+46: def decode_snapshot(
+47:     raw: bytes, *, received_at: str, expected_sha256: str, expected_event_id: str | None = None
+48: ) -> dict[str, Any]:
+49:     received = _utc(received_at)
+50:     digest = hashlib.sha256(raw).hexdigest()
+51:     if digest != expected_sha256:
+52:         raise ValueError("raw SHA256 mismatch")
+53:     payload = json.loads(raw, object_pairs_hook=_object, parse_constant=_nonfinite)
+54:     if expected_event_id is not None:
+55:         if not expected_event_id.strip() or not isinstance(payload, dict) or payload.get("id") != expected_event_id:
+56:             raise ValueError("event response identity mismatch")
+57:         events = [payload]
+58:     elif isinstance(payload, list):
+59:         events = payload
+60:     else:
+61:         raise ValueError("list response required; event endpoint requires expected_event_id")
+62:     output = {
+63:         "schema_version": VERSION,
+64:         "source": "the_odds_api",
+65:         "raw_sha256": digest,
+66:         "received_at": received.isoformat(),
+67:         "published_at": None,
+68:         "observation_status": "VALID_EMPTY" if not events else "OBSERVED",
+69:         "economic_evidence_eligible": False,
+70:         "capital_authorized": False,
+71:         "execution": "ABSTAIN",
+72:         "events": [],
+73:         "rejections": [],
+74:     }
+75:     seen_events = set()
+76:     for index, event in enumerate(events):
+77:         try:
+78:             if not isinstance(event, dict) or event.get("sport_key") != SPORT:
+79:                 raise ValueError("event schema/sport mismatch")
+80:             identity, home, away = event.get("id"), event.get("home_team"), event.get("away_team")
+81:             if any(not isinstance(v, str) or not v.strip() for v in (identity, home, away)) or home == away:
+82:                 raise ValueError("invalid event identity")
+83:             if identity in seen_events:
+84:                 raise ValueError("duplicate event identity")
+85:             seen_events.add(identity)
+86:             kickoff = _utc(event["commence_time"])
+87:             books = event["bookmakers"]
+88:             if not isinstance(books, list):
+89:                 raise ValueError("invalid bookmakers")
+90:             normalized = {
+91:                 "source_event_id": identity,
+92:                 "home_team": home,
+93:                 "away_team": away,
+94:                 "kickoff_at": kickoff.isoformat(),
+95:                 "received_before_kickoff": received < kickoff,
+96:                 "bookmakers": [],
+97:             }
+98:             seen_books = set()
+99:             for book in books:
+100:                 if not isinstance(book, dict) or not isinstance(book.get("key"), str) or not book["key"].strip():
+101:                     raise ValueError("invalid bookmaker identity")
+102:                 name = book["key"]
+103:                 if name in seen_books:
+104:                     raise ValueError("duplicate bookmaker")
+105:                 seen_books.add(name)
+106:                 changed = _utc(book["last_update"])
+107:                 if changed > received:
+108:                     raise ValueError("book changed after receipt")
+109:                 markets = book.get("markets")
+110:                 if not isinstance(markets, list):
+111:                     raise ValueError("invalid markets")
+112:                 normalized_book = {
+113:                     "bookmaker": name,
+114:                     "last_changed_at": changed.isoformat(),
+115:                     "commercial_status": "UNKNOWN",
+116:                     "markets": [],
+117:                 }
+118:                 seen_markets = set()
+119:                 for market in markets:
+120:                     if not isinstance(market, dict):
+121:                         raise ValueError("invalid market")
+122:                     key = market.get("key")
+123:                     if key not in {"h2h", "totals", "h2h_3_way_h1", "totals_h1"}:
+124:                         continue
+125:                     if key in seen_markets:
+126:                         raise ValueError("duplicate market")
+127:                     seen_markets.add(key)
+128:                     market_changed = _utc(market["last_update"]) if "last_update" in market else changed
+129:                     if market_changed > received:
+130:                         raise ValueError("market changed after receipt")
+131:                     outcomes = market.get("outcomes")
+132:                     if not isinstance(outcomes, list):
+133:                         raise ValueError("invalid outcomes")
+134:                     by_line: dict[float | None, dict[str, float]] = {}
+135:                     for outcome in outcomes:
+136:                         if not isinstance(outcome, dict) or not _number(outcome.get("price")) or outcome["price"] <= 1:
+137:                             raise ValueError("invalid decimal price")
+138:                         is_total = key.startswith("totals")
+139:                         line = outcome.get("point") if is_total else None
+140:                         if is_total and (line is None or not _number(line) or line < 0):
+141:                             raise ValueError("invalid total line")
+142:                         if not is_total and outcome.get("point") is not None:
+143:                             raise ValueError("line on a three-way market")
+144:                         names = (
+145:                             {"Over": "over", "Under": "under"}
+146:                             if is_total
+147:                             else {home: "home", "Draw": "draw", away: "away"}
+148:                         )
+149:                         outcome_name = outcome.get("name")
+150:                         selection = names.get(outcome_name) if isinstance(outcome_name, str) else None
+151:                         if selection is None:
+152:                             raise ValueError("unknown selection")
+153:                         selections = by_line.setdefault(line, {})
+154:                         if selection in selections:
+155:                             raise ValueError("duplicate selection")
+156:                         selections[selection] = float(outcome["price"])
+157:                     for line, selections in by_line.items():
+158:                         expected = {"over", "under"} if key.startswith("totals") else {"home", "draw", "away"}
+159:                         normalized_book["markets"].append(
+160:                             {
+161:                                 "market": key,
+162:                                 "line": line,
+163:                                 "odds": selections,
+164:                                 "complete": set(selections) == expected,
+165:                                 "last_changed_at": market_changed.isoformat(),
+166:                                 "received_at": received.isoformat(),
+167:                                 "published_at": None,
+168:                                 "observation_status": "OBSERVED_COMPLETE"
+169:                                 if set(selections) == expected
+170:                                 else "INCOMPLETE",
+171:                             }
+172:                         )
+173:                 normalized["bookmakers"].append(normalized_book)
+174:             output["events"].append(normalized)
+175:         except (KeyError, TypeError, ValueError, OverflowError) as exc:
+176:             output["rejections"].append({"event_index": index, "reason": str(exc)})
+177:     if output["rejections"]:
+178:         output["observation_status"] = "INVALID_RESPONSE"
+180:         output["events"] = []
+181:     return output
+184: def main() -> None:
+185:     parser = argparse.ArgumentParser(description=__doc__)
+186:     parser.add_argument("raw", type=Path)
+187:     parser.add_argument("--sha256", required=True)
+188:     parser.add_argument("--received-at", required=True)
+189:     parser.add_argument("--event-id")
+190:     parser.add_argument("--output", required=True, type=Path)
+191:     args = parser.parse_args()
+192:     result = decode_snapshot(
+193:         args.raw.read_bytes(),
+194:         received_at=args.received_at,
+195:         expected_sha256=args.sha256,
+196:         expected_event_id=args.event_id,
+197:     )
+198:     encoded = json.dumps(result, ensure_ascii=False, allow_nan=False, indent=2)
+200:     with args.output.open("x", encoding="utf-8") as handle:
+201:         handle.write(encoded + "\n")
+202:     print(json.dumps({"observation_status": result["observation_status"], "execution": "ABSTAIN"}))
+203:     if result["observation_status"] == "INVALID_RESPONSE":
+204:         raise SystemExit(2)
+207: if __name__ == "__main__":
+208:     main()

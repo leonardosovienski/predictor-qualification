@@ -1,0 +1,99 @@
+### brasileirao_predictor/diagnose_event_data.py
+2: from brasileirao_predictor import db
+3: from brasileirao_predictor.ingest import ROOT, load_config
+6: def main():
+7:     cfg = load_config()
+8:     db_path = ROOT / cfg["database"]
+9:     conn = db.connect(str(db_path), read_only=True)
+10:     cursor = conn.cursor()
+12:     print("\n=== ODDS_LINES ===\n")
+13:     for market in ["cards", "corners"]:
+14:         cursor.execute("SELECT COUNT(*) FROM odds_lines WHERE market = ?", (market,))
+15:         count = cursor.fetchone()[0]
+16:         print(f"market='{market}': {count} linhas")
+17:         if count > 0:
+18:             cursor.execute(
+19:                 "SELECT event_id, line, odd_a, odd_b, odd_a_open, odd_b_open FROM odds_lines WHERE market = ? LIMIT 3",
+20:                 (market,),
+21:             )
+22:             for row in cursor.fetchall():
+23:                 print(f"  event_id={row[0]}, line={row[1]}, close=({row[2]},{row[3]}), open=({row[4]},{row[5]})")
+25:     print("\n=== STAT_NAMES disponíveis (amostra) ===\n")
+26:     cursor.execute("SELECT DISTINCT stat_name FROM match_statistics ORDER BY stat_name")
+27:     stats = [r[0] for r in cursor.fetchall()]
+28:     print(f"Total: {len(stats)} nomes")
+29:     for s in stats[:30]:
+30:         print(f"  {s}")
+31:     if len(stats) > 30:
+32:         print(f"  ... e mais {len(stats) - 30}")
+34:     print("\n=== Correspondência odds_lines + match_statistics ===\n")
+35:     for market in ["cards", "corners"]:
+37:         cursor.execute("SELECT COUNT(DISTINCT event_id) FROM odds_lines WHERE market = ?", (market,))
+38:         odds_events = cursor.fetchone()[0]
+39:         print(f"{market}: {odds_events} event_ids com odds")
+42:         cursor.execute(
+43:             """
+44:             SELECT COUNT(DISTINCT ol.event_id)
+45:             FROM odds_lines ol
+46:             JOIN match_statistics ms ON ol.event_id = ms.event_id
+47:             WHERE ol.market = ?
+48:         """,
+49:             (market,),
+50:         )
+51:         joined = cursor.fetchone()[0]
+52:         print(f"  com alguma estatística: {joined}")
+55:         for stat_candidate in ["Yellow cards", "Cards", "Corner kicks", "Corners"]:
+56:             cursor.execute(
+57:                 """
+58:                 SELECT COUNT(DISTINCT ol.event_id)
+59:                 FROM odds_lines ol
+60:                 JOIN match_statistics ms ON ol.event_id = ms.event_id
+61:                 WHERE ol.market = ? AND ms.stat_name = ?
+62:             """,
+63:                 (market, stat_candidate),
+64:             )
+65:             cnt = cursor.fetchone()[0]
+66:             if cnt > 0:
+67:                 print(f"  com estatística '{stat_candidate}': {cnt}")
+69:     print("\n=== Odds abertas (open) não nulas ===\n")
+70:     for market in ["cards", "corners"]:
+71:         cursor.execute(
+72:             """
+73:             SELECT COUNT(*) FROM odds_lines 
+74:             WHERE market = ? AND odd_a_open IS NOT NULL AND odd_b_open IS NOT NULL
+75:         """,
+76:             (market,),
+77:         )
+78:         open_not_null = cursor.fetchone()[0]
+79:         print(f"{market}: {open_not_null} linhas com odd_a_open e odd_b_open não nulos")
+82:     print("\n=== Teste da query original (primeiro evento com odds) ===\n")
+83:     for market in ["cards", "corners"]:
+84:         cursor.execute("SELECT event_id FROM odds_lines WHERE market = ? LIMIT 1", (market,))
+85:         row = cursor.fetchone()
+86:         if row:
+87:             eid = row[0]
+88:             print(f"Testando event_id={eid} para {market}:")
+90:             for stat_candidate in ["Yellow cards", "Cards", "Corner kicks", "Corners"]:
+91:                 cursor.execute(
+92:                     """
+93:                     SELECT COUNT(*) FROM match_statistics 
+94:                     WHERE event_id = ? AND team = 'home' AND stat_name = ?
+95:                 """,
+96:                     (eid, stat_candidate),
+97:                 )
+98:                 home_count = cursor.fetchone()[0]
+99:                 cursor.execute(
+100:                     """
+101:                     SELECT COUNT(*) FROM match_statistics 
+102:                     WHERE event_id = ? AND team = 'away' AND stat_name = ?
+103:                 """,
+104:                     (eid, stat_candidate),
+105:                 )
+106:                 away_count = cursor.fetchone()[0]
+107:                 if home_count > 0 and away_count > 0:
+108:                     print(f"  Estatística '{stat_candidate}' encontrada para home e away.")
+109:                 else:
+110:                     print(f"  Estatística '{stat_candidate}': home={home_count}, away={away_count}")
+112:     conn.close()
+115: if __name__ == "__main__":
+116:     main()

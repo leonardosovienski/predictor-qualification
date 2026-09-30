@@ -1,0 +1,427 @@
+### tests/test_player_comp_stats_sofascore.py
+1: from __future__ import annotations
+3: import json
+4: from datetime import UTC, datetime
+6: from brasileirao_predictor import db
+7: from brasileirao_scripts import backfill_player_comp_stats_from_sofascore as backfill
+10: def test_aggregate_and_persist_player_stats_with_provenance(tmp_path) -> None:
+11:     conn = db.connect(":memory:")
+12:     conn.execute(
+13:         "INSERT INTO sofascore_matches "
+14:         "(event_id,competition,season,kickoff_at,home_team,away_team) "
+15:         "VALUES (1,'Serie A 2024','2024','2024-05-01T20:00:00+00:00','Casa','Fora')"
+16:     )
+17:     payload = {
+18:         "home": {
+19:             "players": [
+20:                 {
+21:                     "player": {"name": "Atleta", "position": "F"},
+22:                     "position": "F",
+23:                     "statistics": {
+24:                         "minutesPlayed": 90,
+25:                         "goals": 1,
+26:                         "goalAssist": 1,
+27:                         "expectedGoals": 0.7,
+28:                         "expectedAssists": 0.2,
+29:                     },
+30:                 }
+31:             ]
+32:         },
+33:         "away": {"players": []},
+34:     }
+35:     (tmp_path / "event_1_lineups.json").write_text(json.dumps(payload), encoding="utf-8")
+37:     observed = datetime.now(UTC)
+38:     rows = backfill.aggregate(conn, tmp_path)
+39:     assert backfill.persist(conn, rows) == 1
+40:     persisted = conn.execute(
+41:         "SELECT position,minutes,games,goals,assists,xg,xag,source,available_at FROM player_comp_stats"
+42:     ).fetchone()
+43:     assert persisted[:-1] == ("F", 90, 1, 1, 1, 0.7, 0.2, backfill.SOURCE)
+44:     assert observed <= datetime.fromisoformat(persisted[-1]) <= datetime.now(UTC)
+### tests/test_predict_cache_freshness.py
+1: from brasileirao_predictor import predict
+4: class _Conn:
+5:     def execute(self, _sql):
+6:         return self
+8:     def fetchone(self):
+9:         return (10,)
+12: def _cfg():
+13:     return {
+14:         "database": "ignored.db",
+15:         "elo": {},
+16:         "model": {"calibration_window_years": 4, "goal_half_life_days": 360},
+17:     }
+20: def test_build_recomputes_in_memory_when_cache_hash_is_stale(monkeypatch, capsys):
+21:     conn = _Conn()
+22:     monkeypatch.setattr(predict.db, "connect", lambda _path, **_kwargs: conn)
+23:     monkeypatch.setattr(predict.db, "load_elo", lambda _conn: {"stale": 1.0})
+24:     monkeypatch.setattr(
+25:         predict.db,
+26:         "load_params",
+27:         lambda _conn: (0.1, 0.2, 0.3, 0.0, 10, "stale-hash", "2026-01-01T00:00:00+00:00"),
+28:     )
+29:     monkeypatch.setattr("brasileirao_predictor.cron_update_models.config_hash", lambda _cfg: "fresh-hash")
+30:     monkeypatch.setattr(
+31:         "brasileirao_predictor.cron_update_models.compute",
+32:         lambda _cfg, _conn: ({"fresh": 2.0}, (1.0, 2.0, 3.0, 4.0), 10),
+33:     )
+35:     built_conn, elo, params = predict.build(_cfg())
+37:     assert built_conn is conn
+38:     assert elo == {"fresh": 2.0}
+39:     assert params == (1.0, 2.0, 3.0, 4.0)
+40:     assert "recalculando em memória" in capsys.readouterr().err
+43: def test_build_uses_cache_only_when_hash_and_match_count_are_current(monkeypatch):
+44:     conn = _Conn()
+45:     monkeypatch.setattr(predict.db, "connect", lambda _path, **_kwargs: conn)
+46:     monkeypatch.setattr(predict.db, "load_elo", lambda _conn: {"cached": 1.0})
+47:     monkeypatch.setattr(
+48:         predict.db,
+49:         "load_params",
+50:         lambda _conn: (0.1, 0.2, 0.3, 0.0, 10, "current", "2026-01-01T00:00:00+00:00"),
+51:     )
+52:     monkeypatch.setattr("brasileirao_predictor.cron_update_models.config_hash", lambda _cfg: "current")
+54:     _built_conn, elo, params = predict.build(_cfg())
+56:     assert elo == {"cached": 1.0}
+57:     assert params == (0.1, 0.2, 0.3, 0.0)
+### tests/test_prediction_log.py
+1: import json
+3: import numpy as np
+4: import pytest
+6: from brasileirao_predictor.model import predict_match
+7: from brasileirao_predictor.prediction_log import log_prediction
+9: _PRED = {
+10:     "lambda_a": 1.23,
+11:     "lambda_b": 0.98,
+12:     "total_goals": 2.21,
+13:     "p_win": 0.45,
+14:     "p_draw": 0.28,
+15:     "p_loss": 0.27,
+16:     "over": {1.5: 0.68, 2.5: 0.44, 3.5: 0.24},
+17:     "btts": 0.47,
+19:     "top_scores": [((np.int64(1), np.int64(0)), 0.11), ((np.int64(1), np.int64(1)), 0.10)],
+20: }
+21: _MARKET_1X2_ONLY = {
+22:     "odds_home": 2.15,
+23:     "odds_draw": 3.30,
+24:     "odds_away": 3.60,
+25:     "p_home": 0.42,
+26:     "p_draw": 0.29,
+27:     "p_away": 0.29,
+28:     "overround_1x2": 0.06,
+29:     "odds_over": None,
+30:     "odds_under": None,
+31:     "p_over": None,
+32:     "p_under": None,
+33:     "overround_ou25": None,
+34: }
+35: _MARKET_FULL = dict(
+36:     _MARKET_1X2_ONLY,
+37:     odds_over=1.90,
+38:     odds_under=1.95,
+39:     p_over=0.48,
+40:     p_under=0.52,
+41:     overround_ou25=0.05,
+42: )
+43: _PARAMS = (0.22, 1.06, 0.153, -0.039)
+46: def test_log_appends_one_jsonl_line(tmp_path):
+47:     p = tmp_path / "predictions.jsonl"
+48:     log_prediction("Brazil", "Norway", True, 1806, 1767, _PARAMS, _PRED, match_date="2026-07-05", path=p)
+49:     log_prediction("Portugal", "Spain", True, 1778, 1875, _PARAMS, _PRED, match_date="2026-07-06", path=p)
+50:     lines = p.read_text(encoding="utf-8").splitlines()
+51:     assert len(lines) == 2  # append-only, uma linha por predição
+52:     rec = json.loads(lines[0])
+53:     assert rec["home"] == "Brazil" and rec["away"] == "Norway"
+54:     assert rec["neutral"] is True
+55:     assert rec["match_date"] == "2026-07-05"
+56:     assert rec["p_home"] == 0.45 and rec["p_draw"] == 0.28
+57:     assert rec["over"]["2.5"] == 0.44 and rec["under"]["2.5"] == round(1 - 0.44, 4)
+58:     assert rec["total_goals"] == 2.21
+59:     assert rec["btts_yes"] == 0.47 and rec["btts_no"] == round(1 - 0.47, 4)
+60:     assert rec["params"]["rho"] == -0.039
+61:     assert "market" not in rec  # sem odds passadas ⇒ sem bloco de mercado
+62:     assert "logged_at" in rec  # carimbo de quando foi congelada
+65: def test_log_preserves_draw_diagnostics_from_real_model_output(tmp_path):
+66:     p = tmp_path / "predictions.jsonl"
+67:     pred = predict_match(1500, 1500, _PARAMS, max_goals=8)
+69:     log_prediction("A", "B", True, 1500, 1500, _PARAMS, pred, path=p)
+71:     rec = json.loads(p.read_text(encoding="utf-8"))
+72:     draw = rec["draw_diagnostics"]
+73:     assert draw["p_draw_1x2"] == pytest.approx(pred["p_draw"])
+74:     assert draw["modal_score_is_draw"] is True
+75:     assert draw["categorical_policy"] == "ARGMAX_DIAGNOSTIC_ONLY"
+76:     assert draw["robust_choice"] is None
+79: def test_log_records_1x2_market_block_even_without_ou_odds(tmp_path):
+80:     p = tmp_path / "predictions.jsonl"
+81:     log_prediction("A", "B", True, 1600, 1500, _PARAMS, _PRED, market=_MARKET_1X2_ONLY, path=p)
+82:     rec = json.loads(p.read_text(encoding="utf-8").splitlines()[0])
+83:     assert rec["market"]["p_home"] == 0.42 and rec["market"]["overround_1x2"] == 0.06
+86:     assert rec["market"]["edge_home_vs_price"] == round(0.45 - 1 / 2.15, 4)
+87:     assert rec["market"]["edge_draw_vs_price"] == round(0.28 - 1 / 3.30, 4)
+88:     assert rec["market"]["edge_away_vs_price"] == round(0.27 - 1 / 3.60, 4)
+89:     assert "odds_over" not in rec["market"]  # sem odds O/U, sem bloco O/U
+92: def test_log_records_ou25_market_block_when_odds_present(tmp_path):
+93:     p = tmp_path / "predictions.jsonl"
+94:     log_prediction("A", "B", True, 1600, 1500, _PARAMS, _PRED, market=_MARKET_FULL, path=p)
+95:     rec = json.loads(p.read_text(encoding="utf-8").splitlines()[0])
+96:     assert rec["market"]["p_over"] == 0.48 and rec["market"]["overround_ou25"] == 0.05
+99:     assert rec["market"]["edge_over_vs_price"] == round(0.44 - 1 / 1.90, 4)
+100:     assert rec["market"]["edge_under_vs_price"] == round(0.56 - 1 / 1.95, 4)
+103: def test_log_respects_env_path(tmp_path, monkeypatch):
+104:     p = tmp_path / "sub" / "preds.jsonl"  # diretório ainda não existe
+105:     monkeypatch.setenv("PREDICTIONS_LOG_PATH", str(p))
+106:     log_prediction("A", "B", False, 1500, 1500, _PARAMS, _PRED)
+107:     assert p.exists() and len(p.read_text().splitlines()) == 1
+110: def test_show_fails_closed_when_audit_log_cannot_be_persisted(monkeypatch):
+111:     import brasileirao_predictor.predict as predict
+112:     import brasileirao_predictor.prediction_log as prediction_log
+113:     import brasileirao_predictor.xg_model as xg_model
+115:     result = {
+116:         "lambda_a": 1.2,
+117:         "lambda_b": 0.9,
+118:         "p_win": 0.45,
+119:         "p_draw": 0.28,
+120:         "p_loss": 0.27,
+121:     }
+122:     cfg = {"elo": {"home_advantage": 0}, "model": {"max_goals": 8}}
+123:     monkeypatch.setattr(predict.model, "predict_match", lambda *args, **kwargs: result)
+124:     monkeypatch.setattr(xg_model, "maybe_blend", lambda value, *args: value)
+125:     monkeypatch.setattr(predict, "emit_event", lambda *args, **kwargs: None)
+127:     def fail_to_log(*args, **kwargs):
+128:         raise OSError("disk full")
+130:     monkeypatch.setattr(prediction_log, "log_prediction", fail_to_log)
+132:     with pytest.raises(RuntimeError, match="prediction audit log persistence failed"):
+133:         predict.show(
+134:             "Brazil",
+135:             "Norway",
+136:             {"Brazil": 1806, "Norway": 1767},
+137:             _PARAMS,
+138:             cfg,
+139:             True,
+140:             quiet=True,
+141:         )
+144: _LIVE = {  # forma do dict de display.compute_live (period + final + meta)
+145:     "meta": {
+146:         "team_a": "Switzerland",
+147:         "team_b": "Colombia",
+148:         "fraction": 0.63,
+149:         "current_score": (0, 0),
+150:     },
+151:     "period": {
+152:         "lambda_a": 0.80,
+153:         "lambda_b": 0.78,
+154:         "p_a_scores_more": 0.53,
+155:         "p_b_scores_more": 0.52,
+156:         "p_win": 0.32,
+157:         "p_draw": 0.37,
+158:         "p_loss": 0.31,
+159:         "over": {0.5: 0.77, 1.5: 0.46, 2.5: 0.22},
+160:     },
+161:     "final": {
+162:         "p_win": 0.32,
+163:         "p_draw": 0.37,
+164:         "p_loss": 0.31,
+165:         "over": {1.5: 0.46, 2.5: 0.22, 3.5: 0.08},
+166:         "top_scores": [((0, 0), 0.23), ((1, 0), 0.16)],
+167:     },
+168: }
+171: def test_log_period_prediction_grava_schema_proprio(tmp_path):
+172:     from brasileirao_predictor.prediction_log import log_period_prediction
+174:     p = tmp_path / "period.jsonl"
+175:     log_period_prediction(
+176:         "Switzerland",
+177:         "Colombia",
+178:         True,
+179:         "2T",
+180:         0.629,
+181:         _LIVE,
+182:         calibration={"frac1": 0.3707, "n": 122, "ci_low": 0.3221, "ci_high": 0.4197},
+183:         match_date="2026-07-06",
+184:         path=p,
+185:     )
+186:     rec = json.loads(p.read_text(encoding="utf-8").splitlines()[0])
+187:     assert rec["kind"] == "period" and rec["period"] == "2T"
+188:     assert rec["current_score"] == [0, 0]
+189:     assert rec["fraction"] == 0.629
+190:     assert rec["calibration"] == {"frac1": 0.3707, "n": 122, "ci_low": 0.3221, "ci_high": 0.4197}
+191:     assert rec["period_pred"]["over"]["2.5"] == 0.22
+192:     assert rec["final_pred"]["top_scores"][0] == [[0, 0], 0.23]
+195: def test_log_period_respects_env_path(tmp_path, monkeypatch):
+196:     from brasileirao_predictor.prediction_log import log_period_prediction
+198:     p = tmp_path / "sub" / "periods.jsonl"
+199:     monkeypatch.setenv("PERIOD_LOG_PATH", str(p))
+200:     log_period_prediction("A", "B", True, "1T", 0.371, _LIVE)
+201:     assert p.exists() and len(p.read_text().splitlines()) == 1
+### tests/test_prediction_protocol.py
+1: import json
+2: import sys
+3: from datetime import UTC, datetime, timedelta
+4: from pathlib import Path
+6: import pytest
+7: from pydantic import ValidationError
+9: from brasileirao_predictor.prediction_protocol import assess_prediction_readiness
+11: NOW = datetime(2026, 8, 22, 20, tzinfo=UTC)
+14: def candidate(**overrides):
+15:     row = {
+16:         "prediction_kind": "PRE_MATCH",
+17:         "event_id": "123",
+18:         "home": "A",
+19:         "away": "B",
+20:         "predicted_at": NOW,
+21:         "kickoff_at": NOW + timedelta(hours=1),
+22:         "model_name": "serving",
+23:         "model_version": "1",
+24:         "pipeline_fingerprint": "abc",
+25:         "historical_data_cutoff": NOW,
+26:         "latest_training_match_kickoff": NOW - timedelta(days=1),
+27:         "latest_training_result_available_at": NOW - timedelta(hours=20),
+28:         "current_season_matches_included": 225,
+29:         "current_season_matches_available": 225,
+30:         "lineup_captured_at": NOW - timedelta(minutes=5),
+31:         "lineup_confirmed": False,
+32:         "capital_enabled": False,
+33:     }
+34:     row.update(overrides)
+35:     return row
+38: def test_pre_match_ready_with_explicit_probable_lineup():
+39:     report = assess_prediction_readiness(candidate())
+40:     assert report.ready
+41:     assert report.designation == "CONTRACT_PRE_MATCH"
+42:     assert [warning.code for warning in report.warnings] == ["MARKET_UNAVAILABLE", "PROVENANCE_UNVERIFIED"]
+43:     assert not report.pre_match_evidence_eligible
+44:     assert not report.provenance_verified
+47: @pytest.mark.parametrize(
+48:     ("changes", "code"),
+49:     [
+50:         ({"predicted_at": NOW + timedelta(hours=2)}, "POST_KICKOFF_PRE_MATCH"),
+51:         ({"historical_data_cutoff": NOW + timedelta(seconds=1)}, "FUTURE_DATA_CUTOFF"),
+52:         ({"latest_training_match_kickoff": NOW}, "TRAINING_MATCH_NOT_PRIOR"),
+53:         ({"latest_training_result_available_at": NOW + timedelta(seconds=1)}, "RESULT_NOT_AVAILABLE"),
+54:         ({"current_season_matches_included": 224}, "INCOMPLETE_CURRENT_HISTORY"),
+55:         ({"lineup_captured_at": NOW + timedelta(seconds=1)}, "FUTURE_LINEUP"),
+56:         ({"odds_captured_at": NOW + timedelta(seconds=1)}, "FUTURE_ODDS"),
+57:         ({"lineup_confirmed": None}, "LINEUP_STATUS_UNKNOWN"),
+58:         ({"capital_enabled": True}, "CAPITAL_BLOCKED"),
+59:     ],
+60: )
+61: def test_pre_match_fails_closed(changes, code):
+62:     report = assess_prediction_readiness(candidate(**changes))
+63:     assert not report.ready
+64:     assert report.designation == "BLOCKED"
+65:     assert code in {finding.code for finding in report.blockers}
+68: def test_live_requires_state_and_rejects_unvalidated_features():
+69:     report = assess_prediction_readiness(
+70:         candidate(
+71:             prediction_kind="LIVE",
+72:             kickoff_at=NOW - timedelta(minutes=10),
+73:             lineup_confirmed=True,
+74:             unvalidated_live_features_injected=True,
+75:         )
+76:     )
+77:     codes = {finding.code for finding in report.blockers}
+78:     assert {"LIVE_STATE_MISSING", "UNVALIDATED_LIVE_FEATURES"} <= codes
+81: def test_live_ready_with_point_in_time_state():
+82:     report = assess_prediction_readiness(
+83:         candidate(
+84:             prediction_kind="LIVE",
+85:             kickoff_at=NOW - timedelta(minutes=10),
+86:             live_observed_at=NOW - timedelta(seconds=5),
+87:             observed_minute=9,
+88:             current_score=(0, 0),
+89:             lineup_confirmed=True,
+90:         )
+91:     )
+92:     assert report.ready
+93:     assert report.designation == "CONTRACT_LIVE"
+96: def test_retrospective_is_never_designated_official():
+97:     report = assess_prediction_readiness(candidate(prediction_kind="RETROSPECTIVE_SIMULATION"))
+98:     assert report.ready
+99:     assert report.designation == "RETROSPECTIVE_ONLY"
+100:     assert report.warnings[0].code == "NOT_PROSPECTIVE"
+103: def test_naive_datetime_is_rejected():
+104:     with pytest.raises(ValidationError, match="predicted_at must be timezone-aware"):
+105:         assess_prediction_readiness(candidate(predicted_at=datetime(2026, 8, 22, 20)))
+108: @pytest.mark.parametrize(("changes", "expected_code"), [({}, 0), ({"capital_enabled": True}, 2)])
+109: def test_readiness_cli_exit_code(tmp_path: Path, changes, expected_code, monkeypatch, capsys):
+110:     from brasileirao_scripts.check_prediction_readiness import main
+112:     input_path = tmp_path / "readiness.json"
+113:     payload = candidate(**changes)
+114:     input_path.write_text(json.dumps(payload, default=lambda value: value.isoformat()), encoding="utf-8")
+115:     monkeypatch.setattr(sys, "argv", ["check_prediction_readiness", str(input_path)])
+116:     with pytest.raises(SystemExit) as exc:
+117:         main()
+118:     report = json.loads(capsys.readouterr().out)
+119:     assert exc.value.code == expected_code
+120:     assert report["ready"] is (expected_code == 0)
+### tests/test_prereg_serving_vs_climatologia.py
+8: from __future__ import annotations
+10: import json
+11: import pathlib
+12: import tempfile
+13: from datetime import UTC, datetime
+15: import pytest
+16: from predictor_core.contracts.registry import TrialRegistry, validate_trials
+18: from brasileirao_scripts import prereg_serving_vs_climatologia as prereg
+23: def test_nao_importa_nada_que_leia_o_banco() -> None:
+26:     fonte = pathlib.Path(prereg.__file__).read_text(encoding="utf-8")
+27:     corpo = fonte.split('"""', 2)[2]  # fora do docstring, que CITA os números
+28:     for proibido in ("_load_observations", "_run_walkforward", "sqlite3", "matches.db"):
+29:         assert proibido not in corpo, f"o pré-registro não pode tocar em {proibido}"
+32: def test_dry_run_nao_grava_no_registro(monkeypatch, capsys) -> None:
+33:     alvo = pathlib.Path(tempfile.mkdtemp()) / "trials.json"
+34:     monkeypatch.setattr(prereg, "TRIALS", alvo)
+35:     assert prereg.main(["--dry-run"]) == 0
+36:     assert not alvo.exists(), "--dry-run gravou no registro"
+37:     saida = json.loads(capsys.readouterr().out)
+38:     assert saida["trial"] == prereg.TRIAL_NAME
+44: def test_params_declaram_o_motor_e_o_ensemble_desligado() -> None:
+47:     p = prereg._params("2026-08-22")
+48:     assert p["engine"] == "serving"
+49:     assert p["ensemble_xg_enabled"] is False
+50:     assert p["primary_metric"] == "rps"
+51:     assert p["baseline"] == "climatology"
+54: def test_ponto_unico_de_avaliacao_sem_olhadas_intermediarias() -> None:
+57:     p = prereg._params("2026-08-22")
+58:     assert p["avaliacoes_intermediarias"] is False
+59:     assert p["min_n_avaliacao"] == prereg.MIN_N_AVALIACAO
+60:     assert prereg.MIN_N_AVALIACAO > prereg.N_PODER_MARGINAL, (
+61:         "o ponto de avaliação tem que ser MAIOR que o n de poder marginal — "
+62:         "avaliar em ~50% de poder produz inconclusiva não-informativa"
+63:     )
+66: def test_notes_declaram_o_gate_antes_dos_dados() -> None:
+67:     n = prereg._notes("2026-08-22")
+68:     assert "GATE" in n
+69:     assert "inteiramente abaixo de zero" in n
+70:     assert "controle negativo" in n
+71:     assert "NÃO AUTORIZA CAPITAL" in n
+72:     assert "Resultado ainda não medido" in n
+75: def test_notes_registram_que_a_amostra_de_2021_2024_ja_tinha_sido_vista() -> None:
+77:     n = prereg._notes("2026-08-22")
+78:     assert "NÃO é confirmatório" in n or "NÃO é confirmatório" in n.replace(" ", " ")
+79:     assert "SELADO" in n and "Regra 7" in n
+85: def test_registro_conforma_ao_schema_do_core(monkeypatch) -> None:
+88:     alvo = pathlib.Path(tempfile.mkdtemp()) / "trials.json"
+89:     alvo.write_text("[]", encoding="utf-8")
+94:     real = pathlib.Path(prereg.ROOT) / "data" / "trials.harness_attestation.json"
+95:     atestado = json.loads(real.read_text(encoding="utf-8"))
+96:     if datetime.fromisoformat(atestado["expires_at"]) <= datetime.now(UTC):
+97:         pytest.skip("atestado do repo expirado — renove com attest_rps_power()")
+98:     (alvo.parent / "trials.harness_attestation.json").write_text(
+99:         json.dumps(atestado, ensure_ascii=False), encoding="utf-8"
+100:     )
+101:     monkeypatch.setattr(prereg, "TRIALS", alvo)
+102:     monkeypatch.setattr(prereg, "attest_rps_power", lambda: atestado)
+104:     assert prereg.main([]) == 0
+106:     trials = TrialRegistry(alvo).load()
+107:     assert validate_trials(trials) == []
+108:     t = next(x for x in trials if x["name"] == prereg.TRIAL_NAME)
+109:     assert t["status"] == "pre-registrada"
+110:     assert t["metric"] == "rps"
+111:     assert t["test_period"][1] is None, "coorte prospectiva precisa de fim aberto"
+112:     assert t["sharpe"] is None
+115: def test_nome_da_trial_sem_espacos() -> None:
+117:     assert prereg.TRIAL_NAME and " " not in prereg.TRIAL_NAME
+120: @pytest.mark.parametrize("campo", ["rps", "delta", "IC95", "0.213339"])
+121: def test_params_nao_carregam_resultado(campo: str) -> None:
+125:     if campo == "rps":
+126:         return  # 'rps' é legítimo em params (primary_metric)
+127:     assert campo not in json.dumps(prereg._params("2026-08-22"), ensure_ascii=False)

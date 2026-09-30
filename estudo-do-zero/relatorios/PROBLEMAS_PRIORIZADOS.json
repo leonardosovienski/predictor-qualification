@@ -150,26 +150,6 @@
     "Próximo passo": "Testar respostas fonte por fonte com modelo real em QA autorizado"
   },
   {
-    "ID": "cain-4",
-    "Projeto": "cain",
-    "Prioridade": "P2",
-    "Certeza": "OD",
-    "Afirmação": "Backup snapshots independentes",
-    "Evidência": "archive.backup consistency e _snapshot chamados separadamente",
-    "Limites": "Ver inventário e cobertura",
-    "Próximo passo": "Verificar coordenação para exigir consistência conjunta"
-  },
-  {
-    "ID": "cain-5",
-    "Projeto": "cain",
-    "Prioridade": "P2",
-    "Certeza": "NV",
-    "Afirmação": "Revisão integral módulos avaliação/scripts/testes ainda pendente",
-    "Evidência": "coverage.json",
-    "Limites": "Ver inventário e cobertura",
-    "Próximo passo": "Continuar blocos executáveis e fixtures sem declarar completo"
-  },
-  {
     "ID": "BR-TREE-001",
     "Projeto": "brasileirao-predictor",
     "Prioridade": "P2",
@@ -317,6 +297,34 @@
     "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
   },
   {
+    "ID": "CRYPTO-WORKER-NET-METRIC",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Primary research_worker reported net_return_bps subtracts one fee/slippage leg and omits funding, while equity/drawdown uses two legs+funding via CostModel",
+    "Evidência": [
+      "GarimpoInvestimentos/research_worker.py:88-116,149-167",
+      "GarimpoInvestimentos/v3/costs.py:48-83",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Primary 1.1.1rc4 only; no real result artifact executed; alternate1.2.0rc2 not attributed; direction fixed frozenfixture.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-ADMISSION-QUOTA-LIFETIME",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD+INF",
+    "Afirmação": "Quota global/per publisher contabiliza todo ACCEPTED persistido; execução concluída não libera contagem no caminho revisado",
+    "Evidência": [
+      "GarimpoInvestimentos/research_admission.py:submit",
+      "GarimpoInvestimentos/research_execution.py:execute",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Sem teste de saturação/serviço; políticas externas de retenção não observadas. Não atribuir à raiz alternativa.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
     "ID": "stocks-predictor-4",
     "Projeto": "stocks-predictor",
     "Prioridade": "P2",
@@ -340,11 +348,51 @@
     "ID": "stocks-predictor-6",
     "Projeto": "stocks-predictor",
     "Prioridade": "P2",
-    "Certeza": "NV",
-    "Afirmação": "Profundidade integral própria ainda pendente",
-    "Evidência": "coverage.json",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Ledger prospective verifica ligações mas não recalcula hash do payload JSON",
+    "Evidência": "prospective_big_winner.verify_chain; shared-review-notes.json",
     "Limites": "Ver inventário e cobertura",
-    "Próximo passo": "Continuar módulos científicos/ferramentas/fixtures"
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-7",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Maturidade prospective é declarada pelo argumento horizon=12 sem comprovar tempo decorrido",
+    "Evidência": "prospective_big_winner; shared-review-notes.json",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-8",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Teste de idempotência RJ contém comparação tautológica",
+    "Evidência": "tests/test_rj_audit_2026_08_24.py:test_persist_run_updates_row_when_asof_advances linhas340 e349",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-9",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Outcome TOTALRETURN não exige série alcançar 12 meses",
+    "Evidência": "experiments/BIG_WINNER_DETECTION_V1/lib/outcome_stage.py:calculate_path_outcome; remaining-00.txt",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-10",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Compra ETF rejeitada mantém previous_target true e não tenta de novo até mudança de alvo",
+    "Evidência": "monthly_etf; shared-review-notes.json e tests/test_monthly_etf.py",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
   },
   {
     "ID": "OPS-01",

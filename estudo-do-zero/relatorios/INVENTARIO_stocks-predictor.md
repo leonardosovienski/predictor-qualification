@@ -1,6 +1,6 @@
 # Inventário técnico — stocks-predictor
 
-Estado: estudo central do conteúdo local com cobertura explícita, ainda parcial quanto à revisão semântica integral. Não é qualificação científica, recomputação de lucros ou ativação.
+Estado: estudo central do conteúdo local com cobertura explícita, com revisão semântica integral dos executáveis próprios selecionados concluída. Não é qualificação científica, recomputação de lucros ou ativação.
 
 ## Identidade e confronto
 
@@ -44,6 +44,8 @@ RJ: candidatesfirstcausaltrough, outcome futuro rallyversuscontrol/censored/inva
 
 **L — Fonte/build/uso.** Versão0.2.0 eHEADforenses; wheelrelease3.2.1Core URL/hash configura packagefutureinstall, não instalação atual. Plugin não confirmaativo. Nenhuma ordem/brokerfoiobservado nosfluxos centrais; todos caminhosoperacionais específicos retornamcapitalfalse/FORBIDDEN, ausênciaabsoluta brokeremacervocompleto não demonstrada.
 
-## Cobertura pendente
+## Cobertura e limites finais
 
-235arquivosselecionados/36.308linhas leitura mecânica integral eAST; módulo próprio central revisto emcoverage.json. Integral semânticaDBmigrations/CVMingest/externalall/continuouscash/simulation/backtestrunners/discovery/experiments/tools/fixtures ainda pendente. Histórico research eVendor catalogados; profundo sóquando conclusãoexigir. Dados/bancos/execuçõesmercado/modelos não verificados. Artefatossource-text/executable compact são locais intermediários,excluirpublicação. Documento aprendizado reconstrói fluxo observado, não aprovação econômica.
+A cobertura consolidada está em `evidencias/stocks-predictor/coverage.json` e as notas por módulo em `module-notes.json`. Todos os executáveis próprios selecionados foram revisados semanticamente. Lock, fixtures estáticas e código de terceiros são catalogados com essa profundidade distinta. Histórico e fontes remotas não recebem certificação por transferência desta revisão. Nenhum banco original, modelo vivo ou serviço externo foi acionado.
+
+Leitura de testes (ET-SRC), execuções isoladas (ET-RUN), CI por commit e declarações históricas permanecem separados. Consulte `SUPLEMENTO_CAIN_STOCKS_COBERTURA_FINAL.md` para a contagem exata e limites das execuções.

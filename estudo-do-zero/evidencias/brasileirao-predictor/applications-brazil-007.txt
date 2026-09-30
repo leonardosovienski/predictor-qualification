@@ -1,0 +1,586 @@
+### brasileirao_predictor/data/pit_backfill.py
+10: from __future__ import annotations
+12: import hashlib
+13: import json
+14: import math
+15: import sqlite3
+16: import uuid
+17: from collections.abc import Iterable
+18: from datetime import UTC, datetime
+19: from pathlib import Path
+20: from typing import Any
+21: from urllib.parse import quote
+23: from predictor_core.data.contracts import DataUnavailableError
+25: RAW_SCHEMA_VERSION = "pit-raw/1.0"
+26: CURATED_SCHEMA_VERSION = "pit-curated/2.0"
+27: CLOSING_DEFINITION_VERSION = "closing-v2:last-observed-state-single-contract"
+28: MAPPING_VERSION = "brasileirao-club-aliases/1.0"
+30: SOURCE_REGISTER = {
+31:     "sofascore": {"status": "SOURCE_REQUIRES_TEMPORAL_ADMISSION", "economic": False},
+32:     "api_football": {"status": "SOURCE_QUARANTINED", "economic": False},
+33:     "sportmonks": {"status": "SOURCE_PENDING_REVIEW", "economic": False},
+34: }
+36: SCHEMA = """
+37: CREATE TABLE IF NOT EXISTS curated_matches (
+38:     source TEXT NOT NULL,
+39:     source_match_id TEXT NOT NULL,
+40:     canonical_match_id TEXT NOT NULL,
+41:     kickoff_at TEXT NOT NULL,
+42:     ingested_at TEXT NOT NULL,
+43:     raw_home_team TEXT NOT NULL,
+44:     raw_away_team TEXT NOT NULL,
+45:     home_team TEXT NOT NULL,
+46:     away_team TEXT NOT NULL,
+47:     home_goals INTEGER,
+48:     away_goals INTEGER,
+49:     mapping_version TEXT NOT NULL,
+50:     mapping_status TEXT NOT NULL CHECK(mapping_status IN
+51:       ('EXACT','RULE_BASED','MANUAL_CONFIRMED','AMBIGUOUS','REJECTED')),
+52:     data_quality_status TEXT NOT NULL,
+53:     backfill_batch_id TEXT NOT NULL,
+54:     provenance_hash TEXT NOT NULL,
+55:     match_status TEXT NOT NULL,
+56:     PRIMARY KEY(source, source_match_id, ingested_at, provenance_hash)
+57: );
+58: CREATE INDEX IF NOT EXISTS idx_curated_match_key
+59:   ON curated_matches(canonical_match_id, kickoff_at);
+61: CREATE TABLE IF NOT EXISTS curated_odds (
+62:     source TEXT NOT NULL,
+63:     source_match_id TEXT NOT NULL,
+64:     canonical_match_id TEXT NOT NULL,
+65:     kickoff_at TEXT NOT NULL,
+66:     observed_at TEXT NOT NULL,
+67:     published_at TEXT,
+68:     available_at TEXT NOT NULL,
+69:     captured_at TEXT NOT NULL,
+70:     bookmaker TEXT NOT NULL,
+71:     market TEXT NOT NULL,
+72:     selection TEXT NOT NULL,
+73:     raw_odds REAL CHECK(raw_odds IS NULL OR raw_odds > 1.0),
+74:     normalized_probability REAL,
+75:     is_closing INTEGER NOT NULL DEFAULT 0 CHECK(is_closing IN (0,1)),
+76:     closing_definition_version TEXT,
+77:     mapping_version TEXT NOT NULL,
+78:     mapping_status TEXT NOT NULL,
+79:     data_quality_status TEXT NOT NULL,
+80:     backfill_batch_id TEXT NOT NULL,
+81:     provenance_hash TEXT NOT NULL,
+82:     period TEXT NOT NULL,
+83:     line REAL,
+84:     line_key TEXT NOT NULL,
+85:     status TEXT NOT NULL,
+86:     PRIMARY KEY(source, source_match_id, bookmaker, market, selection, period, line_key, captured_at, provenance_hash)
+87: );
+88: CREATE INDEX IF NOT EXISTS idx_curated_odds_pit
+89:   ON curated_odds(canonical_match_id, market, selection, bookmaker, captured_at);
+91: CREATE TABLE IF NOT EXISTS entity_mappings (
+92:     source TEXT NOT NULL,
+93:     raw_name TEXT NOT NULL,
+94:     canonical_name TEXT,
+95:     rule TEXT NOT NULL,
+96:     mapping_version TEXT NOT NULL,
+97:     mapping_status TEXT NOT NULL,
+98:     reviewed_at TEXT,
+99:     evidence TEXT,
+100:     PRIMARY KEY(source, raw_name, mapping_version)
+101: );
+103: CREATE TABLE IF NOT EXISTS raw_files (
+104:     batch_id TEXT PRIMARY KEY,
+105:     source TEXT NOT NULL,
+106:     path TEXT NOT NULL,
+107:     source_version TEXT,
+108:     retrieved_at TEXT NOT NULL,
+109:     sha256 TEXT NOT NULL,
+110:     file_size INTEGER NOT NULL,
+111:     row_count INTEGER,
+112:     temporal_coverage TEXT,
+113:     license TEXT,
+114:     parser_version TEXT NOT NULL
+115: );
+116: CREATE TABLE IF NOT EXISTS curated_schema (version TEXT PRIMARY KEY);
+117: INSERT OR IGNORE INTO curated_schema VALUES ('pit-curated/2.0');
+118: PRAGMA user_version=2;
+119: """
+122: def _utc(value: Any, field: str) -> datetime:
+123:     if not isinstance(value, str):
+124:         raise ValueError(f"{field} deve ser ISO-8601 com timezone")
+125:     try:
+126:         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+127:     except ValueError as exc:
+128:         raise ValueError(f"{field} inválido") from exc
+129:     if parsed.tzinfo is None or parsed.utcoffset() is None:
+130:         raise ValueError(f"{field} deve conter timezone")
+131:     return parsed.astimezone(UTC)
+134: def _hash_bytes(data: bytes) -> str:
+135:     return hashlib.sha256(data).hexdigest()
+138: def connect_curated(path: str | Path) -> sqlite3.Connection:
+139:     path = Path(path).resolve()
+140:     if path.exists():
+143:         check = sqlite3.connect("file:" + quote(path.as_posix(), safe="/:") + "?mode=ro", uri=True)
+144:         try:
+145:             if check.execute("PRAGMA user_version").fetchone()[0] != 2:
+146:                 raise ValueError("schema curated legado: use novo destino v2, sem migração implícita")
+147:             if check.execute("SELECT version FROM curated_schema").fetchall() != [(CURATED_SCHEMA_VERSION,)]:
+148:                 raise ValueError("schema curated incompatível")
+149:             columns = {r[1] for r in check.execute("PRAGMA table_info(curated_odds)")}
+150:             match_columns = {r[1] for r in check.execute("PRAGMA table_info(curated_matches)")}
+151:             if (
+152:                 not {"period", "line", "line_key", "status", "provenance_hash"} <= columns
+153:                 or "match_status" not in match_columns
+154:             ):
+155:                 raise ValueError("schema curated incompleto")
+156:         except sqlite3.DatabaseError as exc:
+157:             raise ValueError("schema curated inválido") from exc
+158:         finally:
+159:             check.close()
+160:         return sqlite3.connect(path)
+161:     path.parent.mkdir(parents=True, exist_ok=True)
+162:     conn = sqlite3.connect(path)
+163:     try:
+164:         conn.executescript(SCHEMA)
+165:     except BaseException:
+166:         conn.close()
+167:         raise
+168:     return conn
+171: def preserve_raw(
+172:     raw: bytes | str | Path,
+173:     destination: str | Path,
+174:     *,
+175:     source: str,
+176:     source_version: str | None,
+177:     retrieved_at: str,
+178:     license: str | None,
+179:     parser_version: str,
+180:     row_count: int | None,
+181:     temporal_coverage: str | None,
+182:     batch_id: str | None = None,
+183: ) -> dict[str, Any]:
+185:     _utc(retrieved_at, "retrieved_at")
+186:     destination = Path(destination)
+187:     destination.parent.mkdir(parents=True, exist_ok=True)
+188:     if destination.exists():
+189:         raise FileExistsError(f"raw imutável já existe: {destination}")
+190:     if isinstance(raw, Path):
+191:         data = raw.read_bytes()
+192:     elif isinstance(raw, str):
+193:         data = raw.encode("utf-8")
+194:     else:
+195:         data = bytes(raw)
+196:     with destination.open("xb") as output:
+197:         output.write(data)
+198:     return {
+199:         "schema_version": RAW_SCHEMA_VERSION,
+200:         "batch_id": batch_id or uuid.uuid4().hex,
+201:         "source": source,
+202:         "path": str(destination),
+203:         "source_version": source_version,
+204:         "retrieved_at": retrieved_at,
+205:         "sha256": _hash_bytes(data),
+206:         "file_size": len(data),
+207:         "row_count": row_count,
+208:         "temporal_coverage": temporal_coverage,
+209:         "license": license,
+210:         "parser_version": parser_version,
+211:     }
+214: def verify_raw(path: str | Path, manifest: dict[str, Any]) -> None:
+215:     data = Path(path).read_bytes()
+216:     if manifest.get("schema_version") != RAW_SCHEMA_VERSION:
+217:         raise ValueError("manifesto raw incompatível")
+218:     if manifest.get("sha256") != _hash_bytes(data):
+219:         raise ValueError("hash raw divergente")
+220:     if manifest.get("file_size") != len(data):
+221:         raise ValueError("tamanho raw divergente")
+224: def register_raw(conn: sqlite3.Connection, manifest: dict[str, Any]) -> None:
+225:     verify_raw(manifest["path"], manifest)
+226:     conn.execute(
+227:         """INSERT INTO raw_files VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+228:         (
+229:             manifest["batch_id"],
+230:             manifest["source"],
+231:             manifest["path"],
+232:             manifest.get("source_version"),
+233:             manifest["retrieved_at"],
+234:             manifest["sha256"],
+235:             manifest["file_size"],
+236:             manifest.get("row_count"),
+237:             manifest.get("temporal_coverage"),
+238:             manifest.get("license"),
+239:             manifest["parser_version"],
+240:         ),
+241:     )
+242:     conn.commit()
+245: def resolve_entity(
+246:     source: str,
+247:     raw_name: str,
+248:     aliases: dict[str, str],
+249:     known: set[str],
+250:     *,
+251:     mapping_version: str = MAPPING_VERSION,
+252:     reviewed_at: str | None = None,
+253: ) -> tuple[str | None, str]:
+255:     if raw_name in known:
+256:         return raw_name, "EXACT"
+257:     if raw_name in aliases:
+258:         canonical = aliases[raw_name]
+259:         if canonical not in known:
+260:             return None, "REJECTED"
+261:         return canonical, "RULE_BASED"
+262:     candidates = [name for name in known if name.casefold() == raw_name.casefold()]
+263:     if len(candidates) == 1:
+264:         return candidates[0], "RULE_BASED"
+265:     if len(candidates) > 1:
+266:         return None, "AMBIGUOUS"
+267:     return None, "REJECTED"
+270: def insert_entity_mapping(
+271:     conn: sqlite3.Connection,
+272:     *,
+273:     source: str,
+274:     raw_name: str,
+275:     canonical_name: str | None,
+276:     rule: str,
+277:     status: str,
+278:     reviewed_at: str | None,
+279:     evidence: str | None,
+280: ) -> None:
+281:     if status not in {"EXACT", "RULE_BASED", "MANUAL_CONFIRMED", "AMBIGUOUS", "REJECTED"}:
+282:         raise ValueError("mapping_status inválido")
+283:     conn.execute(
+284:         "INSERT OR REPLACE INTO entity_mappings VALUES (?,?,?,?,?,?,?,?)",
+285:         (source, raw_name, canonical_name, rule, MAPPING_VERSION, status, reviewed_at, evidence),
+286:     )
+287:     conn.commit()
+290: def _provenance(row: dict[str, Any]) -> str:
+291:     encoded = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode(
+292:         "utf-8"
+293:     )
+294:     return _hash_bytes(encoded)
+297: def curate_match(
+298:     conn: sqlite3.Connection,
+299:     row: dict[str, Any],
+300:     *,
+301:     aliases: dict[str, str],
+302:     known: set[str],
+303:     batch_id: str,
+304:     ingested_at: str,
+305: ) -> str:
+306:     required = ("source", "source_match_id", "kickoff_at", "home_team", "away_team")
+307:     if any(not row.get(field) for field in required):
+308:         raise ValueError("partida curada sem campos obrigatórios")
+309:     kickoff = _utc(row["kickoff_at"], "kickoff_at")
+310:     ingested = _utc(ingested_at, "ingested_at")
+311:     home, hs = resolve_entity(row["source"], row["home_team"], aliases, known)
+312:     away, aws = resolve_entity(row["source"], row["away_team"], aliases, known)
+313:     if hs in {"AMBIGUOUS", "REJECTED"} or aws in {"AMBIGUOUS", "REJECTED"}:
+314:         raise DataUnavailableError("partida rejeitada: entidade sem resolução inequívoca")
+315:     if home == away:
+316:         raise DataUnavailableError("mandante e visitante resolvem para o mesmo clube")
+317:     for field in ("home_goals", "away_goals"):
+318:         value = row.get(field)
+319:         if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value < 0):
+320:             raise ValueError("gols curados devem ser inteiros não negativos ou desconhecidos")
+321:     match_status = row.get("match_status", "UNKNOWN")
+322:     if match_status not in {"SCHEDULED", "POSTPONED", "CANCELLED", "LIVE", "FINISHED", "UNKNOWN"}:
+323:         raise ValueError("estado da partida inválido")
+324:     canonical_id = row.get("canonical_match_id") or (f"{kickoff.isoformat()}|{home}|{away}")
+325:     payload = {
+326:         **row,
+327:         "canonical_match_id": canonical_id,
+328:         "home_team": home,
+329:         "away_team": away,
+330:         "mapping_version": MAPPING_VERSION,
+331:         "mapping_status": "EXACT" if hs == aws == "EXACT" else "RULE_BASED",
+332:         "batch_id": batch_id,
+333:     }
+334:     conn.execute(
+335:         """INSERT OR IGNORE INTO curated_matches VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+336:         (
+337:             row["source"],
+338:             str(row["source_match_id"]),
+339:             canonical_id,
+340:             kickoff.isoformat(),
+341:             ingested.isoformat(),
+342:             row["home_team"],
+343:             row["away_team"],
+344:             home,
+345:             away,
+346:             row.get("home_goals"),
+347:             row.get("away_goals"),
+348:             MAPPING_VERSION,
+349:             payload["mapping_status"],
+350:             row.get("data_quality_status", "OK"),
+351:             batch_id,
+352:             _provenance(payload),
+353:             match_status,
+354:         ),
+355:     )
+356:     conn.commit()
+357:     return canonical_id
+360: def valid_price(value: Any) -> bool:
+361:     try:
+362:         return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value) and value > 1.0
+363:     except OverflowError:
+364:         return False
+367: def curate_odds(
+368:     conn: sqlite3.Connection,
+369:     row: dict[str, Any],
+370:     *,
+371:     canonical_match_id: str,
+372:     batch_id: str,
+373:     mapping_status: str = "EXACT",
+374: ) -> None:
+376:     required = (
+377:         "source",
+378:         "source_match_id",
+379:         "kickoff_at",
+380:         "observed_at",
+381:         "available_at",
+382:         "captured_at",
+383:         "bookmaker",
+384:         "market",
+385:         "selection",
+386:     )
+387:     if any(row.get(field) in (None, "") for field in required):
+388:         raise ValueError("odd curada sem campo obrigatório")
+389:     kickoff = _utc(row["kickoff_at"], "kickoff_at")
+390:     observed = _utc(row["observed_at"], "observed_at")
+391:     available = _utc(row["available_at"], "available_at")
+392:     captured = _utc(row["captured_at"], "captured_at")
+393:     status = row.get("status", "UNKNOWN")
+394:     period = row.get("period", "UNKNOWN")
+395:     if status not in {"ACTIVE", "SUSPENDED", "CLOSED", "INVALID", "UNKNOWN"}:
+396:         raise ValueError("status de preço inválido")
+397:     if period not in {"FT", "1H", "2H", "UNKNOWN"}:
+398:         raise ValueError("período de preço inválido")
+399:     price = row.get("raw_odds")
+400:     if (price is not None and not valid_price(price)) or (status == "ACTIVE" and price is None):
+401:         raise ValueError("raw_odds inválida")
+402:     line = row.get("line")
+403:     if line is not None and (isinstance(line, bool) or not isinstance(line, (int, float)) or not math.isfinite(line)):
+404:         raise ValueError("linha deve ser finita ou desconhecida")
+405:     line_key = "" if line is None else str(float(line) if line != 0 else 0.0)
+406:     normalized = row.get("normalized_probability")
+407:     if normalized is not None and (
+408:         isinstance(normalized, bool)
+409:         or not isinstance(normalized, (int, float))
+410:         or not math.isfinite(normalized)
+411:         or not 0 <= normalized <= 1
+412:     ):
+413:         raise ValueError("probabilidade normalizada inválida")
+414:     if available > captured or captured >= kickoff:
+415:         raise ValueError("odd não é pré-evento ou available_at posterior à captura")
+416:     if observed > captured:
+417:         raise ValueError("observed_at posterior à captura")
+418:     published = None
+419:     if row.get("published_at") is not None:
+420:         published = _utc(row["published_at"], "published_at")
+421:         if published > captured:
+422:             raise ValueError("published_at posterior à captura")
+423:     payload = {
+424:         **row,
+425:         "canonical_match_id": canonical_match_id,
+426:         "batch_id": batch_id,
+427:         "mapping_version": MAPPING_VERSION,
+428:     }
+429:     conn.execute(
+430:         """INSERT OR IGNORE INTO curated_odds VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+431:         (
+432:             row["source"],
+433:             str(row["source_match_id"]),
+434:             canonical_match_id,
+435:             kickoff.isoformat(),
+436:             observed.isoformat(),
+437:             published.isoformat() if published is not None else None,
+438:             available.isoformat(),
+439:             captured.isoformat(),
+440:             row["bookmaker"],
+441:             row["market"],
+442:             row["selection"],
+443:             float(price) if price is not None else None,
+444:             normalized,
+445:             int(row.get("is_closing", 0)),
+446:             row.get("closing_definition_version"),
+447:             MAPPING_VERSION,
+448:             mapping_status,
+449:             row.get("data_quality_status", "OK"),
+450:             batch_id,
+451:             _provenance(payload),
+452:             period,
+453:             line,
+454:             line_key,
+455:             status,
+456:         ),
+457:     )
+458:     conn.commit()
+461: def choose_closing(
+462:     rows: Iterable[dict[str, Any]],
+463:     *,
+464:     kickoff_at: str,
+465:     bookmaker: str,
+466:     market: str,
+467:     selection: str,
+468:     max_window_hours: float = 72.0,
+469: ) -> dict[str, Any] | None:
+476:     if (
+477:         isinstance(max_window_hours, bool)
+478:         or not isinstance(max_window_hours, (int, float))
+479:         or not math.isfinite(max_window_hours)
+480:         or max_window_hours <= 0
+481:     ):
+482:         raise ValueError("janela deve ser positiva e finita")
+483:     kickoff = _utc(kickoff_at, "kickoff_at")
+484:     candidates = []
+485:     identities = set()
+486:     for row in rows:
+487:         if row.get("bookmaker") != bookmaker or row.get("market") != market or row.get("selection") != selection:
+488:             continue
+489:         captured = _utc(row.get("captured_at"), "captured_at")
+490:         for field in ("observed_at", "available_at", "published_at"):
+491:             if row.get(field) is not None and _utc(row[field], field) > captured:
+492:                 raise ValueError(f"{field} posterior à captura")
+493:         if row.get("kickoff_at") is not None and _utc(row["kickoff_at"], "kickoff_at") != kickoff:
+494:             raise ValueError("kickoff do contrato diverge da referência")
+495:         if captured >= kickoff or (kickoff - captured).total_seconds() > max_window_hours * 3600:
+496:             continue
+497:         required = ("source", "source_match_id", "period")
+498:         if any(not isinstance(row.get(field), str) or not row[field].strip() for field in required):
+499:             raise ValueError("closing requer identidade, fonte e período explícitos")
+500:         identities.add(
+501:             tuple(row.get(field) for field in ("source", "source_match_id", "canonical_match_id", "line", "period"))
+502:         )
+503:         candidates.append((captured, row))
+504:     if len(identities) > 1:
+505:         raise ValueError("closing mistura eventos, fontes ou contratos")
+506:     if not candidates:
+507:         return None
+508:     latest = max(captured for captured, _ in candidates)
+509:     states = [row for captured, row in candidates if captured == latest]
+510:     signatures = {(row.get("raw_odds"), row.get("status"), row.get("data_quality_status", "OK")) for row in states}
+511:     if len(signatures) != 1:
+512:         return None
+513:     chosen = states[0]
+514:     if (
+515:         not valid_price(chosen.get("raw_odds"))
+516:         or chosen.get("status") != "ACTIVE"
+517:         or chosen.get("period") not in {"FT", "1H", "2H"}
+518:         or chosen.get("data_quality_status", "OK") != "OK"
+519:     ):
+520:         return None
+521:     return {
+522:         **chosen,
+523:         "is_closing": 1,
+524:         "closing_definition_version": CLOSING_DEFINITION_VERSION,
+525:         "closing_scope": "last_observed_state_not_commercial_closing",
+526:         "economic_evidence_eligible": False,
+527:     }
+530: def pit_eligible(*, available_at: str, predicted_at: str, kickoff_at: str) -> bool:
+531:     available = _utc(available_at, "available_at")
+532:     predicted = _utc(predicted_at, "predicted_at")
+533:     kickoff = _utc(kickoff_at, "kickoff_at")
+534:     return available <= predicted < kickoff
+537: def evaluation_view(conn: sqlite3.Connection, *, predicted_at: str) -> list[dict[str, Any]]:
+544:     predicted_at = _utc(predicted_at, "predicted_at").isoformat()
+545:     conn.row_factory = sqlite3.Row
+546:     rows = conn.execute(
+547:         """SELECT * FROM (SELECT *, DENSE_RANK() OVER (
+548:             PARTITION BY source, source_match_id ORDER BY ingested_at DESC) AS receipt_rank
+549:             FROM curated_matches WHERE ingested_at <= ?) WHERE receipt_rank=1""",
+550:         (predicted_at,),
+551:     ).fetchall()
+552:     selected: dict[tuple[str, str], dict[str, Any]] = {}
+553:     for raw in rows:
+554:         row = {k: raw[k] for k in raw.keys() if k != "receipt_rank"}
+555:         key = (row["source"], row["source_match_id"])
+556:         previous = selected.get(key)
+558:         def material(r):
+559:             return {k: v for k, v in r.items() if k not in {"provenance_hash", "backfill_batch_id"}}
+561:         if previous is not None and material(previous) != material(row):
+562:             raise ValueError("revisões de partida conflitantes no mesmo recebimento")
+563:         selected[key] = row
+564:     return sorted(
+565:         [
+566:             r
+567:             for r in selected.values()
+568:             if r["kickoff_at"] > predicted_at and r["match_status"] in {"SCHEDULED", "UNKNOWN"}
+569:         ],
+570:         key=lambda r: (r["kickoff_at"], r["canonical_match_id"]),
+571:     )
+574: def walk_forward_splits(
+575:     rows: Iterable[dict[str, Any]], *, development_end: str, validation_end: str, test_end: str
+576: ) -> dict[str, list[dict[str, Any]]]:
+578:     bounds = [
+579:         _utc(value, name)
+580:         for value, name in (
+581:             (development_end, "development_end"),
+582:             (validation_end, "validation_end"),
+583:             (test_end, "test_end"),
+584:         )
+585:     ]
+586:     if not bounds[0] < bounds[1] < bounds[2]:
+587:         raise ValueError("limites walk-forward devem ser estritamente crescentes")
+588:     output = {"development": [], "validation": [], "test": []}
+589:     for row in rows:
+590:         event = _utc(row.get("kickoff_at"), "kickoff_at")
+591:         if event < bounds[0]:
+592:             output["development"].append(row)
+593:         elif event < bounds[1]:
+594:             output["validation"].append(row)
+595:         elif event < bounds[2]:
+596:             output["test"].append(row)
+597:     return output
+600: def cluster_bootstrap_mean(
+601:     rows: Iterable[dict[str, Any]], field: str, *, iterations: int = 2000, seed: int = 13
+602: ) -> dict[str, float] | None:
+604:     import math
+605:     import random
+607:     if isinstance(iterations, bool) or not isinstance(iterations, int) or iterations <= 0:
+608:         raise ValueError("iterations deve ser inteiro positivo")
+610:     grouped: dict[Any, list[float]] = {}
+611:     for row in rows:
+612:         value, cluster = row.get(field), row.get("cluster")
+613:         if value is not None and (
+614:             isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
+615:         ):
+616:             raise ValueError("resultado de bootstrap deve ser numérico finito ou ausente")
+617:         if value is not None and cluster is not None:
+618:             grouped.setdefault(cluster, []).append(float(value))
+619:     if not grouped:
+620:         return None
+621:     clusters = list(grouped.values())
+622:     means = []
+623:     rng = random.Random(seed)
+624:     for _ in range(iterations):
+625:         sampled = [rng.choice(clusters) for _ in clusters]
+626:         values = [value for cluster in sampled for value in cluster]
+627:         means.append(sum(values) / len(values))
+628:     means.sort()
+629:     return {
+630:         "mean": sum(v for cluster in clusters for v in cluster) / sum(len(cluster) for cluster in clusters),
+631:         "lower_95": means[max(0, int(iterations * 0.025))],
+632:         "upper_95": means[min(iterations - 1, int(iterations * 0.975))],
+633:         "clusters": len(clusters),
+634:         "iterations": iterations,
+635:     }
+638: def quality_gate(observations: Iterable[dict[str, Any]], *, min_matured: int = 100) -> dict[str, Any]:
+640:     rows = list(observations)
+641:     eligible = [row for row in rows if row.get("pit_valid") is True and row.get("matured") is True]
+642:     cluster_counts: dict[Any, int] = {}
+643:     club_counts: dict[Any, int] = {}
+644:     for row in eligible:
+645:         cluster_counts[row.get("cluster")] = cluster_counts.get(row.get("cluster"), 0) + 1
+646:         for club in row.get("clubs", ()):
+647:             club_counts[club] = club_counts.get(club, 0) + 1
+648:     total = len(eligible)
+649:     n = sum(club_counts.values())
+650:     hhi = sum((count / n) ** 2 for count in club_counts.values()) if n else None
+651:     return {
+652:         "status": "GATE_PASSED_FOR_PROSPECTIVE_SHADOW" if total >= min_matured else "INSUFFICIENT_SAMPLE",
+653:         "eligible_matches": total,
+654:         "predictions_emitted": len(rows),
+655:         "matured_labels": total,
+656:         "clusters": len(cluster_counts),
+657:         "club_hhi": hhi,
+658:         "roi_ic95": cluster_bootstrap_mean(eligible, "pnl"),
+659:         "clv_ic95": cluster_bootstrap_mean(eligible, "clv"),
+660:         "brier_ic95": cluster_bootstrap_mean(eligible, "brier"),
+661:         "capital_enabled": False,
+662:     }

@@ -1,0 +1,213 @@
+### brasileirao_predictor/bootstrap.py
+26: import json
+27: import sys
+29: import numpy as np
+31: from . import db
+32: from .ingest import ROOT, load_config
+34: BANDS = [(0.0, 0.05), (0.05, 0.10), (0.10, 0.15), (0.15, 1.01)]
+35: CACHE_PATH = ROOT / "data" / "bootstrap_cache.json"
+38: def ci_mean(values, iterations: int, rng) -> tuple[float, float, float]:
+46:     v = np.asarray(values, dtype=float)
+47:     if v.size == 0:
+48:         raise ValueError("ci_mean: amostra vazia — guarde com n >= 1 no chamador")
+49:     idx = rng.integers(0, len(v), size=(iterations, len(v)))
+50:     means = v[idx].mean(axis=1)
+51:     return float(v.mean()), float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+54: def ci_mean_cluster(pairs, iterations: int, rng) -> tuple[float, float, float]:
+62:     groups: dict = {}
+63:     for v, c in pairs:
+64:         groups.setdefault(c, []).append(float(v))
+65:     if not groups:
+66:         raise ValueError("ci_mean_cluster: amostra vazia — guarde com n >= 1 no chamador")
+67:     vals_by_key = [np.asarray(vs, dtype=float) for vs in groups.values()]
+68:     n = len(vals_by_key)
+69:     means = np.empty(iterations, dtype=float)
+70:     for it in range(iterations):
+71:         idx = rng.integers(0, n, size=n)
+72:         sample = np.concatenate([vals_by_key[i] for i in idx])
+73:         means[it] = sample.mean()
+74:     all_vals = np.concatenate(vals_by_key)
+75:     return (
+76:         float(all_vals.mean()),
+77:         float(np.percentile(means, 2.5)),
+78:         float(np.percentile(means, 97.5)),
+79:     )
+82: def _game_key(b):
+85:     return (b["date"], b["home"], b["away"])
+88: def _row(label, pairs, iterations, rng):
+89:     n = len(pairs)
+90:     n_games = len({c for _v, c in pairs})
+91:     if n < 2:
+92:         print(f"  {label:<14}{n:>5}  — amostra insuficiente")
+93:         return
+94:     mean, lo, hi = ci_mean_cluster(pairs, iterations, rng)
+96:     sig = "SIGNIFICATIVO" if (lo > 0 or hi < 0) else "cruza o zero"
+97:     print(f"  {label:<14}{n:>5} ({n_games:>3}j){mean:>+10.2%}  [{lo:>+8.2%}, {hi:>+8.2%}]  {sig}")
+100: def _section(title, bets, metric, iterations, rng):
+101:     print(f"\n{title}")
+102:     print(f"  {'fatia':<14}{'n':>5} {'jogos':>5}{'média':>9}  {'IC 95%':^22}")
+103:     _row("total", [(b[metric], _game_key(b)) for b in bets], iterations, rng)
+104:     for mkt in ("1x2", "ou25"):
+105:         _row(mkt, [(b[metric], _game_key(b)) for b in bets if b["market"] == mkt], iterations, rng)
+106:     for lo, hi in BANDS:
+107:         sub = [(b[metric], _game_key(b)) for b in bets if lo <= b["edge_vs_price"] < hi]
+108:         _row(f"edge {lo:.0%}-{hi:.0%}", sub, iterations, rng)
+111: def _clv_cache_entry(label, pairs, iterations, rng):
+114:     n = len(pairs)
+115:     if n < 2:
+116:         return None
+117:     n_games = len({c for _v, c in pairs})
+118:     mean, lo, hi = ci_mean_cluster(pairs, iterations, rng)
+119:     return {
+120:         "n": n,
+121:         "n_games": n_games,
+122:         "mean": mean,
+123:         "ci_low": lo,
+124:         "ci_high": hi,
+125:         "significant": bool(lo > 0 or hi < 0),
+126:     }
+129: def save_clv_cache(open_bets, iterations, rng, computed_at):
+132:     entries = {}
+133:     total = _clv_cache_entry("total", [(b["clv"], _game_key(b)) for b in open_bets], iterations, rng)
+134:     if total:
+135:         entries["total"] = total
+136:     for mkt in ("1x2", "ou25"):
+137:         e = _clv_cache_entry(
+138:             mkt,
+139:             [(b["clv"], _game_key(b)) for b in open_bets if b["market"] == mkt],
+140:             iterations,
+141:             rng,
+142:         )
+143:         if e:
+144:             entries[mkt] = e
+145:     CACHE_PATH.write_text(
+146:         json.dumps({"computed_at": computed_at, "markets": entries}, indent=2, ensure_ascii=False),
+147:         encoding="utf-8",
+148:     )
+151: def main():
+152:     cfg = load_config()
+153:     bt = cfg.get("backtest", {})
+154:     iterations = int(bt.get("bootstrap_iterations", 1000))
+155:     seed = int(bt.get("bootstrap_seed", 13))
+156:     rng = np.random.default_rng(seed)
+158:     conn = db.connect(str(ROOT / cfg["database"]))
+159:     try:
+160:         cur = conn.execute("SELECT market, edge_vs_price, bet_at, pnl, clv, date, home, away FROM backtest_bets")
+161:         cols = [c[0] for c in cur.description]
+162:         bets = [dict(zip(cols, r)) for r in cur.fetchall()]
+163:     except Exception:
+164:         sys.exit("tabela backtest_bets não existe — rode `python -m brasileirao_predictor.backtest` antes")
+165:     if not bets:
+166:         sys.exit("ledger vazio — rode `python -m brasileirao_predictor.backtest` antes")
+168:     print(f"bootstrap: {iterations} reamostragens, seed {seed}, {len(bets)} apostas no ledger")
+170:     _section("ROI por aposta (stake 1u) — variância alta, exige centenas:", bets, "pnl", iterations, rng)
+172:     open_bets = [b for b in bets if b["bet_at"] == "open" and b["clv"] is not None]
+173:     if open_bets:
+174:         _section(
+175:             f"CLV (população bet_at='open', n={len(open_bets)}) — a régua que converge com dezenas:",
+176:             open_bets,
+177:             "clv",
+178:             iterations,
+179:             rng,
+180:         )
+181:         import datetime
+183:         computed_at = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+184:         save_clv_cache(open_bets, iterations, rng, computed_at)
+185:         print(f"\n[cache gravado: {CACHE_PATH.relative_to(ROOT)}]")
+186:     else:
+187:         print(
+188:             "\nCLV: nenhuma aposta na população 'open' ainda — o sinal nasce quando o"
+189:             "\ncron de 2026 acumular abertura+fechamento. A população 'close' não entra"
+190:             "\naqui: CLV de aposta no próprio fechamento é tautologia (~ -vig)."
+191:         )
+194: if __name__ == "__main__":
+195:     main()
+### brasileirao_predictor/check_coverage.py
+6: from brasileirao_predictor import db
+7: from brasileirao_predictor.ingest import ROOT, load_config
+10: def _percentage(count, total):
+11:     return f"{100 * count / total:.1f}%" if total else "N/A: universo vazio"
+14: def main():
+15:     cfg = load_config()
+16:     db_path = ROOT / cfg["database"]
+17:     conn = db.connect(str(db_path), read_only=True)
+18:     try:
+19:         _render(conn)
+20:     finally:
+21:         conn.close()
+24: def _render(conn):
+25:     cursor = conn.cursor()
+28:     cursor.execute("SELECT COUNT(DISTINCT event_id) FROM sofascore_matches")
+29:     total_sofascore = cursor.fetchone()[0]
+32:     cursor.execute(
+33:         "SELECT COUNT(DISTINCT event_id) FROM match_statistics "
+34:         "WHERE event_id IN (SELECT event_id FROM sofascore_matches)"
+35:     )
+36:     stats_matches = cursor.fetchone()[0]
+39:     cursor.execute("""
+40:         SELECT COUNT(DISTINCT event_id) FROM sofascore_matches
+41:         WHERE odds_home IS NOT NULL AND odds_draw IS NOT NULL AND odds_away IS NOT NULL
+42:     """)
+43:     odds_1x2 = cursor.fetchone()[0]
+46:     cursor.execute(
+47:         "SELECT COUNT(DISTINCT event_id) FROM odds_lines WHERE market='cards' "
+48:         "AND event_id IN (SELECT event_id FROM sofascore_matches)"
+49:     )
+50:     odds_cards = cursor.fetchone()[0]
+53:     cursor.execute(
+54:         "SELECT COUNT(DISTINCT event_id) FROM odds_lines WHERE market='corners' "
+55:         "AND event_id IN (SELECT event_id FROM sofascore_matches)"
+56:     )
+57:     odds_corners = cursor.fetchone()[0]
+60:     cursor.execute("""
+61:         SELECT COUNT(DISTINCT ms.event_id)
+62:         FROM match_statistics ms
+63:         JOIN odds_lines ol ON ms.event_id = ol.event_id
+64:         WHERE ol.market = 'cards' AND ms.event_id IN (SELECT event_id FROM sofascore_matches)
+65:     """)
+66:     stats_and_cards = cursor.fetchone()[0]
+68:     cursor.execute("""
+69:         SELECT COUNT(DISTINCT ms.event_id)
+70:         FROM match_statistics ms
+71:         JOIN odds_lines ol ON ms.event_id = ol.event_id
+72:         WHERE ol.market = 'corners' AND ms.event_id IN (SELECT event_id FROM sofascore_matches)
+73:     """)
+74:     stats_and_corners = cursor.fetchone()[0]
+76:     print("\n=== COBERTURA DE DADOS (apenas Sofascore) ===\n")
+77:     print(f"Total de jogos no Sofascore:              {total_sofascore}")
+78:     print(f"Jogos com estatísticas (match_stats):     {stats_matches} ({_percentage(stats_matches, total_sofascore)})")
+79:     print(f"Jogos com odds 1X2 (em sofascore_matches):{odds_1x2} ({_percentage(odds_1x2, total_sofascore)})")
+80:     print(f"Jogos com odds de CARDS (em odds_lines):  {odds_cards} ({_percentage(odds_cards, total_sofascore)})")
+81:     print(f"Jogos com odds de CORNERS (em odds_lines):{odds_corners} ({_percentage(odds_corners, total_sofascore)})")
+82:     print()
+83:     print(
+84:         f"Jogos com stats + odds cards:             {stats_and_cards} "
+85:         f"({stats_and_cards / stats_matches * 100:.1f}% dos com stats)"
+86:         if stats_matches
+87:         else "Jogos com stats + odds cards: 0"
+88:     )
+89:     print(
+90:         f"Jogos com stats + odds corners:           {stats_and_corners} "
+91:         f"({stats_and_corners / stats_matches * 100:.1f}% dos com stats)"
+92:         if stats_matches
+93:         else "Jogos com stats + odds corners: 0"
+94:     )
+97:     print("\n--- Por competição (top 5) ---")
+98:     cursor.execute("""
+99:         SELECT 
+100:             sm.competition,
+101:             COUNT(DISTINCT sm.event_id) AS total,
+102:             COUNT(DISTINCT ms.event_id) AS stats,
+103:             COUNT(DISTINCT CASE WHEN ol.market='cards' THEN ol.event_id END) AS cards_odds,
+104:             COUNT(DISTINCT CASE WHEN ol.market='corners' THEN ol.event_id END) AS corners_odds
+105:         FROM sofascore_matches sm
+106:         LEFT JOIN match_statistics ms ON sm.event_id = ms.event_id
+107:         LEFT JOIN odds_lines ol ON sm.event_id = ol.event_id AND ol.market IN ('cards','corners')
+108:         GROUP BY sm.competition
+109:         ORDER BY total DESC
+110:         LIMIT 5
+111:     """)
+112:     for row in cursor.fetchall():
+113:         print(f"{row[0]}: total={row[1]}, stats={row[2]}, cards_odds={row[3]}, corners_odds={row[4]}")
+116: if __name__ == "__main__":
+117:     main()

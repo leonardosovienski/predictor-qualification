@@ -1,0 +1,230 @@
+### tests/test_price_strength_dynamic_xg.py
+3: import math
+4: from dataclasses import asdict, replace
+5: from datetime import UTC, datetime, timedelta
+6: from itertools import permutations
+8: import pytest
+10: from brasileirao_predictor.research.price_strength.dynamic_xg import (
+11:     DynamicXGConfig,
+12:     Fixture,
+13:     XGObservation,
+14:     fit_calibration,
+15:     forecast,
+16: )
+18: BASE = datetime(2035, 1, 1, 12, tzinfo=UTC)
+19: CONFIG = DynamicXGConfig(window_matches=3, min_team_matches=2, min_calibration_matches=2)
+22: def observation(day: int, **updates) -> XGObservation:
+23:     kickoff = BASE + timedelta(days=day)
+24:     values = {
+25:         "match_id": f"synthetic-{day}",
+26:         "home_team": "Synthetic Home",
+27:         "away_team": "Synthetic Away",
+28:         "kickoff": kickoff,
+29:         "completed_at": kickoff + timedelta(hours=2),
+30:         "available_at": kickoff + timedelta(hours=3),
+31:         "home_xg": 1.8,
+32:         "away_xg": 0.9,
+33:         "home_goals": 2,
+34:         "away_goals": 1,
+35:     }
+36:     values.update(updates)
+37:     return XGObservation(**values)
+40: HISTORY = [observation(day) for day in (0, 7, 14)]
+41: FIXTURE = Fixture("future-synthetic", "Synthetic Home", "Synthetic Away", BASE + timedelta(days=40))
+42: DECISION = FIXTURE.kickoff - timedelta(hours=1)
+45: def predict(history=HISTORY, **kwargs):
+46:     return forecast(history, FIXTURE, DECISION, CONFIG, **kwargs)
+49: def calibration(history=None):
+50:     if history is None:
+51:         history = [*HISTORY, observation(21), observation(28)]
+52:     return fit_calibration(history, BASE + timedelta(days=20), BASE + timedelta(days=30), CONFIG)
+55: def test_probabilities_are_normalized_and_consistent_with_poisson_rates() -> None:
+56:     prediction = predict()
+57:     assert prediction.eligible
+58:     assert prediction.lambda_home > prediction.lambda_away > 0
+59:     for market in prediction.probabilities.values():
+60:         assert math.fsum(market.values()) == pytest.approx(1)
+61:         assert all(0 <= value <= 1 for value in market.values())
+62:     total = prediction.lambda_home + prediction.lambda_away
+63:     assert prediction.probabilities["ou25"]["under"] == pytest.approx(math.exp(-total) * (1 + total + total**2 / 2))
+64:     assert prediction.probabilities["btts"]["yes"] == pytest.approx(
+65:         (1 - math.exp(-prediction.lambda_home)) * (1 - math.exp(-prediction.lambda_away))
+66:     )
+69: def test_future_results_and_late_statistics_cannot_change_forecast() -> None:
+70:     future = observation(50, home_xg=99, away_xg=80, home_goals=60, away_goals=40)
+71:     late = observation(20, available_at=DECISION + timedelta(seconds=1), home_xg=50, away_xg=50)
+72:     assert predict([*HISTORY, future, late]) == predict()
+75: def test_statistics_at_the_decision_boundary_are_not_available() -> None:
+76:     at_boundary = observation(21, available_at=DECISION, home_xg=10)
+77:     assert predict([*HISTORY, at_boundary]) == predict()
+78:     before_boundary = replace(at_boundary, available_at=DECISION - timedelta(microseconds=1))
+79:     assert predict([*HISTORY, before_boundary]).lambda_home > predict().lambda_home
+82: def test_own_match_id_never_enters_history_even_with_incorrect_external_fixture_identity() -> None:
+83:     own = observation(30, match_id=FIXTURE.match_id, home_xg=40, home_goals=25)
+84:     assert predict([*HISTORY, own]) == predict()
+87: def test_history_is_order_invariant_and_duplicate_delivery_is_counted_once() -> None:
+88:     assert predict(list(reversed(HISTORY)) + HISTORY) == predict()
+91: def test_latest_available_revision_is_used_without_looking_at_future_revision() -> None:
+92:     original = HISTORY[-1]
+93:     future_revision = replace(original, home_xg=90, available_at=DECISION + timedelta(seconds=1))
+94:     assert predict([*HISTORY, future_revision]) == predict()
+95:     revision = replace(original, home_xg=4, available_at=DECISION - timedelta(seconds=1))
+96:     prediction = predict([revision, *HISTORY])
+97:     assert prediction.lambda_home > predict().lambda_home
+98:     assert prediction.n_home == prediction.n_away == 3
+101: def test_conflicting_visible_revision_fails_closed() -> None:
+102:     with pytest.raises(ValueError, match="conflicting statistics"):
+103:         predict([*HISTORY, replace(HISTORY[-1], home_xg=5)])
+106: @pytest.mark.parametrize("order", tuple(permutations(range(3))))
+107: def test_superseded_conflicting_revisions_fail_closed_in_every_input_order(order) -> None:
+108:     original = HISTORY[-1]
+109:     versions = (
+110:         original,
+111:         replace(original, home_xg=5),
+112:         replace(original, home_xg=4, available_at=DECISION - timedelta(seconds=1)),
+113:     )
+114:     with pytest.raises(ValueError, match="conflicting statistics"):
+115:         predict([*HISTORY[:-1], *(versions[index] for index in order)])
+118: @pytest.mark.parametrize("order", tuple(permutations(range(3))))
+119: def test_identical_superseded_duplicates_are_tolerated_in_every_input_order(order) -> None:
+120:     original = HISTORY[-1]
+121:     latest = replace(original, home_xg=4, available_at=DECISION - timedelta(seconds=1))
+122:     versions = (original, replace(original), latest)
+123:     expected = predict([*HISTORY[:-1], latest])
+124:     assert predict([*HISTORY[:-1], *(versions[index] for index in order)]) == expected
+127: def test_conflicting_future_revisions_are_ignored_before_conflict_validation() -> None:
+128:     future = replace(HISTORY[-1], home_xg=4, available_at=DECISION)
+129:     conflict = replace(future, home_xg=5)
+130:     for order in permutations((future, conflict)):
+131:         assert predict([*order, *HISTORY]) == predict()
+134: def test_conflicting_visible_match_identity_fails_closed() -> None:
+135:     with pytest.raises(ValueError, match="conflicting match identity"):
+136:         predict([*HISTORY, replace(HISTORY[-1], home_team="Other Team")])
+139: def test_window_selects_recent_kickoffs_not_recent_delivery_dates() -> None:
+140:     recent_history = [*HISTORY, observation(21)]
+141:     late_old = replace(HISTORY[0], home_xg=50, available_at=DECISION - timedelta(seconds=1))
+142:     assert predict([*recent_history, late_old]) == predict(recent_history)
+143:     assert predict(recent_history).history_match_ids == ("synthetic-14", "synthetic-21", "synthetic-7")
+146: def test_cold_start_does_not_promote_prior_probabilities_into_an_eligible_forecast() -> None:
+147:     result = predict(HISTORY[:1])
+148:     assert not result.eligible
+149:     assert result.reason == "INSUFFICIENT_HISTORY"
+150:     assert result.probabilities == {}
+151:     assert result.lambda_home is None
+154: def test_venue_specific_history_is_required_for_both_teams() -> None:
+155:     wrong_venue = [replace(item, home_team=item.away_team, away_team=item.home_team) for item in HISTORY]
+156:     result = predict(wrong_venue)
+157:     assert not result.eligible
+158:     assert result.n_home == result.n_away == 0
+161: def test_more_opponent_xg_conceded_increases_home_scoring_probability() -> None:
+162:     home_history = [replace(item, away_team="Other Away") for item in HISTORY]
+163:     away_history = [observation(day, home_team="Other Home") for day in (1, 8, 15)]
+164:     regular = predict([*home_history, *away_history])
+165:     weaker_defense = predict([*home_history, *(replace(item, home_xg=4) for item in away_history)])
+166:     assert weaker_defense.lambda_home > regular.lambda_home
+167:     assert weaker_defense.probabilities["1x2"]["home"] > regular.probabilities["1x2"]["home"]
+170: def test_raw_forecast_uses_xg_not_realized_goals() -> None:
+171:     assert predict([replace(item, home_goals=30, away_goals=25) for item in HISTORY]) == predict()
+174: def test_calibration_uses_only_prior_forecasts_and_observed_labels() -> None:
+175:     labels = [observation(21), observation(28)]
+176:     fitted = calibration([*HISTORY, *labels])
+177:     earlier_predictions = [
+178:         forecast(
+179:             [*HISTORY, *labels],
+180:             Fixture(item.match_id, item.home_team, item.away_team, item.kickoff),
+181:             item.kickoff - timedelta(hours=1),
+182:             CONFIG,
+183:         )
+184:         for item in labels
+185:     ]
+186:     assert fitted.eligible and fitted.n_matches == 2
+187:     assert fitted.home_scale == pytest.approx(
+188:         (4 + CONFIG.calibration_prior_exposure)
+189:         / (sum(item.lambda_home for item in earlier_predictions) + CONFIG.calibration_prior_exposure)
+190:     )
+191:     assert fitted.used_match_ids == ("synthetic-0", "synthetic-14", "synthetic-21", "synthetic-28", "synthetic-7")
+194: def test_calibration_is_invariant_to_future_results_and_late_labels() -> None:
+195:     history = [*HISTORY, observation(21), observation(28)]
+196:     future = observation(35, home_xg=90, home_goals=50)
+197:     late = observation(25, available_at=BASE + timedelta(days=31), home_xg=30, home_goals=20)
+198:     assert calibration([future, *history, late]) == calibration(history)
+201: def test_last_calibration_matches_own_xg_cannot_change_its_prediction_or_fitted_scales() -> None:
+202:     history = [*HISTORY, observation(21), observation(28)]
+203:     changed_own_xg = [*history[:-1], replace(history[-1], home_xg=90, away_xg=80)]
+204:     assert calibration(changed_own_xg) == calibration(history)
+207: def test_result_at_calibration_end_is_excluded() -> None:
+208:     at_boundary = observation(28, available_at=BASE + timedelta(days=30))
+209:     result = calibration([*HISTORY, observation(21), at_boundary])
+210:     assert not result.eligible
+211:     assert result.n_matches == 1
+214: def test_calibration_has_explicit_cold_start_and_optional_outcomes() -> None:
+215:     no_labels = [
+216:         replace(item, home_goals=None, away_goals=None) for item in [*HISTORY, observation(21), observation(28)]
+217:     ]
+218:     fitted = calibration(no_labels)
+219:     assert not fitted.eligible
+220:     assert fitted.n_matches == 0
+221:     assert fitted.reason == "INSUFFICIENT_CALIBRATION"
+222:     prediction = predict(calibration=fitted)
+223:     assert not prediction.eligible
+224:     assert prediction.reason == "INSUFFICIENT_CALIBRATION"
+225:     assert prediction.probabilities == {}
+228: def test_calibration_is_applied_coherently_and_records_input_lineage() -> None:
+229:     fitted = calibration()
+230:     prediction = predict(calibration=fitted)
+231:     assert prediction.eligible and prediction.calibration_applied
+232:     assert prediction.lambda_home == pytest.approx(predict().lambda_home * fitted.home_scale)
+233:     assert prediction.calibration_n == 2
+234:     assert prediction.calibration_match_ids == fitted.used_match_ids
+235:     assert prediction.latest_available_at == fitted.latest_available_at
+236:     assert asdict(prediction)["status"] == "UNVALIDATED_NEW_LINEAGE"
+239: def test_calibration_from_the_decision_boundary_or_future_is_rejected() -> None:
+240:     fitted = replace(calibration(), calibration_end=DECISION)
+241:     with pytest.raises(ValueError, match="strictly before"):
+242:         predict(calibration=fitted)
+245: def test_calibration_cannot_be_applied_to_its_own_target_or_different_candidate() -> None:
+246:     fitted = calibration()
+247:     with pytest.raises(ValueError, match="own calibration"):
+248:         forecast(HISTORY, replace(FIXTURE, match_id="synthetic-28"), DECISION, CONFIG, fitted)
+249:     with pytest.raises(ValueError, match="different candidate"):
+250:         forecast(HISTORY, FIXTURE, DECISION, replace(CONFIG, half_life_days=45), fitted)
+253: @pytest.mark.parametrize(
+254:     "decision", [FIXTURE.kickoff, FIXTURE.kickoff + timedelta(seconds=1), BASE.replace(tzinfo=None)]
+255: )
+256: def test_invalid_decision_clocks_are_rejected(decision) -> None:
+257:     with pytest.raises(ValueError):
+258:         forecast(HISTORY, FIXTURE, decision, CONFIG)
+261: @pytest.mark.parametrize(
+262:     "updates",
+263:     [
+264:         {"available_at": BASE},
+265:         {"completed_at": BASE},
+266:         {"kickoff": BASE.replace(tzinfo=None)},
+267:         {"home_xg": float("nan")},
+268:         {"away_xg": float("inf")},
+269:         {"home_xg": True},
+270:         {"home_xg": -1},
+271:         {"home_goals": True},
+272:         {"home_goals": 1.5},
+273:         {"away_goals": None},
+274:         {"match_id": ""},
+275:     ],
+276: )
+277: def test_invalid_observations_fail_closed(updates) -> None:
+278:     with pytest.raises(ValueError):
+279:         observation(0, **updates)
+282: @pytest.mark.parametrize(
+283:     "updates",
+284:     [
+285:         {"window_matches": 0},
+286:         {"min_team_matches": 6},
+287:         {"prior_weight": 0},
+288:         {"half_life_days": float("inf")},
+289:         {"prior_home_xg": -1},
+290:         {"calibration_lead_minutes": 0},
+291:         {"min_calibration_matches": True},
+292:     ],
+293: )
+294: def test_invalid_configuration_is_rejected(updates) -> None:
+295:     with pytest.raises(ValueError):
+296:         DynamicXGConfig(**updates)

@@ -1,0 +1,455 @@
+### brasileirao_predictor/data/bookmaker_stability.py
+3: from __future__ import annotations
+5: import json
+6: import statistics
+7: from collections import defaultdict
+8: from datetime import datetime
+9: from pathlib import Path
+10: from typing import Any
+12: MIN_SMOKES = 3
+13: MIN_SPAN_SECONDS = 24 * 60 * 60
+14: MIN_PRESENCE_RATE = 0.80
+15: MIN_EVENT_COVERAGE = 0.50
+16: MAX_LAG_SECONDS = 15 * 60
+17: EXCHANGES = frozenset({"betfair", "matchbook", "smarkets"})
+20: def bookmaker_type(key: str) -> str:
+21:     return "EXCHANGE" if key in EXCHANGES or key.startswith("betfair_") else "SPORTSBOOK"
+24: def append_smoke(path: Path, rows: list[dict[str, Any]]) -> None:
+26:     seen = set()
+27:     if path.exists():
+28:         for line in path.read_text(encoding="utf-8").splitlines():
+29:             try:
+30:                 old = json.loads(line)
+31:                 seen.add((old.get("executed_at"), old.get("bookmaker_key")))
+32:             except json.JSONDecodeError:
+33:                 continue
+34:     path.parent.mkdir(parents=True, exist_ok=True)
+35:     with path.open("a", encoding="utf-8") as handle:
+36:         for row in rows:
+37:             identity = (row.get("executed_at"), row.get("bookmaker_key"))
+38:             if identity in seen:
+39:                 continue
+40:             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+41:             seen.add(identity)
+44: def summarize_smoke(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+46:     if not rows:
+47:         return []
+48:     executed = {row.get("retrieved_at") for row in rows}
+49:     if len(executed) != 1 or None in executed:
+50:         raise ValueError("one smoke must contain exactly one retrieved_at")
+51:     executed_at = next(iter(executed))
+52:     if not isinstance(executed_at, str):
+53:         raise ValueError("retrieved_at must be an ISO timestamp")
+54:     retrieved = datetime.fromisoformat(executed_at)
+55:     events = {str(row.get("source_event_id")) for row in rows if row.get("source_event_id")}
+56:     output = []
+57:     for bookmaker in sorted({str(row.get("bookmaker")) for row in rows if row.get("bookmaker")}):
+58:         selected = [row for row in rows if row.get("bookmaker") == bookmaker]
+59:         totals_events = {str(row["source_event_id"]) for row in selected if row.get("market") == "ou2.5"}
+60:         captured = [datetime.fromisoformat(row["odds_captured_at"]) for row in selected]
+61:         output.append(
+62:             {
+63:                 "executed_at": retrieved.isoformat(),
+64:                 "bookmaker_key": bookmaker,
+65:                 "events_seen": len(events),
+66:                 "events_with_totals": len(totals_events),
+67:                 "valid_quotes": len(selected),
+68:                 "update_lag_seconds": max(0.0, max((retrieved - stamp).total_seconds() for stamp in captured)),
+69:             }
+70:         )
+71:     return output
+74: def stability_report(path: Path) -> dict[str, Any]:
+75:     records = (
+76:         [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+77:         if path.exists()
+78:         else []
+79:     )
+80:     smoke_ids = sorted({r["executed_at"] for r in records})
+81:     global_span = (
+82:         (datetime.fromisoformat(smoke_ids[-1]) - datetime.fromisoformat(smoke_ids[0])).total_seconds()
+83:         if len(smoke_ids) > 1
+84:         else 0
+85:     )
+86:     by_book: dict[str, list[dict]] = defaultdict(list)
+87:     for row in records:
+88:         by_book[row["bookmaker_key"]].append(row)
+89:     output = []
+90:     for key, rows in sorted(by_book.items()):
+91:         present = len({r["executed_at"] for r in rows})
+92:         seen = sum(int(r["events_seen"]) for r in rows)
+93:         total_events = sum(int(r["events_with_totals"]) for r in rows)
+94:         coverage = total_events / seen if seen else 0.0
+95:         lag_ok = all(float(r["update_lag_seconds"]) <= MAX_LAG_SECONDS for r in rows)
+96:         kind = bookmaker_type(key)
+97:         span = global_span
+98:         if kind == "EXCHANGE":
+99:             classification = "BOOKMAKER_REJECTED"
+100:         elif present < MIN_SMOKES or span < MIN_SPAN_SECONDS:
+101:             classification = "BOOKMAKER_CANDIDATE"
+102:         elif present / len(smoke_ids) < MIN_PRESENCE_RATE:
+103:             classification = "BOOKMAKER_INTERMITTENT"
+104:         elif coverage < MIN_EVENT_COVERAGE:
+105:             classification = "BOOKMAKER_INSUFFICIENT_COVERAGE"
+106:         elif not lag_ok:
+107:             classification = "BOOKMAKER_INTERMITTENT"
+108:         else:
+109:             classification = "BOOKMAKER_STABLE"
+110:         output.append(
+111:             {
+112:                 "bookmaker_key": key,
+113:                 "bookmaker_type": kind,
+114:                 "smokes_observed": len(smoke_ids),
+115:                 "smokes_present": present,
+116:                 "presence_rate": round(present / len(smoke_ids), 4) if smoke_ids else 0.0,
+117:                 "event_coverage": round(coverage, 4),
+118:                 "totals_coverage": round(coverage, 4),
+119:                 "valid_quote_rate": 1.0,
+120:                 "median_update_lag_seconds": statistics.median(float(r["update_lag_seconds"]) for r in rows),
+121:                 "valid_quotes": sum(int(r["valid_quotes"]) for r in rows),
+122:                 "max_update_lag_seconds": max((float(r["update_lag_seconds"]) for r in rows), default=None),
+123:                 "classification": classification,
+124:             }
+125:         )
+126:     stable = [r for r in output if r["classification"] == "BOOKMAKER_STABLE"]
+127:     stable.sort(
+128:         key=lambda r: (
+129:             -r["presence_rate"],
+130:             -r["event_coverage"],
+131:             r["median_update_lag_seconds"],
+132:             -r["valid_quotes"],
+133:             r["bookmaker_key"],
+134:         )
+135:     )
+136:     recommendation = (
+137:         "BOOKMAKER_RECOMMENDATION_READY"
+138:         if stable
+139:         else "NO_STABLE_BOOKMAKER_FOUND"
+140:         if len(smoke_ids) >= MIN_SMOKES and global_span >= MIN_SPAN_SECONDS
+141:         else "BOOKMAKER_STABILITY_PENDING"
+142:     )
+143:     return {
+144:         "schema_version": "bookmaker-stability/v1",
+145:         "criteria": {
+146:             "min_smokes": MIN_SMOKES,
+147:             "min_span_seconds": MIN_SPAN_SECONDS,
+148:             "min_presence_rate": MIN_PRESENCE_RATE,
+149:             "min_event_coverage": MIN_EVENT_COVERAGE,
+150:             "max_lag_seconds": MAX_LAG_SECONDS,
+151:         },
+152:         "smokes": len(smoke_ids),
+153:         "span_seconds": global_span,
+154:         "bookmakers": output,
+155:         "recommended_bookmaker": stable[0]["bookmaker_key"] if stable else None,
+156:         "approved_alternatives": [r["bookmaker_key"] for r in stable[1:]],
+157:         "recommendation": recommendation,
+158:     }
+### brasileirao_predictor/data/collection_only_archive.py
+3: from __future__ import annotations
+5: import hashlib
+6: import json
+7: import sqlite3
+8: import subprocess
+9: import sys
+10: from datetime import UTC, datetime, timedelta
+11: from importlib.metadata import version
+12: from pathlib import Path
+13: from typing import Any
+15: from predictor_core.contracts.collection import (
+16:     CollectionArchive,
+17:     LifecycleState,
+18:     ObservationEnvelope,
+19:     aggregate_funnel,
+20: )
+25: _NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+27: RUN_ID = "collection-brasileirao-20260723-core-9d352654"
+28: ARCHIVE_PATH = Path(__file__).resolve().parents[2] / "data" / "collection_only" / "brasileirao_events.jsonl"
+31: def _hash(value: Any) -> str:
+32:     return hashlib.sha256(
+33:         json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+34:     ).hexdigest()
+37: def _utc(value: str | None) -> datetime | None:
+38:     if not value:
+39:         return None
+40:     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+41:     return parsed.astimezone(UTC) if parsed.tzinfo else None
+44: def _commit(root: Path) -> str:
+45:     return subprocess.run(
+46:         ["git", "rev-parse", "HEAD"],
+47:         cwd=root,
+48:         capture_output=True,
+49:         text=True,
+50:         check=True,
+51:         creationflags=_NO_WINDOW,
+52:     ).stdout.strip()
+55: def collect(
+56:     conn: sqlite3.Connection,
+57:     *,
+58:     root: Path,
+59:     archive_path: Path = ARCHIVE_PATH,
+60:     dry_run: bool = False,
+61:     observed_at: datetime | None = None,
+62: ) -> dict[str, Any]:
+64:     now = observed_at or datetime.now(UTC)
+65:     if now.tzinfo is None:
+66:         raise ValueError("observed_at deve conter timezone")
+67:     now = now.astimezone(UTC).replace(microsecond=0)
+68:     core_version = version("predictor-core")
+69:     code_commit = _commit(root)
+70:     cutoff = (now - timedelta(days=7)).isoformat(timespec="seconds")
+71:     rows = conn.execute(
+72:         "SELECT event_id, competition, season, date, kickoff_at, home_team, away_team, "
+73:         "home_score, away_score FROM sofascore_matches "
+74:         "WHERE kickoff_at IS NOT NULL AND kickoff_at >= ? ORDER BY kickoff_at, event_id",
+75:         (cutoff,),
+76:     ).fetchall()
+77:     archive = CollectionArchive(archive_path)
+78:     current_by_event = {}
+79:     if not dry_run:
+80:         for row in archive.store:
+81:             if row.get("collection_run_id") == RUN_ID:
+82:                 current_by_event[row["canonical_event_id"]] = ObservationEnvelope.from_dict(row["envelope"])
+83:     written = 0
+84:     for event_id, competition, season, date, kickoff, home, away, hs, aas in rows:
+85:         scheduled = _utc(kickoff)
+86:         if scheduled is None:
+87:             continue
+88:         snapshot = {
+89:             "event_id": event_id,
+90:             "competition": competition,
+91:             "season": season,
+92:             "date": date,
+93:             "kickoff_at": kickoff,
+94:             "home": home,
+95:             "away": away,
+96:             "home_score": hs,
+97:             "away_score": aas,
+98:         }
+99:         envelope = ObservationEnvelope(
+100:             collection_run_id=RUN_ID,
+101:             project="brasileirao-predictor",
+102:             domain="football",
+103:             canonical_event_id=f"sofascore:{event_id}",
+104:             observed_at=now,
+105:             scheduled_at=scheduled,
+106:             source="sofascore",
+107:             source_record_id=str(event_id),
+108:             provenance_hash=_hash({"source": "sofascore", "event_id": event_id, "snapshot": snapshot}),
+109:             source_snapshot_hash=_hash(snapshot),
+110:             code_commit=code_commit,
+111:             core_version=core_version,
+112:             participants={"home": home, "away": away},
+113:             competition={"name": competition, "season": season},
+114:             created_at=now,
+115:             updated_at=now,
+116:         )
+117:         current = current_by_event.get(envelope.canonical_event_id)
+118:         if current is not None and current.is_terminal:
+119:             continue
+120:         if current is None:
+121:             if not dry_run:
+122:                 archive.append(envelope)
+123:                 current_by_event[envelope.canonical_event_id] = envelope
+124:             written += 1
+125:             current = envelope
+126:         for state, predecessor in (
+127:             (LifecycleState.VALIDATED, LifecycleState.DISCOVERED),
+128:             (LifecycleState.SNAPSHOT_RECORDED, LifecycleState.VALIDATED),
+129:         ):
+132:             if current.lifecycle_state != predecessor:
+133:                 continue
+134:             next_item = current.transition(state, at=now)
+135:             if not dry_run:
+136:                 archive.append(next_item, previous=current)
+137:                 current_by_event[envelope.canonical_event_id] = next_item
+138:             written += 1
+139:             current = next_item
+140:         if scheduled <= now and current.lifecycle_state == LifecycleState.SNAPSHOT_RECORDED:
+141:             next_item = current.transition(LifecycleState.EVENT_STARTED, at=now)
+142:             if not dry_run:
+143:                 archive.append(next_item, previous=current)
+144:                 current_by_event[envelope.canonical_event_id] = next_item
+145:             written += 1
+146:             current = next_item
+147:         if hs is not None and aas is not None and current.lifecycle_state == LifecycleState.EVENT_STARTED:
+148:             result = {
+149:                 "home_score": int(hs),
+150:                 "away_score": int(aas),
+151:                 "status": "official_from_configured_sports_source",
+152:             }
+153:             next_item = current.transition(LifecycleState.OFFICIAL_RESULT_FOUND, at=now, official_result=result)
+154:             if not dry_run:
+155:                 archive.append(next_item, previous=current)
+156:                 current_by_event[envelope.canonical_event_id] = next_item
+157:             written += 1
+158:             current = next_item
+159:         if current.lifecycle_state == LifecycleState.OFFICIAL_RESULT_FOUND:
+160:             next_item = current.transition(LifecycleState.COMPLETE, at=now, official_result=current.official_result)
+161:             if not dry_run:
+162:                 archive.append(next_item, previous=current)
+163:                 current_by_event[envelope.canonical_event_id] = next_item
+164:             written += 1
+165:     envelopes = list(current_by_event.values()) if not dry_run else []
+166:     return {
+167:         "collection_only": True,
+168:         "collection_run_id": RUN_ID,
+169:         "dry_run": dry_run,
+170:         "events_seen": len(rows),
+171:         "transitions_written": written,
+172:         "archive": str(archive_path),
+173:         "funnel": aggregate_funnel(envelopes, project="brasileirao-predictor", collection_run_id=RUN_ID)
+174:         if envelopes
+175:         else None,
+176:     }
+### brasileirao_predictor/data/historical_expansion.py
+3: from __future__ import annotations
+5: import sqlite3
+6: from collections.abc import Iterable
+7: from pathlib import Path
+8: from typing import Any
+10: from predictor_core.data.contracts import DataUnavailableError
+12: API_FOOTBALL_TEAM_MAP = {
+13:     "America Mineiro": "América Mineiro",
+14:     "Atletico Goianiense": "Atlético Goianiense",
+15:     "Atletico Paranaense": "Athletico",
+16:     "Atletico-MG": "Atlético Mineiro",
+17:     "Avai": "Avaí",
+18:     "Ceara": "Ceará",
+19:     "Criciuma": "Criciúma",
+20:     "Cuiaba": "Cuiabá",
+21:     "Fortaleza EC": "Fortaleza",
+22:     "Gremio": "Grêmio",
+23:     "Goias": "Goiás",
+24:     "RB Bragantino": "Red Bull Bragantino",
+25:     "Sao Paulo": "São Paulo",
+26:     "Vasco DA Gama": "Vasco da Gama",
+27:     "Vitoria": "Vitória",
+28: }
+30: SCHEMA = """
+31: CREATE TABLE IF NOT EXISTS shadow_matches (
+32:     source TEXT NOT NULL,
+33:     source_event_id TEXT NOT NULL,
+34:     season INTEGER NOT NULL,
+35:     scheduled_at TEXT NOT NULL,
+36:     match_date TEXT NOT NULL,
+37:     raw_home_team TEXT NOT NULL,
+38:     raw_away_team TEXT NOT NULL,
+39:     home_team TEXT NOT NULL,
+40:     away_team TEXT NOT NULL,
+41:     home_goals INTEGER,
+42:     away_goals INTEGER,
+43:     status TEXT,
+44:     shadow_only INTEGER NOT NULL CHECK (shadow_only = 1),
+45:     PRIMARY KEY (source, source_event_id),
+46:     UNIQUE (match_date, home_team, away_team)
+47: );
+48: CREATE INDEX IF NOT EXISTS idx_shadow_season ON shadow_matches(season, match_date);
+49: """
+52: def connect_shadow(path: str | Path) -> sqlite3.Connection:
+53:     path = Path(path)
+54:     path.parent.mkdir(parents=True, exist_ok=True)
+55:     conn = sqlite3.connect(path)
+56:     conn.executescript(SCHEMA)
+57:     return conn
+60: def canonical_team(raw: str, known_teams: set[str]) -> str:
+61:     canonical = API_FOOTBALL_TEAM_MAP.get(raw, raw)
+62:     if canonical not in known_teams:
+63:         raise DataUnavailableError(f"clube da fonte sem mapeamento aprovado: {raw!r}")
+64:     return canonical
+67: def ingest_api_football(conn: sqlite3.Connection, rows: Iterable[dict[str, Any]], *, known_teams: set[str]) -> int:
+68:     values = []
+69:     for row in rows:
+70:         if row.get("source") != "api_football" or row.get("shadow_only") is not True:
+71:             raise ValueError("a expansão aceita apenas registros api_football shadow_only")
+72:         home = canonical_team(row["home_team"], known_teams)
+73:         away = canonical_team(row["away_team"], known_teams)
+74:         if home == away:
+75:             raise DataUnavailableError(f"partida inválida após reconciliação: {home}")
+76:         values.append(
+77:             (
+78:                 row["source"],
+79:                 row["source_event_id"],
+80:                 int(row["season"]),
+81:                 row["scheduled_at"],
+82:                 row["scheduled_at"][:10],
+83:                 row["home_team"],
+84:                 row["away_team"],
+85:                 home,
+86:                 away,
+87:                 row.get("home_goals"),
+88:                 row.get("away_goals"),
+89:                 row.get("status"),
+90:                 1,
+91:             )
+92:         )
+93:     conn.executemany(
+94:         """
+95:         INSERT INTO shadow_matches VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+96:         ON CONFLICT(source, source_event_id) DO UPDATE SET
+97:           season=excluded.season, scheduled_at=excluded.scheduled_at,
+98:           match_date=excluded.match_date, raw_home_team=excluded.raw_home_team,
+99:           raw_away_team=excluded.raw_away_team, home_team=excluded.home_team,
+100:           away_team=excluded.away_team, home_goals=excluded.home_goals,
+101:           away_goals=excluded.away_goals, status=excluded.status
+102:     """,
+103:         values,
+104:     )
+105:     conn.commit()
+106:     return len(values)
+109: def coverage_report(shadow: sqlite3.Connection, production: sqlite3.Connection) -> dict[str, Any]:
+110:     total, scored, first_date, last_date = shadow.execute("""
+111:         SELECT count(*), count(home_goals), min(match_date), max(match_date)
+112:         FROM shadow_matches
+113:     """).fetchone()
+114:     duplicate_rows = production.execute("""
+115:         SELECT date, home_team, away_team, home_score, away_score
+116:         FROM matches
+117:     """).fetchall()
+118:     production_by_key = {(r[0], r[1], r[2]): (r[3], r[4]) for r in duplicate_rows}
+119:     exact_duplicates = score_conflicts = new_matches = 0
+120:     for date, home, away, hg, ag in shadow.execute(
+121:         "SELECT match_date,home_team,away_team,home_goals,away_goals FROM shadow_matches"
+122:     ):
+123:         current = production_by_key.get((date, home, away))
+124:         if current is None:
+125:             new_matches += 1
+126:         elif current == (hg, ag):
+127:             exact_duplicates += 1
+128:         else:
+129:             score_conflicts += 1
+130:     seasons = dict(shadow.execute("SELECT season,count(*) FROM shadow_matches GROUP BY season ORDER BY season"))
+131:     return {
+132:         "total": total,
+133:         "with_score": scored,
+134:         "first_date": first_date,
+135:         "last_date": last_date,
+136:         "by_season": seasons,
+137:         "exact_duplicates": exact_duplicates,
+138:         "score_conflicts": score_conflicts,
+139:         "new_matches": new_matches,
+140:         "promotion_safe": bool(total and scored == total and score_conflicts == 0),
+141:     }
+### brasileirao_predictor/data/lineup_archive.py
+3: from __future__ import annotations
+5: import json
+6: from pathlib import Path
+7: from typing import Any
+10: def persist_lineups(path: Path, rows: list[dict[str, Any]]) -> int:
+11:     path.parent.mkdir(parents=True, exist_ok=True)
+12:     seen = set()
+13:     if path.exists():
+14:         for line in path.read_text(encoding="utf-8").splitlines():
+15:             try:
+16:                 row = json.loads(line)
+17:             except (json.JSONDecodeError, TypeError):
+18:                 continue
+19:             seen.add((row.get("source_event_id"), row.get("player_id"), row.get("role"), row.get("content_hash")))
+20:     written = 0
+21:     with path.open("a", encoding="utf-8") as handle:
+22:         for row in rows:
+23:             key = (row.get("source_event_id"), row.get("player_id"), row.get("role"), row.get("content_hash"))
+24:             if None in key or key in seen:
+25:                 continue
+26:             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+27:             seen.add(key)
+28:             written += 1
+29:     return written

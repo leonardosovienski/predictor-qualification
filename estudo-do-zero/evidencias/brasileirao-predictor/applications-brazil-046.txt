@@ -1,0 +1,464 @@
+### tests/test_collection_only_archive.py
+1: from datetime import UTC, datetime
+2: from pathlib import Path
+4: from brasileirao_predictor import db
+5: from brasileirao_predictor.data.collection_only_archive import collect
+8: def _fixture(conn):
+9:     conn.execute(
+10:         "INSERT INTO sofascore_matches "
+11:         "(event_id, competition, season, date, kickoff_at, home_team, away_team, home_score, away_score) "
+12:         "VALUES (7, 'Brasileirão', '2026', '2026-07-20', "
+13:         "'2026-07-20T20:00:00+00:00', 'Casa', 'Fora', 2, 1)"
+14:     )
+15:     conn.commit()
+18: def test_collection_only_dry_run_has_no_archive_write(tmp_path: Path):
+19:     conn = db.connect(str(tmp_path / "m.db"))
+20:     _fixture(conn)
+21:     result = collect(
+22:         conn,
+23:         root=Path.cwd(),
+24:         archive_path=tmp_path / "archive.jsonl",
+25:         dry_run=True,
+26:         observed_at=datetime(2026, 7, 21, tzinfo=UTC),
+27:     )
+28:     assert result["transitions_written"] > 0
+29:     assert not (tmp_path / "archive.jsonl").exists()
+32: def test_collection_only_is_idempotent_and_never_uses_shadow_state(tmp_path: Path):
+33:     conn = db.connect(str(tmp_path / "m.db"))
+34:     _fixture(conn)
+35:     archive = tmp_path / "archive.jsonl"
+36:     first = collect(conn, root=Path.cwd(), archive_path=archive, observed_at=datetime(2026, 7, 21, tzinfo=UTC))
+37:     second = collect(conn, root=Path.cwd(), archive_path=archive, observed_at=datetime(2026, 7, 21, tzinfo=UTC))
+38:     assert first["funnel"]["complete"] == 1
+39:     assert second["transitions_written"] == 0
+40:     assert "PROSPECTIVE_ELIGIBLE" not in archive.read_text(encoding="utf-8")
+43: def test_retry_resumes_event_started_without_lifecycle_regression(tmp_path: Path):
+44:     conn = db.connect(str(tmp_path / "m.db"))
+45:     conn.execute(
+46:         "INSERT INTO sofascore_matches "
+47:         "(event_id, competition, season, date, kickoff_at, home_team, away_team) "
+48:         "VALUES (8, 'Brasileirão', '2026', '2026-07-20', "
+49:         "'2026-07-20T20:00:00+00:00', 'Casa', 'Fora')"
+50:     )
+51:     conn.commit()
+52:     archive = tmp_path / "archive.jsonl"
+53:     now = datetime(2026, 7, 21, tzinfo=UTC)
+54:     collect(conn, root=Path.cwd(), archive_path=archive, observed_at=now)
+55:     result = collect(conn, root=Path.cwd(), archive_path=archive, observed_at=now)
+56:     assert result["transitions_written"] == 0
+### tests/test_collector_contract.py
+3: from __future__ import annotations
+5: import hashlib
+6: import json
+7: from datetime import UTC, datetime
+8: from pathlib import Path
+10: import pytest
+11: from jsonschema import Draft202012Validator
+13: from brasileirao_predictor.collector_a1 import (
+14:     OddsPapiClient,
+15:     QuotaGuard,
+16:     SnapshotStore,
+17:     TeamAliases,
+18:     build_snapshots,
+19:     canonical_json,
+20:     event_id,
+21:     parse_utc,
+22:     quota_status,
+23: )
+24: from brasileirao_scripts.collect_odds_a1 import capture_complete
+25: from brasileirao_scripts.collect_odds_a1 import main as collector_main
+26: from brasileirao_scripts.evaluate_gate_a1 import evaluate
+28: ROOT = Path(__file__).resolve().parent.parent
+29: SCHEMA = ROOT / "schemas" / "odds_snapshot_v1.json"
+30: KICKOFF = "2026-08-25T23:00:00Z"
+31: CAPTURED = datetime(2026, 8, 25, 22, tzinfo=UTC)
+34: @pytest.fixture
+35: def aliases(tmp_path: Path) -> TeamAliases:
+36:     path = tmp_path / "aliases.json"
+37:     teams_path = tmp_path / "teams_brasileirao.json"
+38:     path.write_text(
+39:         json.dumps({"mapping_version": "teams-2026-08-24", "aliases": {"Home FC": "home", "Away FC": "away"}}),
+40:         encoding="utf-8",
+41:     )
+42:     teams_path.write_text(
+43:         json.dumps({"teams": {"Home": {"slug": "home"}, "Away": {"slug": "away"}}}),
+44:         encoding="utf-8",
+45:     )
+46:     return TeamAliases(path)
+49: @pytest.fixture
+50: def payload() -> dict[str, object]:
+51:     players = lambda price: {"players": {"0": {"price": price}}}  # noqa: E731
+52:     return {
+53:         "fixtureId": "fixture-1",
+54:         "participant1Name": "Home FC",
+55:         "participant2Name": "Away FC",
+56:         "startTime": KICKOFF,
+57:         "bookmakerOdds": {
+58:             "pinnacle": {
+59:                 "bookmakerIsActive": True,
+60:                 "suspended": False,
+61:                 "markets": {"101": {"outcomes": {"101": players(2.1), "102": players(3.2), "103": players(3.5)}}},
+62:             }
+63:         },
+64:     }
+67: def rows(payload: dict[str, object], aliases: TeamAliases) -> list[dict[str, object]]:
+68:     return build_snapshots(payload, aliases, CAPTURED)[0]
+71: def test_01_key_absent_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+72:     monkeypatch.delenv("ODDSPAPI_KEY", raising=False)
+73:     with pytest.raises(RuntimeError, match="ODDSPAPI_KEY"):
+74:         OddsPapiClient()
+77: def test_02_historical_endpoint_is_not_exposed() -> None:
+78:     assert not hasattr(OddsPapiClient, "historical")
+79:     assert not hasattr(OddsPapiClient, "historical_odds")
+82: def test_03_fuzzy_only_suggests(aliases: TeamAliases) -> None:
+83:     result = aliases.resolve("Hme FC")
+84:     assert result.canonical is None
+85:     assert result.suggestion == "Home FC"
+88: def test_04_unknown_alias_quarantines(payload: dict[str, object], aliases: TeamAliases) -> None:
+89:     payload["participant1Name"] = "Unknown"
+90:     snapshots, quarantine = build_snapshots(payload, aliases, CAPTURED)
+91:     assert snapshots == [] and quarantine[0]["reason"] == "unknown_team_alias"
+94: def test_05_event_id_is_deterministic() -> None:
+95:     assert event_id("home", "away", KICKOFF) == "br-serie-a|2026|home|away|2026-08-25"
+98: def test_06_naive_timestamp_rejected() -> None:
+99:     with pytest.raises(ValueError, match="timezone-aware"):
+100:         parse_utc("2026-08-25T22:00:00")
+103: def test_07_equal_kickoff_rejected(payload: dict[str, object], aliases: TeamAliases) -> None:
+104:     with pytest.raises(ValueError, match="strictly before"):
+105:         build_snapshots(payload, aliases, parse_utc(KICKOFF))
+108: def test_08_all_snapshots_are_unhomologated(payload: dict[str, object], aliases: TeamAliases) -> None:
+109:     assert rows(payload, aliases) and all(item["homologated"] is False for item in rows(payload, aliases))
+112: def test_totals_parser_does_not_collapse_other_lines_into_ou25(
+113:     payload: dict[str, object], aliases: TeamAliases
+114: ) -> None:
+115:     payload["bookmakerOdds"]["pinnacle"]["markets"]["totals"] = {  # type: ignore[index]
+116:         "outcomes": {
+117:             "all": {
+118:                 "players": {
+119:                     "o15": {"price": 1.4, "bookmakerOutcomeId": "Over 1.5"},
+120:                     "u15": {"price": 2.8, "bookmakerOutcomeId": "Under 1.5"},
+121:                     "o25": {"price": 1.9, "bookmakerOutcomeId": "Over 2.5"},
+122:                     "u25": {"price": 1.95, "bookmakerOutcomeId": "Under 2.5"},
+123:                     "o35": {"price": 2.7, "bookmakerOutcomeId": "Over 3.5"},
+124:                     "u35": {"price": 1.45, "bookmakerOutcomeId": "Under 3.5"},
+125:                 }
+126:             }
+127:         }
+128:     }
+130:     totals = [item for item in rows(payload, aliases) if item["market"] == "ou2.5"]
+131:     assert [(item["selection"], item["odds"]) for item in totals] == [("over", 1.9), ("under", 1.95)]
+134: def test_09_schema_rejects_additional_property(payload: dict[str, object], aliases: TeamAliases) -> None:
+135:     item = rows(payload, aliases)[0]
+136:     item["roi"] = 1
+137:     assert list(Draft202012Validator(json.loads(SCHEMA.read_text())).iter_errors(item))
+140: def test_10_schema_rejects_sofascore_source(payload: dict[str, object], aliases: TeamAliases) -> None:
+141:     item = rows(payload, aliases)[0]
+142:     item["source_id"] = "sofascore_aggregate"
+143:     assert list(Draft202012Validator(json.loads(SCHEMA.read_text())).iter_errors(item))
+146: def test_11_invalid_odds_go_to_quarantine(tmp_path: Path, payload: dict[str, object], aliases: TeamAliases) -> None:
+147:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA)
+148:     item = rows(payload, aliases)[0]
+149:     item["odds"] = 1.0
+150:     assert store.append(item) == "conflict"
+151:     assert (tmp_path / "odds_quarantine" / "quarantine.jsonl").exists()
+154: def test_12_hash_chain_detects_tampering(tmp_path: Path, payload: dict[str, object], aliases: TeamAliases) -> None:
+155:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA)
+156:     for item in rows(payload, aliases):
+157:         assert store.append(item) == "written"
+158:     path = next((tmp_path / "snapshots").glob("*.jsonl"))
+159:     text = path.read_text(encoding="utf-8").replace('"odds": 2.1', '"odds": 9.9')
+160:     path.write_text(text, encoding="utf-8")
+161:     assert store.verify(path) is False
+164: def test_13_identical_snapshot_is_deduplicated(
+165:     tmp_path: Path, payload: dict[str, object], aliases: TeamAliases
+166: ) -> None:
+167:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA)
+168:     item = rows(payload, aliases)[0]
+169:     assert store.append(item) == "written"
+170:     assert store.append(item) == "duplicate"
+173: def test_14_same_identity_different_value_is_conflict(
+174:     tmp_path: Path, payload: dict[str, object], aliases: TeamAliases
+175: ) -> None:
+176:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA)
+177:     item = rows(payload, aliases)[0]
+178:     assert store.append(item) == "written"
+179:     changed = dict(item)
+180:     changed["odds"] = 2.2
+181:     changed.pop("hash_self")
+182:     changed["hash_self"] = hashlib.sha256(canonical_json(changed)).hexdigest()
+183:     assert store.append(changed) == "conflict"
+186: def test_15_collector_exposes_no_financial_execution_api() -> None:
+187:     forbidden = {"roi", "stake", "place_bet", "pick", "expected_value"}
+188:     assert forbidden.isdisjoint(set(dir(OddsPapiClient)) | set(dir(SnapshotStore)))
+191: def test_invalid_middle_row_does_not_poison_valid_batch_tail(
+192:     tmp_path: Path, payload: dict[str, object], aliases: TeamAliases
+193: ) -> None:
+194:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA)
+195:     batch = rows(payload, aliases)[:3]
+196:     batch[1]["odds"] = 1.0
+198:     assert store.append_batch(batch) == ["written", "conflict", "written"]
+199:     path = next((tmp_path / "snapshots").glob("*.jsonl"))
+200:     persisted = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+201:     assert len(persisted) == 2
+202:     assert persisted[1]["hash_prev"] == persisted[0]["hash_self"]
+203:     assert store.verify(path) is True
+206: def test_batch_retry_is_deduplicated(tmp_path: Path, payload: dict[str, object], aliases: TeamAliases) -> None:
+207:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA)
+208:     batch = rows(payload, aliases)[:3]
+210:     assert store.append_batch(batch) == ["written", "written", "written"]
+211:     assert store.append_batch(batch) == ["duplicate", "duplicate", "duplicate"]
+214: def test_operational_mirror_is_bitemporal_and_versions_reschedules(
+215:     tmp_path: Path, payload: dict[str, object], aliases: TeamAliases
+216: ) -> None:
+217:     import sqlite3
+219:     db_path = tmp_path / "odds.db"
+220:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA, operational_db=db_path)
+221:     first = rows(payload, aliases)[0]
+222:     assert store.append(first) == "written"
+223:     moved_payload = dict(payload)
+224:     moved_payload["startTime"] = "2026-08-26T23:00:00Z"
+225:     moved = build_snapshots(moved_payload, aliases, datetime(2026, 8, 26, 22, tzinfo=UTC))[0][0]
+226:     assert store.append(moved) == "written"
+227:     connection = sqlite3.connect(db_path)
+228:     versions = connection.execute(
+229:         "SELECT version,lifecycle_status,superseded_by FROM odds_event_versions ORDER BY version"
+230:     ).fetchall()
+231:     facts = connection.execute(
+232:         "SELECT event_version,valid_from FROM odds_snapshot_facts ORDER BY valid_from"
+233:     ).fetchall()
+234:     assert versions[0][1] == "RESCHEDULED" and versions[0][2] == "fixture-1|v2"
+235:     assert versions[1][0:2] == (2, "SCHEDULED")
+236:     assert [row[0] for row in facts] == [1, 2]
+237:     persisted = json.loads((tmp_path / "snapshots" / "2026-08-26.jsonl").read_text(encoding="utf-8"))
+238:     assert persisted["event_version"] == 2
+239:     assert persisted["lifecycle_status"] == "SCHEDULED"
+240:     assert persisted["supersedes_event_version"] == 1
+243: def test_json_duplicate_repairs_missing_operational_mirror(
+244:     tmp_path: Path, payload: dict[str, object], aliases: TeamAliases
+245: ) -> None:
+246:     import sqlite3
+248:     db_path = tmp_path / "odds.db"
+249:     store = SnapshotStore(tmp_path / "snapshots", SCHEMA, operational_db=db_path)
+250:     item = rows(payload, aliases)[0]
+251:     assert store.append(item) == "written"
+252:     with sqlite3.connect(db_path) as connection:
+253:         connection.execute("DELETE FROM odds_snapshot_facts")
+254:     assert store.append(item) == "duplicate"
+255:     with sqlite3.connect(db_path) as connection:
+256:         assert connection.execute("SELECT COUNT(*) FROM odds_snapshot_facts").fetchone()[0] == 1
+259: def test_capture_window_is_not_closed_after_partial_batch_failure() -> None:
+260:     snapshots = [{"snapshot_id": "a"}, {"snapshot_id": "b"}]
+261:     assert capture_complete(snapshots, [], ["written", "duplicate"]) is True
+262:     assert capture_complete(snapshots, [], ["written", "conflict"]) is False
+263:     assert capture_complete(snapshots, [{"reason": "unknown_alias"}], ["written"]) is False
+266: def test_16_economic_mode_is_rehearsal_only(tmp_path: Path) -> None:
+267:     for day in range(1, 8):
+268:         (tmp_path / f"2026-08-{day:02d}.json").write_text(json.dumps({"mode": "economic"}), encoding="utf-8")
+269:     assert evaluate(tmp_path)["verdict"] == "REHEARSAL_ONLY_BUDGETED"
+272: def test_17_full_mode_failure_restarts_clock(tmp_path: Path) -> None:
+273:     for day in range(1, 8):
+274:         (tmp_path / f"2026-08-{day:02d}.json").write_text(json.dumps({"mode": "full"}), encoding="utf-8")
+275:     result = evaluate(tmp_path)
+276:     assert result["verdict"] == "FAIL_RESTART_CLOCK"
+277:     assert result["restart_clock_required"] is True
+278:     assert result["criteria"]["oddspapi_key_rotated_and_attested"] is False
+279:     assert result["external_evidence"]["key_rotation_attestation_present"] is False
+282: def test_cli_reports_only_sanitized_runtime_detail(
+283:     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+284: ) -> None:
+285:     monkeypatch.setattr("sys.argv", ["collect_odds_a1.py", "--discover"])
+286:     monkeypatch.setattr(
+287:         "brasileirao_scripts.collect_odds_a1.OddsPapiClient", lambda: (_ for _ in ()).throw(RuntimeError("safe"))
+288:     )
+289:     assert collector_main() == 1
+290:     assert json.loads(capsys.readouterr().err)["safe_detail"] == "safe"
+293: def test_cli_hides_arbitrary_exception_text(
+294:     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+295: ) -> None:
+296:     monkeypatch.setattr("sys.argv", ["collect_odds_a1.py", "--discover"])
+297:     monkeypatch.setattr(
+298:         "brasileirao_scripts.collect_odds_a1.OddsPapiClient",
+299:         lambda: (_ for _ in ()).throw(ValueError("must-not-leak")),
+300:     )
+301:     assert collector_main() == 1
+302:     output = json.loads(capsys.readouterr().err)
+303:     assert output["safe_detail"] is None
+304:     assert "must-not-leak" not in json.dumps(output)
+307: def test_quota_status_accepts_nested_account_and_rejects_invalid() -> None:
+308:     assert quota_status({"subscription": {"request_count": 12, "request_limit": 250}}) == (12, 250)
+309:     with pytest.raises(RuntimeError, match="request_count"):
+310:         quota_status({"subscription": {"request_limit": 250}})
+313: def test_quota_guard_reserves_budget_limits_attempts_and_backs_off(tmp_path: Path) -> None:
+314:     guard = QuotaGuard(tmp_path / "quota.json", reserve=20, max_attempts=2, backoff_minutes=30)
+315:     now = datetime(2026, 8, 27, 12, tzinfo=UTC)
+316:     assert guard.allow("f1", "T-1440m", now, 229, 250) == (True, "allowed")
+317:     assert guard.allow("f1", "T-1440m", now, 230, 250) == (False, "monthly_reserve")
+318:     guard.record("f1", "T-1440m", now)
+319:     assert guard.allow("f1", "T-1440m", now, 100, 250) == (False, "backoff")
+320:     later = datetime(2026, 8, 27, 13, tzinfo=UTC)
+321:     assert guard.allow("f1", "T-1440m", later, 100, 250) == (True, "allowed")
+322:     guard.record("f1", "T-1440m", later)
+323:     assert guard.allow("f1", "T-1440m", later, 100, 250) == (False, "attempt_limit")
+### tests/test_compare_hypothesis_errors.py
+1: from brasileirao_scripts.compare_hypothesis_errors import _chronological_keys
+4: def test_moving_block_pairing_uses_time_not_event_id() -> None:
+5:     control = {
+6:         "a": {"date": "2026-01-03"},
+7:         "z": {"date": "2026-01-01"},
+8:         "m": {"date": "2026-01-02"},
+9:     }
+10:     treatment = dict(control)
+12:     assert _chronological_keys(control, treatment) == ["z", "m", "a"]
+### tests/test_completion_anchor.py
+1: import pytest
+3: from brasileirao_predictor.data.market_anchor import consensus_anchor
+6: def rows():
+7:     return [
+8:         dict(
+9:             source="synthetic",
+10:             source_event_id="e",
+11:             market="ou2.5",
+12:             bookmaker=book,
+13:             odds_captured_at="2020-01-01T12:00:00+00:00",
+14:             line=2.5,
+15:             selection=selection,
+16:             decimal_odds=price,
+17:         )
+18:         for book, over, under in [("a", 1.9, 1.9), ("b", 2.05, 1.8)]
+19:         for selection, price in [("over", over), ("under", under)]
+20:     ]
+23: def test_reference_excludes_offering_book():
+24:     anchor = consensus_anchor(rows(), market="ou2.5", offered_by="b")
+25:     assert anchor["books"] == ["a"]
+26:     assert anchor["fair_probabilities"] == {"over": 0.5, "under": 0.5}
+27:     assert anchor["best_odds"]["over"] == 2.05
+30: def test_reference_does_not_pool_different_capture_vintages():
+31:     data = rows()
+32:     data[-1]["odds_captured_at"] = "2020-01-01T11:00:00+00:00"
+33:     with pytest.raises(ValueError):
+34:         consensus_anchor(data, market="ou2.5")
+37: def test_reference_rejects_conflicting_duplicate_selection():
+38:     data = rows()
+39:     data.append({**data[0], "decimal_odds": 2.1})
+40:     with pytest.raises(ValueError):
+41:         consensus_anchor(data, market="ou2.5")
+### tests/test_completion_compose_init.py
+1: import sqlite3
+3: import pytest
+5: from brasileirao_scripts import init_compose_data as init
+8: def setup(monkeypatch, tmp_path):
+9:     monkeypatch.setenv("SPORTS_DB_PATH", str(tmp_path / "sports.db"))
+10:     monkeypatch.setenv("MARKET_DB_PATH", str(tmp_path / "market.db"))
+11:     monkeypatch.setattr(init, "load_config", lambda: {})
+13:     def unexpected(*args, **kwargs):
+14:         raise AssertionError("existing storage must be refused before db.connect")
+16:     monkeypatch.setattr(init.db, "connect", unexpected)
+19: def test_initializer_cannot_reset_an_existing_volume(monkeypatch, tmp_path):
+20:     setup(monkeypatch, tmp_path)
+21:     sports = tmp_path / "sports.db"
+22:     sports.write_bytes(b"synthetic-original-data")
+23:     with pytest.raises(FileExistsError):
+24:         init.main()
+25:     assert sports.read_bytes() == b"synthetic-original-data"
+26:     assert not (tmp_path / "market.db").exists()
+29: def test_initializer_requires_distinct_databases(monkeypatch, tmp_path):
+30:     setup(monkeypatch, tmp_path)
+31:     monkeypatch.setenv("MARKET_DB_PATH", str(tmp_path / "sports.db"))
+32:     with pytest.raises(ValueError, match="distinct"):
+33:         init.main()
+34:     assert not (tmp_path / "sports.db").exists()
+37: def test_initializer_creates_only_new_demo_storage(monkeypatch, tmp_path, capsys):
+38:     monkeypatch.setenv("SPORTS_DB_PATH", str(tmp_path / "sports.db"))
+39:     monkeypatch.setenv("MARKET_DB_PATH", str(tmp_path / "market.db"))
+40:     monkeypatch.setattr(
+41:         init, "load_config", lambda: {"elo": {}, "model": {"calibration_window_years": 3, "goal_half_life_days": 365}}
+42:     )
+43:     assert init.main() == 0
+44:     assert "DEMO_PARAMETERS_ONLY" in capsys.readouterr().out
+45:     for name in ("sports.db", "market.db"):
+46:         with sqlite3.connect(tmp_path / name) as conn:
+47:             assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+48:             assert conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 0
+### tests/test_completion_event_inputs.py
+1: import pytest
+3: from brasileirao_predictor.event_models import fit_event_model, predict_event
+6: def history():
+7:     return [dict(home_elo=1500, away_elo=1450, home_event=3, away_event=2)] * 8
+10: @pytest.mark.parametrize("value", [-1, 2.5, float("inf"), True])
+11: def test_count_target_requires_finite_nonnegative_integer(value):
+12:     with pytest.raises(ValueError):
+13:         fit_event_model([{**history()[0], "home_event": value}], "synthetic")
+16: def test_empty_training_set_is_not_a_fitted_model():
+17:     with pytest.raises(ValueError):
+18:         fit_event_model([], "synthetic")
+21: def test_missing_training_feature_is_not_observed_zero():
+22:     with pytest.raises(ValueError):
+23:         fit_event_model(history(), "synthetic", features=["unobserved"])
+26: def test_missing_prediction_feature_is_not_observed_zero():
+27:     with pytest.raises(ValueError):
+28:         predict_event(1500, 1500, {"a": 1, "b": 0.1, "distribution": "poisson", "theta_feature": {"unobserved": 0.3}})
+31: def test_poisson_override_has_correct_distribution_contract():
+32:     params = fit_event_model(history(), "synthetic", distribution="nbinom", overdispersion=False)
+33:     assert params["distribution"] == "poisson"
+34:     assert predict_event(1500, 1450, params)[2]["under_0.5"] >= 0
+37: def test_unknown_distribution_is_rejected():
+38:     with pytest.raises(ValueError):
+39:         fit_event_model(history(), "synthetic", distribution="typo")
+### tests/test_completion_ledger.py
+1: import json
+2: import math
+4: import pytest
+6: from brasileirao_predictor import bet_log
+9: @pytest.mark.parametrize(
+10:     "changes",
+11:     [
+12:         {"odds": math.nan},
+13:         {"odds": math.inf},
+14:         {"stake": math.nan},
+15:         {"stake": True},
+16:         {"selection": "unknown"},
+17:         {"model_prob": 1.3},
+18:     ],
+19: )
+20: def test_invalid_bet_cannot_enter_journal(tmp_path, changes):
+21:     args = {"home": "A", "away": "B", "market": "ou15", "selection": "over", "odds": 2.0, **changes}
+22:     with pytest.raises(ValueError):
+23:         bet_log.add_bet(**args, path=tmp_path / "bets.jsonl")
+24:     assert not (tmp_path / "bets.jsonl").exists()
+27: def test_stable_bet_id_survives_line_reordering_in_list_and_bank(tmp_path):
+28:     bets, bank = tmp_path / "bets.jsonl", tmp_path / "bank.jsonl"
+29:     bet_log.bank_init(100, 1, path=bank, at="2024-01-01T00:00:00Z")
+30:     bet_log.add_bet("A", "B", "ou15", "over", 2, path=bets, bet_id="settled", logged_at="2024-01-02T00:00:00Z")
+31:     bet_log.settle_bet("A", "B", 2, 0, path=bets, recorded_at="2024-01-03T00:00:00Z")
+32:     old_rows = bets.read_text(encoding="utf-8")
+33:     extra = {
+34:         "kind": "bet",
+35:         "bet_id": "still-open",
+36:         "home": "C",
+37:         "away": "D",
+38:         "market": "ou15",
+39:         "line": 1.5,
+40:         "period": "FT",
+41:         "selection": "over",
+42:         "stake": 3,
+43:         "odds": 2,
+44:         "logged_at": "2024-01-02T00:00:00Z",
+45:     }
+46:     bets.write_text(json.dumps(extra) + "\n" + old_rows, encoding="utf-8")
+47:     by_id = {row["bet_id"]: row for row in bet_log.list_bets(bets)}
+48:     assert by_id["settled"]["result"] is not None
+49:     assert by_id["still-open"]["result"] is None
+50:     state = bet_log.bank_state(bank, bets)
+51:     assert state is not None and state["open_units"] == 3
+54: def test_duplicate_bet_id_is_rejected_before_append(tmp_path):
+55:     path = tmp_path / "bets.jsonl"
+56:     bet_log.add_bet("A", "B", "ou15", "over", 2, path=path, bet_id="same")
+57:     with pytest.raises(ValueError, match="bet_id"):
+58:         bet_log.add_bet("C", "D", "ou15", "under", 2, path=path, bet_id="same")
+59:     assert len(path.read_text(encoding="utf-8").splitlines()) == 1
+62: def test_invalid_half_time_each_side_rejected_before_any_settlement(tmp_path):
+63:     path = tmp_path / "bets.jsonl"
+64:     bet_log.add_bet("A", "B", "ou05_2t", "over", 2, path=path)
+65:     with pytest.raises(ValueError):
+66:         bet_log.settle_bet("A", "B", 0, 2, ht=(1, 0), path=path)
+67:     assert len(path.read_text(encoding="utf-8").splitlines()) == 1

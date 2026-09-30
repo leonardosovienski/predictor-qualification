@@ -1,0 +1,493 @@
+### tests/test_kernel_protocol.py
+1: import asyncio
+2: import json
+3: from pathlib import Path
+5: import pytest
+6: from jsonschema import Draft202012Validator
+8: from brasileirao_predictor import kernel_redis_v2 as protocol
+9: from brasileirao_predictor.kernel_daemon import _handle_invoke
+11: PARAMS = (0.2, 1.0, 0.1, 0.0, 0.0, 6)
+14: class FakeRedis:
+17:     def __init__(self, *, claim: bool = True):
+18:         self.claim = claim
+19:         self.claim_calls = []
+20:         self.values = {}
+21:         self.publications = []
+23:     async def eval(self, script, count, *values):
+24:         keys, args = values[:count], values[count:]
+25:         if script == protocol.CLAIM_SCRIPT:
+26:             self.claim_calls.append((keys, args))
+27:             return b"CLAIMED" if self.claim else b"COMPLETED"
+28:         if script == protocol.COMPLETE_SCRIPT:
+29:             self.values[keys[3]] = (args[4] / 1000, args[3])
+30:             self.publications.append((args[5], args[3]))
+31:             return b"COMPLETED"
+32:         if script == protocol.RELEASE_SCRIPT:
+33:             return b"LEASE_LOST"
+34:         raise AssertionError("unexpected script")
+37: def payload(**updates) -> bytes:
+38:     value = {
+39:         "protocol_version": protocol.PROTOCOL_VERSION,
+40:         "job_id": "job-1",
+41:         "run_id": "run-1",
+42:         "match_id": "match-1",
+43:         "idempotency_key": "idem-1",
+44:         "elo_a": 1600,
+45:         "elo_b": 1500,
+46:         "dvorp_a": 0,
+47:         "dvorp_b": 0,
+48:         "timestamp_t3": 1,
+49:         "state_version": "1",
+50:     }
+51:     value.update(updates)
+52:     return json.dumps(value).encode()
+55: def run(client: FakeRedis, raw: bytes) -> None:
+56:     asyncio.run(_handle_invoke(client, raw, PARAMS))
+59: def test_invalid_json_and_unknown_version_are_rejected() -> None:
+60:     client = FakeRedis()
+61:     run(client, b"not-json")
+62:     run(client, payload(protocol_version="brasileirao.redis/999"))
+63:     assert not client.claim_calls and not client.values
+66: def test_missing_identifier_is_rejected() -> None:
+67:     client = FakeRedis()
+68:     run(client, payload(run_id=""))
+69:     assert not client.claim_calls and not client.values
+72: def test_duplicate_idempotency_claim_is_safe() -> None:
+73:     client = FakeRedis(claim=False)
+74:     run(client, payload())
+75:     assert len(client.claim_calls) == 1
+76:     keys, args = client.claim_calls[0]
+77:     assert keys == (
+78:         "kernel:v2:current:match-1",
+79:         "kernel:v2:request:run-1",
+80:         "kernel:v2:lease:run-1",
+81:         "kernel:v2:pending",
+82:         "lineup_state:match-1",
+83:     )
+84:     assert args[:2] == (payload(), "run-1")
+85:     assert len(args[2]) == 32 and args[3] == 5000
+86:     assert not client.values and not client.publications
+89: def test_valid_payload_writes_versioned_ttl_response() -> None:
+90:     client = FakeRedis()
+91:     run(client, payload())
+92:     ttl, encoded = client.values["fair_odds:match-1"]
+93:     response = json.loads(encoded)
+94:     assert ttl == 5
+95:     assert response["protocol_version"] == protocol.PROTOCOL_VERSION
+96:     assert response["job_id"] == "job-1"
+97:     assert response["run_id"] == "run-1"
+98:     assert response["match_id"] == "match-1"
+99:     assert response["state_version"] == "1"
+100:     assert response["idempotency_key"] == "idem-1"
+101:     assert client.publications == [("fair_odds_ready:match-1", encoded)]
+104: def assert_rejected(raw: bytes) -> None:
+105:     client = FakeRedis()
+106:     run(client, raw)
+107:     assert not client.claim_calls, "Invalid input must not reserve an idempotency key"
+108:     assert not client.values
+109:     assert not client.publications
+112: @pytest.mark.parametrize("missing", tuple(json.loads(payload())))
+113: def test_each_required_field_is_rejected_when_missing(missing: str) -> None:
+114:     value = json.loads(payload())
+115:     del value[missing]
+116:     assert_rejected(json.dumps(value).encode())
+119: @pytest.mark.parametrize("field", ["job_id", "run_id", "match_id", "idempotency_key"])
+120: @pytest.mark.parametrize("invalid", [None, "", 123, True, [], {}])
+121: def test_invalid_identifier_is_rejected_without_coercion(field: str, invalid) -> None:
+122:     assert_rejected(payload(**{field: invalid}))
+125: @pytest.mark.parametrize("field", ["elo_a", "elo_b", "dvorp_a", "dvorp_b"])
+126: @pytest.mark.parametrize("invalid", [None, "1500", True, [], {}, float("nan"), float("inf"), -float("inf"), 10**400])
+127: def test_invalid_number_is_rejected_before_claim(field: str, invalid) -> None:
+128:     assert_rejected(payload(**{field: invalid}))
+131: @pytest.mark.parametrize("invalid", [None, "1", True, -1, -1.0, 0.5, [], {}, float("nan"), float("inf")])
+132: def test_invalid_timestamp_is_rejected_before_claim(invalid) -> None:
+133:     assert_rejected(payload(timestamp_t3=invalid))
+136: @pytest.mark.parametrize("raw", [b"null", b"[]", b"1", b"true", b'"message"', b"{", b"\xff"])
+137: def test_non_object_or_malformed_payload_is_rejected(raw: bytes) -> None:
+138:     assert_rejected(raw)
+141: def test_additional_properties_are_rejected() -> None:
+142:     assert_rejected(payload(unexpected="value"))
+145: @pytest.mark.parametrize("invalid", [None, 1, True, [], {}])
+146: def test_non_string_protocol_version_is_rejected(invalid) -> None:
+147:     assert_rejected(payload(protocol_version=invalid))
+150: @pytest.mark.parametrize("elo_a", [1e308, -1e308])
+151: def test_unrepresentable_rates_are_rejected_before_claim(elo_a: float) -> None:
+152:     assert_rejected(payload(elo_a=elo_a))
+155: def test_invalid_message_does_not_poison_valid_retry() -> None:
+156:     client = FakeRedis()
+157:     run(client, payload(elo_a="invalid"))
+158:     run(client, payload())
+159:     assert len(client.claim_calls) == 1
+160:     assert "fair_odds:match-1" in client.values
+161:     assert len(client.publications) == 1
+164: @pytest.mark.parametrize("timestamp", [0, 1, 1.0, 1e20])
+165: def test_schema_valid_numeric_representations_are_accepted(timestamp) -> None:
+166:     value = json.loads(payload(timestamp_t3=timestamp, elo_a=1600.0, dvorp_a=-0.25))
+167:     schema = json.loads((Path(__file__).parents[1] / "contracts" / "redis-protocol-v2.schema.json").read_text())
+168:     Draft202012Validator(schema).validate(value)
+169:     client = FakeRedis()
+170:     run(client, json.dumps(value).encode())
+171:     assert len(client.claim_calls) == 1
+172:     assert "fair_odds:match-1" in client.values
+175: @pytest.mark.parametrize(
+176:     "invalid", [None, True, 1, "", "0", "01", "-1", "1.0", "1e3", "１２", "١", "9223372036854775808", "1" * 20]
+177: )
+178: def test_state_version_requires_canonical_positive_redis_integer(invalid) -> None:
+179:     assert_rejected(payload(state_version=invalid))
+182: def test_version_above_lua_double_precision_is_preserved_as_string() -> None:
+183:     client = FakeRedis()
+184:     run(client, payload(state_version="9223372036854775807"))
+185:     assert json.loads(client.values["fair_odds:match-1"][1])["state_version"] == "9223372036854775807"
+188: def test_legacy_v1_cannot_bypass_registered_v2_lifecycle() -> None:
+189:     raw = json.loads(payload(protocol_version="brasileirao.redis/1"))
+190:     del raw["state_version"]
+191:     assert_rejected(json.dumps(raw).encode())
+### tests/test_kernel_runtime.py
+1: import json
+2: import sys
+3: from types import SimpleNamespace
+5: import numpy as np
+6: import pytest
+8: from brasileirao_predictor import kernel_daemon
+9: from brasileirao_predictor import kernel_redis_v2 as protocol
+12: def test_grid_is_normalized_non_negative_and_dixon_coles_changes_low_scores() -> None:
+13:     baseline = kernel_daemon._compute_grid_jit(1.4, 1.1, 0.12, 0.0, 8)
+14:     adjusted = kernel_daemon._compute_grid_jit(1.4, 1.1, 0.12, -0.08, 8)
+16:     assert baseline.shape == (9, 9)
+17:     assert np.isclose(adjusted.sum(), 1.0)
+18:     assert np.all(adjusted >= 0)
+19:     assert not np.allclose(baseline[:2, :2], adjusted[:2, :2])
+22: def test_numba_python_implementation_is_directly_verifiable() -> None:
+23:     python_grid = kernel_daemon._compute_grid_jit.py_func
+25:     grid = python_grid(1.2, 0.9, 0.15, 0.05, 5)
+27:     assert grid.shape == (6, 6)
+28:     assert np.isclose(grid.sum(), 1.0)
+29:     assert np.all(grid >= 0)
+32: def test_fair_odds_cover_complete_probability_grid() -> None:
+33:     grid = np.zeros((3, 3))
+34:     grid[0, 0] = 0.2
+35:     grid[1, 0] = 0.3
+36:     grid[0, 1] = 0.1
+37:     grid[2, 2] = 0.4
+39:     odds = kernel_daemon._fair_odds_from_grid(grid)
+41:     assert odds == {"1": 3.3333, "X": 1.6667, "2": 10.0, "o25": 2.5, "u25": 1.6667}
+44: def test_fair_odds_represents_zero_probability_as_none() -> None:
+45:     grid = np.zeros((2, 2))
+46:     grid[0, 0] = 1.0
+48:     odds = kernel_daemon._fair_odds_from_grid(grid)
+50:     assert odds["1"] is None
+51:     assert odds["2"] is None
+52:     assert odds["o25"] is None
+55: class _Connection:
+56:     closed = False
+58:     def close(self) -> None:
+59:         self.closed = True
+62: def test_load_params_closes_sports_db_and_applies_config(monkeypatch) -> None:
+63:     connection = _Connection()
+64:     monkeypatch.setattr(kernel_daemon._db, "connect", lambda path, read_only: connection)
+65:     monkeypatch.setattr(kernel_daemon._db, "load_params", lambda conn: (0.2, 1.1, 0.3, -0.1))
+66:     monkeypatch.setenv("KERNEL_VORP_THETA", "0.25")
+67:     monkeypatch.setenv("KERNEL_MAX_GOALS", "9")
+69:     assert kernel_daemon._load_params("sports.db") == (0.2, 1.1, 0.3, -0.1, 0.25, 9)
+70:     assert connection.closed
+73: def test_load_params_closes_sports_db_when_cache_is_empty(monkeypatch) -> None:
+74:     connection = _Connection()
+75:     monkeypatch.setattr(kernel_daemon._db, "connect", lambda path, read_only: connection)
+76:     monkeypatch.setattr(kernel_daemon._db, "load_params", lambda conn: None)
+78:     with pytest.raises(RuntimeError, match="cache vazio"):
+79:         kernel_daemon._load_params("sports.db")
+80:     assert connection.closed
+83: def test_load_params_rejects_stale_versioned_cache(monkeypatch) -> None:
+84:     connection = _Connection()
+85:     row = (0.2, 1.1, 0.3, -0.1, 10, "old-hash", "2026-01-01T00:00:00+00:00")
+86:     monkeypatch.setattr(kernel_daemon._db, "connect", lambda path, read_only: connection)
+87:     monkeypatch.setattr(kernel_daemon._db, "load_params", lambda conn: row)
+88:     monkeypatch.setattr("brasileirao_predictor.cron_update_models.cache_is_current", lambda cfg, conn, params: False)
+89:     monkeypatch.setattr("brasileirao_predictor.ingest.load_config", lambda: {})
+91:     with pytest.raises(RuntimeError, match="cache desatualizado"):
+92:         kernel_daemon._load_params("sports.db")
+93:     assert connection.closed
+96: def test_warmup_invokes_grid_twice(monkeypatch) -> None:
+97:     calls = []
+98:     monkeypatch.setattr(kernel_daemon, "_compute_grid_jit", lambda *args: calls.append(args))
+100:     elapsed = kernel_daemon._warmup_jit((0.2, 1.0, 0.1, -0.2, 0.0, 6))
+102:     assert elapsed >= 0
+103:     assert len(calls) == 2
+104:     assert calls[0] == calls[1]
+105:     assert calls[0][-2:] == (0.2, 6)
+108: def test_main_rejects_missing_runtime_configuration(monkeypatch) -> None:
+109:     monkeypatch.delenv("SPORTS_DB_PATH", raising=False)
+110:     monkeypatch.delenv("REDIS_URL", raising=False)
+111:     monkeypatch.setattr(sys, "argv", ["brasileirao-kernel"])
+113:     with pytest.raises(SystemExit) as exc:
+114:         kernel_daemon.main()
+115:     assert exc.value.code == 2
+118: def test_main_healthcheck_reports_redis_state(monkeypatch, tmp_path) -> None:
+119:     sports_db = tmp_path / "sports.db"
+120:     client = SimpleNamespace(eval=lambda *args: 1, close=lambda: None)
+121:     fake_redis = SimpleNamespace(from_url=lambda url, **kwargs: client)
+122:     monkeypatch.setitem(sys.modules, "redis", fake_redis)
+123:     monkeypatch.setattr(
+124:         sys,
+125:         "argv",
+126:         [
+127:             "brasileirao-kernel",
+128:             "--db",
+129:             str(sports_db),
+130:             "--redis",
+131:             "redis://redis:6379/0",
+132:             "--healthcheck",
+133:         ],
+134:     )
+136:     assert kernel_daemon.main() == 0
+139: def test_main_healthcheck_fails_when_kernel_is_not_ready(monkeypatch, tmp_path) -> None:
+140:     sports_db = tmp_path / "sports.db"
+141:     client = SimpleNamespace(eval=lambda *args: 0, close=lambda: None)
+142:     monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=lambda url, **kwargs: client))
+143:     monkeypatch.setattr(
+144:         sys,
+145:         "argv",
+146:         [
+147:             "brasileirao-kernel",
+148:             "--db",
+149:             str(sports_db),
+150:             "--redis",
+151:             "redis://redis:6379/0",
+152:             "--healthcheck",
+153:         ],
+154:     )
+156:     assert kernel_daemon.main() == 1
+159: def test_main_starts_daemon_with_explicit_absolute_configuration(monkeypatch, tmp_path) -> None:
+160:     sports_db = tmp_path / "sports.db"
+161:     seen = []
+163:     def run(coroutine) -> None:
+164:         seen.append(coroutine)
+165:         coroutine.close()
+167:     monkeypatch.setattr(kernel_daemon.asyncio, "run", run)
+168:     monkeypatch.setattr(
+169:         sys,
+170:         "argv",
+171:         [
+172:             "brasileirao-kernel",
+173:             "--db",
+174:             str(sports_db),
+175:             "--redis",
+176:             "redis://redis:6379/0",
+177:         ],
+178:     )
+180:     assert kernel_daemon.main() is None
+181:     assert len(seen) == 1
+184: class _PubSub:
+185:     def __init__(self) -> None:
+186:         self.subscribed = []
+187:         self.unsubscribed = []
+189:     async def subscribe(self, channel) -> None:
+190:         self.subscribed.append(channel)
+192:     async def listen(self):
+193:         yield {"type": "subscribe", "data": b""}
+195:     async def unsubscribe(self, channel) -> None:
+196:         self.unsubscribed.append(channel)
+198:     async def aclose(self) -> None:
+199:         return None
+202: class _DaemonRedis:
+203:     def __init__(self) -> None:
+204:         self.pubsub_instance = _PubSub()
+205:         self.set_calls = []
+206:         self.deleted = []
+207:         self.closed = False
+209:     def pubsub(self):
+210:         return self.pubsub_instance
+212:     async def set(self, key, value) -> None:
+213:         self.set_calls.append((key, value))
+215:     async def delete(self, key) -> None:
+216:         self.deleted.append(key)
+218:     async def eval(self, script, count, *args):
+219:         assert script == protocol.HEARTBEAT_SCRIPT and count == 1
+220:         key, value, ttl, mode = args
+221:         assert key == protocol.HEALTH_KEY and ttl == 5000
+222:         if mode == "start":
+223:             self.set_calls.append((key, json.loads(value)["protocol_version"]))
+224:         elif mode == "release":
+225:             self.deleted.append(key)
+226:         return 1
+228:     async def aclose(self) -> None:
+229:         self.closed = True
+232: def test_daemon_sets_health_and_cleans_up_on_shutdown(monkeypatch) -> None:
+233:     import redis.asyncio as redis_asyncio_module
+235:     client = _DaemonRedis()
+236:     monkeypatch.setattr(redis_asyncio_module, "from_url", lambda url, **kwargs: client)
+237:     monkeypatch.setattr(kernel_daemon, "_load_params", lambda path: (0.2, 1, 0.1, 0, 0, 6))
+238:     monkeypatch.setattr(kernel_daemon, "_warmup_jit", lambda params: 0.1)
+240:     async def exercise() -> None:
+241:         running_loop = __import__("asyncio").get_running_loop()
+242:         loop = SimpleNamespace(
+243:             run_in_executor=running_loop.run_in_executor,
+244:             add_signal_handler=lambda signal, callback: callback(),
+245:             remove_signal_handler=lambda signal: True,
+246:         )
+247:         monkeypatch.setattr(kernel_daemon.asyncio, "get_event_loop", lambda: loop)
+248:         await kernel_daemon._run_daemon("sports.db", "redis://redis:6379/0")
+250:     __import__("asyncio").run(exercise())
+252:     assert client.pubsub_instance.subscribed == [protocol.INVOKE_CHANNEL]
+253:     assert client.set_calls == [("health:kernel", protocol.PROTOCOL_VERSION)]
+254:     assert client.pubsub_instance.unsubscribed == [protocol.INVOKE_CHANNEL]
+255:     assert client.deleted == ["health:kernel"]
+256:     assert client.closed
+### tests/test_kernel_v2_runtime.py
+3: import asyncio
+4: import json
+5: import signal
+6: from types import SimpleNamespace
+8: import numpy as np
+9: import pytest
+11: from brasileirao_predictor import kernel_daemon
+12: from brasileirao_predictor import kernel_redis_v2 as protocol
+14: PARAMS = (0.2, 1.0, 0.1, 0.0, 0.0, 6)
+15: RAW = json.dumps(
+16:     {
+17:         "protocol_version": protocol.PROTOCOL_VERSION,
+18:         "job_id": "synthetic",
+19:         "run_id": "synthetic-run",
+20:         "match_id": "synthetic",
+21:         "idempotency_key": "synthetic-identity",
+22:         "state_version": "1",
+23:         "elo_a": 1500,
+24:         "elo_b": 1500,
+25:         "dvorp_a": 0,
+26:         "dvorp_b": 0,
+27:         "timestamp_t3": 1,
+28:     }
+29: ).encode()
+32: @pytest.mark.parametrize("failure", [ConnectionError, asyncio.CancelledError])
+33: def test_uncertain_completion_releases_only_its_attempt(monkeypatch, failure):
+34:     calls = []
+36:     class Client:
+37:         async def eval(self, script, count, *args):
+38:             calls.append((script, count, args))
+39:             if script == protocol.CLAIM_SCRIPT:
+40:                 return b"CLAIMED"
+41:             if script == protocol.COMPLETE_SCRIPT:
+42:                 raise failure("synthetic failure")
+43:             assert script == protocol.RELEASE_SCRIPT
+44:             return b"LEASE_LOST"  # e.g. completion already committed / new owner.
+46:     monkeypatch.setattr(kernel_daemon, "_compute_grid_jit", lambda *_: np.ones((2, 2)) / 4)
+47:     if failure is asyncio.CancelledError:
+48:         with pytest.raises(asyncio.CancelledError):
+49:             asyncio.run(kernel_daemon._handle_invoke(Client(), RAW, PARAMS))
+50:     else:
+51:         asyncio.run(kernel_daemon._handle_invoke(Client(), RAW, PARAMS))
+52:     claim, complete, release = calls
+53:     assert claim[0] == protocol.CLAIM_SCRIPT
+54:     assert complete[0] == protocol.COMPLETE_SCRIPT
+55:     assert release[0] == protocol.RELEASE_SCRIPT
+56:     assert claim[2][7] == complete[2][9] == release[2][7]  # same lease token
+57:     assert release[2][5:7] == (RAW, "synthetic-run")
+60: def test_computation_failure_releases_claim_and_never_completes(monkeypatch):
+61:     scripts = []
+63:     class Client:
+64:         async def eval(self, script, count, *args):
+65:             scripts.append(script)
+66:             return b"CLAIMED" if script == protocol.CLAIM_SCRIPT else b"RETRY"
+68:     def fail(*_):
+69:         raise ArithmeticError("synthetic computation failure")
+71:     monkeypatch.setattr(kernel_daemon, "_compute_grid_jit", fail)
+72:     asyncio.run(kernel_daemon._handle_invoke(Client(), RAW, PARAMS))
+73:     assert scripts == [protocol.CLAIM_SCRIPT, protocol.RELEASE_SCRIPT]
+76: def test_poller_recovers_registered_payloads_without_pubsub(monkeypatch):
+77:     seen = []
+79:     async def scenario():
+80:         stop = asyncio.Event()
+82:         class Client:
+83:             async def eval(self, script, count, *args):
+84:                 assert script == protocol.POLL_SCRIPT
+85:                 assert count == 1 and args[0] == protocol.PENDING_KEY
+86:                 return [b"request-a", b"request-b"]
+88:         async def handle(client, raw, params):
+89:             assert params == PARAMS
+90:             seen.append(raw)
+91:             if len(seen) == 2:
+92:                 stop.set()
+94:         monkeypatch.setattr(kernel_daemon, "_handle_invoke", handle)
+95:         await kernel_daemon._poll_pending(Client(), PARAMS, stop)
+97:     asyncio.run(scenario())
+98:     assert seen == [b"request-a", b"request-b"]
+101: def test_windows_signal_fallback_schedules_stop_and_restores_handlers(monkeypatch):
+102:     originals = {signal.SIGTERM: object(), signal.SIGINT: object()}
+103:     installed = dict(originals)
+104:     scheduled = []
+106:     def unavailable(*_):
+107:         raise NotImplementedError
+109:     monkeypatch.setattr(kernel_daemon.signal, "getsignal", lambda sig: originals[sig])
+110:     monkeypatch.setattr(kernel_daemon.signal, "signal", lambda sig, fn: installed.__setitem__(sig, fn))
+111:     loop = SimpleNamespace(
+112:         add_signal_handler=unavailable,
+113:         call_soon_threadsafe=lambda callback: scheduled.append(callback),
+114:     )
+115:     stop = asyncio.Event()
+116:     restore = kernel_daemon._install_stop_signals(loop, stop)
+117:     installed[signal.SIGTERM](signal.SIGTERM, None)
+118:     assert len(scheduled) == 1 and not stop.is_set()
+119:     scheduled[0]()
+120:     assert stop.is_set()
+121:     restore()
+122:     assert installed == originals
+125: def test_session_keeps_client_open_until_inflight_handler_cleans_up(monkeypatch):
+126:     import redis.asyncio as redis_asyncio_module
+128:     async def scenario():
+129:         callbacks = {}
+130:         started = asyncio.Event()
+131:         released = False
+133:         class PubSub:
+134:             async def subscribe(self, channel):
+135:                 assert channel == protocol.INVOKE_CHANNEL
+137:             async def listen(self):
+138:                 yield {"type": "message", "data": RAW}
+139:                 await asyncio.Event().wait()
+141:             async def unsubscribe(self, channel):
+142:                 pass
+144:             async def aclose(self):
+145:                 pass
+147:         class Client:
+148:             closed = False
+150:             def pubsub(self):
+151:                 return PubSub()
+153:             async def set(self, key, value):
+154:                 pass
+156:             async def delete(self, key):
+157:                 pass
+159:             async def eval(self, script, count, *args):
+160:                 assert script == protocol.HEARTBEAT_SCRIPT
+161:                 return 1
+163:             async def aclose(self):
+164:                 assert released
+165:                 self.closed = True
+167:         client = Client()
+169:         async def handle(*_):
+170:             nonlocal released
+171:             started.set()
+172:             try:
+173:                 await asyncio.Event().wait()
+174:             finally:
+175:                 await asyncio.sleep(0)
+176:                 assert not client.closed
+177:                 released = True
+179:         async def poll(client, params, stop, heartbeat_payload):
+180:             await stop.wait()
+182:         loop = asyncio.get_running_loop()
+183:         wrapper = SimpleNamespace(
+184:             run_in_executor=loop.run_in_executor,
+185:             add_signal_handler=lambda sig, callback: callbacks.__setitem__(sig, callback),
+186:             remove_signal_handler=lambda sig: True,
+187:         )
+188:         monkeypatch.setattr(kernel_daemon.asyncio, "get_event_loop", lambda: wrapper)
+189:         monkeypatch.setattr(kernel_daemon, "_load_params", lambda _: PARAMS)
+190:         monkeypatch.setattr(kernel_daemon, "_warmup_jit", lambda _: 0.1)
+191:         monkeypatch.setattr(kernel_daemon, "_handle_invoke", handle)
+192:         monkeypatch.setattr(kernel_daemon, "_poll_pending", poll)
+193:         monkeypatch.setattr(redis_asyncio_module, "from_url", lambda *args, **kwargs: client)
+194:         daemon = asyncio.create_task(kernel_daemon._run_daemon("synthetic.db", "redis://unused/15"))
+195:         await asyncio.wait_for(started.wait(), 2)
+196:         callbacks[signal.SIGTERM]()
+197:         await asyncio.wait_for(daemon, 2)
+198:         assert released and client.closed
+200:     asyncio.run(scenario())

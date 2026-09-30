@@ -1,0 +1,177 @@
+### tests/test_reconciliation_gate_contracts.py
+3: from copy import deepcopy
+4: from typing import Any
+6: import pytest
+8: from brasileirao_predictor.research.calibration_gate import assess_a10
+9: from brasileirao_predictor.research.residual_gate import evaluate_economic_gate
+12: def calibration_report() -> dict[str, Any]:
+13:     return {
+14:         "metrics": {
+15:             name: {"delta_treatment_minus_control": -0.01}
+16:             for name in ("rps", "brier", "log_loss", "brier_draw", "log_loss_home_win")
+17:         }
+18:     }
+21: @pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf"), True, "-0.01", None])
+22: @pytest.mark.parametrize("metric", ["rps", "log_loss_home_win"])
+23: def test_calibration_rejects_invalid_numeric_evidence(bad: Any, metric: str) -> None:
+24:     report = calibration_report()
+25:     report["metrics"][metric]["delta_treatment_minus_control"] = bad
+26:     with pytest.raises(ValueError, match="finite number"):
+27:         assess_a10(report)
+30: @pytest.mark.parametrize("bad", [None, [], {"metrics": []}, {"metrics": {"rps": None}}])
+31: def test_calibration_rejects_malformed_report(bad: Any) -> None:
+32:     with pytest.raises(ValueError):
+33:         assess_a10(bad)
+36: def test_calibration_marks_report_only_and_does_not_mutate() -> None:
+37:     report = calibration_report()
+38:     original = deepcopy(report)
+39:     result = assess_a10(report)
+40:     assert result["verdict"] == "GO_CANDIDATE_FOR_NEW_PROSPECTIVE_PROTOCOL"
+41:     assert result["schema_version"] == "a10-promotion-gate/v2"
+42:     assert result["economic_evidence"] is False
+43:     assert result["provenance_verified"] is False
+44:     assert result["capital_enabled"] is False
+45:     assert report == original
+48: def test_calibration_missing_home_guardrail_still_abstains() -> None:
+49:     report = calibration_report()
+50:     del report["metrics"]["log_loss_home_win"]
+51:     assert assess_a10(report)["verdict"] == "NO_GO_ARCHIVE_A10"
+54: def rows() -> list[dict[str, Any]]:
+55:     return [{"event_id": str(i), "pnl": 0.2 if i % 2 else 0.1, "clv": 0.03} for i in range(8)]
+58: @pytest.mark.parametrize("field", ["pnl", "clv"])
+59: @pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf"), True, "0.2"])
+60: def test_residual_rejects_invalid_values_before_any_statistics(field: str, bad: Any) -> None:
+61:     sample = rows()
+62:     sample[0][field] = bad
+63:     with pytest.raises(ValueError, match="finite number"):
+64:         evaluate_economic_gate(sample, dsr=0.99, minimum_sample=2, n_boot=20)
+67: @pytest.mark.parametrize("bad", [True, " ", [], {}])
+68: def test_residual_requires_an_event_identity(bad: Any) -> None:
+69:     sample = rows()
+70:     sample[0]["event_id"] = bad
+71:     with pytest.raises(ValueError, match="event_id"):
+72:         evaluate_economic_gate(sample, dsr=0.99, minimum_sample=2, n_boot=20)
+75: @pytest.mark.parametrize(
+76:     "argument,bad",
+77:     [
+78:         ("dsr", float("inf")),
+79:         ("dsr", True),
+80:         ("dsr", 1.01),
+81:         ("minimum_psr", -0.01),
+82:         ("minimum_dsr", float("nan")),
+83:         ("minimum_sample", 0),
+84:         ("minimum_sample", True),
+85:         ("minimum_sample", 2.5),
+86:         ("n_boot", 0),
+87:         ("n_boot", True),
+88:         ("n_boot", 2.5),
+89:     ],
+90: )
+91: def test_residual_validates_configuration_even_below_sample_floor(argument: str, bad: Any) -> None:
+92:     options: dict[str, Any] = {"dsr": 0.99, "minimum_sample": 2, "n_boot": 20}
+93:     options[argument] = bad
+94:     with pytest.raises(ValueError):
+95:         evaluate_economic_gate([], **options)
+98: def test_residual_does_not_promote_a_selected_complete_subset() -> None:
+99:     sample = rows() + [{"event_id": "missing", "pnl": None, "clv": 0.03}]
+100:     result = evaluate_economic_gate(sample, dsr=0.99, minimum_sample=2, n_boot=20)
+101:     assert result["verdict"] == "PENDING_DATA"
+102:     assert result["n_input"] == 9
+103:     assert result["n"] == 8
+104:     assert result["n_incomplete"] == 1
+105:     assert result["capital_enabled"] is False
+108: def test_residual_labels_unit_assumption_and_declared_dsr() -> None:
+109:     sample = rows()
+110:     original = deepcopy(sample)
+111:     result = evaluate_economic_gate(sample, dsr=0.99, minimum_sample=2, n_boot=20)
+112:     assert result["roi"] == pytest.approx(0.15)
+113:     assert result["roi_scope"] == "mean_pnl_assuming_one_unit_staked_per_row"
+114:     assert result["dsr_source"] == "caller_declared_unverified"
+115:     assert result["economic_evidence"] is False
+116:     assert result["capital_enabled"] is False
+117:     assert sample == original
+120: def test_residual_cannot_call_variable_stake_pnl_roi() -> None:
+121:     sample = rows()
+122:     sample[0]["stake"] = 2.0
+123:     with pytest.raises(ValueError, match="unit stake"):
+124:         evaluate_economic_gate(sample, dsr=0.99, minimum_sample=2, n_boot=20)
+### tests/test_record_h9_closing_snapshots.py
+4: from datetime import UTC, datetime, timedelta
+6: import pytest
+7: from predictor_core.data.contracts import DataUnavailableError
+9: from brasileirao_predictor import db
+10: from brasileirao_scripts import record_h9_closing_snapshots as job
+12: KICKOFF = datetime(2027, 3, 1, 19, 0, tzinfo=UTC)
+15: @pytest.fixture
+16: def dbpath(tmp_path):
+17:     path = tmp_path / "t.db"
+18:     conn = db.connect(str(path))
+19:     conn.execute(
+20:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+21:         "VALUES (1, 'T', '2027', ?, 'Casa', 'Fora', ?)",
+22:         (KICKOFF.date().isoformat(), KICKOFF.isoformat(timespec="seconds")),
+23:     )
+24:     conn.commit()
+25:     conn.close()
+26:     return path
+29: def _cfg(dbpath):
+30:     return {"database": str(dbpath)}
+33: def test_no_upcoming_kickoff_skips_api_call(dbpath, monkeypatch, tmp_path):
+34:     monkeypatch.setattr(job, "load_config", lambda: _cfg(dbpath))
+36:     class _BoomProvider:
+37:         def __init__(self, *a, **k):
+38:             raise AssertionError("nao deveria instanciar o provider fora da janela")
+40:     monkeypatch.setattr(job, "TheOddsApiProvider", _BoomProvider)
+41:     result = job.run(now=KICKOFF - timedelta(hours=6), db_path=dbpath, market_obs_path=tmp_path / "mo.jsonl")
+42:     assert result == {"status": "NO_KICKOFF_WINDOW", "rows_written": 0}
+45: def test_writes_quotes_when_kickoff_is_imminent(dbpath, monkeypatch, tmp_path):
+46:     monkeypatch.setattr(job, "load_config", lambda: _cfg(dbpath))
+48:     class _Provider:
+49:         def __init__(self, *a, **k):
+50:             pass
+52:         def fetch_markets(self, *, markets, retrieved_at=None):
+53:             assert markets == ("totals",)
+54:             return [
+55:                 {
+56:                     "source_event_id": "e1",
+57:                     "bookmaker": "williamhill",
+58:                     "market": "ou2.5",
+59:                     "selection": "over",
+60:                     "decimal_odds": 1.9,
+61:                     "odds_captured_at": (KICKOFF - timedelta(minutes=10)).isoformat(timespec="seconds"),
+62:                     "retrieved_at": retrieved_at.isoformat(timespec="seconds"),
+63:                     "canonical_match_id": "the_odds_api:e1",
+64:                     "home_team": "Casa",
+65:                     "away_team": "Fora",
+66:                     "kickoff_at": KICKOFF.isoformat(timespec="seconds"),
+67:                 }
+68:             ]
+70:     monkeypatch.setattr(job, "TheOddsApiProvider", _Provider)
+71:     market_obs_path = tmp_path / "mo.jsonl"
+72:     result = job.run(now=KICKOFF - timedelta(minutes=30), db_path=dbpath, market_obs_path=market_obs_path)
+73:     assert result == {"status": "OK", "rows_written": 1}
+74:     assert market_obs_path.exists()
+77: def test_source_unavailable_is_reported_not_swallowed(dbpath, monkeypatch, tmp_path):
+78:     monkeypatch.setattr(job, "load_config", lambda: _cfg(dbpath))
+80:     class _BrokenProvider:
+81:         def __init__(self, *a, **k):
+82:             pass
+84:         def fetch_markets(self, *, markets, retrieved_at=None):
+85:             raise DataUnavailableError("The Odds API indisponivel")
+87:     monkeypatch.setattr(job, "TheOddsApiProvider", _BrokenProvider)
+88:     result = job.run(now=KICKOFF - timedelta(minutes=30), db_path=dbpath, market_obs_path=tmp_path / "mo.jsonl")
+89:     assert result["status"] == "SOURCE_UNAVAILABLE"
+90:     assert result["rows_written"] == 0
+### tests/test_redis_contract.py
+1: import json
+2: from pathlib import Path
+4: from brasileirao_predictor import kernel_daemon
+7: def test_shared_schema_is_versioned_and_correlated() -> None:
+8:     schema = json.loads((Path(__file__).parents[1] / "contracts" / "redis-protocol-v1.schema.json").read_text())
+9:     required = set(schema["required"])
+10:     assert {"protocol_version", "job_id", "run_id", "match_id", "idempotency_key"} <= required
+11:     assert schema["properties"]["protocol_version"]["const"] == "brasileirao.redis/1"
+14: def test_golden_pricing_grid_is_preserved() -> None:
+15:     grid = kernel_daemon._compute_grid_jit(1.5, 1.1, 0.1, -0.05, 12)
+16:     odds = kernel_daemon._fair_odds_from_grid(grid)
+17:     assert odds == {"1": 2.2047, "X": 3.7475, "2": 3.5767, "o25": 2.1183, "u25": 1.8942}

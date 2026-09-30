@@ -1,0 +1,438 @@
+### brasileirao_predictor/research/survival_test.py
+23: import argparse
+24: import json
+25: import sys
+26: from pathlib import Path
+28: import numpy as np
+31: from predictor_core.measurement.stats import probabilistic_sharpe_ratio
+33: from brasileirao_predictor import db
+34: from brasileirao_predictor.ingest import load_config
+35: from brasileirao_predictor.math_utils import shin_probabilities
+36: from brasileirao_predictor.model import predict_match
+37: from brasileirao_predictor.ratings import ratings_asof
+40: from brasileirao_predictor.research.score_metrics import (
+41:     brier_score_multiclass,
+42:     brier_skill_score,
+43:     diebold_mariano_hln,
+44:     log_loss_matrix,
+45: )
+47: ROOT = Path(__file__).resolve().parents[2]
+48: TEST_SEASONS = {"2023", "2024"}
+49: MAX_GOALS = 12
+57: def _one_hot(home_score: int, away_score: int, g: int = MAX_GOALS) -> np.ndarray:
+59:     y = np.zeros((g, g), dtype=np.float32)
+60:     y[min(home_score, g - 1), min(away_score, g - 1)] = 1.0
+61:     return y
+64: def _predict_base(elo_a, elo_b, params) -> np.ndarray:
+66:     res = predict_match(elo_a, elo_b, params, home_adv=0.0)
+67:     return res["grid"].astype(np.float32)
+70: def _predict_hybrid(elo_a, elo_b, params, dvorp_a, dvorp_b, theta) -> np.ndarray:
+72:     res = predict_match(
+73:         elo_a,
+74:         elo_b,
+75:         params,
+76:         home_adv=0.0,
+77:         delta_vorp_a=dvorp_a,
+78:         delta_vorp_b=dvorp_b,
+79:         theta=theta,
+80:     )
+81:     return res["grid"].astype(np.float32)
+89: def _team_delta_vorp(team, event_id, presence, beta_players, replacement_levels, positions):
+91:     players = [p for p, (t, _) in presence.get(event_id, {}).items() if t == team]
+92:     if not players:
+93:         return 0.0
+95:     total = 0.0
+96:     for p in players:
+97:         if p in beta_players:
+98:             total += beta_players[p]
+99:         else:
+100:             pos = positions.get(p, "UNKNOWN")
+101:             total += replacement_levels.get(pos, replacement_levels.get("UNKNOWN", 0.0))
+102:     return total
+110: def calibration_curve_over25(probs: np.ndarray, outcomes: np.ndarray, n_bins: int = 10):
+112:     bins = np.linspace(0.0, 1.0, n_bins + 1)
+113:     bin_ids = np.digitize(probs, bins[1:-1])  # shape (N,), valores 0..n_bins-1
+114:     counts = np.bincount(bin_ids, minlength=n_bins)
+115:     sum_pred = np.bincount(bin_ids, weights=probs, minlength=n_bins)
+116:     sum_true = np.bincount(bin_ids, weights=outcomes.astype(float), minlength=n_bins)
+117:     mask = counts > 0
+118:     denom = np.where(mask, counts.astype(float), 1.0)
+119:     mean_pred = np.where(mask, sum_pred / denom, np.nan)
+120:     mean_true = np.where(mask, sum_true / denom, np.nan)
+121:     return mean_pred, mean_true, counts
+129: def _simulated_clv_and_pnl(
+130:     matches_data,  # list of dicts com probs e odds
+131:     kelly_frac: float = 0.25,
+132:     min_edge: float = 0.02,
+133: ):
+136:     clv_edges = []
+137:     pnl_series = []
+138:     bankroll = 1.0
+140:     for m in matches_data:
+141:         p_model = m["p_model_1x2"]  # [p_win, p_draw, p_loss]
+142:         odds_1x2 = m["odds_1x2"]  # [odd_home, odd_draw, odd_away]
+143:         result_idx = m["result_idx"]  # 0=home, 1=draw, 2=away
+144:         shin = m["shin_close"]  # probs purificadas do fechamento
+146:         if any(o is None or o <= 1.0 for o in odds_1x2):
+147:             continue
+150:         for k in range(3):
+151:             implied = 1.0 / odds_1x2[k]
+152:             edge = p_model[k] - implied
+153:             if edge < min_edge:
+154:                 continue
+157:             clv = odds_1x2[k] * shin[k] - 1.0
+158:             clv_edges.append(clv)
+161:             f = kelly_frac * edge / (odds_1x2[k] - 1.0)
+162:             f = min(f, 0.05)  # cap de 5% do bankroll por aposta
+164:             if result_idx == k:
+165:                 ret = f * (odds_1x2[k] - 1.0)
+166:             else:
+167:                 ret = -f
+168:             bankroll += bankroll * ret
+169:             pnl_series.append(ret)
+171:     return np.array(clv_edges), np.array(pnl_series)
+179: def run(db_path: str, vorp_path: str | None, theta: float, debug_team: str | None, kelly_frac: float):
+180:     conn = db.connect(db_path, read_only=True)
+181:     prow = db.load_params(conn)
+182:     if not prow:
+183:         sys.exit("cache vazio — rode cron_update_models primeiro")
+184:     params = (prow[0], prow[1], prow[2], prow[3])
+187:     use_vorp = False
+188:     beta_players, replacement_levels, positions = {}, {}, {}
+189:     if vorp_path:
+190:         artifact = json.loads(Path(vorp_path).read_text())
+191:         beta_players = artifact["beta_players"]
+192:         replacement_levels = artifact["replacement_levels"]
+193:         use_vorp = True
+196:     pos_rows = conn.execute("SELECT player, position FROM player_comp_stats WHERE position IS NOT NULL").fetchall()
+197:     pos_count = {}
+198:     for player, pos in pos_rows:
+199:         pos_count.setdefault(player, {}).setdefault(pos, 0)
+200:         pos_count[player][pos] += 1
+201:     positions = {p: max(d, key=d.get) for p, d in pos_count.items()}
+204:     rows = conn.execute(
+205:         "SELECT event_id, date, home_team, away_team, home_score, away_score, "
+206:         "home_xg, away_xg, odds_home, odds_draw, odds_away, season "
+207:         "FROM sofascore_matches "
+208:         "WHERE home_score IS NOT NULL AND away_score IS NOT NULL"
+209:     ).fetchall()
+210:     test_rows = [r for r in rows if r[11] in TEST_SEASONS]
+212:     if not test_rows:
+213:         sys.exit(
+214:             f"Nenhuma partida encerrada em seasons {TEST_SEASONS}. "
+215:             "Rode ingest_sofascore com historico (Euro 2024, Copa América 2024, etc.)."
+216:         )
+218:     all_eids = {r[0] for r in test_rows}
+219:     cfg = load_config()
+220:     history = conn.execute(
+221:         "SELECT date,home_team,away_team,home_score,away_score,tournament,neutral "
+222:         "FROM matches WHERE home_score IS NOT NULL ORDER BY date"
+223:     ).fetchall()
+224:     snapshots = ratings_asof(history, cfg["elo"], [r[1] for r in test_rows])
+226:     presence = {}
+227:     if use_vorp:
+228:         ph = ",".join("?" * len(all_eids))
+229:         pres_rows = conn.execute(
+230:             f"SELECT event_id, player, team, minutes FROM sofascore_player_ratings "
+231:             f"WHERE event_id IN ({ph}) AND minutes > 0",
+232:             list(all_eids),
+233:         ).fetchall()
+234:         for eid, player, team, minutes in pres_rows:
+235:             presence.setdefault(eid, {})[player] = (team, minutes)
+238:     snap_rows = (
+239:         conn.execute(
+240:             f"SELECT event_id, market, selection, odd FROM odds_snapshots "
+241:             f"WHERE event_id IN ({','.join('?' * len(all_eids))}) AND pre_match=1",
+242:             list(all_eids),
+243:         ).fetchall()
+244:         if all_eids
+245:         else []
+246:     )
+248:     close_odds = {}
+249:     for eid, mkt, sel, odd in snap_rows:
+250:         close_odds[(eid, mkt, sel)] = odd  # sobrescreve = pega o mais recente
+252:     print(f"\n[survival_test] {len(test_rows)} partidas de teste (seasons {TEST_SEASONS})")
+254:     P_base_list, P_hybrid_list, Y_list = [], [], []
+255:     matches_for_clv = []
+256:     debug_rows = []
+258:     for eid, date, home, away, hs, as_, hxg, axg, oh, od, oa, _ in test_rows:
+259:         elo = snapshots[date]
+260:         elo_a = elo.get(home, 1500.0)
+261:         elo_b = elo.get(away, 1500.0)
+263:         grid_base = _predict_base(elo_a, elo_b, params)
+265:         dvorp_a = dvorp_b = 0.0
+266:         if use_vorp:
+267:             dvorp_a = _team_delta_vorp(home, eid, presence, beta_players, replacement_levels, positions)
+268:             dvorp_b = _team_delta_vorp(away, eid, presence, beta_players, replacement_levels, positions)
+269:         grid_hyb = _predict_hybrid(elo_a, elo_b, params, dvorp_a, dvorp_b, theta)
+271:         y = _one_hot(hs, as_)
+273:         P_base_list.append(grid_base)
+274:         P_hybrid_list.append(grid_hyb)
+275:         Y_list.append(y)
+278:         g = MAX_GOALS
+279:         k = np.arange(g)
+280:         totals = k.reshape(-1, 1) + k.reshape(1, -1)
+281:         p_base_over25 = float(grid_base[totals > 2.5].sum())
+283:         p_1x2_base = [
+284:             float(np.tril(grid_base, -1).sum()),
+285:             float(np.trace(grid_base)),
+286:             float(np.triu(grid_base, 1).sum()),
+287:         ]
+290:         odds_close = [
+291:             close_odds.get((eid, "1x2", "home"), oh),
+292:             close_odds.get((eid, "1x2", "draw"), od),
+293:             close_odds.get((eid, "1x2", "away"), oa),
+294:         ]
+295:         shin_p = [0.0, 0.0, 0.0]
+296:         if all(o is not None and o > 1.0 for o in odds_close):
+297:             shin_p, _, _ = shin_probabilities(odds_close)
+299:         result_idx = 0 if hs > as_ else (1 if hs == as_ else 2)
+300:         matches_for_clv.append(
+301:             {
+302:                 "event_id": eid,
+303:                 "home": home,
+304:                 "away": away,
+305:                 "p_model_1x2": p_1x2_base,
+306:                 "odds_1x2": [oh, od, oa],
+307:                 "result_idx": result_idx,
+308:                 "shin_close": list(shin_p),
+309:                 "p_over25": p_base_over25,
+310:                 "over25_result": int((hs + as_) > 2),
+311:             }
+312:         )
+314:         if debug_team and (debug_team in (home, away)):
+315:             debug_rows.append(
+316:                 {
+317:                     "event_id": eid,
+318:                     "home": home,
+319:                     "away": away,
+320:                     "score": f"{hs}-{as_}",
+321:                     "bs_base": float(np.sum((grid_base - y) ** 2)),
+322:                     "bs_hyb": float(np.sum((grid_hyb - y) ** 2)),
+323:                     "dvorp_home": dvorp_a,
+324:                     "dvorp_away": dvorp_b,
+325:                 }
+326:             )
+329:     P_base = np.stack(P_base_list)
+330:     P_hybrid = np.stack(P_hybrid_list)
+331:     Y = np.stack(Y_list)
+336:     print("\n" + "=" * 60)
+337:     print("RELATÓRIO — TESTE DE SOBREVIVÊNCIA (Go/No-Go v3)")
+338:     print("=" * 60)
+340:     bs_base = brier_score_multiclass(P_base, Y)
+341:     bs_hyb = brier_score_multiclass(P_hybrid, Y)
+342:     bss = brier_skill_score(P_hybrid, P_base, Y)
+343:     ll_base = log_loss_matrix(P_base, Y)
+344:     ll_hyb = log_loss_matrix(P_hybrid, Y)
+345:     print("\n[Brier Score]")
+346:     print(f"  Base    : {bs_base:.5f}")
+347:     print(f"  Híbrido : {bs_hyb:.5f}")
+348:     print(f"  BSS     : {bss:+.4f}  ({'melhora' if bss > 0 else 'piora'} sobre base)")
+349:     print("\n[Log-Loss]")
+350:     print(f"  Base    : {ll_base:.5f}")
+351:     print(f"  Híbrido : {ll_hyb:.5f}")
+354:     e_base = np.sqrt(np.sum((P_base - Y) ** 2, axis=(1, 2)))
+355:     e_hyb = np.sqrt(np.sum((P_hybrid - Y) ** 2, axis=(1, 2)))
+356:     dm_stat, dm_pval = diebold_mariano_hln(e_base, e_hyb, h=1)
+357:     print("\n[Teste Diebold-Mariano (HLN)]")
+358:     print(f"  DM_HLN  : {dm_stat:.4f}")
+359:     print(f"  p-valor : {dm_pval:.4f}  " + ("*** SIGNIFICATIVO (p<0.05)" if dm_pval < 0.05 else "(não significativo)"))
+362:     probs_o25 = np.array([m["p_over25"] for m in matches_for_clv])
+363:     outcomes_o25 = np.array([m["over25_result"] for m in matches_for_clv], dtype=float)
+364:     mp, mt, cnts = calibration_curve_over25(probs_o25, outcomes_o25, n_bins=8)
+365:     print(f"\n[Calibração Over 2.5 — {len(probs_o25)} partidas]")
+366:     print(f"  {'Bin prev':>10}  {'Real':>8}  {'N':>6}")
+367:     for pred, real, cnt in zip(mp, mt, cnts):
+368:         if np.isnan(pred):
+369:             continue
+370:         print(f"  {pred:10.3f}  {real:8.3f}  {cnt:6d}")
+373:     clv_edges, pnl = _simulated_clv_and_pnl(matches_for_clv, kelly_frac=kelly_frac)
+374:     print(f"\n[Análise Econômica — Kelly Simplificado (frac={kelly_frac})]")
+375:     if len(clv_edges) > 0:
+376:         print(f"  Apostas simuladas : {len(clv_edges)}")
+377:         print(f"  CLV médio         : {clv_edges.mean():+.4f} ({clv_edges.mean() * 100:+.2f}%)")
+378:         print(f"  CLV IC 95% approx : [{np.percentile(clv_edges, 2.5):+.4f}, {np.percentile(clv_edges, 97.5):+.4f}]")
+379:     else:
+380:         print("  Nenhuma aposta de valor gerada (ajuste min_edge ou theta).")
+381:     if len(pnl) >= 3:
+382:         psr = probabilistic_sharpe_ratio(pnl.tolist(), benchmark_sharpe=0.0)
+383:         print(f"  PSR (P(SR>0))     : {psr:.4f}  " + ("*** POSITIVO" if psr > 0.9 else "(insuficiente)"))
+384:     else:
+385:         print("  PSR: n<3 apostas — insuficiente.")
+388:     print("\n" + "-" * 60)
+389:     estatistica_ok = dm_pval < 0.05 and bss > 0
+390:     economico_ok = len(clv_edges) > 0 and clv_edges.mean() > 0.0
+391:     if estatistica_ok and economico_ok:
+392:         print("VEREDITO: GO ✓ — superioridade estatística E edge econômico positivo.")
+393:     elif estatistica_ok:
+394:         print("VEREDITO: PARCIAL — estatisticamente superior, mas sem edge econômico.")
+395:     elif economico_ok:
+396:         print("VEREDITO: PARCIAL — edge econômico positivo, mas sem significância estatística.")
+397:     else:
+398:         print("VEREDITO: NO-GO — sem superioridade estatística nem edge econômico.")
+399:     print("-" * 60)
+402:     if debug_team:
+403:         print(f"\n[DEBUG — {debug_team}] ({len(debug_rows)} jogos)")
+404:         if not debug_rows:
+405:             print("  Nenhum jogo encontrado para este time na amostra de teste.")
+406:         for r in debug_rows:
+407:             delta = r["bs_base"] - r["bs_hyb"]
+408:             print(
+409:                 f"  {r['home']:20} × {r['away']:20}  {r['score']}  "
+410:                 f"ΔBS={delta:+.4f}  ΔVORP=({r['dvorp_home']:+.3f},{r['dvorp_away']:+.3f})"
+411:             )
+414: def main():
+415:     parser = argparse.ArgumentParser(description="Teste de Sobrevivência — v3 Go/No-Go")
+416:     parser.add_argument("--db", default="data/matches.db")
+417:     parser.add_argument("--vorp", default=None, help="caminho para data/vorp.json")
+418:     parser.add_argument(
+419:         "--theta",
+420:         type=float,
+421:         default=0.5,
+422:         help="peso do delta VORP na link function (0 = desativado)",
+423:     )
+424:     parser.add_argument("--debug-team", default=None, help="time para debug isolado (ex: 'Athletico Paranaense')")
+425:     parser.add_argument("--kelly-frac", type=float, default=0.25, help="fração de Kelly para simulação de P&L")
+426:     args = parser.parse_args()
+428:     run(
+429:         db_path=str(ROOT / args.db),
+430:         vorp_path=str(ROOT / args.vorp) if args.vorp else None,
+431:         theta=args.theta,
+432:         debug_team=args.debug_team,
+433:         kelly_frac=args.kelly_frac,
+434:     )
+437: if __name__ == "__main__":
+438:     main()
+### brasileirao_predictor/research/test_combinations.py
+12: import numpy as np
+14: from brasileirao_predictor import db
+15: from brasileirao_predictor.feature_builder import build_features
+16: from brasileirao_predictor.ingest import ROOT, load_config
+17: from brasileirao_predictor.model import fit_goal_model, predict_match
+18: from brasileirao_predictor.research.verify_calibration import brier_1x2, load_rows_with_forward_elo
+21: def _required_combined_delta(features: dict, feature_names: list[str], event_id: int) -> float:
+22:     deltas = []
+23:     for feature_name in feature_names:
+24:         home = features.get(f"home_{feature_name}")
+25:         away = features.get(f"away_{feature_name}")
+26:         if home is None or away is None:
+27:             raise ValueError(
+28:                 f"feature {feature_name!r} is incomplete for event_id={event_id}; refusing zero imputation"
+29:             )
+30:         deltas.append(float(home) - float(away))
+31:     if not deltas:
+32:         raise ValueError("feature_names must not be empty")
+33:     return float(np.mean(deltas))
+36: DB_PATH = str(ROOT / "data" / "matches.db")
+39: CANDIDATES = [
+40:     "Expected goals",
+41:     "Shots on target",
+42:     "Shots inside box",
+43:     "Big chances",
+44: ]
+47: def test_combination(conn, feature_names, train_rows, test_rows):
+50:     history = []
+51:     for r in train_rows:
+52:         elo_home = r[6] if r[6] is not None else 1500
+53:         elo_away = r[7] if r[7] is not None else 1500
+54:         history.append((elo_home - elo_away, r[3], r[4]))
+57:     delta_train = []
+58:     for r in train_rows:
+59:         feats = build_features(DB_PATH, r[0])
+60:         delta_train.append(_required_combined_delta(feats, feature_names, r[0]))
+62:     params_base = fit_goal_model(history)
+63:     params_feat = fit_goal_model(history, delta_xg=delta_train)
+64:     theta_xg = params_feat[4] if len(params_feat) == 5 else 0.0
+66:     y_true = []
+67:     proba_base = []
+68:     proba_feat = []
+70:     for r in test_rows:
+71:         if r[3] > r[4]:
+72:             y_true.append(0)
+73:         elif r[3] == r[4]:
+74:             y_true.append(1)
+75:         else:
+76:             y_true.append(2)
+78:         feats = build_features(DB_PATH, r[0])
+79:         delta = _required_combined_delta(feats, feature_names, r[0])
+81:         elo_home = r[6] if r[6] is not None else 1500
+82:         elo_away = r[7] if r[7] is not None else 1500
+84:         pred_base = predict_match(elo_home, elo_away, params_base)
+85:         proba_base.append([pred_base["p_win"], pred_base["p_draw"], pred_base["p_loss"]])
+87:         pred_feat = predict_match(elo_home, elo_away, params_feat, delta_xg=delta)
+88:         proba_feat.append([pred_feat["p_win"], pred_feat["p_draw"], pred_feat["p_loss"]])
+90:     proba_base = np.array(proba_base)
+91:     proba_feat = np.array(proba_feat)
+92:     y_true = np.array(y_true)
+94:     brier_base = brier_1x2(y_true, proba_base)
+95:     brier_feat = brier_1x2(y_true, proba_feat)
+96:     probmax_base = np.max(proba_base[:, [0, 2]], axis=1)
+97:     probmax_feat = np.max(proba_feat[:, [0, 2]], axis=1)
+99:     return {
+100:         "features": "+".join(feature_names),
+101:         "theta_xg": theta_xg,
+102:         "brier_base": brier_base,
+103:         "brier_feat": brier_feat,
+104:         "improvement": brier_base - brier_feat,
+105:         "probmax_max_base": np.max(probmax_base),
+106:         "probmax_max_feat": np.max(probmax_feat),
+107:     }
+110: def main():
+111:     cfg = load_config()
+113:     conn = db.connect(DB_PATH, read_only=True)
+114:     rows = load_rows_with_forward_elo(conn, cfg, extra_where="AND sm.date >= '2026-06-01'")
+115:     conn.close()
+117:     split_idx = int(len(rows) * 0.8)
+118:     train_rows = rows[:split_idx]
+119:     test_rows = rows[split_idx:]
+121:     print(f"Treino: {len(train_rows)} jogos, Teste: {len(test_rows)} jogos")
+122:     print(f"Candidatas: {CANDIDATES}\n")
+124:     results = []
+127:     for f in CANDIDATES:
+128:         print(f"Testando: {f} (individual)...", end=" ", flush=True)
+129:         r = test_combination(None, [f], train_rows, test_rows)
+130:         results.append(r)
+131:         status = "^" if r["improvement"] > 0 else "v"
+132:         print(f"theta={r['theta_xg']:.4f} Brier={status}{abs(r['improvement']):.4f}")
+135:     for i in range(len(CANDIDATES)):
+136:         for j in range(i + 1, len(CANDIDATES)):
+137:             combo = [CANDIDATES[i], CANDIDATES[j]]
+138:             name = f"{CANDIDATES[i]}+{CANDIDATES[j]}"
+139:             print(f"Testando: {name}...", end=" ", flush=True)
+140:             r = test_combination(None, combo, train_rows, test_rows)
+141:             results.append(r)
+142:             status = "^" if r["improvement"] > 0 else "v"
+143:             print(f"theta={r['theta_xg']:.4f} Brier={status}{abs(r['improvement']):.4f}")
+146:     if len(CANDIDATES) >= 3:
+147:         combo = CANDIDATES[:3]
+148:         name = "+".join(combo)
+149:         print(f"Testando: {name}...", end=" ", flush=True)
+150:         r = test_combination(None, combo, train_rows, test_rows)
+151:         results.append(r)
+152:         status = "^" if r["improvement"] > 0 else "v"
+153:         print(f"theta={r['theta_xg']:.4f} Brier={status}{abs(r['improvement']):.4f}")
+156:     print("Testando: TODAS...", end=" ", flush=True)
+157:     r = test_combination(None, CANDIDATES, train_rows, test_rows)
+158:     results.append(r)
+159:     status = "^" if r["improvement"] > 0 else "v"
+160:     print(f"theta={r['theta_xg']:.4f} Brier={status}{abs(r['improvement']):.4f}")
+162:     results.sort(key=lambda r: r["improvement"], reverse=True)
+164:     print(
+165:         f"\n{'Features':<40s} {'theta':>8s} {'Brier_base':>10s} {'Brier_feat':>10s} "
+166:         f"{'Melhora':>8s} {'max_base':>8s} {'max_feat':>8s}"
+167:     )
+168:     print("-" * 90)
+169:     for r in results:
+170:         print(
+171:             f"{r['features']:<40s} {r['theta_xg']:>+8.4f} "
+172:             f"{r['brier_base']:>10.4f} {r['brier_feat']:>10.4f} "
+173:             f"{r['improvement']:>+8.4f} "
+174:             f"{r['probmax_max_base']:>7.2%} {r['probmax_max_feat']:>7.2%}"
+175:         )
+177:     best = results[0]
+178:     print(
+179:         f"\nMelhor: {best['features']} (melhora={best['improvement']:.4f}, "
+180:         f"ProbMax: {best['probmax_max_base']:.2%} -> {best['probmax_max_feat']:.2%})"
+181:     )
+184: if __name__ == "__main__":
+185:     main()

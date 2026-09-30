@@ -1,0 +1,441 @@
+### tests/test_shadow_cohort_evaluator.py
+1: import json
+2: from pathlib import Path
+4: from brasileirao_predictor.data.prospective_shadow import record_hash
+5: from brasileirao_scripts.evaluate_shadow_cohort import compute_verdict, evaluate
+8: def _matured_pick(pick_id: str, match_id: str, clv: float, pnl: float) -> dict:
+9:     return {
+10:         "pick_id": pick_id,
+11:         "canonical_match_id": match_id,
+12:         "source_event_id": match_id,
+13:         "clv": clv,
+14:         "pnl": pnl,
+15:     }
+18: def test_legacy_records_do_not_count(tmp_path: Path):
+19:     picks = tmp_path / "picks.jsonl"
+20:     results = tmp_path / "results.jsonl"
+21:     picks.write_text(
+22:         json.dumps({"event_id": 1, "selection": "under", "captured_at": "2026-01-01T10:00:00+00:00"}) + "\n",
+23:         encoding="utf-8",
+24:     )
+25:     results.write_text(
+26:         json.dumps(
+27:             {
+28:                 "event_id": 1,
+29:                 "selection": "under",
+30:                 "settled_at": "2026-01-02T10:00:00+00:00",
+31:                 "result": "lost",
+32:                 "settlement_status": "settled",
+33:             }
+34:         )
+35:         + "\n",
+36:         encoding="utf-8",
+37:     )
+38:     report = evaluate(picks, results)
+39:     assert report["classification"]["LEGACY_INCOMPLETE"] == 1
+40:     assert report["counts"]["eligible"] == 0
+43: def test_valid_prospective_pick_requires_complete_clocks(tmp_path: Path):
+44:     row = {
+45:         "pick_id": "p1",
+46:         "trial_id": "h3",
+47:         "model_version": "m1",
+48:         "code_commit": "abc",
+49:         "predicted_at": "2026-01-01T10:00:00+00:00",
+50:         "kickoff_at": "2026-01-01T12:00:00+00:00",
+51:         "market": "ou2.5",
+52:         "selection": "under",
+53:         "captured_odds": 2.0,
+54:         "odds_captured_at": "2026-01-01T10:01:00+00:00",
+55:         "bookmaker": "x",
+56:         "source": "s",
+57:         "source_event_id": "e1",
+58:         "canonical_match_id": "c1",
+59:         "closing_definition_version": "v1",
+60:         "data_quality_status": "ok",
+61:     }
+62:     row["provenance_hash"] = record_hash(row)
+63:     picks = tmp_path / "picks.jsonl"
+64:     results = tmp_path / "results.jsonl"
+65:     picks.write_text(json.dumps(row) + "\n", encoding="utf-8")
+66:     results.write_text("", encoding="utf-8")
+67:     report = evaluate(picks, results)
+68:     assert report["classification"]["PROSPECTIVE_ELIGIBLE"] == 1
+69:     assert report["counts"]["matured"] == 0
+72: def test_complete_test_only_lifecycle_is_rejected_in_production(tmp_path: Path):
+73:     row = {
+74:         "pick_id": "test-1",
+75:         "trial_id": "h3",
+76:         "model_version": "m1",
+77:         "code_commit": "abc",
+78:         "predicted_at": "2026-01-01T10:00:00+00:00",
+79:         "kickoff_at": "2026-01-01T12:00:00+00:00",
+80:         "market": "ou2.5",
+81:         "selection": "under",
+82:         "captured_odds": 2.0,
+83:         "odds_captured_at": "2026-01-01T10:01:00+00:00",
+84:         "bookmaker": "test",
+85:         "source": "fixture",
+86:         "source_event_id": "e1",
+87:         "canonical_match_id": "c1",
+88:         "closing_definition_version": "v1",
+89:         "data_quality_status": "ok",
+90:         "synthetic": True,
+91:     }
+92:     row["provenance_hash"] = record_hash(row)
+93:     picks = tmp_path / "picks.jsonl"
+94:     results = tmp_path / "results.jsonl"
+95:     picks.write_text(json.dumps(row) + "\n", encoding="utf-8")
+96:     results.write_text("", encoding="utf-8")
+97:     report = evaluate(picks, results)
+98:     assert report["classification"]["PROSPECTIVE_ELIGIBLE"] == 0
+99:     assert report["rejections"]["non_production_record"] == 1
+102: def test_verdict_inconclusive_below_min_sample():
+103:     matured = [_matured_pick("p1", "m1", clv=0.05, pnl=0.5)]
+104:     verdict = compute_verdict(matured, min_sample=100)
+105:     assert verdict["verdict"] == "INCONCLUSIVE"
+106:     assert verdict["capital_enabled"] is False
+107:     assert verdict["clv_ci95"] is None
+110: def test_verdict_go_when_clv_and_roi_clear_criteria():
+111:     matured = [_matured_pick(f"p{i}", f"m{i}", clv=0.05, pnl=0.5) for i in range(10)]
+112:     verdict = compute_verdict(matured, min_sample=10)
+113:     assert verdict["verdict"] == "GO"
+114:     assert verdict["capital_enabled"] is True
+115:     assert verdict["clv_ci95"][0] > 0
+116:     assert verdict["roi_ci95"][0] > -0.02
+119: def test_verdict_no_go_when_clv_negative():
+120:     matured = [_matured_pick(f"p{i}", f"m{i}", clv=-0.06, pnl=-1.0) for i in range(10)]
+121:     verdict = compute_verdict(matured, min_sample=10)
+122:     assert verdict["verdict"] == "NO_GO"
+123:     assert verdict["capital_enabled"] is False
+126: def test_verdict_clusters_by_game_not_by_pick():
+130:     matured = [_matured_pick(f"p{i}", "m1", clv=0.01, pnl=0.05) for i in range(9)]
+131:     matured.append(_matured_pick("p10", "m2", clv=-0.5, pnl=-1.0))
+132:     verdict = compute_verdict(matured, min_sample=10)
+133:     assert verdict["verdict"] == "NO_GO"
+136: def test_evaluate_wires_verdict_into_report(tmp_path: Path):
+137:     row = {
+138:         "pick_id": "p1",
+139:         "trial_id": "h3",
+140:         "model_version": "m1",
+141:         "code_commit": "abc",
+142:         "predicted_at": "2026-01-01T10:00:00+00:00",
+143:         "kickoff_at": "2026-01-01T12:00:00+00:00",
+144:         "market": "ou2.5",
+145:         "selection": "under",
+146:         "captured_odds": 2.0,
+147:         "odds_captured_at": "2026-01-01T10:01:00+00:00",
+148:         "bookmaker": "x",
+149:         "source": "s",
+150:         "source_event_id": "e1",
+151:         "canonical_match_id": "c1",
+152:         "closing_definition_version": "v1",
+153:         "data_quality_status": "ok",
+154:     }
+155:     row["provenance_hash"] = record_hash(row)
+156:     result = {
+157:         "pick_id": "p1",
+158:         "source_event_id": "e1",
+159:         "selection": "under",
+160:         "result": "won",
+161:         "settled_at": "2026-01-01T14:00:00+00:00",
+162:         "settlement_status": "settled",
+163:         "closing_odds": 1.8,
+164:         "closing_captured_at": "2026-01-01T11:59:00+00:00",
+165:         "closing_definition_version": "v1",
+166:         "clv": 0.05,
+167:         "pnl": 1.0,
+168:     }
+169:     result["provenance_hash"] = record_hash(result)
+170:     picks = tmp_path / "picks.jsonl"
+171:     results = tmp_path / "results.jsonl"
+172:     picks.write_text(json.dumps(row) + "\n", encoding="utf-8")
+173:     results.write_text(json.dumps(result) + "\n", encoding="utf-8")
+174:     report = evaluate(picks, results, min_sample=1)
+175:     assert report["counts"]["matured"] == 1
+176:     assert report["verdict"] == "GO"
+177:     assert report["capital_enabled"] is True
+178:     assert report["verdict_detail"]["clv_ci95"] == [0.05, 0.05]
+### tests/test_shared_dependencies.py
+1: import importlib.metadata
+2: import sys
+3: from pathlib import Path
+5: import predictor_core
+6: import predictor_ops
+7: import predictor_ops.runner
+8: from packaging.requirements import Requirement
+9: from predictor_ops.models import JobConfig, RuntimeConfig
+11: ROOT = Path(__file__).resolve().parents[1]
+14: def test_shared_dependencies_load_from_site_packages() -> None:
+15:     assert importlib.metadata.version("predictor-core") == "3.2.1"
+16:     assert importlib.metadata.version("predictor-ops") == "4.2.1"
+17:     assert "site-packages" in str(predictor_core.__file__)
+18:     assert "site-packages" in str(predictor_ops.__file__)
+21: def test_distribution_requires_core_with_strict_deflation_api() -> None:
+22:     requirements = [Requirement(value) for value in importlib.metadata.requires("brasileirao-predictor") or []]
+23:     core = next(requirement for requirement in requirements if requirement.name == "predictor-core")
+24:     assert "3.1.0" not in core.specifier
+25:     assert "3.2.0" not in core.specifier
+26:     assert "3.2.1" in core.specifier
+29: def test_shared_wheel_hashes_are_pinned() -> None:
+30:     records = (ROOT / "constraints" / "shared-wheels.sha256").read_text(encoding="utf-8")
+32:     assert "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3" in records
+33:     assert "da4fa540703879669caba919521ec7d3c33734b5d57781122823df8817346f0e" in records
+36: def test_python_images_verify_shared_wheels_before_install() -> None:
+37:     for name in ("Dockerfile.cli", "Dockerfile.kernel"):
+38:         dockerfile = (ROOT / name).read_text(encoding="utf-8")
+39:         assert "COPY constraints/shared-wheels.sha256" in dockerfile
+40:         verify_at = dockerfile.index("sha256sum -c constraints/shared-wheels.sha256")
+41:         install_at = dockerfile.index("uv pip install")
+42:         assert verify_at < install_at
+45: def test_predictor_ops_closes_owned_stdout_pipe(tmp_path: Path, monkeypatch) -> None:
+46:     spawned = []
+47:     real_popen = predictor_ops.runner.subprocess.Popen
+49:     def recording_popen(*args, **kwargs):
+50:         process = real_popen(*args, **kwargs)
+51:         spawned.append(process)
+52:         return process
+54:     monkeypatch.setattr(predictor_ops.runner.subprocess, "Popen", recording_popen)
+55:     job = JobConfig(
+56:         id="pipe-cleanup",
+57:         command=[sys.executable, "-c", "print('done')"],
+58:         runtime=RuntimeConfig(root=tmp_path),
+59:         heartbeat_interval_seconds=0.01,
+60:     )
+61:     result = predictor_ops.runner.run_job(job)
+63:     assert result.exit_code == 0
+64:     assert len(spawned) == 1
+65:     assert spawned[0].stdout is not None and spawned[0].stdout.closed
+### tests/test_simulator.py
+4: from brasileirao_predictor import db
+5: from brasileirao_predictor.simulator import derive_groups
+8: def _round_robin(conn, teams, tournament="FIFA World Cup"):
+10:     rows = []
+11:     for i in range(len(teams)):
+12:         for j in range(i + 1, len(teams)):
+13:             rows.append((f"2026-06-{10 + i}{j}", teams[i], teams[j], None, None, tournament, "", "", 1))
+14:     conn.executemany(
+15:         "INSERT INTO matches (date, home_team, away_team, home_score, away_score, "
+16:         "tournament, city, country, neutral) VALUES (?,?,?,?,?,?,?,?,?)",
+17:         rows,
+18:     )
+19:     conn.commit()
+22: def test_deriva_dois_grupos_de_quatro():
+23:     conn = db.connect(":memory:")
+24:     _round_robin(conn, ["A1", "A2", "A3", "A4"])
+25:     _round_robin(conn, ["B1", "B2", "B3", "B4"])
+27:     groups = derive_groups(conn)
+28:     assert len(groups) == 2
+29:     assert all(len(g) == 4 for g in groups)
+30:     flat = {t for g in groups for t in g}
+31:     assert flat == {"A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4"}
+32:     conn.close()
+35: def test_ignora_componente_de_tamanho_errado():
+37:     conn = db.connect(":memory:")
+38:     _round_robin(conn, ["A1", "A2", "A3", "A4"])
+39:     conn.execute(
+40:         "INSERT INTO matches (date, home_team, away_team, home_score, away_score, "
+41:         "tournament, city, country, neutral) VALUES "
+42:         "('2026-07-01','X','Y',NULL,NULL,'FIFA World Cup','','',1)"
+43:     )
+44:     conn.commit()
+46:     groups = derive_groups(conn)
+47:     assert len(groups) == 1
+48:     assert set(groups[0]) == {"A1", "A2", "A3", "A4"}
+49:     conn.close()
+52: def test_ignora_jogos_ja_disputados():
+55:     conn = db.connect(":memory:")
+56:     conn.execute(
+57:         "INSERT INTO matches (date, home_team, away_team, home_score, away_score, "
+58:         "tournament, city, country, neutral) VALUES "
+59:         "('2022-11-20','Qatar','Ecuador',0,2,'FIFA World Cup','','',1)"
+60:     )
+61:     conn.commit()
+62:     assert derive_groups(conn) == []
+63:     conn.close()
+### tests/test_simulator_fixes.py
+4: import random
+6: import numpy as np
+8: from brasileirao_predictor import simulator
+11: def _twelve_groups():
+12:     teams = [f"T{i:02d}" for i in range(48)]
+13:     return [teams[i * 4 : (i + 1) * 4] for i in range(12)]
+16: def test_play_reproducible_with_seed():
+18:     elo, params = {"A": 1600, "B": 1500}, (0.0, 0.3, 0.16, -0.03)
+19:     random.seed(7)
+20:     np.random.seed(7)
+21:     r1 = [simulator._play("A", "B", elo, params) for _ in range(20)]
+22:     random.seed(7)
+23:     np.random.seed(7)
+24:     r2 = [simulator._play("A", "B", elo, params) for _ in range(20)]
+25:     assert r1 == r2
+28: def test_simulate_batch_reproducible_with_seed():
+30:     groups = _twelve_groups()
+31:     elo = {t: 1500 + (i % 7) for i, t in enumerate(sum(groups, []))}
+32:     params = (0.0, 0.3, 0.16, -0.03)
+33:     r1 = simulator.simulate_batch(groups, elo, params, n=30, seed=123)
+34:     r2 = simulator.simulate_batch(groups, elo, params, n=30, seed=123)
+35:     assert r1 == r2
+38: def test_sample_score_from_dc_grid():
+40:     np.random.seed(0)
+41:     draws = [simulator._sample_score(1.3, 1.3, 0.16, -0.05) for _ in range(2000)]
+42:     assert all(isinstance(a, int) and isinstance(b, int) for a, b in draws)
+43:     media_total = sum(a + b for a, b in draws) / len(draws)
+44:     assert 1.5 < media_total < 4.0  # ~2×1.3 gols esperados, faixa sã
+### tests/test_sofascore_cache.py
+1: import json
+3: import pytest
+5: from brasileirao_predictor.sofascore import Sofascore
+8: def _client(tmp_path, monkeypatch, pages_by_call):
+11:     c = Sofascore(rate_limit=0.0, cache_dir=str(tmp_path))
+12:     calls = []
+14:     def fake_fetch(path):
+15:         calls.append(path)
+16:         return pages_by_call.pop(0) if pages_by_call else {"events": []}
+18:     monkeypatch.setattr(c, "_fetch", fake_fetch)
+19:     return c, calls
+22: def test_next_events_are_never_cached_bracket_placeholder_resolves(tmp_path, monkeypatch):
+26:     stale = {"events": [{"id": 1, "homeTeam": {"name": "W83"}, "awayTeam": {"name": "W84"}}]}
+27:     fresh = {"events": [{"id": 1, "homeTeam": {"name": "Mexico"}, "awayTeam": {"name": "England"}}]}
+30:     empty = {"events": []}
+32:     c, calls = _client(tmp_path, monkeypatch, [empty, stale, empty])
+33:     first = c.season_events(16, 58210, upcoming=True)
+34:     assert first[-1]["homeTeam"]["name"] == "W83"  # placeholder da 1ª coleta
+38:     c2, calls2 = _client(tmp_path, monkeypatch, [fresh, empty])
+39:     second = c2.season_events(16, 58210, upcoming=True)
+40:     assert calls2, "season_events('next') deve SEMPRE ir à rede — nunca servir do cache"
+41:     assert second[-1]["awayTeam"]["name"] == "England"  # nome resolvido na 2ª coleta
+44: def test_last_events_are_cached(tmp_path, monkeypatch):
+46:     finished = {"events": [{"id": 2, "homeTeam": {"name": "Brazil"}, "awayTeam": {"name": "Japan"}}]}
+47:     c, calls = _client(tmp_path, monkeypatch, [finished, {"events": []}])
+48:     c.season_events(16, 58210, upcoming=False)
+50:     c2, calls2 = _client(tmp_path, monkeypatch, [{"events": [{"id": 999}]}, {"events": []}])
+51:     result = c2.season_events(16, 58210, upcoming=False)
+52:     assert not calls2, "kind='last' deve vir do cache — sem chamada de rede na 2ª coleta"
+53:     assert result[-1]["homeTeam"]["name"] == "Brazil"  # veio do disco, não do 'fresh' fake
+56: def test_cache_truncado_e_refeito_sem_bloquear_coleta(tmp_path, monkeypatch):
+57:     path = tmp_path / "unique-tournament_16_seasons.json"
+58:     path.write_text('{"seasons": [', encoding="utf-8")
+59:     fresh = {"seasons": [{"id": 87678, "year": "2026"}]}
+60:     client, calls = _client(tmp_path, monkeypatch, [fresh])
+62:     assert client.list_seasons(16) == [(87678, "2026")]
+63:     assert calls == ["unique-tournament/16/seasons"]
+64:     assert json.loads(path.read_text(encoding="utf-8")) == fresh
+65:     assert not list(tmp_path.glob("*.tmp"))
+68: def test_no_cache_dir_skips_disk_entirely(monkeypatch):
+69:     c = Sofascore(rate_limit=0.0)
+70:     monkeypatch.setattr(c, "_fetch", lambda path: {"seasons": []})
+71:     assert c.cache is None
+72:     assert c.list_seasons(16) == []
+75: def test_sofascore_insecure_env_disables_verification(monkeypatch):
+76:     monkeypatch.setenv("SOFASCORE_INSECURE", "1")
+77:     c = Sofascore(rate_limit=0.0)
+78:     assert c.verify is False
+81: def test_event_wrappers_delegate_to_get(monkeypatch):
+82:     c = Sofascore(rate_limit=0.0)
+83:     calls = []
+84:     monkeypatch.setattr(c, "_get", lambda path, cache=True: calls.append((path, cache)) or {"ok": True})
+86:     assert c.event_odds(123, finished=True) == {"ok": True}
+87:     assert c.event_odds(123) == {"ok": True}
+88:     assert c.event_statistics(123) == {"ok": True}
+89:     assert c.event_lineups(123) == {"ok": True}
+90:     assert calls == [
+91:         ("event/123/odds/1/all", True),
+92:         ("event/123/odds/1/all", False),
+93:         ("event/123/statistics", True),
+94:         ("event/123/lineups", True),
+95:     ]
+98: def test_cache_write_failure_removes_temp_file_and_reraises(tmp_path, monkeypatch):
+99:     c, _ = _client(tmp_path, monkeypatch, [{"seasons": []}])
+101:     def failing_fdopen(*args, **kwargs):
+102:         raise OSError("disk full")
+104:     monkeypatch.setattr("brasileirao_predictor.sofascore.os.fdopen", failing_fdopen)
+105:     with pytest.raises(OSError, match="disk full"):
+106:         c.list_seasons(16)
+107:     assert not list(tmp_path.glob("*.tmp"))
+### tests/test_sofascore_probe.py
+8: from brasileirao_predictor.research.sofascore_probe import (
+9:     summarize_lineups,
+10:     summarize_odds,
+11:     summarize_statistics,
+12: )
+19: def test_summarize_odds_extracts_markets_and_choices():
+20:     raw = {
+21:         "markets": [
+22:             {
+23:                 "marketId": 1,
+24:                 "marketName": "Full time",
+25:                 "choiceGroup": None,
+26:                 "choices": [{"name": "1"}, {"name": "X"}, {"name": "2"}],
+27:             },
+28:             {
+29:                 "marketId": 12,
+30:                 "marketName": "Both teams to score",
+31:                 "choices": [{"name": "Yes"}, {"name": "No"}],
+32:             },
+33:         ]
+34:     }
+35:     s = summarize_odds(raw)
+36:     assert s["n_markets"] == 2
+37:     assert s["markets"][0]["marketName"] == "Full time"
+38:     assert s["markets"][0]["choices"] == ["1", "X", "2"]
+39:     assert s["markets"][1]["choices"] == ["Yes", "No"]
+42: def test_summarize_odds_none_safe():
+43:     assert summarize_odds(None) == {"n_markets": 0, "markets": []}
+44:     assert summarize_odds({}) == {"n_markets": 0, "markets": []}
+47: def test_summarize_odds_missing_choices_is_empty_list():
+48:     raw = {"markets": [{"marketId": 5, "marketName": "X"}]}
+49:     s = summarize_odds(raw)
+50:     assert s["markets"][0]["choices"] == []
+58: def test_summarize_statistics_collects_item_names():
+59:     raw = {
+60:         "statistics": [
+61:             {
+62:                 "period": "ALL",
+63:                 "groups": [
+64:                     {
+65:                         "groupName": "Shots",
+66:                         "statisticsItems": [
+67:                             {"name": "Total shots", "home": "10", "away": "8"},
+68:                             {"name": "Shots on target", "home": "4", "away": "3"},
+69:                         ],
+70:                     },
+71:                     {
+72:                         "groupName": "TVData",
+73:                         "statisticsItems": [
+74:                             {"name": "Corner kicks", "home": "5", "away": "2"},
+75:                             {"name": "Fouls", "home": "12", "away": "9"},
+76:                         ],
+77:                     },
+78:                 ],
+79:             },
+80:         ]
+81:     }
+82:     s = summarize_statistics(raw)
+83:     assert s["n_periods"] == 1
+84:     assert s["periods"][0]["period"] == "ALL"
+85:     assert "Total shots" in s["periods"][0]["items"]
+86:     assert "Corner kicks" in s["periods"][0]["items"]
+87:     assert "Fouls" in s["periods"][0]["items"]
+90: def test_summarize_statistics_none_safe():
+91:     assert summarize_statistics(None) == {"n_periods": 0, "periods": []}
+99: def test_summarize_lineups_collects_stat_keys():
+100:     raw = {
+101:         "home": {
+102:             "players": [
+103:                 {"player": {"name": "A"}, "statistics": {"rating": 7.1, "minutesPlayed": 90}},
+104:                 {"player": {"name": "B"}, "statistics": {"rating": 6.5, "totalShots": 2}},
+105:             ]
+106:         },
+107:         "away": {
+108:             "players": [
+109:                 {"player": {"name": "C"}, "statistics": {"rating": 6.9, "minutesPlayed": 80}},
+110:             ]
+111:         },
+112:     }
+113:     s = summarize_lineups(raw)
+114:     assert s["n_players"] == 3
+115:     assert "rating" in s["player_stat_keys"]
+116:     assert "minutesPlayed" in s["player_stat_keys"]
+117:     assert "totalShots" in s["player_stat_keys"]
+120: def test_summarize_lineups_none_safe():
+121:     assert summarize_lineups(None) == {"n_players": 0, "player_stat_keys": []}

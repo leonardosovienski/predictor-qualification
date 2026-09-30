@@ -1,0 +1,452 @@
+### tests/test_price_strength_quotes.py
+3: import json
+4: from dataclasses import replace
+5: from datetime import UTC, datetime
+7: import pytest
+9: from brasileirao_predictor.research.price_strength.quotes import PricePolicy, scan_quotes
+11: AS_OF = datetime(2030, 1, 1, 9, tzinfo=UTC)
+14: def policy(**changes):
+15:     return PricePolicy(
+16:         **{
+17:             "reference_books": ("reference",),
+18:             "max_age_seconds": 300,
+19:             "max_skew_seconds": 30,
+20:             "cost_per_unit": 0.02,
+21:             "commission_on_profit": 0.05,
+22:             **changes,
+23:         }
+24:     )
+27: def snapshot(book="reference", **changes):
+28:     event = changes.get("event_id", "event")
+29:     return {
+30:         "snapshot_id": f"{event}-{book}",
+31:         "source": "synthetic-provider",
+32:         "source_event_id": f"source-{event}",
+33:         "event_id": event,
+34:         "bookmaker": book,
+35:         "market": "ou25",
+36:         "period": "FT",
+37:         "line": 2.5,
+38:         "kickoff_at": "2030-01-01T11:00:00Z",
+39:         "observed_at": "2030-01-01T08:59:00Z",
+40:         "available_at": "2030-01-01T08:59:01Z",
+41:         "received_at": "2030-01-01T08:59:02Z",
+42:         "status": "active",
+43:         "odds": {"over": 1.9, "under": 1.9} if book == "reference" else {"over": 2.4, "under": 1.7},
+44:         "raw_payload_hash": "a" * 64,
+45:         "snapshot_scope": "complete_market",
+46:         **changes,
+47:     }
+50: def evaluation(report, book="offer", side="over"):
+51:     return next(row for row in report["evaluations"] if row["bookmaker"] == book and row.get("selection") == side)
+54: def test_explicit_friction_and_independent_probability_have_reviewable_provenance():
+55:     report = scan_quotes([snapshot(), snapshot("offer")], as_of=AS_OF, policy=policy())
+56:     selected = report["selected_candidates"]
+57:     assert len(selected) == 1
+58:     assert selected[0]["reference_probability"] == pytest.approx(0.5)
+59:     assert selected[0]["gross_ev"] == pytest.approx(0.2)
+60:     assert selected[0]["net_ev"] == pytest.approx(0.145)
+61:     assert selected[0]["reference_books_used"] == ["reference"]
+62:     assert selected[0]["reference_provenance"][0]["odds"] == {"over": 1.9, "under": 1.9}
+63:     assert report["status"] == "RESEARCH_ONLY"
+64:     assert not report["capital_enabled"] and not report["execution_proven"]
+65:     assert not selected[0]["provenance"]["source_authentication_proven"]
+66:     assert not report["validation_errors"]
+67:     json.dumps(report, allow_nan=False)
+70: def test_offering_book_never_contributes_to_its_own_reference():
+71:     report = scan_quotes(
+72:         [snapshot(), snapshot("offer")],
+73:         as_of=AS_OF,
+74:         policy=policy(reference_books=("reference", "offer")),
+75:     )
+76:     offer = evaluation(report)
+77:     assert offer["reference_probability"] == pytest.approx(0.5)
+78:     assert {item["bookmaker"] for item in offer["reference_provenance"]} == {"reference"}
+79:     assert {item["reason"] for item in offer["reference_exclusions"]} == {"offering_book_excluded_from_reference"}
+82: def test_reference_book_cannot_self_validate_when_no_independent_reference_exists():
+83:     report = scan_quotes([snapshot(odds={"over": 3, "under": 1.5})], as_of=AS_OF, policy=policy())
+84:     assert not report["selected_candidates"]
+85:     assert {row["reason"] for row in report["evaluations"]} == {"insufficient_independent_reference_books"}
+88: @pytest.mark.parametrize("status", ["suspended", "unavailable"])
+89: @pytest.mark.parametrize("book", ["offer", "reference"])
+90: def test_latest_inactive_state_never_revives_older_prices(status, book):
+91:     rows = [
+92:         snapshot(),
+93:         snapshot("offer"),
+94:         snapshot(
+95:             book,
+96:             snapshot_id="new-state",
+97:             status=status,
+98:             odds={},
+99:             observed_at="2030-01-01T08:59:30Z",
+100:             available_at="2030-01-01T08:59:31Z",
+101:             received_at="2030-01-01T08:59:32Z",
+102:         ),
+103:     ]
+104:     report = scan_quotes(rows, as_of=AS_OF, policy=policy())
+105:     assert not report["selected_candidates"]
+106:     assert any(row["reason"] == f"latest_snapshot_{status}" for row in report["evaluations"])
+109: @pytest.mark.parametrize(
+110:     "changes",
+111:     [
+112:         {"odds": {"over": 5.0}},
+113:         {"odds": {"over": None, "under": 1.9}},
+114:         {"odds": {"over": float("nan"), "under": 1.9}},
+115:         {"raw_payload_hash": "missing-evidence"},
+116:         {"line": 3.5},
+117:         {"period": "1H"},
+118:     ],
+119: )
+120: def test_malformed_latest_state_blocks_old_valid_price(changes):
+121:     invalid = snapshot("offer", snapshot_id="invalid-latest", received_at="2030-01-01T08:59:50Z", **changes)
+122:     report = scan_quotes([snapshot(), snapshot("offer"), invalid], as_of=AS_OF, policy=policy())
+123:     assert report["validation_errors"]
+124:     assert not report["selected_candidates"]
+125:     assert any(row["reason"] == "latest_snapshot_invalid" for row in report["evaluations"])
+126:     json.dumps(report, allow_nan=False)
+129: def test_unorderable_invalid_row_blocks_batch_without_fallback():
+130:     invalid = snapshot("another-book", received_at="yesterday")
+131:     report = scan_quotes([snapshot(), snapshot("offer"), invalid], as_of=AS_OF, policy=policy())
+132:     assert report["batch_blocked"]
+133:     assert report["validation_errors"]
+134:     assert not report["selected_candidates"]
+137: def test_future_receipt_does_not_change_a_past_decision():
+138:     rows = [snapshot(), snapshot("offer")]
+139:     before = scan_quotes(rows, as_of=AS_OF, policy=policy())
+140:     rows.append(
+141:         snapshot("offer", snapshot_id="future", status="suspended", odds={}, received_at="2030-01-01T09:01:00Z")
+142:     )
+143:     after = scan_quotes(rows, as_of=AS_OF, policy=policy())
+144:     assert before["selected_candidates"] == after["selected_candidates"]
+145:     assert after["snapshot_reviews"][-1]["reason"] == "received_after_as_of"
+148: @pytest.mark.parametrize("clock", ["observed_at", "available_at", "received_at", "kickoff_at"])
+149: def test_naive_snapshot_timestamps_are_reported_as_validation_errors(clock):
+150:     report = scan_quotes([snapshot(**{clock: "2030-01-01T08:59:00"}), snapshot("offer")], as_of=AS_OF, policy=policy())
+151:     assert report["validation_errors"]
+152:     assert not report["selected_candidates"]
+155: @pytest.mark.parametrize(
+156:     "changes",
+157:     [
+158:         {"observed_at": "2030-01-01T08:59:02Z"},
+159:         {"available_at": "2030-01-01T08:59:03Z"},
+160:     ],
+161: )
+162: def test_clock_order_cannot_be_inverted(changes):
+163:     report = scan_quotes([snapshot(**changes), snapshot("offer")], as_of=AS_OF, policy=policy())
+164:     assert report["validation_errors"][0]["reason"] == "observation_availability_receipt_clock_order"
+165:     assert not report["selected_candidates"]
+168: def test_naive_decision_clock_is_rejected():
+169:     with pytest.raises(ValueError, match="invalid_timestamp:as_of"):
+170:         scan_quotes([], as_of=datetime(2030, 1, 1), policy=policy())
+173: def test_decision_exactly_at_kickoff_is_not_pre_match():
+174:     report = scan_quotes([snapshot(), snapshot("offer")], as_of=datetime(2030, 1, 1, 11, tzinfo=UTC), policy=policy())
+175:     assert not report["selected_candidates"]
+176:     assert {row["reason"] for row in report["evaluations"]} == {"decision_not_strictly_pre_kickoff"}
+179: def test_staleness_uses_decision_clock_and_does_not_search_older_prices():
+180:     rows = [
+181:         snapshot(),
+182:         snapshot("offer"),
+183:         snapshot(
+184:             "offer",
+185:             snapshot_id="recent-receipt-old-quote",
+186:             observed_at="2030-01-01T08:00:00Z",
+187:             received_at="2030-01-01T08:59:50Z",
+188:         ),
+189:     ]
+190:     report = scan_quotes(rows, as_of=AS_OF, policy=policy())
+191:     assert not report["selected_candidates"]
+192:     assert any(row["reason"] == "latest_snapshot_stale" for row in report["evaluations"])
+195: def test_timestamp_skew_excludes_reference_even_when_both_quotes_are_fresh():
+196:     reference = snapshot(
+197:         observed_at="2030-01-01T08:58:00Z", available_at="2030-01-01T08:58:01Z", received_at="2030-01-01T08:58:02Z"
+198:     )
+199:     report = scan_quotes([reference, snapshot("offer")], as_of=AS_OF, policy=policy())
+200:     assert not report["selected_candidates"]
+201:     assert evaluation(report)["reference_exclusions"] == [{"bookmaker": "reference", "reason": "reference_clock_skew"}]
+204: def test_each_reference_contributes_once_regardless_of_capture_count():
+205:     rows = [snapshot(), snapshot("reference2", odds={"over": 1.5, "under": 2.5}), snapshot("offer")]
+206:     rows.extend(
+207:         snapshot(
+208:             snapshot_id=f"old-{i}",
+209:             odds={"over": 1.2, "under": 4},
+210:             observed_at="2030-01-01T08:58:00Z",
+211:             available_at="2030-01-01T08:58:01Z",
+212:             received_at=f"2030-01-01T08:58:{i + 2:02d}Z",
+213:         )
+214:         for i in range(5)
+215:     )
+216:     report = scan_quotes(rows, as_of=AS_OF, policy=policy(reference_books=("reference", "reference2")))
+217:     expected = (0.5 + (1 / 1.5) / (1 / 1.5 + 1 / 2.5)) / 2
+218:     assert evaluation(report)["reference_probability"] == pytest.approx(expected)
+219:     assert len(evaluation(report)["reference_provenance"]) == 2
+222: def test_ambiguous_sources_for_same_book_are_rejected():
+223:     rows = [
+224:         snapshot(),
+225:         snapshot("offer"),
+226:         snapshot(
+227:             source="another-source",
+228:             snapshot_id="other-source",
+229:             received_at="2030-01-01T08:59:10Z",
+230:         ),
+231:     ]
+232:     report = scan_quotes(rows, as_of=AS_OF, policy=policy())
+233:     assert not report["selected_candidates"]
+234:     assert any(row["reason"] == "ambiguous_bookmaker_source" for row in report["evaluations"])
+237: @pytest.mark.parametrize(
+238:     "changes",
+239:     [
+240:         {"kickoff_at": "2030-01-01T12:00:00Z"},
+241:         {"source_event_id": "different-event-in-provider"},
+242:     ],
+243: )
+244: def test_event_identity_or_kickoff_conflict_blocks_cross_book_comparison(changes):
+245:     report = scan_quotes([snapshot(), snapshot("offer", **changes)], as_of=AS_OF, policy=policy())
+246:     assert not report["selected_candidates"]
+247:     assert all(row["reason"].startswith("event_") for row in report["evaluations"])
+250: def test_conflicting_snapshots_at_same_receipt_time_are_not_resolved_by_input_order():
+251:     rows = [snapshot(), snapshot("offer"), snapshot("offer", snapshot_id="conflicting", odds={"over": 5, "under": 1.3})]
+252:     for ordered in (rows, list(reversed(rows))):
+253:         report = scan_quotes(ordered, as_of=AS_OF, policy=policy())
+254:         assert not report["selected_candidates"]
+255:         assert report["validation_errors"]
+256:         assert any(row["reason"] == "conflicting_latest_snapshots" for row in report["evaluations"])
+259: def test_exact_duplicate_snapshot_does_not_change_weight_or_candidates():
+260:     rows = [snapshot(), snapshot("offer")]
+261:     expected = scan_quotes(rows, as_of=AS_OF, policy=policy())
+262:     actual = scan_quotes(rows + [snapshot()], as_of=AS_OF, policy=policy())
+263:     assert expected["selected_candidates"] == actual["selected_candidates"]
+266: @pytest.mark.parametrize(
+267:     "market,line,reference_odds,offer_odds",
+268:     [
+269:         ("1x2", None, {"home": 3, "draw": 3, "away": 3}, {"home": 4, "draw": 3, "away": 3}),
+270:         ("btts", None, {"yes": 1.9, "no": 1.9}, {"yes": 2.4, "no": 1.7}),
+271:     ],
+272: )
+273: def test_supported_markets_preserve_canonical_outcomes(market, line, reference_odds, offer_odds):
+275:     if market == "1x2":
+276:         reference_odds = {side: 2.9 for side in reference_odds}
+277:     rows = [
+278:         snapshot(market=market, line=line, odds=reference_odds),
+279:         snapshot("offer", market=market, line=line, odds=offer_odds),
+280:     ]
+281:     report = scan_quotes(rows, as_of=AS_OF, policy=policy())
+282:     assert len(report["selected_candidates"]) == 1
+283:     assert report["selected_candidates"][0]["market"] == market
+284:     assert report["selected_candidates"][0]["line"] == line
+287: def test_insufficient_reference_count_and_nonpositive_reference_margin_fail_closed():
+288:     report = scan_quotes([snapshot(odds={"over": 2, "under": 2}), snapshot("offer")], as_of=AS_OF, policy=policy())
+289:     assert not report["selected_candidates"]
+290:     assert evaluation(report)["reference_exclusions"][0]["reason"] == "reference_has_no_positive_overround"
+291:     report = scan_quotes(
+292:         [snapshot(), snapshot("offer")],
+293:         as_of=AS_OF,
+294:         policy=policy(reference_books=("reference", "missing"), min_reference_books=2),
+295:     )
+296:     assert not report["selected_candidates"]
+299: @pytest.mark.parametrize(
+300:     "changes,reason",
+301:     [
+302:         ({"cost_per_unit": 0.3}, "non_positive_net_ev"),
+303:         ({"min_ev": 0.15}, "below_minimum_net_ev"),
+304:         ({"max_ev": 0.14}, "above_maximum_net_ev"),
+305:     ],
+306: )
+307: def test_filters_use_net_ev_after_explicit_costs(changes, reason):
+308:     report = scan_quotes([snapshot(), snapshot("offer")], as_of=AS_OF, policy=policy(**changes))
+309:     assert not report["selected_candidates"]
+310:     assert evaluation(report)["reason"] == reason
+313: def test_one_candidate_per_event_and_deterministic_tie_break_independent_of_input_order():
+314:     rows = [
+315:         snapshot(),
+316:         snapshot("offer-b"),
+317:         snapshot("offer-a"),
+318:         snapshot(event_id="event2"),
+319:         snapshot("offer-a", event_id="event2"),
+320:     ]
+321:     before = scan_quotes(rows, as_of=AS_OF, policy=policy())
+322:     after = scan_quotes(list(reversed(rows)), as_of=AS_OF, policy=policy())
+323:     assert before["selected_candidates"] == after["selected_candidates"]
+324:     assert len(before["selected_candidates"]) == 2
+325:     assert {row["bookmaker"] for row in before["selected_candidates"]} == {"offer-a"}
+326:     assert evaluation(before, "offer-b")["reason"] == "one_candidate_per_event"
+329: @pytest.mark.parametrize(
+330:     "changes",
+331:     [
+332:         {"reference_books": ()},
+333:         {"reference_books": ("a", "a")},
+334:         {"reference_books": ["a"]},
+335:         {"min_reference_books": 0},
+336:         {"min_reference_books": True},
+337:         {"max_age_seconds": 0},
+338:         {"max_skew_seconds": -1},
+339:         {"cost_per_unit": -0.1},
+340:         {"commission_on_profit": 1},
+341:         {"min_ev": float("nan")},
+342:         {"min_ev": 0.2, "max_ev": 0.1},
+343:     ],
+344: )
+345: def test_invalid_policy_is_rejected_before_comparison(changes):
+346:     with pytest.raises(ValueError):
+347:         replace(policy(), **changes)
+350: def test_no_implicit_legacy_snapshot_adapter_or_provenance_fabrication():
+351:     legacy = {
+352:         "event_id": "event",
+353:         "bookmaker": "offer",
+354:         "market": "ou2.5",
+355:         "odd": 2.4,
+356:         "odds_captured_at": "2030-01-01T08:59:00Z",
+357:         "selection": "over",
+358:     }
+359:     report = scan_quotes([snapshot(), snapshot("offer"), legacy], as_of=AS_OF, policy=policy())
+360:     assert report["batch_blocked"] and report["validation_errors"]
+361:     assert not report["selected_candidates"]
+### tests/test_price_strength_reliability.py
+3: import math
+4: from dataclasses import FrozenInstanceError, asdict
+6: import pytest
+8: from brasileirao_predictor.research.price_strength_reliability import blend, fit_weight
+11: def test_binary_interior_solution_uses_positive_class_brier_once() -> None:
+12:     fitted = fit_weight([(0.8, 0.2)] * 2, [(0.2, 0.8)] * 2, [0, 1])
+13:     assert fitted.weight == pytest.approx(0.5)
+14:     assert fitted.n == 2
+15:     assert fitted.dimension == 2
+16:     assert fitted.numerator == pytest.approx(0.36)
+17:     assert fitted.denominator == pytest.approx(0.72)
+18:     assert fitted.model_loss == pytest.approx(0.34)
+19:     assert fitted.market_loss == pytest.approx(0.34)
+20:     assert fitted.blended_loss == pytest.approx(0.25)
+21:     assert blend((0.8, 0.2), (0.2, 0.8), fitted.weight) == pytest.approx((0.5, 0.5))
+24: def test_three_class_interior_solution_sums_all_classes() -> None:
+25:     fitted = fit_weight([(0.8, 0.1, 0.1)] * 4, [(0.2, 0.4, 0.4)] * 4, [0, 0, 1, 2])
+26:     assert fitted.weight == pytest.approx(0.5)
+27:     assert fitted.n == 4
+28:     assert fitted.dimension == 3
+29:     assert fitted.numerator == pytest.approx(1.08)
+30:     assert fitted.denominator == pytest.approx(2.16)
+31:     assert fitted.model_loss == pytest.approx(0.76)
+32:     assert fitted.market_loss == pytest.approx(0.76)
+33:     assert fitted.blended_loss == pytest.approx(0.625)
+36: @pytest.mark.parametrize("outcome, expected", [(0, 1.0), (1, 0.0)])
+37: def test_unconstrained_solution_is_clipped_to_convex_endpoints(outcome, expected) -> None:
+38:     fitted = fit_weight([(0.8, 0.2)], [(0.2, 0.8)], [outcome])
+39:     assert fitted.weight == expected
+40:     assert fitted.blended_loss == pytest.approx(min(fitted.model_loss, fitted.market_loss))
+43: @pytest.mark.parametrize("vector, labels", [((0.5, 0.5), [0, 1]), ((0.2, 0.3, 0.5), [2, 1])])
+44: def test_identical_model_and_market_choose_market_for_zero_denominator(vector, labels) -> None:
+45:     fitted = fit_weight([vector] * 2, [vector] * 2, labels)
+46:     assert fitted.weight == 0
+47:     assert fitted.numerator == fitted.denominator == 0
+48:     assert fitted.model_loss == fitted.market_loss == fitted.blended_loss
+51: def test_repeated_vectors_are_not_mistaken_for_duplicate_event_ids() -> None:
+52:     fitted = fit_weight([(0.8, 0.2)] * 3, [(0.2, 0.8)] * 3, [0, 0, 1])
+53:     assert fitted.n == 3
+54:     assert fitted.weight == pytest.approx(7 / 9)
+55:     assert fitted.blended_loss == pytest.approx(2 / 9)
+58: def test_input_order_does_not_change_fit_and_inputs_are_not_modified() -> None:
+59:     models = [[0.7, 0.2, 0.1], [0.3, 0.2, 0.5], [0.1, 0.6, 0.3]]
+60:     markets = [[0.4, 0.3, 0.3], [0.2, 0.3, 0.5], [0.3, 0.3, 0.4]]
+61:     labels = [0, 1, 2]
+62:     original = [row[:] for row in models], [row[:] for row in markets], labels[:]
+63:     fitted = fit_weight(models, markets, labels)
+64:     reversed_fit = fit_weight(reversed(models), reversed(markets), reversed(labels))
+65:     assert asdict(reversed_fit) == pytest.approx(asdict(fitted))
+66:     assert (models, markets, labels) == original
+67:     with pytest.raises(FrozenInstanceError):
+68:         fitted.weight = 0.5
+71: def test_joint_class_permutation_preserves_multiclass_fit() -> None:
+72:     models = [(0.8, 0.1, 0.1), (0.3, 0.4, 0.3)]
+73:     markets = [(0.2, 0.3, 0.5), (0.4, 0.3, 0.3)]
+74:     fitted = fit_weight(models, markets, [0, 1])
+75:     permuted = fit_weight([row[::-1] for row in models], [row[::-1] for row in markets], [2, 1])
+76:     assert asdict(permuted) == pytest.approx(asdict(fitted))
+79: def test_fit_accepts_ordered_generators_without_consuming_them_twice() -> None:
+80:     fitted = fit_weight(((x for x in (0.8, 0.2)) for _ in range(2)), iter([(0.2, 0.8)] * 2), iter([0, 1]))
+81:     assert fitted.weight == pytest.approx(0.5)
+82:     assert fitted.n == 2
+85: @pytest.mark.parametrize("dimension", [2, 3])
+86: def test_fitted_weight_minimizes_synthetic_loss_along_the_convex_segment(dimension) -> None:
+87:     model = (0.8, 0.2) if dimension == 2 else (0.8, 0.1, 0.1)
+88:     market = (0.2, 0.8) if dimension == 2 else (0.2, 0.4, 0.4)
+89:     labels = [0, 1] if dimension == 2 else [0, 0, 1, 2]
+90:     fitted = fit_weight([model] * len(labels), [market] * len(labels), labels)
+91:     classes = range(1) if dimension == 2 else range(3)
+92:     for weight in (0, 0.25, 0.5, 0.75, 1):
+93:         vector = blend(model, market, weight)
+94:         independent_loss = sum((vector[i] - (label == i)) ** 2 for label in labels for i in classes) / len(labels)
+95:         assert fitted.blended_loss <= independent_loss + 1e-14
+98: @pytest.mark.parametrize("weight", [0, 0.25, 0.5, 1])
+99: def test_blend_is_normalized_convex_and_returns_an_immutable_tuple(weight) -> None:
+100:     model, market = [0.8, 0.1, 0.1], [0.2, 0.4, 0.4]
+101:     result = blend(model, market, weight)
+102:     assert isinstance(result, tuple)
+103:     assert math.fsum(result) == pytest.approx(1)
+104:     assert all(min(p, q) <= b <= max(p, q) for p, q, b in zip(model, market, result, strict=True))
+105:     assert model == [0.8, 0.1, 0.1]
+106:     assert market == [0.2, 0.4, 0.4]
+109: def test_endpoints_preserve_valid_input_without_silent_renormalization() -> None:
+110:     model = (0.3, 0.7000000001)
+111:     market = (0.5, 0.5)
+112:     assert blend(model, market, 1) == model
+113:     assert blend(model, market, 0) == market
+116: @pytest.mark.parametrize(
+117:     "invalid",
+118:     [
+119:         [],
+120:         [1],
+121:         [0.25] * 4,
+122:         [0.2, 0.7],
+123:         [-0.1, 1.1],
+124:         [True, 0],
+125:         [False, 1],
+126:         [float("nan"), 1],
+127:         [float("inf"), 0],
+128:         [-float("inf"), 1],
+129:         [10**400, 0],
+130:         ["0.5", 0.5],
+131:         None,
+132:         "01",
+133:         {0.5},
+134:         {"yes": 0.5, "no": 0.5},
+135:     ],
+136: )
+137: def test_invalid_probability_vectors_are_rejected_in_fit_and_blend(invalid) -> None:
+138:     with pytest.raises(ValueError):
+139:         fit_weight([invalid], [(0.5, 0.5)], [0])
+140:     with pytest.raises(ValueError):
+141:         fit_weight([(0.5, 0.5)], [invalid], [0])
+142:     with pytest.raises(ValueError):
+143:         blend(invalid, (0.5, 0.5), 0.5)
+144:     with pytest.raises(ValueError):
+145:         blend((0.5, 0.5), invalid, 0.5)
+148: @pytest.mark.parametrize("weight", [True, False, -0.1, 1.1, float("nan"), float("inf"), "0.5", None, 10**400])
+149: def test_invalid_blend_weights_are_rejected(weight) -> None:
+150:     with pytest.raises(ValueError, match="weight"):
+151:         blend((0.8, 0.2), (0.2, 0.8), weight)
+154: @pytest.mark.parametrize("outcome", [True, False, -1, 2, 0.0, float("nan"), "0", None])
+155: def test_binary_outcomes_require_integer_class_indices(outcome) -> None:
+156:     with pytest.raises(ValueError, match="outcomes"):
+157:         fit_weight([(0.5, 0.5)], [(0.5, 0.5)], [outcome])
+160: def test_inconsistent_dimensions_are_rejected() -> None:
+161:     with pytest.raises(ValueError, match="dimensions"):
+162:         fit_weight([(0.5, 0.5), (0.2, 0.3, 0.5)], [(0.5, 0.5)] * 2, [0, 1])
+163:     with pytest.raises(ValueError, match="dimensions"):
+164:         fit_weight([(0.2, 0.3, 0.5)], [(0.5, 0.5)], [0])
+165:     with pytest.raises(ValueError, match="dimensions"):
+166:         blend((0.5, 0.5), (0.2, 0.3, 0.5), 0.5)
+169: @pytest.mark.parametrize(
+170:     "models, markets, outcomes",
+171:     [
+172:         ([], [], []),
+173:         ([(0.5, 0.5)], [], [0]),
+174:         ([(0.5, 0.5)], [(0.5, 0.5)], []),
+175:         ([(0.5, 0.5)], [(0.5, 0.5)], [0, 1]),
+176:         (None, [], []),
+177:         ([], None, []),
+178:         ([], [], None),
+179:         ({(0.5, 0.5)}, [(0.5, 0.5)], [0]),
+180:         ([(0.5, 0.5)], [(0.5, 0.5)], {0}),
+181:     ],
+182: )
+183: def test_empty_unordered_or_unaligned_fitting_samples_are_rejected(models, markets, outcomes) -> None:
+184:     with pytest.raises(ValueError):
+185:         fit_weight(models, markets, outcomes)

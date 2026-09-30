@@ -1,0 +1,404 @@
+### tests/test_price_strength_review_regressions.py
+3: import json
+4: from copy import deepcopy
+5: from dataclasses import replace
+6: from datetime import UTC, datetime
+8: import pytest
+10: from brasileirao_predictor.research.price_strength.__main__ import main
+11: from brasileirao_predictor.research.price_strength.demo import demo_inputs
+12: from brasileirao_predictor.research.price_strength.dynamic_xg import (
+13:     DynamicXGConfig,
+14:     Fixture,
+15:     LambdaCalibration,
+16:     XGObservation,
+17:     forecast,
+18: )
+19: from brasileirao_predictor.research.price_strength.quotes import scan_quotes
+20: from brasileirao_predictor.research.price_strength.study import price_policy, run_study, timestamp
+23: @pytest.mark.parametrize("reverse", [False, True])
+24: def test_provider_event_cannot_split_into_two_canonical_event_ids(reverse):
+25:     demo = demo_inputs()
+26:     original = demo["quotes.jsonl"][:6]
+27:     alias = deepcopy(original)
+28:     for row in alias:
+29:         row["event_id"] = "second-canonical-id-for-same-provider-event"
+30:         row["snapshot_id"] += "-alias"
+31:     rows = original + alias
+32:     result = scan_quotes(
+33:         rows[::-1] if reverse else rows,
+34:         as_of=timestamp(demo["fixtures.jsonl"][0]["decision_at"]),
+35:         policy=price_policy(demo["protocol.json"]["price_policy"]),
+36:     )
+37:     assert not result["selected_candidates"], "Same (source, source_event_id) produced multiple picks: " + str(
+38:         [(r["event_id"], r["provenance"]["source_event_id"]) for r in result["selected_candidates"]]
+39:     )
+40:     assert {row["reason"] for row in result["snapshot_reviews"]} == {"source_event_canonical_identity_conflict"}
+43: def test_cli_invalid_timestamp_does_not_echo_arbitrary_input(tmp_path, capsys):
+44:     demo = demo_inputs()
+45:     policy = tmp_path / "policy.json"
+46:     quotes = tmp_path / "quotes.jsonl"
+47:     policy.write_text(json.dumps(demo["protocol.json"]["price_policy"]), encoding="utf-8")
+48:     quotes.write_text("", encoding="utf-8")
+49:     marker = "SYNTHETIC_INPUT_CANARY_NOT_A_CREDENTIAL"
+50:     result = main(
+51:         [
+52:             "scan",
+53:             "--quotes",
+54:             str(quotes),
+55:             "--policy",
+56:             str(policy),
+57:             "--as-of",
+58:             marker,
+59:             "--output-dir",
+60:             str(tmp_path / "run"),
+61:         ]
+62:     )
+63:     assert result == 2
+64:     assert marker not in capsys.readouterr().err
+67: @pytest.mark.parametrize("invalid", ["false", "true", 0, 1, None])
+68: def test_invalid_calibration_eligibility_is_not_truthy_permission(invalid):
+69:     config = DynamicXGConfig(min_team_matches=1, min_calibration_matches=1)
+70:     calibration = LambdaCalibration(
+71:         config_fingerprint=config.fingerprint,
+72:         training_end=datetime(2030, 1, 1, tzinfo=UTC),
+73:         calibration_end=datetime(2030, 2, 1, tzinfo=UTC),
+74:         eligible=False,
+75:         reason="INSUFFICIENT_CALIBRATION",
+76:         n_matches=1,
+77:         home_scale=1,
+78:         away_scale=1,
+79:         latest_available_at=None,
+80:         used_match_ids=(),
+81:     )
+82:     observation = XGObservation(
+83:         match_id="synthetic-past",
+84:         home_team="A",
+85:         away_team="B",
+86:         kickoff=datetime(2030, 2, 5, tzinfo=UTC),
+87:         completed_at=datetime(2030, 2, 5, 2, tzinfo=UTC),
+88:         available_at=datetime(2030, 2, 5, 3, tzinfo=UTC),
+89:         home_xg=1.5,
+90:         away_xg=1.0,
+91:     )
+92:     target = Fixture("synthetic-target", "A", "B", datetime(2030, 2, 15, 2, tzinfo=UTC))
+93:     with pytest.raises(ValueError, match="eligible|eligibility|boolean|bool"):
+94:         malformed = replace(calibration, eligible=invalid)
+95:         forecast([observation], target, datetime(2030, 2, 15, 1, tzinfo=UTC), config, malformed)
+98: def test_study_ignores_identity_changes_received_only_after_decision():
+99:     demo = demo_inputs()
+100:     arguments = {name.split(".")[0]: value for name, value in demo.items()}
+101:     expected = run_study(**arguments)
+102:     future = deepcopy(arguments["quotes"][0])
+103:     future.update(
+104:         snapshot_id="synthetic-future-reschedule",
+105:         received_at=arguments["protocol"]["report_as_of"],
+106:         available_at=arguments["protocol"]["report_as_of"],
+107:         observed_at=arguments["protocol"]["report_as_of"],
+108:         kickoff_at="2030-12-01T18:00:00+00:00",
+109:     )
+110:     arguments["quotes"].append(future)
+111:     actual = run_study(**arguments)
+112:     assert actual["forecasts.jsonl"] == expected["forecasts.jsonl"]
+113:     assert actual["summary.json"] == expected["summary.json"]
+116: def test_study_rejects_provider_event_aliases_across_per_fixture_scans():
+117:     arguments = {name.split(".")[0]: value for name, value in demo_inputs().items()}
+118:     first_id = arguments["fixtures"][0]["match_id"]
+119:     second_id = arguments["fixtures"][1]["match_id"]
+120:     for row in arguments["quotes"]:
+121:         if row["event_id"] == second_id:
+122:             row["source_event_id"] = first_id
+123:     with pytest.raises(ValueError, match="source event maps to multiple"):
+124:         run_study(**arguments)
+127: def test_future_alias_does_not_change_global_study_identity_mapping():
+128:     arguments = {name.split(".")[0]: value for name, value in demo_inputs().items()}
+129:     expected = run_study(**arguments)
+130:     alias = deepcopy(arguments["quotes"][0])
+131:     second = arguments["fixtures"][1]
+132:     alias.update(
+133:         snapshot_id="future-alias-only",
+134:         event_id=second["match_id"],
+135:         kickoff_at=second["kickoff"],
+136:         received_at=arguments["protocol"]["report_as_of"],
+137:     )
+138:     arguments["quotes"].append(alias)
+139:     actual = run_study(**arguments)
+140:     assert actual["summary.json"] == expected["summary.json"]
+141:     assert [scan["selected_candidates"] for scan in actual["price_scans.jsonl"]] == [
+142:         scan["selected_candidates"] for scan in expected["price_scans.jsonl"]
+143:     ]
+146: @pytest.mark.parametrize("receipt", [None, "unreadable-synthetic-timestamp", "2030-05-20T17:00:00"])
+147: def test_unknown_quote_receipt_never_bypasses_validation_as_future(receipt):
+148:     arguments = {name.split(".")[0]: value for name, value in demo_inputs().items()}
+149:     unknown = deepcopy(arguments["quotes"][0])
+150:     unknown.update(snapshot_id="unknown-receipt", received_at=receipt, kickoff_at="2030-12-01T18:00:00+00:00")
+151:     arguments["quotes"].append(unknown)
+152:     result = run_study(**arguments)
+153:     scan = result["price_scans.jsonl"][0]
+154:     assert scan["batch_blocked"]
+155:     assert not scan["selected_candidates"]
+156:     assert any(error["reason"] == "invalid_timestamp:received_at" for error in scan["validation_errors"])
+159: def test_provider_ids_are_namespaced_by_source():
+160:     demo = demo_inputs()
+161:     original = demo["quotes.jsonl"][:6]
+162:     other = deepcopy(original)
+163:     for row in other:
+164:         row.update(event_id="independent-event", source="different-synthetic-provider")
+165:         row["snapshot_id"] += "-other-source"
+166:     result = scan_quotes(
+167:         original + other,
+168:         as_of=timestamp(demo["fixtures.jsonl"][0]["decision_at"]),
+169:         policy=price_policy(demo["protocol.json"]["price_policy"]),
+170:     )
+171:     assert len(result["selected_candidates"]) == 2
+174: def test_future_provider_alias_cannot_reject_current_scanner_candidates():
+175:     demo = demo_inputs()
+176:     original = demo["quotes.jsonl"][:6]
+177:     future = deepcopy(original)
+178:     for row in future:
+179:         row.update(event_id="future-canonical-alias", received_at=demo["protocol.json"]["report_as_of"])
+180:         row["snapshot_id"] += "-future"
+181:     arguments = {
+182:         "as_of": timestamp(demo["fixtures.jsonl"][0]["decision_at"]),
+183:         "policy": price_policy(demo["protocol.json"]["price_policy"]),
+184:     }
+185:     expected = scan_quotes(original, **arguments)
+186:     actual = scan_quotes(original + future, **arguments)
+187:     assert actual["selected_candidates"] == expected["selected_candidates"]
+### tests/test_price_strength_study.py
+3: import hashlib
+4: import json
+5: from copy import deepcopy
+6: from pathlib import Path
+8: import pytest
+10: from brasileirao_predictor.research.price_strength.__main__ import main
+11: from brasileirao_predictor.research.price_strength.demo import demo_inputs
+12: from brasileirao_predictor.research.price_strength.study import run_study
+15: def inputs():
+16:     return {name.split(".")[0]: value for name, value in demo_inputs().items()}
+19: def test_full_synthetic_study_compares_probabilities_and_keeps_execution_unproven():
+20:     result = run_study(**inputs())
+21:     summary = result["summary.json"]
+22:     assert summary["fixtures"] == summary["calibrated_forecasts"] == summary["labelled_fixtures"] == 4
+23:     assert not summary["execution_proven"] and not summary["real_capital_enabled"]
+24:     assert not summary["profitability_established"]
+25:     for market in ("1x2", "ou25", "btts"):
+26:         assert summary["paired_metrics"]["calibrated_xg"]["market"][market]["n"] == 4
+27:     assert summary["quote_candidates"] == 4
+28:     for scan in result["price_scans.jsonl"]:
+29:         assert len(scan["selected_candidates"]) == 1
+30:         priced = [row for row in scan["evaluations"] if row.get("xg_diagnostics")]
+31:         assert priced and set(priced[0]["xg_diagnostics"]) == {"raw_xg", "calibrated_xg"}
+34: def test_history_and_fixture_order_do_not_change_predictions_or_paired_metrics():
+35:     original = inputs()
+36:     shuffled = deepcopy(original)
+37:     for key in ("history", "fixtures", "quotes"):
+38:         shuffled[key].reverse()
+39:     first, second = run_study(**original), run_study(**shuffled)
+40:     for name in ("forecasts.jsonl", "comparisons.jsonl", "summary.json"):
+41:         assert first[name] == second[name]
+42:     assert [s["selected_candidates"] for s in first["price_scans.jsonl"]] == [
+43:         s["selected_candidates"] for s in second["price_scans.jsonl"]
+44:     ]
+47: def test_future_evaluation_statistics_do_not_change_first_forecast_or_calibration():
+48:     original = inputs()
+49:     altered = deepcopy(original)
+50:     for row in altered["history"][-4:]:
+51:         row.update(home_xg=10.0, away_xg=9.0, home_goals=8, away_goals=7)
+52:     first, second = run_study(**original), run_study(**altered)
+53:     assert first["forecasts.jsonl"][0] == second["forecasts.jsonl"][0]
+54:     assert first["summary.json"]["calibration"] == second["summary.json"]["calibration"]
+57: def test_missing_results_and_prices_reduce_paired_coverage_without_imputation():
+58:     raw = inputs()
+59:     raw["history"][-1].update(home_goals=None, away_goals=None)
+60:     raw["quotes"] = []
+61:     result = run_study(**raw)
+62:     assert result["summary.json"]["labelled_fixtures"] == 3
+63:     assert result["summary.json"]["calibrated_forecasts"] == 4
+64:     assert result["summary.json"]["paired_metrics"]["calibrated_xg"]["market"]["1x2"]["n"] == 0
+67: def test_frozen_external_baseline_is_compared_on_the_same_fixtures():
+68:     raw = inputs()
+69:     preliminary = run_study(**raw)
+70:     raw["baseline"] = [
+71:         {
+72:             "match_id": row["match_id"],
+73:             "decision_at": row["decision_at"],
+74:             "generated_at": row["decision_at"],
+75:             "candidate_id": "synthetic-frozen-control",
+76:             "probabilities": row["raw"]["probabilities"],
+77:         }
+78:         for row in preliminary["forecasts.jsonl"]
+79:     ]
+80:     result = run_study(**raw)
+81:     metrics = result["summary.json"]["paired_metrics"]["raw_xg"]["frozen_baseline"]
+82:     assert metrics["1x2"]["n"] == 4
+83:     assert metrics["1x2"]["mean_delta_brier"] == 0
+84:     raw["baseline"][0]["generated_at"] = raw["protocol"]["report_as_of"]
+85:     with pytest.raises(ValueError, match="generated after"):
+86:         run_study(**raw)
+89: @pytest.mark.parametrize(
+90:     "change,expected",
+91:     [
+92:         (lambda raw: raw["protocol"].update(data_kind="UNTOUCHED_HOLDOUT"), "exploratory"),
+93:         (lambda raw: raw["protocol"].update(calibration_end=raw["protocol"]["evaluation_start"]), "ordered"),
+94:         (lambda raw: raw["fixtures"].append(raw["fixtures"][0]), "duplicate"),
+95:         (lambda raw: raw["quotes"][0].update(event_id="wrong-match"), "fixture universe"),
+96:         (lambda raw: raw["quotes"][0].update(kickoff_at=raw["protocol"]["report_as_of"]), "kickoff"),
+97:     ],
+98: )
+99: def test_invalid_study_contracts_fail_closed(change, expected):
+100:     raw = inputs()
+101:     change(raw)
+102:     with pytest.raises(ValueError, match=expected):
+103:         run_study(**raw)
+106: def test_cli_demo_writes_reproducible_receipts_and_never_overwrites(tmp_path):
+107:     output = tmp_path / "demo"
+108:     assert main(["demo", "--output-dir", str(output)]) == 0
+109:     manifest = json.loads((output / "run/manifest.json").read_text())
+110:     assert manifest["status"] == "COMPLETE"
+111:     assert manifest["metadata"]["real_capital_enabled"] is False
+112:     for row in manifest["inputs"].values():
+113:         assert hashlib.sha256(Path(row["path"]).read_bytes()).hexdigest() == row["sha256"]
+114:     for name, row in manifest["artifacts"].items():
+115:         assert hashlib.sha256((output / "run" / name).read_bytes()).hexdigest() == row["sha256"]
+116:     original = (output / "run/manifest.json").read_bytes()
+117:     assert main(["demo", "--output-dir", str(output)]) == 2
+118:     assert (output / "run/manifest.json").read_bytes() == original
+121: def test_cli_scan_requires_explicit_inputs_and_retains_invalid_snapshot_evidence(tmp_path):
+122:     demo = demo_inputs()
+123:     policy = tmp_path / "policy.json"
+124:     policy.write_text(json.dumps(demo["protocol.json"]["price_policy"]))
+125:     quotes = tmp_path / "quotes.jsonl"
+126:     rows = demo["quotes.jsonl"][:6]
+127:     rows[3].update(status="suspended", odds={})
+128:     quotes.write_text("".join(json.dumps(row) + "\n" for row in rows))
+129:     result = tmp_path / "scan"
+130:     assert (
+131:         main(
+132:             [
+133:                 "scan",
+134:                 "--quotes",
+135:                 str(quotes),
+136:                 "--policy",
+137:                 str(policy),
+138:                 "--as-of",
+139:                 demo["fixtures.jsonl"][0]["decision_at"],
+140:                 "--output-dir",
+141:                 str(result),
+142:             ]
+143:         )
+144:         == 0
+145:     )
+146:     scan = json.loads((result / "scan.json").read_text())
+147:     assert any("suspended" in row.get("reason", "") for row in scan["evaluations"])
+148:     with pytest.raises(SystemExit):
+149:         main(["study", "--output-dir", str(tmp_path / "empty")])
+152: @pytest.mark.parametrize("reverse", [False, True])
+153: def test_conflicting_evaluation_identity_is_rejected_even_with_identical_scores(reverse):
+154:     raw = inputs()
+155:     conflicting = {**raw["history"][-1], "home_team": "Unrelated synthetic team"}
+156:     raw["history"].append(conflicting)
+157:     if reverse:
+158:         raw["history"].reverse()
+159:     with pytest.raises(ValueError, match="identity"):
+160:         run_study(**raw)
+### tests/test_promoted_cold_start.py
+1: import pytest
+3: from brasileirao_predictor.data.promotions import Promotion
+4: from brasileirao_predictor.research.promoted_cold_start import (
+5:     ColdStartMatch,
+6:     PromotedEntry,
+7:     build_entries,
+8:     evaluate_empirical_prior,
+9:     evaluate_first_matches,
+10:     evaluate_goal_priors,
+11:     leave_one_season_out_priors,
+12:     protocol_status,
+13: )
+16: def _entry(season, team, rating):
+17:     return PromotedEntry(season, team, 1, rating, f"source-{season}-{team}")
+20: def test_prior_for_a_season_uses_only_strictly_earlier_seasons():
+21:     entries = [_entry(2022, "a", 1400), _entry(2023, "b", 1420), _entry(2024, "c", 2000)]
+22:     priors = leave_one_season_out_priors(entries)
+23:     assert priors[2023] == 1400
+24:     assert priors[2024] == 1410
+27: def test_missing_metadata_blocks_without_changing_serving():
+28:     assert protocol_status([])["status"] == "BLOCKED_MISSING_PROMOTION_METADATA"
+29:     assert protocol_status([])["serving_changed"] is False
+32: def test_duplicate_or_insufficient_history_fails_closed():
+33:     duplicate = [_entry(2022, "a", 1400), _entry(2022, "a", 1410), _entry(2023, "b", 1420)]
+34:     with pytest.raises(ValueError, match="at least|duplicate"):
+35:         leave_one_season_out_priors(duplicate)
+38: def test_build_entries_fails_closed_without_point_in_time_rating():
+39:     promotion = Promotion(2024, 2023, 1, "vitoria", "Vitoria", "https://www.cbf.com.br/source")
+40:     with pytest.raises(ValueError, match="missing point-in-time"):
+41:         build_entries([promotion], {}, as_of_season=2024)
+44: def test_empirical_prior_blocks_small_samples_and_never_changes_serving():
+45:     entries = [_entry(2022, "a", 1400), _entry(2023, "b", 1420), _entry(2024, "c", 1410)]
+46:     report = evaluate_empirical_prior(entries)
+47:     assert report["status"] == "BLOCKED_DATA"
+48:     assert report["serving_changed"] is False
+51: def test_first_matches_cold_start_runs_oos_and_never_changes_serving():
+52:     entries = [_entry(2022, "a", 1400), _entry(2023, "b", 1410), _entry(2024, "c", 1420), _entry(2025, "d", 1430)]
+53:     matches = [
+54:         ColdStartMatch(season, team, number, 1500.0, number % 2 == 0, number % 3, (number + 1) % 3)
+55:         for season, team in ((2023, "b"), (2024, "c"), (2025, "d"))
+56:         for number in range(1, 11)
+57:     ]
+58:     report = evaluate_first_matches(
+59:         entries,
+60:         matches,
+61:         first_n=10,
+62:         baseline_rating=1500.0,
+63:         home_advantage=65.0,
+64:         draw_rate=0.27,
+65:         base_k=20.0,
+66:         bootstrap_seed=13,
+67:         bootstrap_iterations=200,
+68:     )
+69:     assert report["status"] in {"GO_CANDIDATE", "NO_GO"}
+70:     assert report["n"] == 30
+71:     assert report["serving_changed"] is False
+72:     assert report["bootstrap"]["scheme"] == "season_cluster"
+75: def test_goal_prior_arm_is_isolated_from_serving():
+76:     matches = [ColdStartMatch(2024, "c", number, 1500, True, 1, 2) for number in range(1, 31)]
+77:     report = evaluate_goal_priors(
+78:         matches,
+79:         {2024: (0.9, 1.1)},
+80:         baseline_goals_for=1.3,
+81:         baseline_goals_against=1.3,
+82:         bootstrap_seed=42,
+83:         bootstrap_iterations=100,
+84:     )
+85:     assert report["status"] in {"GO_CANDIDATE", "NO_GO"}
+86:     assert report["serving_changed"] is False
+87:     assert "goal_log_loss_delta_ci95" in report
+### tests/test_promotions_dataset.py
+1: from pathlib import Path
+3: import pytest
+5: from brasileirao_predictor.data.promotions import load_promotions, load_relegations
+7: DATASET = Path(__file__).parents[1] / "data" / "promotions_brasileirao_2018_2026.json"
+10: def test_versioned_promotion_dataset_is_complete() -> None:
+11:     entries = load_promotions(DATASET)
+12:     assert len(entries) == 36
+13:     assert {entry.serie_a_season for entry in entries} == set(range(2018, 2027))
+14:     assert [entry.team_id for entry in entries if entry.serie_a_season == 2026] == [
+15:         "coritiba",
+16:         "athletico",
+17:         "chapecoense",
+18:         "remo",
+19:     ]
+22: def test_promotion_dataset_rejects_empty_file(tmp_path: Path) -> None:
+23:     path = tmp_path / "promotions.json"
+24:     path.write_text('{"schema_version":"promotions-brasileirao/v1","entries":[],"sources":[]}', encoding="utf-8")
+25:     with pytest.raises(ValueError, match="empty"):
+26:         load_promotions(path)
+29: def test_versioned_relegation_dataset_is_complete() -> None:
+30:     entries = load_relegations(DATASET)
+31:     assert len(entries) == 36
+32:     assert {entry.serie_a_season for entry in entries} == set(range(2017, 2026))
+33:     assert {entry.team_id for entry in entries if entry.serie_a_season == 2025} == {
+34:         "ceara",
+35:         "fortaleza",
+36:         "juventude",
+37:         "sport",
+38:     }

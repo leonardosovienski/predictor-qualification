@@ -1,0 +1,504 @@
+### tests/test_persist_h15_prospective.py
+5: import json
+6: from datetime import UTC, datetime, timedelta
+7: from pathlib import Path
+9: import pytest
+11: from brasileirao_predictor import db
+12: from brasileirao_scripts import persist_h15_prospective as job
+18: _TODAY = datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
+19: KICKOFF = _TODAY + timedelta(days=2, hours=7)
+20: HOME_ADV = 100.0
+22: TRIAL_PARAMS = {"algorithm_version": "nbdc-normalized-elo-horizon-v2"}
+24: CFG = {
+25:     "elo": {
+26:         "initial_rating": 1500,
+27:         "home_advantage": HOME_ADV,
+28:         "window_years": 6,
+29:         "form_half_life_years": 4.0,
+30:         "k_factors": {"default": 30},
+31:     },
+32:     "model": {"calibration_window_years": 4, "goal_half_life_days": None, "max_goals": 12},
+33: }
+36: def _trials_json(path: Path) -> None:
+37:     path.write_text(json.dumps([{"name": job.TRIAL, "params": TRIAL_PARAMS}]), encoding="utf-8")
+40: def _seed_matches(conn, n: int, start: datetime, *, id_base: int = 1000) -> None:
+42:     for i in range(n):
+43:         eid = id_base + i
+44:         kickoff = start + timedelta(days=i)
+45:         home_score, away_score = (2, 0) if i % 3 else (1, 1)
+46:         conn.execute(
+47:             "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, "
+48:             "home_score, away_score, kickoff_at) VALUES (?, 'T', '2027', ?, ?, ?, ?, ?, ?)",
+49:             (
+50:                 eid,
+51:                 kickoff.date().isoformat(),
+52:                 f"Time{i % 4}",
+53:                 f"Time{(i + 1) % 4}",
+54:                 home_score,
+55:                 away_score,
+56:                 kickoff.isoformat(timespec="seconds"),
+57:             ),
+58:         )
+59:         conn.execute(
+60:             "INSERT INTO matches (event_id, date, home_team, away_team, home_score, away_score, tournament, neutral) "
+61:             "VALUES (?, ?, ?, ?, ?, ?, 'T', 0)",
+62:             (eid, kickoff.date().isoformat(), f"Time{i % 4}", f"Time{(i + 1) % 4}", home_score, away_score),
+63:         )
+64:     conn.commit()
+67: @pytest.fixture
+68: def ambiente(tmp_path, monkeypatch):
+69:     dbpath = tmp_path / "t.db"
+70:     conn = db.connect(str(dbpath))
+71:     _seed_matches(conn, 15, KICKOFF - timedelta(days=100))
+72:     conn.execute(
+73:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+74:         "VALUES (1, 'T', '2027', ?, 'Time0', 'Time1', ?)",
+75:         (KICKOFF.date().isoformat(), KICKOFF.isoformat(timespec="seconds")),
+76:     )
+77:     conn.commit()
+78:     conn.close()
+80:     trials_path = tmp_path / "trials.json"
+81:     _trials_json(trials_path)
+82:     ledger_path = tmp_path / "h15.jsonl"
+83:     state_dir = tmp_path / "state"
+84:     arms = tuple(job.Arm(a.name, a.retrain_every) for a in job.ARMS)
+85:     for arm in arms:
+86:         monkeypatch.setattr(
+87:             job.Arm, "state_path", property(lambda self, _dir=state_dir: _dir / f"h15_state_{self.name}.json")
+88:         )
+90:     monkeypatch.setattr(job, "load_config", lambda: dict(CFG, database=str(dbpath)))
+92:     return {"db_path": dbpath, "trials_path": trials_path, "ledger_path": ledger_path, "arms": arms}
+95: def test_primeiro_refit_acontece_para_os_dois_bracos(ambiente):
+96:     now = KICKOFF - timedelta(hours=1)
+97:     outcomes = job.run(
+98:         now=now,
+99:         trials_path=ambiente["trials_path"],
+100:         ledger_path=ambiente["ledger_path"],
+101:         arms=ambiente["arms"],
+102:         db_path=ambiente["db_path"],
+103:     )
+104:     assert outcomes == [{"event_id": 1, "home": "Time0", "away": "Time1", "status": "PERSISTED"}]
+105:     for arm in ambiente["arms"]:
+106:         assert arm.state_path.exists()
+107:         state = json.loads(arm.state_path.read_text(encoding="utf-8"))
+108:         assert state["n_matches_at_refit"] == 15
+110:     rows = [json.loads(line) for line in ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()]
+111:     row = rows[0]
+112:     assert "treatment_refit10" in row and "control_refit100" in row
+113:     assert row["treatment_refit10"]["n_matches_at_refit"] == 15
+114:     assert row["control_refit100"]["n_matches_at_refit"] == 15
+117: def test_braco_10_refita_antes_do_braco_100(ambiente):
+118:     now1 = KICKOFF - timedelta(hours=2)
+119:     job.run(
+120:         now=now1,
+121:         trials_path=ambiente["trials_path"],
+122:         ledger_path=ambiente["ledger_path"],
+123:         arms=ambiente["arms"],
+124:         db_path=ambiente["db_path"],
+125:     )
+129:     conn = db.connect(str(ambiente["db_path"]))
+130:     _seed_matches(conn, 12, KICKOFF - timedelta(days=200), id_base=2000)
+131:     conn.execute("DELETE FROM sofascore_matches WHERE event_id = 1")
+132:     conn.execute(
+133:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+134:         "VALUES (2, 'T', '2027', ?, 'Time0', 'Time1', ?)",
+135:         ((KICKOFF + timedelta(days=1)).date().isoformat(), (KICKOFF + timedelta(days=1)).isoformat(timespec="seconds")),
+136:     )
+137:     conn.commit()
+138:     conn.close()
+140:     now2 = KICKOFF + timedelta(days=1) - timedelta(hours=1)
+141:     job.run(
+142:         now=now2,
+143:         trials_path=ambiente["trials_path"],
+144:         ledger_path=ambiente["ledger_path"],
+145:         arms=ambiente["arms"],
+146:         db_path=ambiente["db_path"],
+147:     )
+149:     treatment_state = json.loads(
+150:         next(a for a in ambiente["arms"] if a.name == "treatment_refit10").state_path.read_text(encoding="utf-8")
+151:     )
+152:     control_state = json.loads(
+153:         next(a for a in ambiente["arms"] if a.name == "control_refit100").state_path.read_text(encoding="utf-8")
+154:     )
+155:     assert treatment_state["n_matches_at_refit"] == 27
+156:     assert control_state["n_matches_at_refit"] == 15  # não cruzou 100 desde o último refit
+159: def test_idempotente_nao_duplica(ambiente):
+160:     now = KICKOFF - timedelta(hours=1)
+161:     job.run(
+162:         now=now,
+163:         trials_path=ambiente["trials_path"],
+164:         ledger_path=ambiente["ledger_path"],
+165:         arms=ambiente["arms"],
+166:         db_path=ambiente["db_path"],
+167:     )
+168:     outcomes = job.run(
+169:         now=now,
+170:         trials_path=ambiente["trials_path"],
+171:         ledger_path=ambiente["ledger_path"],
+172:         arms=ambiente["arms"],
+173:         db_path=ambiente["db_path"],
+174:     )
+175:     assert outcomes == []
+176:     rows = ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()
+177:     assert len(rows) == 1
+180: def test_fora_da_janela_nao_persiste(ambiente):
+181:     now = KICKOFF - timedelta(hours=30)
+182:     outcomes = job.run(
+183:         now=now,
+184:         trials_path=ambiente["trials_path"],
+185:         ledger_path=ambiente["ledger_path"],
+186:         arms=ambiente["arms"],
+187:         db_path=ambiente["db_path"],
+188:     )
+189:     assert outcomes == []
+192: def test_fingerprint_estavel_entre_refits(ambiente):
+193:     now1 = KICKOFF - timedelta(hours=2)
+194:     job.run(
+195:         now=now1,
+196:         trials_path=ambiente["trials_path"],
+197:         ledger_path=ambiente["ledger_path"],
+198:         arms=ambiente["arms"],
+199:         db_path=ambiente["db_path"],
+200:     )
+201:     row1 = json.loads(ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()[0])
+202:     fp1 = row1["treatment_refit10"]["code_fingerprint"]
+204:     conn = db.connect(str(ambiente["db_path"]))
+205:     _seed_matches(conn, 12, KICKOFF - timedelta(days=200), id_base=2000)
+206:     conn.execute("DELETE FROM sofascore_matches WHERE event_id = 1")
+207:     conn.execute(
+208:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+209:         "VALUES (2, 'T', '2027', ?, 'Time0', 'Time1', ?)",
+210:         ((KICKOFF + timedelta(days=1)).date().isoformat(), (KICKOFF + timedelta(days=1)).isoformat(timespec="seconds")),
+211:     )
+212:     conn.commit()
+213:     conn.close()
+214:     now2 = KICKOFF + timedelta(days=1) - timedelta(hours=1)
+215:     job.run(
+216:         now=now2,
+217:         trials_path=ambiente["trials_path"],
+218:         ledger_path=ambiente["ledger_path"],
+219:         arms=ambiente["arms"],
+220:         db_path=ambiente["db_path"],
+221:     )
+222:     row2 = json.loads(ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()[1])
+223:     fp2 = row2["treatment_refit10"]["code_fingerprint"]
+224:     assert fp1 == fp2  # o refit mudou os params, não a identidade do desenho
+### tests/test_pit_backfill.py
+1: import pytest
+3: from brasileirao_predictor.data.pit_backfill import (
+4:     CLOSING_DEFINITION_VERSION,
+5:     choose_closing,
+6:     connect_curated,
+7:     curate_match,
+8:     curate_odds,
+9:     evaluation_view,
+10:     pit_eligible,
+11:     preserve_raw,
+12:     quality_gate,
+13:     register_raw,
+14:     resolve_entity,
+15:     verify_raw,
+16:     walk_forward_splits,
+17: )
+20: def _match(**extra):
+21:     row = {
+22:         "source": "fixture",
+23:         "source_match_id": "m1",
+24:         "kickoff_at": "2024-05-01T20:00:00+00:00",
+25:         "home_team": "Sao Paulo",
+26:         "away_team": "Flamengo",
+27:         "home_goals": 2,
+28:         "away_goals": 1,
+29:     }
+30:     row.update(extra)
+31:     return row
+34: def test_raw_is_write_once_hashable_and_tamper_detected(tmp_path):
+35:     raw = tmp_path / "raw" / "batch.json"
+36:     manifest = preserve_raw(
+37:         b'{"id":1}',
+38:         raw,
+39:         source="fixture",
+40:         source_version="v1",
+41:         retrieved_at="2024-01-01T00:00:00Z",
+42:         license="test",
+43:         parser_version="p1",
+44:         row_count=1,
+45:         temporal_coverage="2024",
+46:     )
+47:     verify_raw(raw, manifest)
+48:     with pytest.raises(FileExistsError):
+49:         preserve_raw(
+50:             b"changed",
+51:             raw,
+52:             source="fixture",
+53:             source_version="v1",
+54:             retrieved_at="2024-01-01T00:00:00Z",
+55:             license="test",
+56:             parser_version="p1",
+57:             row_count=1,
+58:             temporal_coverage="2024",
+59:         )
+60:     raw.write_bytes(b"tampered")
+61:     with pytest.raises(ValueError, match="hash raw"):
+62:         verify_raw(raw, manifest)
+65: def test_curated_store_has_provenance_and_never_touches_live(tmp_path):
+66:     conn = connect_curated(tmp_path / "curated.db")
+67:     raw = tmp_path / "raw.json"
+68:     manifest = preserve_raw(
+69:         "{}",
+70:         raw,
+71:         source="fixture",
+72:         source_version="v1",
+73:         retrieved_at="2024-01-01T00:00:00Z",
+74:         license="test",
+75:         parser_version="p1",
+76:         row_count=1,
+77:         temporal_coverage="2024",
+78:     )
+79:     register_raw(conn, manifest)
+80:     cid = curate_match(
+81:         conn,
+82:         _match(),
+83:         aliases={"Sao Paulo": "São Paulo"},
+84:         known={"São Paulo", "Flamengo"},
+85:         batch_id="b1",
+86:         ingested_at="2024-04-01T00:00:00Z",
+87:     )
+88:     assert cid.startswith("2024-05-01T20:00:00")
+89:     row = conn.execute("select mapping_status,provenance_hash from curated_matches").fetchone()
+90:     assert row[0] == "RULE_BASED" and len(row[1]) == 64
+91:     assert conn.execute("select count(*) from raw_files").fetchone()[0] == 1
+94: def test_entity_resolution_rejects_ambiguous_case():
+95:     assert resolve_entity("x", "CLUBE", {}, {"Clube", "clube"}) == (None, "AMBIGUOUS")
+96:     assert resolve_entity("x", "Unknown", {}, {"Clube"}) == (None, "REJECTED")
+99: def test_closing_requires_valid_pre_kickoff_quote_and_versions_definition():
+100:     rows = [
+101:         {
+102:             "bookmaker": "A",
+103:             "market": "ou2.5",
+104:             "selection": "over",
+105:             "raw_odds": 2.0,
+106:             "captured_at": "2024-04-30T20:00:00Z",
+107:         },
+108:         {
+109:             "bookmaker": "A",
+110:             "market": "ou2.5",
+111:             "selection": "over",
+112:             "raw_odds": 2.1,
+113:             "captured_at": "2024-05-01T19:00:00Z",
+114:         },
+115:         {
+116:             "bookmaker": "A",
+117:             "market": "ou2.5",
+118:             "selection": "over",
+119:             "raw_odds": 9.0,
+120:             "captured_at": "2024-05-01T21:00:00Z",
+121:         },
+122:     ]
+123:     rows = [{**row, "source": "fixture", "source_match_id": "m1", "period": "FT", "status": "ACTIVE"} for row in rows]
+124:     close = choose_closing(rows, kickoff_at="2024-05-01T20:00:00Z", bookmaker="A", market="ou2.5", selection="over")
+125:     assert close is not None
+126:     assert close["raw_odds"] == 2.1
+127:     assert close["closing_definition_version"] == CLOSING_DEFINITION_VERSION
+130: def test_curated_odds_rejects_future_capture_and_preserves_all_clocks(tmp_path):
+131:     conn = connect_curated(tmp_path / "odds.db")
+132:     row = {
+133:         "source": "fixture",
+134:         "source_match_id": "m1",
+135:         "kickoff_at": "2024-05-01T20:00:00Z",
+136:         "observed_at": "2024-05-01T10:00:00Z",
+137:         "available_at": "2024-05-01T10:01:00Z",
+138:         "captured_at": "2024-05-01T10:02:00Z",
+139:         "bookmaker": "A",
+140:         "market": "ou2.5",
+141:         "selection": "over",
+142:         "raw_odds": 2.0,
+143:     }
+144:     curate_odds(conn, row, canonical_match_id="cid", batch_id="b1")
+145:     assert conn.execute("select count(*) from curated_odds").fetchone()[0] == 1
+146:     with pytest.raises(ValueError, match="pré-evento"):
+147:         curate_odds(
+148:             conn,
+149:             {**row, "source_match_id": "m2", "captured_at": "2024-05-01T21:00:00Z"},
+150:             canonical_match_id="cid",
+151:             batch_id="b1",
+152:         )
+155: def test_pit_rejects_future_and_evaluation_view_is_temporal(tmp_path):
+156:     assert pit_eligible(
+157:         available_at="2024-05-01T10:00:00Z",
+158:         predicted_at="2024-05-01T11:00:00Z",
+159:         kickoff_at="2024-05-01T20:00:00Z",
+160:     )
+161:     assert not pit_eligible(
+162:         available_at="2024-05-01T21:00:00Z",
+163:         predicted_at="2024-05-01T11:00:00Z",
+164:         kickoff_at="2024-05-01T20:00:00Z",
+165:     )
+166:     conn = connect_curated(tmp_path / "eval.db")
+167:     curate_match(
+168:         conn,
+169:         _match(source_match_id="past"),
+170:         aliases={"Sao Paulo": "São Paulo"},
+171:         known={"São Paulo", "Flamengo"},
+172:         batch_id="b1",
+173:         ingested_at="2024-04-01T00:00:00Z",
+174:     )
+175:     curate_match(
+176:         conn,
+177:         _match(source_match_id="future", kickoff_at="2024-06-01T20:00:00Z"),
+178:         aliases={"Sao Paulo": "São Paulo"},
+179:         known={"São Paulo", "Flamengo"},
+180:         batch_id="b1",
+181:         ingested_at="2024-04-02T00:00:00Z",
+182:     )
+183:     assert [r["source_match_id"] for r in evaluation_view(conn, predicted_at="2024-05-15T00:00:00Z")] == ["future"]
+186: def test_walk_forward_holdout_and_cluster_gate_never_enable_capital():
+187:     rows = [{"kickoff_at": f"2024-0{month}-15T12:00:00Z", "id": month} for month in (1, 2, 3, 4)]
+188:     split = walk_forward_splits(
+189:         rows,
+190:         development_end="2024-02-01T00:00:00Z",
+191:         validation_end="2024-03-01T00:00:00Z",
+192:         test_end="2024-05-01T00:00:00Z",
+193:     )
+194:     assert [r["id"] for r in split["development"]] == [1]
+195:     assert [r["id"] for r in split["validation"]] == [2]
+196:     assert [r["id"] for r in split["test"]] == [3, 4]
+197:     observations = [
+198:         {
+199:             "pit_valid": True,
+200:             "matured": True,
+201:             "cluster": "r1",
+202:             "clubs": ("A", "B"),
+203:             "pnl": 1.0,
+204:             "clv": 0.1,
+205:             "brier": 0.2,
+206:         },
+207:         {
+208:             "pit_valid": True,
+209:             "matured": False,
+210:             "cluster": "r1",
+211:             "clubs": ("A", "B"),
+212:             "pnl": 1.0,
+213:             "clv": 0.1,
+214:             "brier": 0.2,
+215:         },
+216:     ]
+217:     gate = quality_gate(observations, min_matured=2)
+218:     assert gate["status"] == "INSUFFICIENT_SAMPLE"
+219:     assert gate["capital_enabled"] is False
+220:     assert gate["clusters"] == 1
+### tests/test_pit_contextual_features.py
+1: from datetime import UTC, datetime, timedelta
+3: import pytest
+5: from brasileirao_predictor.research.pit_features import PITFeatureEvidence
+6: from brasileirao_predictor.research.pit_features.contextual import COACH, REST, SURFACE, TRAVEL, materialize_context
+8: KICKOFF = datetime(2026, 8, 28, 22, tzinfo=UTC)
+11: def _evidence(declaration, payload):
+12:     return PITFeatureEvidence(
+13:         event_id="fixture",
+14:         feature_family=declaration.feature_family,
+15:         declaration_version=declaration.version,
+16:         source="versioned-test-source",
+17:         source_record_id="record-v1",
+18:         observed_at=KICKOFF - timedelta(hours=3),
+19:         available_at=KICKOFF - timedelta(hours=2),
+20:         ingested_at=KICKOFF - timedelta(hours=1),
+21:         kickoff_at=KICKOFF,
+22:         payload=payload,
+23:     )
+26: def test_rest_is_strictly_pre_match() -> None:
+27:     result = materialize_context(
+28:         _evidence(
+29:             REST,
+30:             {
+31:                 "home_previous_kickoff": (KICKOFF - timedelta(days=4)).isoformat(),
+32:                 "away_previous_kickoff": (KICKOFF - timedelta(days=2)).isoformat(),
+33:             },
+34:         )
+35:     )
+36:     assert result["rest_days_delta"] == 2.0
+39: def test_travel_surface_and_coach_materialize_deterministically() -> None:
+40:     travel = materialize_context(
+41:         _evidence(TRAVEL, {"origin_lat": -30.03, "origin_lon": -51.23, "venue_lat": -3.73, "venue_lon": -38.52})
+42:     )
+43:     assert travel["away_travel_km"] > 3000
+44:     surface = materialize_context(
+45:         _evidence(SURFACE, {"surface": "synthetic", "home_accustomed": True, "away_accustomed": False})
+46:     )
+47:     assert surface == {"synthetic_surface": True, "surface_familiarity_delta": 1}
+48:     coach = materialize_context(
+49:         _evidence(COACH, {"home_matches": 10, "away_matches": 2, "announced_at": "2026-07-01T12:00:00Z"})
+50:     )
+51:     assert coach["coach_tenure_delta"] == 8
+54: def test_future_previous_match_fails_closed() -> None:
+55:     evidence = _evidence(
+56:         REST,
+57:         {
+58:             "home_previous_kickoff": KICKOFF.isoformat(),
+59:             "away_previous_kickoff": (KICKOFF - timedelta(days=2)).isoformat(),
+60:         },
+61:     )
+62:     with pytest.raises(ValueError, match="strictly before"):
+63:         materialize_context(evidence)
+### tests/test_pit_features_scaffold.py
+1: from __future__ import annotations
+3: from datetime import UTC, datetime, timedelta
+5: import pytest
+6: from pydantic import ValidationError
+8: from brasileirao_predictor.research.pit_features import (
+9:     ExternalResearchGate,
+10:     PITFeatureEvidence,
+11:     assert_training_unlocked,
+12: )
+13: from brasileirao_predictor.research.pit_features.absences import DECLARATION as ABSENCES
+14: from brasileirao_predictor.research.pit_features.hierarchical_home_advantage import DECLARATION as HOME
+15: from brasileirao_predictor.research.pit_features.isolated_xg import ARCHITECTURE_POLICY
+16: from brasileirao_predictor.research.pit_features.isolated_xg import DECLARATION as XG
+17: from brasileirao_predictor.research.pit_features.lineup import DECLARATION as LINEUP
+19: KICKOFF = datetime(2026, 8, 24, 22, tzinfo=UTC)
+22: def evidence(**changes) -> PITFeatureEvidence:
+23:     row = {
+24:         "event_id": "123",
+25:         "feature_family": "lineup",
+26:         "declaration_version": LINEUP.version,
+27:         "source": "sofascore",
+28:         "source_record_id": "lineup-123-v1",
+29:         "observed_at": KICKOFF - timedelta(minutes=70),
+30:         "available_at": KICKOFF - timedelta(minutes=65),
+31:         "ingested_at": KICKOFF - timedelta(minutes=60),
+32:         "kickoff_at": KICKOFF,
+33:         "payload": {"team": "A", "players": ["p1"], "confirmed": True, "published_at": "timestamp"},
+34:     }
+35:     row.update(changes)
+36:     return PITFeatureEvidence.model_validate(row)
+39: def test_todas_as_familias_declaram_mecanismo_proveniencia_e_bloqueio() -> None:
+40:     for declaration in (ABSENCES, LINEUP, XG, HOME):
+41:         assert declaration.mechanism_ex_ante
+42:         assert declaration.provenance_policy
+43:         assert declaration.training_status == "SCAFFOLD_ONLY_TRAINING_BLOCKED"
+46: @pytest.mark.parametrize("offset", [timedelta(0), timedelta(seconds=1)])
+47: def test_informacao_no_ou_apos_kickoff_falha_fechado(offset: timedelta) -> None:
+48:     with pytest.raises(ValidationError, match="strictly before kickoff"):
+49:         evidence(available_at=KICKOFF + offset, ingested_at=KICKOFF + offset)
+52: def test_rejeita_relogio_ingenuo_e_ingestao_anterior_a_publicacao() -> None:
+53:     with pytest.raises(ValidationError, match="timezone-aware"):
+54:         evidence(available_at=datetime(2026, 8, 24, 20))
+55:     with pytest.raises(ValidationError, match="ingested_at"):
+56:         evidence(ingested_at=KICKOFF - timedelta(minutes=66))
+59: def test_envelope_precisa_corresponder_a_declaracao_e_campos_ex_ante() -> None:
+60:     item = evidence()
+61:     item.assert_matches(LINEUP)
+62:     with pytest.raises(ValueError, match="feature_family"):
+63:         item.assert_matches(ABSENCES)
+64:     with pytest.raises(ValueError, match="missing declared"):
+65:         evidence(payload={"team": "A"}).assert_matches(LINEUP)
+68: def test_xg_isolado_proibe_linhagem_h12_e_blends() -> None:
+69:     assert ARCHITECTURE_POLICY["architecture"] == "ISOLATED_XG_NEW_LINEAGE"
+70:     assert "H12_ENSEMBLE_REUSE" in ARCHITECTURE_POLICY["forbidden"]
+71:     assert "GRID_BLEND_WITH_SERVING" in ARCHITECTURE_POLICY["forbidden"]
+74: def test_treino_bloqueado_sem_go_e_referencia() -> None:
+75:     with pytest.raises(RuntimeError, match="blocked"):
+76:         assert_training_unlocked(ExternalResearchGate())
+77:     with pytest.raises(RuntimeError, match="reference"):
+78:         assert_training_unlocked(ExternalResearchGate(phase0b_go=True))
+79:     assert_training_unlocked(ExternalResearchGate(live_viability_go=True, evidence_reference="report:sha256:abc"))

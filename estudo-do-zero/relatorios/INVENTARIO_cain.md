@@ -1,6 +1,6 @@
 # Inventário técnico — cain
 
-Estado da investigação: caracterização central baseada em código, com cobertura por módulo em `evidencias/cain/coverage.json`. Revisão integral de todos os módulos próprios, ferramentas e fixtures ainda pendente. Este documento não certifica instalação nem funcionamento atual.
+Estado da investigação: caracterização central baseada em código, com cobertura por módulo em `evidencias/cain/coverage.json`. A revisão semântica dos módulos próprios executáveis selecionados, ferramentas, testes e UI foi concluída; artefatos estáticos e dependências têm catálogo separado. Este documento não certifica instalação nem funcionamento atual.
 
 ## Identidade e origem
 
@@ -38,10 +38,12 @@ README local declara conversa/memória/pesquisa Snapshot e Bundle e versão0.4.1
 
 **J — Operação.** CI declarada lint/test/build e smoke wheel fora checkout, matrizPython; .ci supply/completion são harnesses com overlays/artefatosversionados. Não executados aqui; consultar run/commitstatus em evidência central. Retry explicitamente negado em orchestrator; workflowrecovertemlease. Arquivos/modelos/DB vivos não investigados. Segurança loopback/origin é controle de fronteira local, não sistema autenticação.
 
-**K — Documentação.** `document-catalog.json` lista narrativas/histórico, datasnomes e profundidade. README/CONTINUIDADE foram confrontados; registros de avaliações/QA continuamDD/ET-HIST apenas. Não se declara código morto porlackreference. Módulos avaliação/tools/JS e branches secundárias ainda precisam revisão integral por módulo.
+**K — Documentação.** `document-catalog.json` lista narrativas/histórico, datasnomes e profundidade. README/CONTINUIDADE foram confrontados; registros de avaliações/QA continuamDD/ET-HIST apenas. Não se declara código morto porlackreference. Avaliação, ferramentas e UI foram revisadas integralmente na árvore local; branches secundárias e remoto não herdam essa cobertura.
 
 **L — Fonte vs uso.** Fonte dirty mais untracked é OD. Publicação release remoto distinta é registrada à parte. Instalação principal C:/CAIN/.venv e serviço8877 são DD doREADME, sem EU atual. Nenhuma capacidade remotaV2 foi atribuída a esta árvore.
 
-## Cobertura e pendências
+## Cobertura e limites finais
 
-Em profundidade: agentes, aritmética, API, runtime/orchestratorcentral, configurações, identidadeexplicit/scopes, workspace, SnapshotService, CAS/backup, workflows/providers, coverage/diagnósticos. Leitura mecânica/AST integral da seleção169arquivos/25.175linhas; isso NÃO equivale à revisão semântica integral. Restante módulossearch/router/persistencedetalhes/Bundles/historian/grounding/evaluation/scripts/funções fixtures eweb: coverage.json é fonte precisa; alguns métodos centrais foram examinados sem arquivo completo. Históricodocs/evaluationresults/vendor apenascatalogado salvo quando citado. Pendentes testeisolado completo e reconstrução respostas atuais; sem bloqueio de acesso ao fonte, portanto não rotular estudo completo.
+A cobertura consolidada está em `evidencias/cain/coverage.json` e as notas por módulo em `module-notes.json`. Todos os executáveis próprios selecionados foram revisados semanticamente. Lock, fixtures estáticas e código de terceiros são catalogados com essa profundidade distinta. Histórico e fontes remotas não recebem certificação por transferência desta revisão. Nenhum banco original, modelo vivo ou serviço externo foi acionado.
+
+Leitura de testes (ET-SRC), execuções isoladas (ET-RUN), CI por commit e declarações históricas permanecem separados. Consulte `SUPLEMENTO_CAIN_STOCKS_COBERTURA_FINAL.md` para a contagem exata e limites das execuções.

@@ -1,0 +1,496 @@
+### tests/test_operational_readiness.py
+1: import json
+2: import sqlite3
+3: from datetime import UTC, datetime
+5: from brasileirao_predictor.operational_readiness import assess_operational_readiness
+8: def _catalogs(data):
+9:     (data / "team_aliases.json").write_text(
+10:         json.dumps({"mapping_version": "v1", "aliases": {"Home FC": "home"}}), encoding="utf-8"
+11:     )
+12:     (data / "teams_brasileirao.json").write_text(json.dumps({"teams": {"Home": {"slug": "home"}}}), encoding="utf-8")
+15: def test_readiness_fails_closed_and_never_enables_capital(tmp_path):
+16:     data = tmp_path / "data"
+17:     data.mkdir()
+18:     _catalogs(data)
+19:     report = assess_operational_readiness(tmp_path, env={})
+20:     assert report["status"] == "BLOCKED"
+21:     assert "oddspapi_credential" in report["blockers"]
+22:     assert report["capital_enabled"] is False
+23:     assert report["secrets_exposed"] is False
+26: def test_all_local_evidence_reaches_human_review_only(tmp_path):
+27:     data = tmp_path / "data"
+28:     data.mkdir()
+29:     _catalogs(data)
+30:     with sqlite3.connect(data / "odds_operational.db") as connection:
+31:         connection.execute("CREATE TABLE odds_event_versions (id INTEGER)")
+32:         connection.execute("CREATE TABLE odds_snapshot_facts (id INTEGER)")
+33:     snapshots = data / "odds_snapshots"
+34:     snapshots.mkdir()
+35:     (snapshots / "2026-01-01.jsonl").write_text('{"id": 1}\n', encoding="utf-8")
+36:     metrics = data / "collector_metrics"
+37:     metrics.mkdir()
+38:     (metrics / "gate_a1_verdict.json").write_text('{"verdict": "PASS"}', encoding="utf-8")
+39:     state = data / "collector_state"
+40:     state.mkdir()
+41:     now = datetime(2026, 8, 28, 12, tzinfo=UTC)
+42:     for name in ("collector", "discovery", "metrics"):
+43:         (state / f"{name}_heartbeat.json").write_text(
+44:             json.dumps({"checked_at": now.isoformat(), "status": "PASS"}), encoding="utf-8"
+45:         )
+46:     report = assess_operational_readiness(tmp_path, env={"ODDSPAPI_KEY": "configured-but-never-returned"}, now=now)
+47:     assert report["status"] == "READY_FOR_HUMAN_REVIEW"
+48:     assert report["capital_enabled"] is False
+51: def test_stale_heartbeat_blocks_readiness(tmp_path):
+52:     data = tmp_path / "data"
+53:     data.mkdir()
+54:     _catalogs(data)
+55:     state = data / "collector_state"
+56:     state.mkdir()
+57:     (state / "collector_heartbeat.json").write_text(
+58:         json.dumps({"checked_at": "2026-08-01T00:00:00+00:00"}), encoding="utf-8"
+59:     )
+60:     report = assess_operational_readiness(tmp_path, now=datetime(2026, 8, 28, tzinfo=UTC))
+61:     assert report["checks"]["collector_heartbeat"]["status"] == "BLOCKED"
+### tests/test_ou25_annual.py
+1: from brasileirao_scripts.research_ou25_annual_2021_2026 import _annual_baseline, _valid_price_pair
+4: def _row(pair=(2.0, 2.0), actual=True):
+5:     return {
+6:         "event_id": "1",
+7:         "kickoff_at": "2026-01-01T00:00:00Z",
+8:         "season": "2026",
+9:         "p_over": 0.6,
+10:         "actual_over": actual,
+11:         "offered_odds_ou25": pair,
+12:         "closing_odds_ou25": (1.8, 2.2),
+13:     }
+16: def test_price_quality_gate_rejects_placeholder_pair():
+17:     assert not _valid_price_pair((51.0, 1.002))
+18:     assert _valid_price_pair((2.0, 1.9))
+21: def test_annual_baseline_settles_one_unit_and_devigged_clv():
+22:     picks, metrics = _annual_baseline([_row()], "2026", 7)
+23:     assert len(picks) == 1
+24:     assert picks[0]["side"] == "over"
+25:     assert picks[0]["profit"] == 1.0
+26:     assert picks[0]["clv"] == 2.0 * (1 / 1.8) / (1 / 1.8 + 1 / 2.2) - 1
+27:     assert metrics["profit_units"] == 1.0
+30: def test_annual_baseline_drops_invalid_prices():
+31:     picks, metrics = _annual_baseline([_row((51.0, 1.002))], "2026", 7)
+32:     assert picks == []
+33:     assert metrics["n"] == 0
+### tests/test_ou25_certainty.py
+1: from brasileirao_predictor.research.ou25_nested_replay import _wilson_lower
+4: def test_wilson_lower_is_conservative_and_tightens_with_sample():
+5:     small = _wilson_lower(8, 10, 0.95)
+6:     large = _wilson_lower(80, 100, 0.95)
+7:     assert 0 < small < large < 0.8
+10: def test_higher_confidence_has_lower_bound():
+11:     assert _wilson_lower(80, 100, 0.99) < _wilson_lower(80, 100, 0.90)
+### tests/test_ou25_market_anchor.py
+1: from datetime import UTC, datetime, timedelta
+3: from brasileirao_predictor.research.ou25_nested_replay import anchor_to_market_prequential
+6: def _rows(n=40):
+7:     start = datetime(2021, 1, 1, tzinfo=UTC)
+8:     return [
+9:         {
+10:             "event_id": str(index),
+11:             "kickoff_at": (start + timedelta(days=index)).isoformat(),
+12:             "season": "2021",
+13:             "p_over": 0.8,
+14:             "actual_over": index % 2,
+15:             "offered_odds_ou25": (2.0, 2.0),
+16:         }
+17:         for index in range(n)
+18:     ]
+21: def test_anchor_selects_market_when_model_is_worse():
+22:     transformed, report = anchor_to_market_prequential(_rows(), minimum_history=20, block_size=10)
+23:     assert all(fold["selected_model_weight"] == 0.0 for fold in report["folds"])
+24:     assert all(row["p_over"] == 0.5 for row in transformed[20:])
+25:     assert report["anchored_brier"] < report["model_brier"]
+28: def test_anchor_does_not_split_simultaneous_kickoff_group():
+29:     rows = _rows(n=40)
+30:     kickoff = (datetime(2021, 1, 1, tzinfo=UTC) + timedelta(days=19)).isoformat()
+31:     for index in range(18, 22):
+32:         rows[index]["kickoff_at"] = kickoff
+33:     _transformed, report = anchor_to_market_prequential(rows, minimum_history=20, block_size=10)
+34:     assert report["folds"]
+35:     assert report["folds"][0]["train_n"] == 18
+36:     assert report["folds"][0]["test_n"] == 10
+37:     assert report["folds"][0]["test_min_kickoff"] == kickoff
+40: def test_anchor_excludes_invalid_price_pairs():
+41:     rows = _rows(n=40)
+42:     rows[25]["offered_odds_ou25"] = (51.0, 1.002)
+43:     transformed, report = anchor_to_market_prequential(rows, minimum_history=20, block_size=10)
+44:     assert len(transformed) == 39
+45:     assert report["evaluated_n"] == 19
+46:     assert all(row["event_id"] != "25" for row in transformed)
+49: def test_future_labels_do_not_change_first_anchor_weight():
+50:     rows = _rows()
+51:     first = anchor_to_market_prequential(rows, minimum_history=20, block_size=10)[1]
+52:     changed = [dict(row) for row in rows]
+53:     for row in changed[20:]:
+54:         row["actual_over"] = 1 - row["actual_over"]
+55:     second = anchor_to_market_prequential(changed, minimum_history=20, block_size=10)[1]
+56:     assert first["folds"][0]["selected_model_weight"] == second["folds"][0]["selected_model_weight"]
+### tests/test_ou25_nested_replay.py
+1: import json
+2: from datetime import UTC, datetime, timedelta
+4: import numpy as np
+5: import pytest
+7: from brasileirao_predictor.research.ou25_nested_replay import (
+8:     FilterParameters,
+9:     _metrics,
+10:     freeze_candidate,
+11:     holm_adjust,
+12:     nested_walk_forward,
+13:     score_row,
+14: )
+17: def _panel(n=520, seed=8):
+18:     rng = np.random.default_rng(seed)
+19:     base = datetime(2021, 1, 1, tzinfo=UTC)
+20:     rows = []
+21:     for i in range(n):
+22:         p = float(np.clip(0.5 + 0.14 * np.sin(i / 23) + rng.normal(0, 0.025), 0.12, 0.88))
+23:         market_p = float(np.clip(p + rng.normal(0, 0.04), 0.15, 0.85))
+24:         margin = 1.05
+25:         oo, ou = margin / market_p, margin / (1 - market_p)
+26:         rows.append(
+27:             {
+28:                 "event_id": str(i),
+29:                 "kickoff_at": (base + timedelta(days=i)).isoformat(),
+30:                 "season": str(2021 + i // 190),
+31:                 "p_over": p,
+32:                 "actual_over": int(rng.random() < p),
+33:                 "offered_odds_ou25": (oo, ou),
+34:                 "closing_odds_ou25": (oo * 0.99, ou * 0.99),
+35:             }
+36:         )
+37:     return rows
+40: def _configs():
+41:     return [
+42:         FilterParameters(edge, 0.5, 1.3, 3.5, side)
+43:         for edge in (-0.20, -0.10, 0.0)
+44:         for side in ("both", "over", "under")
+45:     ]
+48: def test_holm_is_monotone_and_not_below_raw():
+49:     raw = {"a": 0.01, "b": 0.03, "c": 0.2}
+50:     adjusted = holm_adjust(raw)
+51:     assert all(adjusted[k] >= raw[k] for k in raw)
+52:     assert adjusted["a"] <= adjusted["b"] <= adjusted["c"]
+55: def test_outer_fold_has_strict_temporal_boundary_and_operational_caps():
+56:     result = nested_walk_forward(_panel(), _configs(), minimum_train=260, block_size=65, seed=19)
+57:     assert result["capital_enabled"] is False
+58:     assert result["strength_cap_without_prospective_a1"] == 40
+59:     assert result["contaminated_seasons"] == ["2024", "2025", "2026"]
+60:     assert result["outer_folds"]
+61:     assert all(f["train_max_kickoff"] < f["test_min_kickoff"] for f in result["outer_folds"])
+62:     assert len(result["tested_combinations"]) == len(_configs()) * len(result["outer_folds"])
+63:     assert all(p["indication_strength_0_100"] <= 40 for p in result["picks"])
+64:     assert all(p["strength_cap_reason"] == "NO_PROSPECTIVE_A1_EVIDENCE" for p in result["picks"])
+65:     json.dumps(result, allow_nan=False)
+68: def test_simultaneous_kickoff_group_is_never_split_across_outer_boundary():
+69:     rows = _panel(n=400)
+70:     shared_kickoff = (datetime(2021, 1, 1, tzinfo=UTC) + timedelta(days=259)).isoformat()
+71:     for index in range(258, 262):
+72:         rows[index]["kickoff_at"] = shared_kickoff
+73:     result = nested_walk_forward(rows, _configs(), minimum_train=260, block_size=65, seed=23)
+74:     assert result["outer_folds"]
+75:     assert all(fold["train_max_kickoff"] < fold["test_min_kickoff"] for fold in result["outer_folds"])
+78: def test_score_row_rejects_placeholder_price_pair():
+79:     row = _panel(n=1)[0]
+80:     row["p_over"] = 0.5
+81:     row["offered_odds_ou25"] = (51.0, 1.002)
+82:     params = FilterParameters(-1.0, 100.0, 1.0, 100.0, "both", 0.9, 0.0)
+83:     assert score_row(row, params, _panel(n=100), uncertainty_by_side={"over": 0.0, "under": 0.0}) is None
+86: def test_future_labels_cannot_change_past_fold_selection():
+87:     rows = _panel()
+88:     original = nested_walk_forward(rows, _configs(), minimum_train=260, block_size=65, seed=22)
+89:     changed = [dict(r) for r in rows]
+90:     for row in changed[325:]:
+91:         row["actual_over"] = 1 - row["actual_over"]
+92:     mutated = nested_walk_forward(changed, _configs(), minimum_train=260, block_size=65, seed=22)
+93:     assert original["outer_folds"][0]["selected_config_id"] == mutated["outer_folds"][0]["selected_config_id"]
+94:     first_original = [p for p in original["picks"] if p["outer_fold"] == 1]
+95:     first_mutated = [p for p in mutated["picks"] if p["outer_fold"] == 1]
+96:     assert [p["event_id"] for p in first_original] == [p["event_id"] for p in first_mutated]
+99: def test_replay_is_deterministic_across_repeated_simulations():
+100:     one = nested_walk_forward(_panel(seed=44), _configs(), minimum_train=260, block_size=65, seed=99)
+101:     two = nested_walk_forward(_panel(seed=44), _configs(), minimum_train=260, block_size=65, seed=99)
+102:     one.pop("generated_at")
+103:     two.pop("generated_at")
+104:     assert one == two
+107: def test_freeze_candidate_requires_stability_and_minimum_cells(tmp_path):
+108:     picks = []
+109:     for index in range(200):
+110:         picks.append(
+111:             {
+112:                 "side": "over" if index % 2 == 0 else "under",
+113:                 "odd": 1.7 if index % 3 == 0 else 2.0 if index % 3 == 1 else 2.5,
+114:             }
+115:         )
+116:     result = {
+117:         "outer_folds": [{"selected_config_id": "cfg-1"}],
+118:         "tested_combinations": [{"config_id": "cfg-1", "parameters": {"min_ev": 0.02}}],
+119:         "picks": picks,
+120:         "metrics": {
+121:             "n": 200,
+122:             "roi_ci95_lower": 0.01,
+123:             "clv_ci95_lower": 0.01,
+124:             "worst_season_roi": 0.001,
+125:             "worst_side_roi": 0.002,
+126:             "worst_odd_band_roi": 0.003,
+127:         },
+128:     }
+129:     frozen = freeze_candidate(result, tmp_path / "frozen.json", source_hash="source")
+130:     assert frozen["candidate_id"] == "cfg-1"
+131:     assert frozen["current_action"] == "SHADOW_CANDIDATE"
+132:     assert frozen["capital_enabled"] is False
+133:     assert frozen["maximum_indication_score"] == 40
+136: def test_empty_and_singleton_metrics_do_not_claim_estimable_interval():
+137:     assert _metrics([], seed=1)["roi_ci95_lower"] is None
+138:     singleton = [{"profit": 1.0, "season": "2023", "side": "over", "odd": 2.0, "clv": None}]
+139:     assert _metrics(singleton, seed=1)["roi_ci95_lower"] is None
+142: def test_clv_uses_devigged_closing_pair():
+143:     row = _panel(n=1)[0]
+144:     row["p_over"] = 0.8
+145:     row["offered_odds_ou25"] = (2.0, 1.8)
+146:     row["closing_odds_ou25"] = (1.8, 2.0)
+147:     params = FilterParameters(-1.0, 1.0, 1.1, 5.0, "over", 0.9, 0.0)
+148:     pick = score_row(row, params, _panel(n=100), uncertainty_by_side={"over": 0.0, "under": 0.0})
+149:     assert pick is not None
+150:     close_over_probability = (1 / 1.8) / (1 / 1.8 + 1 / 2.0)
+151:     assert pick["clv"] == pytest.approx(2.0 * close_over_probability - 1)
+154: def test_runner_requires_explicit_point_in_time_price_source(tmp_path, monkeypatch):
+155:     from brasileirao_scripts import research_ou25_nested_replay as runner
+157:     operational_db = tmp_path / "matches.db"
+158:     operational_db.write_bytes(b"placeholder")
+159:     monkeypatch.setattr(runner.bp, "DB", operational_db)
+160:     with pytest.raises(SystemExit, match="odds.*point-in-time"):
+161:         runner.load_rows("serving", retrain_every=20, backfill_db=tmp_path / "missing-backfill.sqlite")
+### tests/test_parse_all_odds.py
+8: import pytest
+10: from brasileirao_predictor.ingest_sofascore import parse_all_odds
+13: def _choice(name, frac):
+14:     return {"name": name, "fractionalValue": frac, "initialFractionalValue": frac, "change": 0}
+17: RAW = {
+18:     "markets": [
+19:         {
+20:             "marketId": 1,
+21:             "marketName": "Full time",
+22:             "choiceGroup": None,
+23:             "choices": [_choice("1", "4/5"), _choice("X", "1/1"), _choice("2", "6/5")],
+24:         },
+25:         {
+26:             "marketId": 2,
+27:             "marketName": "Double chance",
+28:             "choiceGroup": None,
+29:             "choices": [_choice("1X", "1/5"), _choice("X2", "1/1"), _choice("12", "1/2")],
+30:         },
+31:         {
+32:             "marketId": 4,
+33:             "marketName": "Draw no bet",
+34:             "choiceGroup": None,
+35:             "choices": [_choice("1", "1/4"), _choice("2", "11/4")],
+36:         },
+37:         {
+38:             "marketId": 5,
+39:             "marketName": "Both teams to score",
+40:             "choiceGroup": None,
+41:             "choices": [_choice("Yes", "1/1"), _choice("No", "7/10")],
+42:         },
+43:         {
+44:             "marketId": 9,
+45:             "marketName": "Match goals",
+46:             "choiceGroup": "1.5",
+47:             "choices": [_choice("Over", "2/5"), _choice("Under", "2/1")],
+48:         },
+49:         {
+50:             "marketId": 9,
+51:             "marketName": "Match goals",
+52:             "choiceGroup": "2.5",
+53:             "choices": [_choice("Over", "1/1"), _choice("Under", "4/5")],
+54:         },
+55:         {
+56:             "marketId": 17,
+57:             "marketName": "Asian handicap",
+58:             "choiceGroup": None,
+59:             "choices": [_choice("(-0.75) Croatia", "1/1"), _choice("(0.75) Ghana", "4/5")],
+60:         },
+62:         {
+63:             "marketId": 3,
+64:             "marketName": "1st half",
+65:             "choiceGroup": None,
+66:             "choices": [_choice("1", "7/5")],
+67:         },
+68:         {
+69:             "marketId": 20,
+70:             "marketName": "Cards in match",
+71:             "choiceGroup": "2.5",
+72:             "choices": [_choice("Over", "4/5")],
+73:         },
+74:     ]
+75: }
+78: def test_1x2():
+79:     out = parse_all_odds(RAW)
+80:     assert out["1x2"]["1"] == pytest.approx(1.8)
+81:     assert out["1x2"]["X"] == pytest.approx(2.0)
+82:     assert out["1x2"]["2"] == pytest.approx(2.2)
+85: def test_double_chance():
+86:     out = parse_all_odds(RAW)
+87:     assert out["dc"]["1X"] == pytest.approx(1.2)
+88:     assert out["dc"]["12"] == pytest.approx(1.5)
+91: def test_draw_no_bet():
+92:     out = parse_all_odds(RAW)
+93:     assert out["dnb"]["1"] == pytest.approx(1.25)
+94:     assert out["dnb"]["2"] == pytest.approx(3.75)
+97: def test_btts():
+98:     out = parse_all_odds(RAW)
+99:     assert out["btts"]["Yes"] == pytest.approx(2.0)
+100:     assert out["btts"]["No"] == pytest.approx(1.7)
+103: def test_ou_multi_line():
+104:     out = parse_all_odds(RAW)
+105:     assert set(out["ou"].keys()) == {1.5, 2.5}
+106:     assert out["ou"][1.5]["Over"] == pytest.approx(1.4)
+107:     assert out["ou"][2.5]["Over"] == pytest.approx(2.0)
+108:     assert out["ou"][2.5]["Under"] == pytest.approx(1.8)
+111: def test_asian_handicap_oriented_to_home():
+113:     out = parse_all_odds(RAW, home_name="Croatia", away_name="Ghana")
+114:     assert -0.75 in out["ah"]
+115:     assert out["ah"][-0.75]["home"] == pytest.approx(2.0)  # (-0.75) Croatia = 1/1
+116:     assert out["ah"][-0.75]["away"] == pytest.approx(1.8)  # (0.75) Ghana = 4/5
+119: def test_asian_handicap_orientation_flips_with_home():
+121:     out = parse_all_odds(RAW, home_name="Ghana", away_name="Croatia")
+122:     assert 0.75 in out["ah"]
+123:     assert out["ah"][0.75]["home"] == pytest.approx(1.8)  # (0.75) Ghana
+124:     assert out["ah"][0.75]["away"] == pytest.approx(2.0)  # (-0.75) Croatia
+127: def test_out_of_scope_markets_ignored():
+130:     out = parse_all_odds(RAW)
+132:     assert all(k in ("1x2", "dc", "dnb", "btts", "ou", "ah", "cards", "corners") for k in out)
+134:     assert 2.5 in out["ou"]  # essa é a linha de gols, não de cartões
+137: def test_none_and_empty_safe():
+138:     assert parse_all_odds(None)["1x2"] == {}
+139:     assert parse_all_odds({})["ou"] == {}
+140:     assert parse_all_odds({"markets": []})["ah"] == {}
+143: def test_ah_without_team_names_is_skipped():
+145:     out = parse_all_odds(RAW)
+146:     assert out["ah"] == {}
+149: def test_initial_reads_opening_odds():
+151:     raw = {
+152:         "markets": [
+153:             {
+154:                 "marketId": 1,
+155:                 "choices": [
+156:                     {"name": "1", "fractionalValue": "4/5", "initialFractionalValue": "73/100"},
+157:                     {"name": "X", "fractionalValue": "1/1", "initialFractionalValue": "11/10"},
+158:                     {"name": "2", "fractionalValue": "6/5", "initialFractionalValue": "5/4"},
+159:                 ],
+160:             },
+161:             {
+162:                 "marketId": 9,
+163:                 "choiceGroup": "2.5",
+164:                 "choices": [
+165:                     {"name": "Over", "fractionalValue": "1/1", "initialFractionalValue": "9/10"},
+166:                     {"name": "Under", "fractionalValue": "4/5", "initialFractionalValue": "17/20"},
+167:                 ],
+168:             },
+169:         ]
+170:     }
+171:     close = parse_all_odds(raw)
+172:     op = parse_all_odds(raw, initial=True)
+173:     assert close["1x2"]["1"] == pytest.approx(1.8)  # 4/5 (fechamento)
+174:     assert op["1x2"]["1"] == pytest.approx(1.73)  # 73/100 (abertura)
+175:     assert op["ou"][2.5]["Over"] == pytest.approx(1.9)  # 9/10 (abertura)
+### tests/test_parse_ou_scope_regression.py
+3: import copy
+5: import pytest
+7: from brasileirao_predictor.ingest_sofascore import parse_all_odds, parse_ou
+10: def market(name="Match goals", market_id=9, over="4/5", under="1/1"):
+11:     return {
+12:         "marketId": market_id,
+13:         "marketName": name,
+14:         "choiceGroup": "2.5",
+15:         "choices": [
+16:             {"name": "Over", "fractionalValue": over, "initialFractionalValue": "3/4"},
+17:             {"name": "Under", "fractionalValue": under, "initialFractionalValue": "21/20"},
+18:         ],
+19:     }
+22: @pytest.mark.parametrize(
+23:     "name,market_id",
+24:     [
+25:         ("Total corners", 21),
+26:         ("Total cards", 20),
+27:         ("Total goals", 20),
+28:         ("1st half total goals", 9),
+29:         ("2nd half goals", 9),
+30:         ("Home team total goals", 9),
+31:         ("Away team total goals", 9),
+32:         ("Total corners", None),
+33:         ("Corners over/under", None),
+34:     ],
+35: )
+36: def test_other_market_cannot_replace_goal_prices(name, market_id):
+37:     irrelevant = market(name, market_id, "3/1", "1/10")
+38:     assert parse_ou({"markets": [irrelevant, market()]}) == (1.8, 2.0)
+39:     assert parse_ou({"markets": [irrelevant]}) == (None, None)
+42: @pytest.mark.parametrize(
+43:     "field,value",
+44:     [
+45:         ("period", "1st half"),
+46:         ("periodName", "Second half"),
+47:         ("marketPeriod", "extra time"),
+48:         ("periodId", 1),
+49:         ("period", {"id": 1}),
+50:         ("period", "unknown"),
+51:     ],
+52: )
+53: def test_explicit_unrecognized_period_is_not_full_time(field, value):
+54:     other = market()
+55:     other[field] = value
+56:     assert parse_ou({"markets": [other]}) == (None, None)
+59: @pytest.mark.parametrize("period", ["full time", "FT", "match", "90 minutes"])
+60: def test_explicit_full_time_preserved(period):
+61:     full = market()
+62:     full["period"] = period
+63:     assert parse_ou({"markets": [full]}) == (1.8, 2.0)
+66: def test_documented_market_id_without_name_preserved():
+67:     full = market()
+68:     full.pop("marketName")
+69:     assert parse_ou({"markets": [full]}) == (1.8, 2.0)
+72: def test_legacy_goal_name_without_id_preserved():
+73:     full = market("Total goals")
+74:     full.pop("marketId")
+75:     assert parse_ou({"markets": [full]}) == (1.8, 2.0)
+78: def test_opening_and_current_do_not_mix():
+79:     full = market()
+80:     assert parse_ou({"markets": [full]}, initial=True) == (1.75, 2.05)
+81:     assert parse_ou({"markets": [full]}) == (1.8, 2.0)
+84: def test_conflicting_full_time_market_versions_fail_closed_in_any_order():
+85:     first, second = market(), market(over="11/10", under="7/10")
+86:     assert parse_ou({"markets": [first, second]}) == (None, None)
+87:     assert parse_ou({"markets": [second, first]}) == (None, None)
+90: def test_identical_market_duplicates_are_not_conflicts():
+91:     full = market()
+92:     assert parse_ou({"markets": [full, copy.deepcopy(full)]}) == (1.8, 2.0)
+95: def test_duplicate_side_with_conflicting_price_fails_closed():
+96:     full = market()
+97:     full["choices"].append({"name": "Over", "fractionalValue": "11/10"})
+98:     assert parse_ou({"markets": [full]}) == (None, None)
+101: def test_conflicting_group_and_choice_handicap_fails_closed():
+102:     full = market()
+103:     full["choices"][0]["name"] = "Over 3.5"
+104:     assert parse_ou({"markets": [full]}) == (None, None)
+107: @pytest.mark.parametrize("bad", ["nan", "inf", "-1", "0"])
+108: def test_nonfinite_or_nonbettable_quote_cannot_pass(bad):
+109:     full = market()
+110:     full["choices"][0].pop("fractionalValue")
+111:     full["choices"][0]["decimalValue"] = bad
+112:     assert parse_ou({"markets": [full]}) == (None, None)
+115: def test_unrecognized_choice_cannot_contribute_a_goal_side():
+116:     full = market()
+117:     full["choices"][0]["name"] = "Home over"
+118:     assert parse_ou({"markets": [full]}) == (None, None)
+121: def test_normalized_line_table_uses_identical_scope_and_conflict_rules():
+122:     half = market("1st half total goals")
+123:     assert parse_all_odds({"markets": [half]})["ou"] == {}
+124:     full, conflicting = market(), market(over="11/10", under="7/10")
+125:     assert parse_all_odds({"markets": [full, conflicting]})["ou"] == {}
+126:     assert parse_all_odds({"markets": [full]})["ou"] == {2.5: {"Over": 1.8, "Under": 2.0}}

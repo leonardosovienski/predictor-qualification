@@ -1,0 +1,371 @@
+### tests/test_xg_input_quality.py
+3: import itertools
+4: import sqlite3
+6: import pytest
+8: from brasileirao_predictor.data.missingness_audit import xg_coverage
+9: from brasileirao_predictor.data.xg_quality import classify_xg_pair
+10: from brasileirao_predictor.ingest_sofascore import parse_xg
+13: def payload(*items, period="ALL"):
+14:     return {"statistics": [{"period": period, "groups": [{"statisticsItems": list(items)}]}]}
+17: def item(home="1.2", away="0.7", **extra):
+18:     return {"name": "Expected goals", "home": home, "away": away, **extra}
+21: def test_xgot_cannot_substitute_for_expected_goals():
+22:     other = item("2.9", "3.8", name="Expected goals on target")
+23:     assert parse_xg(payload(other)) == (None, None)
+24:     for order in itertools.permutations([other, item()]):
+25:         assert parse_xg(payload(*order)) == (1.2, 0.7)
+28: def test_conflicting_full_match_xg_is_rejected_in_every_order():
+29:     for order in itertools.permutations([item(), item("2.1")]):
+30:         assert parse_xg(payload(*order)) == (None, None)
+31:     assert parse_xg(payload(item(), item())) == (1.2, 0.7)
+34: @pytest.mark.parametrize("value", [True, False, float("nan"), float("inf"), -0.1, "nan", "-1", {}, []])
+35: def test_invalid_xg_never_becomes_a_provider_observation(value):
+36:     assert parse_xg(payload(item(value))) == (None, None)
+39: @pytest.mark.parametrize("value", [None, [], {"statistics": None}, {"statistics": [None]}, {"statistics": "bad"}])
+40: def test_malformed_payload_is_missing_without_crashing(value):
+41:     assert parse_xg(value) == (None, None)
+44: def test_period_identity_and_real_zero_are_preserved():
+45:     assert parse_xg(payload(item(), period="1ST")) == (None, None)
+46:     assert parse_xg(payload(item("0", "0"))) == (0.0, 0.0)
+47:     assert parse_xg(payload(item("0", "1.2"))) == (0.0, 1.2)
+48:     assert parse_xg(payload(item(key="expectedGoalsOnTarget"))) == (None, None)
+49:     assert parse_xg(payload(item(key="expectedGoals"))) == (1.2, 0.7)
+52: @pytest.mark.parametrize(
+53:     ("pair", "expected"),
+54:     [
+55:         ((None, None), "MISSING_PAIR"),
+56:         ((1, None), "PARTIAL_PAIR"),
+57:         ((0, 0), "ZERO_PAIR_UNATTESTED"),
+58:         ((0, 1), "NUMERIC_PAIR"),
+59:         ((1.2, 0.7), "NUMERIC_PAIR"),
+60:         (("0", 1), "INVALID_PAIR"),
+61:         ((True, 1), "INVALID_PAIR"),
+62:         ((-1, 1), "INVALID_PAIR"),
+63:         ((float("inf"), 1), "INVALID_PAIR"),
+64:         ((float("nan"), 1), "INVALID_PAIR"),
+65:     ],
+66: )
+67: def test_pair_classification_preserves_zero_ambiguity(pair, expected):
+68:     assert classify_xg_pair(*pair) == expected
+71: def test_presence_does_not_claim_numeric_quality_or_attested_coverage():
+72:     conn = sqlite3.connect(":memory:")
+73:     conn.execute("CREATE TABLE sofascore_matches (season, home_score, away_score, home_xg, away_xg)")
+74:     conn.executemany(
+75:         "INSERT INTO sofascore_matches VALUES (?,?,?,?,?)",
+76:         [
+77:             ("2021", 3, 2, 0, 0),
+78:             ("2021", 0, 0, 0, 0),
+79:             ("2022", 0, 0, 0, 1),
+80:             ("2022", 1, 0, None, 1),
+81:             ("2022", 1, 0, -1, 1),
+82:             ("2022", 1, 0, "not-xg", 1),
+83:             ("2022", None, None, 1, 1),
+84:         ],
+85:     )
+86:     result = xg_coverage(conn)
+87:     assert result["total"]["played"] == 6
+88:     assert result["total"]["paired_xg_present"] == 5
+89:     assert result["total"]["paired_xg_numeric"] == 3
+90:     assert result["total"]["zero_pair_unattested"] == 2
+91:     assert result["total"]["numeric_nonzero_pair"] == 1
+92:     assert result["total"]["invalid_pair"] == 2
+93:     assert result["total"]["partial_pair"] == 1
+94:     assert result["source_provenance_attested"] is False
+95:     assert result["seasons"][0]["all_reported_pairs_zero"] is True
+97:     assert conn.execute("SELECT COUNT(*) FROM sofascore_matches WHERE home_xg=0 AND away_xg=0").fetchone()[0] == 2
+98:     conn.close()
+### tests/test_xg_model.py
+4: import math
+6: import pytest
+8: from brasileirao_predictor import db, model, xg_model
+12: def _liga_sintetica():
+15:     placar = {
+16:         ("Forte", "Fraco"): (4, 0),
+17:         ("Fraco", "Forte"): (0, 3),
+18:         ("Forte", "MedioA"): (2, 0),
+19:         ("MedioA", "Forte"): (1, 2),
+20:         ("Forte", "MedioB"): (3, 1),
+21:         ("MedioB", "Forte"): (0, 2),
+22:         ("MedioA", "MedioB"): (1, 1),
+23:         ("MedioB", "MedioA"): (1, 1),
+24:         ("MedioA", "Fraco"): (2, 0),
+25:         ("Fraco", "MedioA"): (0, 1),
+26:         ("MedioB", "Fraco"): (2, 1),
+27:         ("Fraco", "MedioB"): (1, 2),
+28:     }
+29:     matches = []
+30:     mes = 1
+31:     for rodada in range(4):  # 4 voltas = 48 jogos
+32:         for (h, a), (hs, as_) in placar.items():
+33:             matches.append((f"2025-{mes:02d}-15", h, a, hs, as_))
+34:         mes += 2
+35:     return sorted(matches)
+38: @pytest.fixture
+39: def xgp():
+40:     m = _liga_sintetica()
+42:     xg = {(d, h, a): (float(hs), float(as_)) for d, h, a, hs, as_ in m}
+43:     return xg_model.fit(m, xg, "2025-08-01")
+47: def test_fit_ordena_forcas(xgp):
+48:     assert xgp is not None and xgp["ok"]
+49:     assert xgp["atk"]["Forte"] > xgp["atk"]["MedioA"] > xgp["atk"]["Fraco"]
+50:     assert xgp["def"]["Forte"] > xgp["def"]["Fraco"]
+53: def test_fit_vazio_devolve_none():
+54:     assert xg_model.fit([], {}, "2025-08-01") is None
+57: def test_fit_sem_xg_cai_nos_gols():
+59:     m = _liga_sintetica()
+60:     p = xg_model.fit(m, {}, "2025-08-01")
+61:     assert p["ok"]
+62:     assert p["atk"]["Forte"] > p["atk"]["Fraco"]
+65: def test_fit_e_serializavel(xgp):
+66:     import json
+68:     blob = json.dumps(xgp)  # cache do cron é JSON
+69:     assert json.loads(blob)["mu"] == pytest.approx(xgp["mu"])
+73: def test_predict_probs_consistentes(xgp):
+74:     r = xg_model.predict(xgp, "Forte", "Fraco")
+75:     assert r["p_win"] + r["p_draw"] + r["p_loss"] == pytest.approx(1.0, abs=1e-9)
+76:     assert r["p_win"] > 0.5  # forte em casa é favorito claro
+77:     assert r["lambda_a"] > r["lambda_b"]
+80: def test_predict_time_desconhecido_e_media(xgp):
+82:     r = xg_model.predict(xgp, "Promovido", "OutroNovo")
+83:     assert r["p_win"] + r["p_draw"] + r["p_loss"] == pytest.approx(1.0, abs=1e-9)
+85:     assert r["lambda_a"] / r["lambda_b"] == pytest.approx(math.exp(xgp["ha"]), rel=1e-6)
+88: def test_predict_neutro_remove_mando(xgp):
+89:     rn = xg_model.predict(xgp, "MedioA", "MedioB", neutral=True)
+90:     rc = xg_model.predict(xgp, "MedioA", "MedioB", neutral=False)
+91:     assert rn["lambda_a"] < rc["lambda_a"]  # sem mando, ataque de A cai
+93:     rn_inv = xg_model.predict(xgp, "MedioB", "MedioA", neutral=True)
+94:     assert rn["lambda_a"] == pytest.approx(rn_inv["lambda_b"], rel=1e-9)
+95:     assert rn["p_win"] == pytest.approx(rn_inv["p_loss"], rel=1e-9)
+99: def _base_result():
+100:     return model.predict_match(1600, 1500, (0.2, 0.7, 1e-4, 0.01), 100.0, max_goals=12)
+103: def test_blend_extremos(xgp):
+104:     rb = _base_result()
+105:     rx = xg_model.predict(xgp, "Forte", "Fraco")
+106:     b1 = xg_model.blend(rb, rx, w_base=1.0)
+107:     assert b1["p_win"] == pytest.approx(rb["p_win"], abs=1e-9)
+108:     b0 = xg_model.blend(rb, rx, w_base=0.0)
+109:     assert b0["p_win"] == pytest.approx(rx["p_win"], abs=1e-9)
+112: def test_blend_meio_soma_um_e_marca_ensemble(xgp):
+113:     rb = _base_result()
+114:     rx = xg_model.predict(xgp, "Forte", "Fraco")
+115:     b = xg_model.blend(rb, rx, w_base=0.5)
+116:     assert b["ensemble"] is True
+117:     assert b["p_win"] + b["p_draw"] + b["p_loss"] == pytest.approx(1.0, abs=1e-9)
+118:     assert min(rb["p_win"], rx["p_win"]) <= b["p_win"] <= max(rb["p_win"], rx["p_win"])
+119:     assert b["lambda_a"] == pytest.approx(0.5 * rb["lambda_a"] + 0.5 * rx["lambda_a"])
+121:     assert 0.0 < b["over"][2.5] < 1.0
+125: def test_save_load_xg_params_roundtrip(tmp_path, xgp):
+126:     conn = db.connect(str(tmp_path / "t.db"))
+127:     db.save_xg_params(conn, xgp, 48, "hash123", "2025-08-01T00:00:00+00:00")
+128:     loaded, n, h, at = db.load_xg_params(conn)
+129:     assert loaded["atk"]["Forte"] == pytest.approx(xgp["atk"]["Forte"])
+130:     assert (n, h) == (48, "hash123")
+133: def test_load_xg_params_vazio(tmp_path):
+134:     conn = db.connect(str(tmp_path / "t.db"))
+135:     assert db.load_xg_params(conn) is None
+139: def test_maybe_blend_desligado_devolve_intocado():
+140:     rb = _base_result()
+141:     out = xg_model.maybe_blend(rb, None, {"ensemble_xg": {"enabled": False}}, "A", "B", False)
+142:     assert out is rb  # MESMO objeto, zero mutação
+145: def test_maybe_blend_sem_secao_config():
+146:     rb = _base_result()
+147:     assert xg_model.maybe_blend(rb, None, {}, "A", "B", False) is rb
+150: def test_maybe_blend_ligado_sem_cache_degrada(tmp_path, capsys):
+151:     conn = db.connect(str(tmp_path / "t.db"))
+152:     rb = _base_result()
+153:     out = xg_model.maybe_blend(rb, conn, {"ensemble_xg": {"enabled": True}}, "A", "B", False)
+154:     assert out is rb  # degrada pro baseline
+155:     assert "sem cache" in capsys.readouterr().err
+158: def test_maybe_blend_ligado_com_cache_blenda(tmp_path, xgp):
+159:     conn = db.connect(str(tmp_path / "t.db"))
+160:     db.save_xg_params(conn, xgp, 48, "h", "2025-08-01T00:00:00+00:00")
+161:     rb = _base_result()
+162:     out = xg_model.maybe_blend(rb, conn, {"ensemble_xg": {"enabled": True}}, "Forte", "Fraco", False)
+163:     assert out is not rb and out.get("ensemble") is True
+164:     assert out["p_win"] + out["p_draw"] + out["p_loss"] == pytest.approx(1.0, abs=1e-9)
+167: def test_maybe_blend_nunca_lanca(tmp_path, capsys):
+169:     conn = db.connect(str(tmp_path / "t.db"))
+170:     db.save_xg_params(conn, {"lixo": 1}, 0, "h", "x")  # sem atk/def/mu
+171:     rb = _base_result()
+172:     out = xg_model.maybe_blend(rb, conn, {"ensemble_xg": {"enabled": True}}, "A", "B", False)
+173:     assert out is rb
+174:     assert "falhou" in capsys.readouterr().err
+178: def test_config_hash_inclui_recencia_e_flag_do_ensemble():
+180:     from brasileirao_predictor.cron_update_models import config_hash
+182:     cfg = {
+183:         "elo": {"k": 1},
+184:         "model": {"calibration_window_years": 4, "goal_half_life_days": 360},
+185:     }
+186:     h0 = config_hash(cfg)
+187:     cfg2 = dict(cfg, ensemble_xg={"enabled": False})
+188:     assert config_hash(cfg2) == h0
+189:     cfg3 = dict(cfg, ensemble_xg={"enabled": True})
+190:     assert config_hash(cfg3) != h0
+191:     cfg4 = {**cfg, "model": {**cfg["model"], "goal_half_life_days": 180}}
+192:     assert config_hash(cfg4) != h0
+195: def test_cache_is_current_requires_matching_hash_and_completed_count():
+196:     from brasileirao_predictor.cron_update_models import cache_is_current, config_hash
+198:     cfg = {
+199:         "elo": {"k": 1},
+200:         "model": {"calibration_window_years": 4, "goal_half_life_days": 360},
+201:     }
+203:     class Conn:
+204:         def execute(self, _sql):
+205:             return self
+207:         def fetchone(self):
+208:             return (10,)
+210:     current = (0.1, 0.2, 0.3, 0.0, 10, config_hash(cfg), "now")
+211:     assert cache_is_current(cfg, Conn(), current)
+212:     assert not cache_is_current(cfg, Conn(), (*current[:4], 9, *current[5:]))
+213:     assert not cache_is_current(cfg, Conn(), (*current[:5], "wrong", current[6]))
+### tests/test_audit_hardening.py
+1: import importlib
+3: import pytest
+5: from brasileirao_scripts import evaluate_h14_prospective as h14
+6: from brasileirao_scripts import evaluate_h15_prospective as h15
+7: from brasileirao_scripts.prospective_metrics import holm_family
+10: @pytest.mark.parametrize("prefix", ["h14", "h15"])
+11: def test_duplicate_events_cannot_inflate_sample(prefix, tmp_path, monkeypatch):
+12:     cases = importlib.import_module(f"test_evaluate_{prefix}_prospective")
+13:     database, ledger = cases._seed_db_and_ledger(tmp_path, n=cases.MIN_N)
+14:     first = ledger.read_text(encoding="utf-8").splitlines()[0]
+15:     with ledger.open("a", encoding="utf-8") as stream:
+16:         stream.write(first + "\n")
+17:     registry = tmp_path / "trials.json"
+18:     cases._trials_json(registry)
+19:     def forbidden(*args):
+20:         raise AssertionError("No metric permitted for a duplicated ledger")
+21:     monkeypatch.setattr(cases.job, "_paired_gain", forbidden)
+22:     with pytest.raises(cases.job.EvaluationBlocked, match="Duplicate"):
+23:         cases.job.evaluate(trials_path=registry, ledger_path=ledger,
+24:                            db_path=database, reports_dir=tmp_path / "reports")
+27: @pytest.mark.parametrize("job", [h14, h15])
+28: @pytest.mark.parametrize("interval", [None, [], [1], [1, 2, 3], ["0", 1], [True, 1], [0, float("inf")]])
+29: def test_invalid_primary_cannot_crash_or_approve(job, interval):
+30:     assert job._verdict({"ci95": interval}, {})[0] == "inconclusiva"
+33: @pytest.mark.parametrize("job", [h14, h15])
+34: def test_partially_recorded_score_is_not_completed(job):
+35:     import sqlite3
+37:     with sqlite3.connect(":memory:") as db:
+38:         db.execute("CREATE TABLE sofascore_matches(event_id INTEGER, home_score INTEGER, away_score INTEGER)")
+39:         db.executemany("INSERT INTO sofascore_matches VALUES (?, ?, ?)", [(1, 2, None), (2, None, 1), (3, 0, 0)])
+40:         assert job._results_by_event(db) == {3: (0, 0)}
+43: @pytest.mark.parametrize("alpha", [None, "0.05", True, float("nan"), -0.1, 1])
+44: def test_invalid_alpha_is_a_validation_error(alpha):
+45:     with pytest.raises(ValueError):
+46:         holm_family({"A": 0.01, "B": 0.04}, expected_ids=("A", "B"), alpha=alpha)
+### tests/test_prospective_metrics.py
+1: import pytest
+3: from brasileirao_scripts.prospective_metrics import brier_ou25, holm_family
+6: def test_brier_convention_and_boundary():
+7:     assert brier_ou25(0.75, 2, 1) == 0.125
+8:     assert brier_ou25(0.75, 2, 0) == 1.125
+9:     assert brier_ou25(1, 2, 1) == 0
+10:     assert brier_ou25(0, 2, 1) == 2
+13: @pytest.mark.parametrize("value", [None, True, -0.1, 1.1, float("nan"), float("inf")])
+14: def test_invalid_forecasts_are_not_filled_in(value):
+15:     with pytest.raises(ValueError):
+16:         brier_ou25(value, 2, 1)
+19: def test_holm_stops_after_first_failed_hypothesis():
+20:     result = holm_family({"H14": 0.03, "H15": 0.04}, expected_ids=("H14", "H15"))
+21:     assert result["adjusted_p_values"] == {"H14": 0.06, "H15": 0.06}
+22:     assert result["rejected"] == {"H14": False, "H15": False}
+25: def test_holm_is_order_invariant_and_keeps_family():
+26:     first = holm_family({"H14": 0.02, "H15": 0.045}, expected_ids=("H14", "H15"))
+27:     assert first["rejected"] == {"H14": True, "H15": True}
+28:     assert first == holm_family({"H15": 0.045, "H14": 0.02}, expected_ids=("H15", "H14"))
+29:     with pytest.raises(ValueError):
+30:         holm_family({"H14": 0.02}, expected_ids=("H14", "H15"))
+33: @pytest.mark.parametrize("value", [True, None, -0.1, 1.1, float("nan"), float("inf")])
+34: def test_holm_rejects_invalid_p_values(value):
+35:     with pytest.raises(ValueError):
+36:         holm_family({"H14": value, "H15": 0.5}, expected_ids=("H14", "H15"))
+### tests/test_prospective_protocol_compatibility.py
+3: import json
+4: from unittest.mock import Mock
+6: import pytest
+8: from brasileirao_scripts import evaluate_h14_prospective as h14
+9: from brasileirao_scripts import evaluate_h15_prospective as h15
+10: from brasileirao_scripts._prospective_evaluation_guard import EvaluationBlocked, claim_directory
+13: @pytest.mark.parametrize("job", [h14, h15])
+14: @pytest.mark.parametrize(
+15:     "declared",
+16:     [
+17:         ["log_loss", "brier_1x2", "brier_ou25"],
+18:         None,
+19:         [],
+20:         ["log_loss"],
+21:         ["log_loss", "log_loss"],
+22:         [[], "brier_1x2"],
+23:     ],
+24: )
+25: def test_incompatible_protocol_blocks_before_claim_or_cohort_reads(job, declared, tmp_path, monkeypatch):
+26:     registry = tmp_path / "trials.json"
+27:     registry.write_text(
+28:         json.dumps(
+29:             [
+30:                 {
+31:                     "name": job.TRIAL,
+32:                     "params": {"primary_metric": "rps", "guardrails": declared, "min_n_avaliacao": 900},
+33:                 }
+34:             ]
+35:         ),
+36:         encoding="utf-8",
+37:     )
+38:     ledger = tmp_path / "unread-cohort.jsonl"
+39:     database = tmp_path / "unread-results.db"
+40:     forbidden = Mock(side_effect=AssertionError("cohort access forbidden"))
+41:     monkeypatch.setattr(job, "_load_jsonl", forbidden)
+42:     monkeypatch.setattr(job.db, "connect", forbidden)
+43:     monkeypatch.setattr(job, "load_config", forbidden)
+44:     with pytest.raises(EvaluationBlocked, match="metric mismatch"):
+45:         job.evaluate(trials_path=registry, ledger_path=ledger, db_path=database, reports_dir=tmp_path / "reports")
+46:     forbidden.assert_not_called()
+47:     assert not claim_directory(trial=job.TRIAL, ledger_path=ledger).exists()
+48:     assert list(tmp_path.iterdir()) == [registry]
+51: @pytest.mark.parametrize("job", [h14, h15])
+52: def test_cli_blocks_unsupported_protocol_without_output_or_claim(job, tmp_path, monkeypatch, capsys):
+53:     registry = tmp_path / "trials.json"
+54:     registry.write_text(
+55:         json.dumps(
+56:             [
+57:                 {
+58:                     "name": job.TRIAL,
+59:                     "params": {
+60:                         "primary_metric": "rps",
+61:                         "guardrails": ["log_loss", "brier_1x2", "brier_ou25"],
+62:                     },
+63:                 }
+64:             ]
+65:         ),
+66:         encoding="utf-8",
+67:     )
+68:     monkeypatch.setattr(job, "TRIALS_PATH", registry)
+69:     monkeypatch.setattr(job, "LEDGER_PATH", tmp_path / "ledger.jsonl")
+70:     monkeypatch.setattr(job, "REPORTS_DIR", tmp_path / "reports")
+71:     assert job.main() == 1
+72:     captured = capsys.readouterr()
+73:     assert captured.out == ""
+74:     assert "brier_ou25" in captured.err
+75:     assert list(tmp_path.iterdir()) == [registry]
+78: @pytest.mark.parametrize("job", [h14, h15])
+79: @pytest.mark.parametrize("interval", [[-0.1, 0.1], [-0.1, 0.0], [0.0, 0.0]])
+80: def test_zero_interval_does_not_assert_equivalence_or_strict_negativity(job, interval):
+81:     status, detail = job._verdict({"ci95": interval}, {})
+82:     assert status == "refutada"  # Existing native decision rule is preserved.
+83:     assert "não prova equivalência" in detail
+84:     assert "estritamente negativo" not in detail
+87: @pytest.mark.parametrize("job", [h14, h15])
+88: @pytest.mark.parametrize("interval", [None, [None, None], [float("nan"), 0.1], [0.2, 0.1]])
+89: def test_missing_or_invalid_guardrail_cannot_approve(job, interval):
+90:     guardrails = {"log_loss": {"ci95": [0.01, 0.1]}}
+91:     if interval is not None:
+92:         guardrails["brier_1x2"] = {"ci95": interval}
+93:     status, _ = job._verdict({"ci95": [0.01, 0.1]}, guardrails)
+94:     assert status == "inconclusiva"
+97: @pytest.mark.parametrize("job", [h14, h15])
+98: def test_complete_guardrails_keep_existing_individual_decision(job):
+99:     guardrails = {metric: {"ci95": [0.01, 0.1]} for metric in job.GUARDRAIL_METRICS}
+100:     assert job._verdict({"ci95": [0.01, 0.1]}, guardrails)[0] == "comprovada"
+101:     guardrails["log_loss"]["ci95"] = [-0.2, -0.1]
+102:     assert job._verdict({"ci95": [0.01, 0.1]}, guardrails)[0] == "refutada"

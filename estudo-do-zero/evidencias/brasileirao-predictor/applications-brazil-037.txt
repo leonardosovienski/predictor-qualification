@@ -1,0 +1,460 @@
+### brasileirao_predictor/serving_evaluator.py
+41: from __future__ import annotations
+43: import math
+44: from datetime import date, datetime, timedelta
+45: from typing import Any
+47: from predictor_core.contracts.points import PredictionPoint
+48: from predictor_core.testing.prequential import PrequentialEvaluator
+50: from brasileirao_predictor import dynamic_strength, model, ratings, xg_model
+52: __all__ = ["DynamicStrengthServingEvaluator", "ServingStackEvaluator"]
+55: class ServingStackEvaluator(PrequentialEvaluator):
+81:     def __init__(self, cfg: dict[str, Any], *, max_goals: int | None = None) -> None:
+82:         super().__init__(target_key="result")
+83:         self.cfg = cfg
+84:         self.max_goals: int = int(max_goals or cfg["model"]["max_goals"])
+85:         self.goal_half_life_days: float | None = cfg["model"]["goal_half_life_days"]
+86:         model.exponential_recency_weights([], "2000-01-01", self.goal_half_life_days)
+87:         ecfg = (cfg.get("ensemble_xg") or {}) if cfg else {}
+88:         self.ensemble_enabled: bool = bool(ecfg.get("enabled"))
+89:         self.blend_weight: float = float(ecfg.get("blend_weight", 0.5))
+90:         self.elo: dict[str, float] = {}
+91:         self.params: tuple | None = None
+92:         self.xg_params: dict[str, Any] | None = None
+93:         self._trained_at: datetime | None = None
+94:         self._pending_history: list[dict[str, Any]] | None = None
+95:         self.blocked_observations: int = 0
+96:         self.deferred_refits: int = 0
+97:         self.xg_fit_failures: int = 0
+98:         self.dynamic_states: dict[str, dict[str, float]] | None = None
+99:         self.dynamic_cfg: dict[str, Any] | None = None
+103:     def train_step(self, history: list[dict[str, Any]]) -> None:
+105:         self._pending_history = list(history)
+107:     def predict_step(self, features: dict[str, Any]) -> PredictionPoint:
+108:         if self._pending_history is not None:
+109:             self._fit(self._pending_history, features["kickoff"])
+110:             self._pending_history = None
+111:         if self.params is None or self._trained_at is None:
+112:             raise RuntimeError("predict_step antes de train_step — chamada fora de ordem")
+114:         home, away = str(features["home"]), str(features["away"])
+115:         neutral = bool(features.get("neutral"))
+116:         adv = 0.0 if neutral else float(self.cfg["elo"]["home_advantage"])
+117:         base = float(self.cfg["elo"]["initial_rating"])
+121:         r = model.predict_match(
+122:             self.elo.get(home, base),
+123:             self.elo.get(away, base),
+124:             self.params,
+125:             adv,
+126:             max_goals=self.max_goals,
+127:         )
+128:         if self.dynamic_states is not None:
+129:             corr_home, corr_away = dynamic_strength.corrections(self.dynamic_states, home, away)
+130:             a, b, alpha, rho, _theta = model._unpack_params(self.params)
+131:             diff = (self.elo.get(home, base) + adv - self.elo.get(away, base)) / 400.0
+132:             lam_home = math.exp(a + b * diff + corr_home)
+133:             lam_away = math.exp(a - b * diff + corr_away)
+134:             grid = model._score_grid(lam_home, lam_away, alpha, rho, self.max_goals)
+135:             r = {
+136:                 "lambda_a": lam_home,
+137:                 "lambda_b": lam_away,
+138:                 "total_goals": lam_home + lam_away,
+139:                 **model._grid_stats(grid, self.max_goals),
+140:             }
+141:         if self.xg_params is not None:
+142:             rx = xg_model.predict(self.xg_params, home, away, neutral=neutral, max_goals=self.max_goals)
+143:             r = xg_model.blend(r, rx, w_base=self.blend_weight)
+145:         return PredictionPoint(
+146:             predicted_at=self._trained_at,
+147:             matures_at=features["kickoff"],
+148:             value={"home": r["p_win"], "draw": r["p_draw"], "away": r["p_loss"]},
+149:             metadata={
+150:                 "home": home,
+151:                 "away": away,
+152:                 "lam": r["lambda_a"],
+153:                 "mu": r["lambda_b"],
+158:                 "effective_elo_diff": self.elo.get(home, base) + adv - self.elo.get(away, base),
+168:                 "p_over": float(r["over"][2.5]),
+169:                 "p_btts": float(r["btts"]),
+170:                 "ensemble": bool(r.get("ensemble")),
+171:                 "model": "Ensemble(NB+DC, AtkDef-xG)" if r.get("ensemble") else "NegBin+DixonColes",
+172:             },
+173:         )
+177:     def _fit(self, history: list[dict[str, Any]], horizon: datetime) -> None:
+178:         usable = [h for h in history if h["kickoff"] < horizon]
+179:         if len(usable) < 2:
+180:             self.deferred_refits += 1
+181:             if self.params is None:
+182:                 raise ValueError(
+183:                     f"histórico anterior a {horizon.isoformat()} insuficiente para o primeiro "
+184:                     f"ajuste ({len(usable)} de {len(history)}) — aumente min_history ou verifique "
+185:                     "a ordenação por kickoff"
+186:                 )
+187:             return
+188:         self.blocked_observations += len(history) - len(usable)
+190:         rows = [
+191:             (
+192:                 h["date"],
+193:                 h["home"],
+194:                 h["away"],
+195:                 h["result"]["home_goals"],
+196:                 h["result"]["away_goals"],
+197:                 h.get("tournament") or self.cfg.get("tournament_name"),
+198:                 int(bool(h.get("neutral"))),
+199:             )
+200:             for h in usable
+201:         ]
+205:         asof = rows[-1][0]
+206:         rows = self._window(rows, self.cfg["elo"].get("window_years"), asof)
+207:         elo, hist = ratings.compute_ratings(rows, self.cfg["elo"], asof=horizon.date())
+208:         cal_cut = _cut(asof, self.cfg["model"]["calibration_window_years"])
+209:         hist_cal_rows = [(h, r) for h, r in zip(hist, rows) if r[0] >= cal_cut]
+210:         hist_cal = [h for h, _r in hist_cal_rows]
+211:         fit_rows = [r for _h, r in hist_cal_rows]
+212:         if not hist_cal:
+213:             hist_cal, fit_rows = hist, rows
+214:         weights = model.exponential_recency_weights([r[0] for r in fit_rows], asof, self.goal_half_life_days)
+215:         self.elo = elo
+216:         self.params = model.fit_goal_model(hist_cal, sample_weights=weights)
+217:         self.dynamic_states = self._fit_dynamic(hist, rows) if self.dynamic_cfg is not None else None
+218:         self.xg_params = self._fit_xg(usable, asof) if self.ensemble_enabled else None
+219:         self._trained_at = max(h["kickoff"] for h in usable)
+221:     def _fit_dynamic(self, hist: list[tuple], rows: list[tuple]) -> dict[str, dict[str, float]]:
+222:         if self.params is None or self.dynamic_cfg is None:
+223:             raise RuntimeError("ajuste dinâmico exige parâmetros e configuração")
+224:         return dynamic_strength.fit(
+225:             hist,
+226:             self.params,
+227:             ((r[1], r[2]) for r in rows),
+228:             alpha_short=float(self.dynamic_cfg["alpha_short"]),
+229:             alpha_long=float(self.dynamic_cfg["alpha_long"]),
+230:             ridge_reg=float(self.dynamic_cfg.get("ridge_reg", 1.0)),
+231:             eps=float(self.dynamic_cfg.get("eps", 0.1)),
+232:         )
+234:     def _fit_xg(self, usable: list[dict[str, Any]], asof: str) -> dict[str, Any] | None:
+239:         matches = [
+240:             (h["date"], h["home"], h["away"], h["result"]["home_goals"], h["result"]["away_goals"]) for h in usable
+241:         ]
+242:         xg_map = {
+243:             (h["date"][:10], h["home"], h["away"]): (
+244:                 h["result"].get("home_xg"),
+245:                 h["result"].get("away_xg"),
+246:             )
+247:             for h in usable
+248:         }
+249:         try:
+250:             return xg_model.fit(matches, xg_map, asof, self.cfg.get("ensemble_xg"))
+251:         except Exception:
+252:             self.xg_fit_failures += 1
+253:             return None
+255:     @staticmethod
+256:     def _window(rows: list[tuple], window_years: float | None, asof: str) -> list[tuple]:
+257:         if not window_years:
+258:             return rows
+259:         cut = _cut(asof, window_years)
+260:         return [r for r in rows if r[0] >= cut] or rows
+263: class DynamicStrengthServingEvaluator(ServingStackEvaluator):
+266:     def __init__(self, cfg: dict[str, Any], *, max_goals: int | None = None) -> None:
+267:         super().__init__(cfg, max_goals=max_goals)
+268:         self.dynamic_cfg = dict(cfg.get("dynamic_strength") or {})
+269:         if not self.dynamic_cfg:
+270:             raise ValueError("dynamic_strength ausente da configuracao")
+273: class H9FrozenPolicyEvaluator(ServingStackEvaluator):
+276:     def __init__(self, cfg: dict[str, Any], *, max_goals: int | None = None) -> None:
+277:         frozen = cfg.get("h9_frozen_policy") or {}
+278:         raw = frozen.get("params")
+279:         if not isinstance(raw, (list, tuple)) or len(raw) != 4:
+280:             raise ValueError("h9_frozen_policy.params deve conter a/b/alpha/rho")
+281:         super().__init__(cfg, max_goals=max_goals or frozen.get("max_goals"))
+282:         self.frozen_params = tuple(float(value) for value in raw)
+283:         self.ensemble_enabled = False
+285:     def _fit(self, history: list[dict[str, Any]], horizon: datetime) -> None:
+286:         usable = [h for h in history if h["kickoff"] < horizon]
+287:         if len(usable) < 2:
+288:             self.deferred_refits += 1
+289:             if self.params is None:
+290:                 raise ValueError("histórico insuficiente para política H9")
+291:             return
+292:         self.blocked_observations += len(history) - len(usable)
+293:         rows = [
+294:             (
+295:                 h["date"],
+296:                 h["home"],
+297:                 h["away"],
+298:                 h["result"]["home_goals"],
+299:                 h["result"]["away_goals"],
+300:                 h.get("tournament") or self.cfg.get("tournament_name"),
+301:                 int(bool(h.get("neutral"))),
+302:             )
+303:             for h in usable
+304:         ]
+305:         rows = self._window(rows, self.cfg["elo"].get("window_years"), rows[-1][0])
+306:         self.elo, _history = ratings.compute_ratings(rows, self.cfg["elo"], asof=horizon.date())
+307:         self.params = self.frozen_params
+308:         self.xg_params = None
+309:         self.dynamic_states = None
+310:         self._trained_at = max(h["kickoff"] for h in usable)
+313: def _cut(asof: str, years: float) -> str:
+314:     return (date.fromisoformat(asof[:10]) - timedelta(days=int(float(years) * 365.25))).isoformat()
+### brasileirao_predictor/settings.py
+4: from pathlib import Path, PurePosixPath
+6: from pydantic import AnyUrl, field_validator, model_validator
+7: from pydantic_settings import BaseSettings, SettingsConfigDict
+10: class Settings(BaseSettings):
+11:     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
+13:     REDIS_URL: AnyUrl
+14:     SPORTS_DB_PATH: Path
+15:     MARKET_DB_PATH: Path
+16:     VORP_ARTIFACT_PATH: Path
+17:     TITULARIDADE_PATH: Path
+18:     RUNTIME_DIR: Path
+19:     LOG_LEVEL: str = "INFO"
+20:     THE_ODDS_API_KEY: str | None = None
+21:     API_FOOTBALL_KEY: str | None = None
+22:     SPORTMONKS_API_TOKEN: str | None = None
+23:     EXCHANGE_WEBSOCKET_URL: AnyUrl | None = None
+24:     EXCHANGE_API_KEY: str | None = None
+26:     @field_validator("REDIS_URL")
+27:     @classmethod
+28:     def redis_scheme(cls, value: AnyUrl) -> AnyUrl:
+29:         if value.scheme not in {"redis", "rediss"}:
+30:             raise ValueError("REDIS_URL must use redis:// or rediss://")
+31:         return value
+33:     @field_validator(
+34:         "SPORTS_DB_PATH",
+35:         "MARKET_DB_PATH",
+36:         "VORP_ARTIFACT_PATH",
+37:         "TITULARIDADE_PATH",
+38:         "RUNTIME_DIR",
+39:         mode="before",
+40:     )
+41:     @classmethod
+42:     def absolute_path(cls, value: object) -> object:
+43:         if not Path(str(value)).is_absolute() and not PurePosixPath(str(value)).is_absolute():
+44:             raise ValueError("production paths must be absolute")
+45:         return value
+47:     @model_validator(mode="after")
+48:     def isolated_databases(self) -> "Settings":
+49:         if self.SPORTS_DB_PATH.resolve() == self.MARKET_DB_PATH.resolve():
+50:             raise ValueError("SPORTS_DB_PATH and MARKET_DB_PATH must be isolated")
+51:         return self
+### brasileirao_predictor/settle.py
+10: import json
+11: import os
+12: from datetime import UTC, datetime
+13: from pathlib import Path
+15: from .identity import legacy_canonical_name as _canon
+16: from .paths import project_root
+20: ROOT = project_root()
+21: PRED_PATH = ROOT / "data" / "predictions.jsonl"
+22: RESULTS_PATH = ROOT / "data" / "results.jsonl"
+23: ENV_RESULTS = "RESULTS_LOG_PATH"
+27: STAT_KEYS = (
+28:     "possession",
+29:     "xg",
+30:     "big_chances",
+31:     "shots",
+32:     "shots_on_target",
+33:     "gk_saves",
+34:     "corners",
+35:     "fouls",
+36:     "passes",
+37:     "tackles",
+38:     "yellow",
+39:     "red",
+40: )
+43: def _find_prediction(home, away, match_date=None, pred_path=None, *, prediction_id=None):
+48:     p = Path(pred_path or PRED_PATH)
+49:     if not p.exists():
+50:         if prediction_id is not None:
+51:             raise ValueError("prediction_id not found")
+52:         return None
+53:     target = frozenset((_canon(home), _canon(away)))
+54:     hit = None
+55:     for line in p.read_text(encoding="utf-8").splitlines():
+56:         r = json.loads(line)
+57:         if prediction_id is not None:
+58:             if r.get("prediction_id") != prediction_id:
+59:                 continue
+60:             if hit is not None:
+61:                 raise ValueError("ambiguous duplicate prediction_id")
+62:             if frozenset((_canon(r["home"]), _canon(r["away"]))) != target:
+63:                 raise ValueError("prediction_id belongs to different teams")
+64:             if match_date and r.get("match_date") != match_date:
+65:                 raise ValueError("prediction_id belongs to a different date")
+66:             hit = r
+67:             continue
+68:         if frozenset((_canon(r["home"]), _canon(r["away"]))) == target:
+69:             if match_date and r.get("match_date") != match_date:
+70:                 continue
+71:             hit = r  # fica com a mais recente
+72:     if prediction_id is not None and hit is None:
+73:         raise ValueError("prediction_id not found")
+74:     return hit
+77: def _orient(pred, home, away):
+82:     if _canon(pred["home"]) == _canon(home):
+83:         return pred
+84:     swapped = dict(pred)
+85:     swapped["home"], swapped["away"] = pred["away"], pred["home"]
+86:     swapped["p_home"], swapped["p_away"] = pred["p_away"], pred["p_home"]
+87:     swapped["lambda_home"], swapped["lambda_away"] = pred["lambda_away"], pred["lambda_home"]
+89:     swapped["top_scores"] = [[[sc[1], sc[0]], p] for sc, p in pred["top_scores"]]
+90:     return swapped
+93: def _score(value):
+95:     if isinstance(value, bool):
+96:         raise ValueError("placar deve ser um inteiro não negativo")
+97:     try:
+98:         result = int(value)
+99:     except (ValueError, TypeError, OverflowError) as exc:
+100:         raise ValueError("placar deve ser um inteiro não negativo") from exc
+101:     if not isinstance(value, str) and value != result:
+102:         raise ValueError("placar deve ser um inteiro não negativo")
+103:     if result < 0:
+104:         raise ValueError("placar negativo não existe")
+105:     return result
+108: def grade(pred, home_score, away_score):
+110:     hs, as_ = _score(home_score), _score(away_score)
+111:     res = "home" if hs > as_ else ("away" if as_ > hs else "draw")
+112:     total = hs + as_
+113:     ph, pd, pa = pred["p_home"], pred["p_draw"], pred["p_away"]
+115:     pick_1x2 = max((("home", ph), ("draw", pd), ("away", pa)), key=lambda t: t[1])[0]
+116:     pick_name = {"home": pred["home"], "away": pred["away"], "draw": "Empate"}[pick_1x2]
+117:     o25 = pred["over"]["2.5"]
+118:     ou_pick = "Over" if o25 >= 0.5 else "Under"
+119:     ou_real = "Over" if total > 2.5 else "Under"
+120:     btts_pick = "Sim" if pred["btts_yes"] >= 0.5 else "Não"
+121:     btts_real = "Sim" if (hs >= 1 and as_ >= 1) else "Não"
+122:     top = pred["top_scores"][0][0]
+123:     exact_pick = f"{top[0]}x{top[1]}"
+124:     grades = {
+125:         "winner": {
+126:             "pick": pick_name,
+127:             "prob": round(max(ph, pd, pa), 4),
+128:             "actual": {"home": pred["home"], "away": pred["away"], "draw": "Empate"}[res],
+129:             "correct": pick_1x2 == res,
+130:         },
+131:         "over_under_2.5": {"pick": ou_pick, "actual": ou_real, "correct": ou_pick == ou_real},
+132:         "btts": {"pick": btts_pick, "actual": btts_real, "correct": btts_pick == btts_real},
+133:         "exact_score": {
+134:             "pick": exact_pick,
+135:             "actual": f"{hs}x{as_}",
+136:             "correct": exact_pick == f"{hs}x{as_}",
+137:         },
+138:     }
+139:     return grades
+142: def record_result(
+143:     home,
+144:     away,
+145:     home_score,
+146:     away_score,
+147:     *,
+148:     match_date=None,
+149:     scorers=None,
+150:     stats=None,
+151:     path=None,
+152:     pred_path=None,
+153:     recorded_at=None,
+154:     prediction_id=None,
+155: ) -> dict:
+158:     hs, as_ = _score(home_score), _score(away_score)
+159:     pred = _find_prediction(home, away, match_date, pred_path, prediction_id=prediction_id)
+160:     if pred is not None:
+161:         pred = _orient(pred, home, away)
+164:         if match_date is None:
+165:             match_date = pred.get("match_date")
+166:     record = {
+167:         "recorded_at": recorded_at or datetime.now(UTC).isoformat(timespec="seconds"),
+168:         "match_date": match_date,
+169:         "home": home,
+170:         "away": away,
+171:         "actual": {
+172:             "home_score": hs,
+173:             "away_score": as_,
+174:             "result": "home" if hs > as_ else ("away" if as_ > hs else "draw"),
+175:             "total_goals": hs + as_,
+176:             "scorers": scorers or [],
+177:             "stats": {k: stats[k] for k in STAT_KEYS if stats and k in stats} if stats else {},
+178:         },
+179:         "prediction": None
+180:         if pred is None
+181:         else {
+182:             "p_home": pred["p_home"],
+183:             "p_draw": pred["p_draw"],
+184:             "p_away": pred["p_away"],
+185:             "lambda_home": pred["lambda_home"],
+186:             "lambda_away": pred["lambda_away"],
+187:             "over_2.5": pred["over"]["2.5"],
+188:             "btts_yes": pred["btts_yes"],
+189:             "top_score": pred["top_scores"][0],
+190:             "logged_at": pred["logged_at"],
+191:         },
+192:         "grades": None if pred is None else grade(pred, hs, as_),
+193:     }
+194:     if prediction_id is not None:
+195:         if pred is None:
+196:             raise ValueError("prediction_id not found")
+197:         record["prediction_id"] = prediction_id
+198:         record["event_id"] = pred["event_id"]
+199:     if pred is None:
+200:         record["warning"] = "sem palpite congelado para este confronto (não avaliado)"
+201:     dest = Path(path or os.environ.get(ENV_RESULTS) or RESULTS_PATH)
+202:     dest.parent.mkdir(parents=True, exist_ok=True)
+203:     with open(dest, "a", encoding="utf-8") as f:
+204:         f.write(json.dumps(record, ensure_ascii=False) + "\n")
+205:     return record
+208: def summary(path=None):
+210:     dest = Path(path or os.environ.get(ENV_RESULTS) or RESULTS_PATH)
+211:     if not dest.exists():
+212:         return {}
+213:     tally = {}
+214:     for line in dest.read_text(encoding="utf-8").splitlines():
+215:         g = json.loads(line).get("grades")
+216:         if not g:
+217:             continue
+218:         for market, res in g.items():
+219:             t = tally.setdefault(market, [0, 0])
+220:             t[0] += int(res["correct"])
+221:             t[1] += 1
+222:     return tally
+225: def main():
+226:     import argparse
+228:     ap = argparse.ArgumentParser(description="Registra resultado real + afere o palpite congelado")
+229:     ap.add_argument("home", nargs="?")
+230:     ap.add_argument("away", nargs="?")
+231:     ap.add_argument("home_score", type=int, nargs="?")
+232:     ap.add_argument("away_score", type=int, nargs="?")
+233:     ap.add_argument("--date", help="data do jogo (YYYY-MM-DD) p/ casar o palpite certo")
+234:     ap.add_argument("--prediction-id", help="identidade exata da previsão formal congelada")
+235:     ap.add_argument(
+236:         "--stats",
+237:         help='JSON dos stats, cada valor [casa,fora] (ex: \'{"corners":[2,12],"yellow":[0,3]}\')',
+238:     )
+239:     ap.add_argument("--summary", action="store_true", help="só mostra o placar acumulado")
+240:     args = ap.parse_args()
+241:     if args.summary:
+242:         tally = summary()
+243:         if not tally:
+244:             print("nada aferido ainda (data/results.jsonl vazio)")
+245:         for mkt, (ok, n) in tally.items():
+246:             print(f"  {mkt:16} {ok}/{n}  ({ok / n:.0%})" if n else f"  {mkt}: 0")
+247:         return
+248:     if None in (args.home, args.away, args.home_score, args.away_score):
+249:         ap.error("informe: home away home_score away_score  (ou use --summary)")
+250:     stats = json.loads(args.stats) if args.stats else None
+251:     rec = record_result(
+252:         args.home,
+253:         args.away,
+254:         args.home_score,
+255:         args.away_score,
+256:         match_date=args.date,
+257:         stats=stats,
+258:         prediction_id=args.prediction_id,
+259:     )
+260:     if rec["grades"] is None:
+261:         print("resultado gravado, mas SEM palpite congelado p/ este confronto (não avaliado)")
+262:     else:
+263:         ok = sum(g["correct"] for g in rec["grades"].values())
+264:         print(
+265:             f"gravado: {args.home} {args.home_score}-{args.away_score} {args.away} "
+266:             f"| palpite acertou {ok}/{len(rec['grades'])} mercados"
+267:         )
+270: if __name__ == "__main__":
+271:     main()

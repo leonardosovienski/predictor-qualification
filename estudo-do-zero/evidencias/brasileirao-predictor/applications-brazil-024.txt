@@ -1,0 +1,397 @@
+### brasileirao_predictor/research/price_strength/artifacts.py
+3: from __future__ import annotations
+5: import hashlib
+6: import json
+7: import math
+8: import os
+9: from pathlib import Path
+10: from typing import Any, cast
+12: REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+13: PACKAGE_ROOT = Path(__file__).resolve().parent
+14: SCHEMA_VERSION = "price-strength-artifacts/v1"
+15: _RESERVED_NAMES = {"manifest.json", "failure.json"}
+18: def _input_path(path: Path) -> Path:
+19:     resolved = Path(path).resolve()
+20:     if resolved.is_relative_to((REPOSITORY_ROOT / "data").resolve()):
+21:         raise ValueError("offline research inputs cannot be inside repository data")
+22:     if not resolved.is_file():
+23:         raise ValueError("input must be an explicit existing file")
+24:     return resolved
+27: def _output_path(path: Path) -> Path:
+28:     resolved = Path(path).resolve()
+29:     root = REPOSITORY_ROOT.resolve()
+30:     if resolved == root or resolved.is_relative_to((root / "data").resolve()):
+31:         raise ValueError("output cannot be the repository root or inside repository data")
+32:     if any(part.casefold() == ".git" for part in resolved.parts):
+33:         raise ValueError("output cannot be inside Git metadata")
+34:     if resolved.exists() or Path(path).is_symlink():
+35:         raise FileExistsError("output directory must not already exist")
+36:     return resolved
+39: def _object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+40:     result: dict[str, Any] = {}
+41:     for key, value in pairs:
+42:         if key in result:
+43:             raise ValueError("duplicate JSON object key")
+44:         result[key] = value
+45:     return result
+48: def _reject_constant(value: str) -> Any:
+49:     raise ValueError("non-finite JSON number is not allowed")
+52: def _finite_float(value: str) -> float:
+53:     parsed = float(value)
+54:     if not math.isfinite(parsed):
+55:         raise ValueError("non-finite JSON number is not allowed")
+56:     return parsed
+59: def _decode(text: str) -> Any:
+60:     return json.loads(text, object_pairs_hook=_object_pairs, parse_constant=_reject_constant, parse_float=_finite_float)
+63: def read_json(path: Path) -> dict:
+65:     return cast(dict, read_hashed(path, jsonl=False)[0])
+68: def read_jsonl(path: Path) -> list[dict]:
+70:     return cast(list[dict], read_hashed(path, jsonl=True)[0])
+73: def read_hashed(path: Path, *, jsonl: bool) -> tuple[dict | list[dict], str]:
+75:     content = _input_path(path).read_bytes()
+76:     text = content.decode("utf-8", errors="strict")
+77:     fingerprint = hashlib.sha256(content).hexdigest()
+78:     if not jsonl:
+79:         value = _decode(text)
+80:         if not isinstance(value, dict):
+81:             raise ValueError("JSON input must be an object")
+82:         return value, fingerprint
+83:     lines = text.split("\n")
+84:     if lines[-1] == "":
+85:         lines.pop()  # A final newline is not an additional JSONL record.
+86:     rows: list[dict] = []
+87:     for number, line in enumerate(lines, start=1):
+88:         try:
+89:             value = _decode(line)
+90:             if not isinstance(value, dict):
+91:                 raise ValueError("JSONL rows must be objects")
+92:         except ValueError as exc:
+93:             raise ValueError(f"invalid JSONL object at line {number}: {exc}") from None
+94:         rows.append(value)
+95:     return rows, fingerprint
+98: def _validate_keys(value: Any) -> None:
+99:     if isinstance(value, dict):
+100:         if any(not isinstance(key, str) for key in value):
+101:             raise ValueError("JSON object keys must be strings")
+102:         for child in value.values():
+103:             _validate_keys(child)
+104:     elif isinstance(value, (list, tuple)):
+105:         for child in value:
+106:             _validate_keys(child)
+109: def _json_bytes(value: Any) -> bytes:
+110:     _validate_keys(value)
+111:     return (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False) + "\n").encode("utf-8")
+114: def _artifact_bytes(name: str, value: object) -> bytes:
+115:     if (
+116:         not isinstance(name, str)
+117:         or not name
+118:         or any(character in name for character in "/\\:")
+119:         or name != Path(name).name
+120:         or Path(name).suffix not in {".json", ".jsonl"}
+121:         or name.casefold() in _RESERVED_NAMES
+122:     ):
+123:         raise ValueError("artifact name must be a simple, non-reserved .json or .jsonl filename")
+124:     if name.endswith(".jsonl"):
+125:         if not isinstance(value, list) or any(not isinstance(row, dict) for row in value):
+126:             raise ValueError("JSONL artifacts must be lists of objects")
+127:         _validate_keys(value)
+128:         return "".join(
+129:             json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+130:             for row in value
+131:         ).encode("utf-8")
+132:     return _json_bytes(value)
+135: def _digest(content: bytes) -> dict[str, str | int]:
+136:     return {"sha256": hashlib.sha256(content).hexdigest(), "bytes": len(content)}
+139: def _source_hashes() -> dict[str, dict[str, str | int]]:
+140:     package = PACKAGE_ROOT.resolve()
+141:     sources: dict[str, dict[str, str | int]] = {}
+142:     for path in sorted(package.rglob("*.py")):
+143:         resolved = path.resolve()
+144:         if not resolved.is_relative_to(package):
+145:             raise ValueError("research source cannot resolve outside its package")
+146:         resolved = _input_path(resolved)
+147:         sources[path.relative_to(package).as_posix()] = _digest(resolved.read_bytes())
+148:     return sources
+151: def write_artifacts(output_dir: Path, *, inputs: dict[str, Path], artifacts: dict[str, object], metadata: dict) -> dict:
+158:     destination = _output_path(output_dir)
+159:     input_paths = {name: _input_path(path) for name, path in inputs.items()}
+160:     _validate_keys(inputs)
+161:     serialized = {name: _artifact_bytes(name, value) for name, value in artifacts.items()}
+162:     if len({name.casefold() for name in artifacts}) != len(artifacts):
+163:         raise ValueError("artifact filenames must be distinct ignoring case")
+164:     _json_bytes(metadata)
+166:     destination.mkdir(parents=True, exist_ok=False)
+167:     try:
+168:         input_records = {
+169:             name: {"path": str(path), **_digest(path.read_bytes())} for name, path in sorted(input_paths.items())
+170:         }
+171:         if "input_hashes_used" in metadata:
+172:             expected = metadata["input_hashes_used"]
+173:             if not isinstance(expected, dict) or set(expected) != set(input_records):
+174:                 raise ValueError("input_hashes_used must cover exactly the supplied inputs")
+175:             if any(expected[name] != record["sha256"] for name, record in input_records.items()):
+176:                 raise ValueError("input content changed after it was read for calculation")
+177:         sources = _source_hashes()
+178:         artifact_records = {}
+179:         for name, content in sorted(serialized.items()):
+180:             with (destination / name).open("xb") as handle:
+181:                 handle.write(content)
+182:             artifact_records[name] = _digest(content)
+183:         manifest = {
+184:             "schema_version": SCHEMA_VERSION,
+185:             "status": "COMPLETE",
+186:             "inputs": input_records,
+187:             "source_code": sources,
+188:             "artifacts": artifact_records,
+189:             "metadata": metadata,
+190:         }
+191:         pending_manifest = destination / ".manifest.pending"
+192:         with pending_manifest.open("xb") as handle:
+193:             handle.write(_json_bytes(manifest))
+196:         os.link(pending_manifest, destination / "manifest.json")
+197:     except Exception as exc:
+198:         try:
+199:             with (destination / "failure.json").open("xb") as handle:
+200:                 handle.write(
+201:                     _json_bytes(
+202:                         {"schema_version": SCHEMA_VERSION, "status": "FAILED", "error_type": type(exc).__name__}
+203:                     )
+204:                 )
+205:         except OSError:
+206:             pass
+207:         raise
+208:     try:
+209:         pending_manifest.unlink()
+210:     except OSError:
+211:         pass  # All artifacts and the complete receipt are already published.
+212:     return manifest
+### brasileirao_predictor/research/price_strength/capture_decision.py
+8: from __future__ import annotations
+10: import argparse
+11: import hashlib
+12: import json
+13: import math
+14: import sys
+15: from pathlib import Path
+16: from typing import Any
+18: from .artifacts import read_hashed, write_artifacts
+19: from .historical_admission import timestamp
+20: from .live_capture_admission import audit_capture, strict_json_loads
+21: from .quotes import PricePolicy, scan_quotes
+23: _BOOKS = ("pinnacle", "bet365.bet.br")
+24: _MISSING = [
+25:     "bookmaker_publication_and_personal_offer_availability",
+26:     "accepted_price_and_stake",
+27:     "offer_capacity_and_currency",
+28:     "actual_variable_and_fixed_costs",
+29:     "independent_future_economic_validation",
+30: ]
+33: def decide_captures(captures: list[tuple[bytes | None, dict[str, Any]]], *, contract: dict[str, Any]) -> dict[str, Any]:
+35:     if (
+36:         set(contract)
+37:         != {"schema_version", "fixture_id", "identity", "kickoff_at", "decision_at", "policy", "initial_bankroll_units"}
+38:         or contract["schema_version"] != "api-capture-decision/1"
+39:     ):
+40:         raise ValueError("invalid_decision_contract")
+41:     fixture = contract["fixture_id"]
+42:     if not isinstance(fixture, str) or not fixture or fixture != fixture.strip():
+43:         raise ValueError("invalid_frozen_fixture")
+44:     identity = contract["identity"]
+45:     if (
+46:         not isinstance(identity, dict)
+47:         or set(identity) != {"participant1Id", "participant2Id", "sportId", "tournamentId", "seasonId"}
+48:         or any(type(v) is not int or v <= 0 for v in identity.values())
+49:         or identity["participant1Id"] == identity["participant2Id"]
+50:     ):
+51:         raise ValueError("invalid_frozen_identity")
+52:     cutoff, kickoff = timestamp(contract["decision_at"]), timestamp(contract["kickoff_at"])
+53:     if cutoff >= kickoff:
+54:         raise ValueError("decision_must_precede_frozen_kickoff")
+55:     raw_policy = contract["policy"]
+56:     if not isinstance(raw_policy, dict) or raw_policy.get("reference_books") != ["pinnacle"]:
+57:         raise ValueError("adapter_requires_frozen_pinnacle_reference")
+58:     policy = PricePolicy(**{**raw_policy, "reference_books": tuple(raw_policy["reference_books"])})
+59:     bank = contract["initial_bankroll_units"]
+60:     if type(bank) not in (int, float) or not math.isfinite(bank) or bank <= 0:
+61:         raise ValueError("invalid_scenario_bankroll")
+62:     result: dict[str, Any] = {
+63:         "schema_version": "api-capture-decision/1",
+64:         "fixture_id": fixture,
+65:         "decision_at": cutoff.isoformat(),
+66:         "kickoff_at": kickoff.isoformat(),
+67:         "action": "ABSTAIN",
+68:         "execution_admitted": False,
+69:         "profitability_established": False,
+70:         "real_capital_enabled": False,
+71:         "labels_accessed": False,
+72:         "clock_semantics": "local_API_response_availability_only_not_bookmaker_publication",
+73:         "cost_semantics": "explicit_hypothetical_policy_not_verified_costs",
+74:         "missing_execution_evidence": list(_MISSING),
+75:         "capture_reviews": [],
+76:         "latest_capture_sha256": None,
+77:         "api_audit": None,
+78:         "conditional_scan": None,
+79:         "portfolio": {
+80:             "initial_bankroll_units": float(bank),
+81:             "stakes_units": 0.0,
+82:             "bets": 0,
+83:             "abstentions": 1,
+84:             "locked_capital_units": 0.0,
+85:             "betting_pnl_units": 0.0,
+86:             "bankroll_before_unknown_fixed_costs_units": float(bank),
+87:             "actual_fixed_costs_units": None,
+88:             "total_net_pnl_units": None,
+89:             "roi_on_stakes": None,
+90:             "return_on_bankroll_after_all_costs": None,
+91:         },
+92:     }
+93:     states = []
+94:     malformed_clock = False
+95:     for raw, receipt in captures:
+96:         digest = hashlib.sha256(raw).hexdigest() if raw is not None else None
+97:         review = {"sha256": digest, "reason": "eligible_for_latest_selection"}
+98:         result["capture_reviews"].append(review)
+99:         try:
+100:             received = timestamp(receipt["received_at"])
+101:             started = timestamp(receipt["requested_at"])
+102:             if received < started:
+103:                 raise ValueError("receipt_before_request")
+104:         except (ValueError, TypeError, KeyError, OverflowError):
+105:             review["reason"] = "ambiguous_receipt_clock"
+106:             malformed_clock = True
+107:             continue
+108:         if received > cutoff:
+109:             review["reason"] = "not_received_by_cutoff"
+110:             continue
+111:         states.append((received, raw, receipt, review))
+112:     if malformed_clock:
+113:         result["reason"] = "AMBIGUOUS_RECEIPT_CLOCK_NO_FALLBACK"
+114:         return result
+115:     if not states:
+116:         result["reason"] = "NO_CAPTURE_RECEIVED_BY_CUTOFF"
+117:         return result
+118:     latest_time = max(item[0] for item in states)
+119:     latest = [item for item in states if item[0] == latest_time]
+122:     if len(latest) != 1:
+123:         result["reason"] = "AMBIGUOUS_LATEST_CAPTURE_NO_FALLBACK"
+124:         return result
+125:     received, raw, receipt, review = latest[0]
+126:     for item in states:
+127:         item[3]["reason"] = "latest_at_cutoff" if item is latest[0] else "superseded_by_later_receipt"
+128:     result["latest_capture_sha256"] = review["sha256"]
+129:     if (
+130:         raw is None
+131:         or receipt.get("endpoint") != "https://api.oddspapi.io/v4/odds"
+132:         or receipt.get("parameters")
+133:         != {"fixtureId": fixture, "bookmakers": "pinnacle,bet365.bet.br", "oddsFormat": "decimal"}
+134:         or receipt.get("status") != "SAVED"
+135:         or type(receipt.get("http_status")) is not int
+136:         or receipt["http_status"] != 200
+137:         or receipt.get("sha256") != review["sha256"]
+138:         or type(receipt.get("bytes")) is not int
+139:         or receipt["bytes"] != len(raw)
+140:     ):
+141:         result["reason"] = "LATEST_TRANSPORT_OR_INTEGRITY_REJECTED"
+142:         return result
+143:     if (cutoff - received).total_seconds() > policy.max_age_seconds:
+144:         result["reason"] = "LATEST_API_RESPONSE_STALE"
+145:         return result
+146:     try:
+147:         payload = strict_json_loads(raw)
+148:         if not isinstance(payload, dict) or timestamp(payload.get("startTime")) != kickoff:
+149:             result["reason"] = "FROZEN_KICKOFF_MISMATCH"
+150:             return result
+151:         audit = audit_capture(payload, receipt, fixture, expected_identity=identity)
+152:     except (ValueError, TypeError, KeyError, OverflowError):
+153:         result["reason"] = "LATEST_PAYLOAD_INVALID"
+154:         return result
+155:     result["api_audit"] = audit
+156:     if not audit["pair_api_state_admitted"]:
+157:         result["reason"] = "LATEST_API_PAIR_REJECTED"
+158:         return result
+159:     quotes = [
+160:         {
+161:             "observed_at": received.isoformat(),
+162:             "available_at": received.isoformat(),
+163:             "received_at": received.isoformat(),
+164:             "kickoff_at": kickoff.isoformat(),
+165:             "snapshot_id": review["sha256"] + ":" + book,
+166:             "source": "oddspapi_collector_response",
+167:             "source_event_id": fixture,
+168:             "event_id": fixture,
+169:             "bookmaker": book,
+170:             "market": "1x2",
+171:             "period": "FT",
+172:             "line": None,
+173:             "status": "active",
+174:             "odds": {side: leg["price"] for side, leg in audit["bookmakers"][book]["legs"].items()},
+175:             "raw_payload_hash": review["sha256"],
+176:             "snapshot_scope": "complete_market",
+177:         }
+178:         for book in _BOOKS
+179:     ]
+180:     result["conditional_scan"] = scan_quotes(quotes, as_of=cutoff, policy=policy)
+181:     result["reason"] = "API_COMPARISON_ONLY_EXECUTION_EVIDENCE_MISSING"
+182:     return result
+185: def main(argv: list[str] | None = None) -> int:
+186:     parser = argparse.ArgumentParser(description="Auditar capturas explícitas sem API, desfechos ou ordens")
+187:     parser.add_argument("--contract", type=Path, required=True)
+188:     parser.add_argument("--receipt", type=Path, required=True)
+189:     parser.add_argument("--capture", type=Path, action="append", required=True)
+190:     parser.add_argument("--output-dir", type=Path, required=True)
+191:     args = parser.parse_args(argv)
+192:     try:
+193:         contract, contract_hash = read_hashed(args.contract, jsonl=False)
+194:         receipt, receipt_hash = read_hashed(args.receipt, jsonl=False)
+195:         if not isinstance(contract, dict) or not isinstance(receipt, dict):
+196:             raise ValueError("object_contracts_required")
+197:         records = receipt.get("requests")
+198:         if not isinstance(records, list):
+199:             raise ValueError("request_receipt_list_required")
+200:         inputs = {"contract": args.contract, "receipt": args.receipt}
+201:         hashes = {"contract": contract_hash, "receipt": receipt_hash}
+202:         captures: list[tuple[bytes | None, dict[str, Any]]] = []
+203:         supplied = {path.name for path in args.capture}
+204:         if len(supplied) != len(args.capture):
+205:             raise ValueError("distinct_capture_files_required")
+206:         for record in records:
+207:             if not isinstance(record, dict):
+208:                 raise ValueError("invalid_request_receipt")
+209:             parameters = record.get("parameters")
+210:             relevant = (
+211:                 record.get("endpoint") == "https://api.oddspapi.io/v4/odds"
+212:                 and isinstance(parameters, dict)
+213:                 and parameters.get("fixtureId") == contract["fixture_id"]
+214:             )
+215:             if relevant and record.get("file") not in supplied:
+216:                 if record.get("file") is not None or record.get("status") == "SAVED":
+217:                     raise ValueError("all_saved_fixture_captures_required")
+219:                 captures.append((None, record))
+220:         for index, path in enumerate(args.capture):
+223:             from .artifacts import _input_path
+225:             raw = _input_path(path).read_bytes()
+226:             matches = [r for r in records if isinstance(r, dict) and r.get("file") == path.name]
+227:             if len(matches) != 1:
+228:                 raise ValueError("unique_receipt_for_each_capture_required")
+229:             key = f"capture_{index}"
+230:             inputs[key], hashes[key] = path, hashlib.sha256(raw).hexdigest()
+231:             captures.append((raw, matches[0]))
+232:         result = decide_captures(captures, contract=contract)
+233:         write_artifacts(
+234:             args.output_dir,
+235:             inputs=inputs,
+236:             artifacts={"decision.json": result},
+237:             metadata={
+238:                 "status": "RESEARCH_ONLY",
+239:                 "input_hashes_used": hashes,
+240:                 "profitability_established": False,
+241:                 "real_capital_enabled": False,
+242:             },
+243:         )
+244:         print(json.dumps({"action": result["action"], "reason": result["reason"]}))
+245:         return 0
+246:     except (ValueError, TypeError, KeyError, OSError, OverflowError):
+247:         print("Decisão recusada: entrada, contrato ou saída inválidos.", file=sys.stderr)
+248:         return 2
+251: if __name__ == "__main__":
+252:     raise SystemExit(main())

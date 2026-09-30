@@ -1,0 +1,558 @@
+### brasileirao_predictor/research/ou25_nested_replay.py
+9: from __future__ import annotations
+11: import hashlib
+12: import json
+13: import math
+14: from collections.abc import Iterable
+15: from dataclasses import asdict, dataclass
+16: from datetime import datetime
+17: from pathlib import Path
+18: from statistics import NormalDist, mean
+19: from typing import Any
+21: import numpy as np
+23: CONTAMINATED_SEASONS = frozenset({"2024", "2025", "2026"})
+26: def valid_ou25_price_pair(pair: tuple[float, float] | list[float]) -> bool:
+28:     try:
+29:         over, under = map(float, pair)
+30:     except (TypeError, ValueError):
+31:         return False
+32:     if not math.isfinite(over) or not math.isfinite(under):
+33:         return False
+34:     return 1.20 <= over <= 5.00 and 1.20 <= under <= 5.00 and 1.00 <= (1 / over + 1 / under) <= 1.30
+37: def _group_start(rows: list[dict[str, Any]], index: int) -> int:
+39:     index = max(0, min(index, len(rows)))
+40:     if index == len(rows):
+41:         return index
+42:     kickoff = rows[index]["kickoff_at"]
+43:     while index > 0 and rows[index - 1]["kickoff_at"] == kickoff:
+44:         index -= 1
+45:     return index
+48: def _group_end(rows: list[dict[str, Any]], index: int) -> int:
+50:     index = max(0, min(index, len(rows)))
+51:     if index == 0 or index == len(rows):
+52:         return index
+53:     kickoff = rows[index - 1]["kickoff_at"]
+54:     while index < len(rows) and rows[index]["kickoff_at"] == kickoff:
+55:         index += 1
+56:     return index
+59: def _walk_forward_boundaries(rows: list[dict[str, Any]], minimum_train: int, block_size: int) -> list[tuple[int, int]]:
+61:     if minimum_train < 0 or block_size <= 0:
+62:         raise ValueError("minimum_train must be non-negative and block_size must be positive")
+63:     start = _group_start(rows, minimum_train)
+64:     boundaries = []
+65:     while start < len(rows):
+66:         end = _group_end(rows, min(start + block_size, len(rows)))
+67:         if end <= start:
+68:             raise ValueError("kickoff group prevented progress through the ordered rows")
+69:         boundaries.append((start, end))
+70:         start = end
+71:     return boundaries
+74: @dataclass(frozen=True)
+75: class FilterParameters:
+76:     min_conservative_ev: float
+77:     max_conservative_ev: float
+78:     min_odds: float
+79:     max_odds: float
+80:     side: str = "both"
+81:     uncertainty_quantile: float = 0.90
+82:     friction_rate: float = 0.015
+84:     @property
+85:     def id(self) -> str:
+86:         raw = json.dumps(asdict(self), sort_keys=True, separators=(",", ":"))
+87:         return hashlib.sha256(raw.encode()).hexdigest()[:16]
+90: def devig_proportional(over_odd: float, under_odd: float) -> tuple[float, float]:
+91:     inv = (1 / over_odd, 1 / under_odd)
+92:     total = sum(inv)
+93:     return inv[0] / total, inv[1] / total
+96: def anchor_to_market_prequential(
+97:     rows: Iterable[dict[str, Any]],
+98:     *,
+99:     minimum_history: int = 190,
+100:     block_size: int = 38,
+101:     weights: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0),
+102: ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+108:     ordered = sorted((dict(row) for row in rows), key=lambda row: (row["kickoff_at"], row["event_id"]))
+109:     if any(not 0 <= weight <= 1 for weight in weights):
+110:         raise ValueError("anchor weights must be between zero and one")
+111:     output = [dict(row) for row in ordered if valid_ou25_price_pair(row.get("offered_odds_ou25", []))]
+112:     ordered = output
+113:     folds = []
+114:     boundaries = _walk_forward_boundaries(ordered, minimum_history, block_size)
+115:     for start, end in boundaries:
+116:         history = ordered[:start]
+118:         def loss(weight: float) -> float:
+119:             errors = []
+120:             for row in history:
+121:                 market, _ = devig_proportional(*map(float, row["offered_odds_ou25"]))
+122:                 model_probability = float(row.get("p_over_model_unanchored", row["p_over"]))
+123:                 probability = weight * model_probability + (1 - weight) * market
+124:                 errors.append((probability - int(row["actual_over"])) ** 2)
+125:             return mean(errors)
+127:         losses = {weight: loss(weight) for weight in weights}
+128:         selected = min(weights, key=lambda weight: (losses[weight], weight))
+129:         test = output[start:end]
+130:         for row in test:
+131:             market, _ = devig_proportional(*map(float, row["offered_odds_ou25"]))
+132:             row["p_over_model_unanchored"] = float(row["p_over"])
+133:             row["p_over"] = selected * float(row["p_over"]) + (1 - selected) * market
+134:             row["market_anchor_model_weight"] = selected
+135:         folds.append(
+136:             {
+137:                 "train_n": len(history),
+138:                 "test_n": len(test),
+139:                 "test_min_kickoff": test[0]["kickoff_at"] if test else None,
+140:                 "selected_model_weight": selected,
+141:                 "past_brier_by_weight": {str(weight): losses[weight] for weight in weights},
+142:             }
+143:         )
+144:     evaluated = output[boundaries[0][0] :] if boundaries else []
+145:     model_errors = []
+146:     anchored_errors = []
+147:     market_errors = []
+148:     for row in evaluated:
+149:         actual = int(row["actual_over"])
+150:         market, _ = devig_proportional(*map(float, row["offered_odds_ou25"]))
+151:         model = float(row.get("p_over_model_unanchored", row["p_over"]))
+152:         model_errors.append((model - actual) ** 2)
+153:         anchored_errors.append((float(row["p_over"]) - actual) ** 2)
+154:         market_errors.append((market - actual) ** 2)
+155:     report = {
+156:         "schema_version": "ou25-market-anchor-prequential/2",
+157:         "minimum_history": minimum_history,
+158:         "block_size": block_size,
+159:         "weights": list(weights),
+160:         "folds": folds,
+161:         "evaluated_n": len(evaluated),
+162:         "model_brier": mean(model_errors) if model_errors else None,
+163:         "anchored_brier": mean(anchored_errors) if anchored_errors else None,
+164:         "market_brier": mean(market_errors) if market_errors else None,
+165:         "capital_enabled": False,
+166:     }
+167:     return output, report
+170: def holm_adjust(p_values: dict[str, float]) -> dict[str, float]:
+171:     ordered = sorted(p_values.items(), key=lambda item: item[1])
+172:     out: dict[str, float] = {}
+173:     running = 0.0
+174:     m = len(ordered)
+175:     for rank, (key, value) in enumerate(ordered):
+176:         running = max(running, min(1.0, (m - rank) * value))
+177:         out[key] = running
+178:     return out
+181: def _wilson_lower(successes: int, n: int, confidence: float) -> float:
+182:     if n <= 0:
+183:         return 0.0
+184:     z = NormalDist().inv_cdf(0.5 + confidence / 2)
+185:     observed = successes / n
+186:     denominator = 1 + z * z / n
+187:     centre = observed + z * z / (2 * n)
+188:     margin = z * math.sqrt(observed * (1 - observed) / n + z * z / (4 * n * n))
+189:     return max(0.0, (centre - margin) / denominator)
+192: def evaluate_certainty_policies(
+193:     rows: Iterable[dict[str, Any]],
+194:     *,
+195:     evaluation_start: int,
+196:     confidences: tuple[float, ...] = (0.90, 0.95, 0.99),
+197:     minimum_samples: tuple[int, ...] = (30, 50, 100),
+198:     radii: tuple[float, ...] = (0.05, 0.10),
+199:     minimum_net_evs: tuple[float, ...] = (0.0, 0.02, 0.05),
+200:     friction_rate: float = 0.02,
+201:     seed: int = 20260827,
+202: ) -> dict[str, Any]:
+204:     ordered = sorted((dict(row) for row in rows), key=lambda row: (row["kickoff_at"], row["event_id"]))
+205:     policies = []
+206:     raw_p = {}
+207:     evaluation_start = _group_start(ordered, evaluation_start)
+208:     for confidence in confidences:
+209:         for min_n in minimum_samples:
+210:             for radius in radii:
+211:                 for minimum_ev in minimum_net_evs:
+212:                     picks = []
+213:                     start = evaluation_start
+214:                     while start < len(ordered):
+215:                         end = _group_end(ordered, min(start + 1, len(ordered)))
+216:                         history = ordered[:start]
+217:                         for row in ordered[start:end]:
+218:                             if not valid_ou25_price_pair(row.get("offered_odds_ou25", [])):
+219:                                 continue
+220:                             choices = []
+221:                             for side in ("over", "under"):
+222:                                 probability = float(row["p_over"] if side == "over" else 1 - row["p_over"])
+223:                                 calibration = []
+224:                                 for past in history:
+225:                                     past_probability = float(past["p_over"] if side == "over" else 1 - past["p_over"])
+226:                                     if abs(past_probability - probability) <= radius:
+227:                                         outcome = int(
+228:                                             past["actual_over"] if side == "over" else not past["actual_over"]
+229:                                         )
+230:                                         calibration.append(outcome)
+231:                                 if len(calibration) < min_n:
+232:                                     continue
+233:                                 lower = _wilson_lower(sum(calibration), len(calibration), confidence)
+234:                                 odd = float(row["offered_odds_ou25"][0 if side == "over" else 1])
+235:                                 conservative_ev = lower * odd - 1 - friction_rate
+236:                                 if conservative_ev >= minimum_ev:
+237:                                     choices.append((conservative_ev, side, odd, probability, lower, len(calibration)))
+238:                             if not choices:
+239:                                 continue
+240:                             conservative_ev, side, odd, probability, lower, calibration_n = max(choices)
+241:                             won = bool(row["actual_over"]) == (side == "over")
+242:                             picks.append(
+243:                                 {
+244:                                     "event_id": row["event_id"],
+245:                                     "season": row["season"],
+246:                                     "side": side,
+247:                                     "odd": odd,
+248:                                     "profit": odd - 1 if won else -1.0,
+249:                                     "clv": None,
+250:                                     "outcome_probability": probability,
+251:                                     "probability_ci_lower": lower,
+252:                                     "conservative_ev": conservative_ev,
+253:                                     "calibration_n": calibration_n,
+254:                                 }
+255:                             )
+256:                         start = end
+257:                     policy_id = f"c{confidence:.2f}_n{min_n}_r{radius:.2f}_ev{minimum_ev:.2f}"
+258:                     metrics = _metrics(picks, seed=seed + len(policies), full_bootstrap=True)
+259:                     raw_p[policy_id] = _normal_p_greater([pick["profit"] for pick in picks])
+260:                     policies.append(
+261:                         {
+262:                             "policy_id": policy_id,
+263:                             "confidence": confidence,
+264:                             "minimum_calibration_n": min_n,
+265:                             "probability_radius": radius,
+266:                             "minimum_conservative_ev": minimum_ev,
+267:                             "metrics": metrics,
+268:                             "picks": picks,
+269:                         }
+270:                     )
+271:     adjusted = holm_adjust(raw_p)
+272:     for policy in policies:
+273:         policy["p_raw_one_sided"] = raw_p[policy["policy_id"]]
+274:         policy["p_holm"] = adjusted[policy["policy_id"]]
+275:     return {
+276:         "schema_version": "ou25-certainty-abstention/2",
+277:         "evaluation_start": evaluation_start,
+278:         "evaluated_games": len(ordered) - evaluation_start,
+279:         "policy_count": len(policies),
+280:         "multiplicity": "Holm across all certainty policies",
+281:         "policies": policies,
+282:         "capital_enabled": False,
+283:         "maximum_indication_score": 40,
+284:     }
+287: def _normal_p_greater(values: list[float]) -> float:
+288:     if len(values) < 2:
+289:         return 1.0
+290:     sd = float(np.std(values, ddof=1))
+291:     if sd == 0:
+292:         return 0.0 if mean(values) > 0 else 1.0
+293:     z = mean(values) / (sd / math.sqrt(len(values)))
+294:     return 1.0 - NormalDist().cdf(z)
+297: def _moving_block_lcb(values: list[float], *, seed: int, iterations: int = 1000) -> float | None:
+298:     if len(values) < 2:
+299:         return None
+300:     rng = np.random.default_rng(seed)
+301:     n = len(values)
+302:     block = min(max(2, round(math.sqrt(n))), n)
+303:     starts = np.arange(n - block + 1)
+304:     samples = np.empty(iterations)
+305:     for j in range(iterations):
+306:         draw: list[float] = []
+307:         while len(draw) < n:
+308:             start = int(rng.choice(starts))
+309:             draw.extend(values[start : start + block])
+310:         samples[j] = np.mean(draw[:n])
+311:     return float(np.quantile(samples, 0.025))
+314: def _uncertainty(history: list[dict[str, Any]], side: str, quantile: float) -> float:
+315:     bins: dict[int, list[tuple[float, int]]] = {}
+316:     for row in history:
+317:         p = float(row["p_over"] if side == "over" else 1 - row["p_over"])
+318:         y = int(row["actual_over"] if side == "over" else not row["actual_over"])
+319:         bins.setdefault(min(9, int(p * 10)), []).append((p, y))
+323:     gaps = [
+324:         abs(mean(p for p, _ in values) - mean(y for _, y in values)) for values in bins.values() if len(values) >= 10
+325:     ]
+326:     return float(np.quantile(gaps, quantile)) if gaps else 1.0
+329: def score_row(
+330:     row: dict[str, Any],
+331:     params: FilterParameters,
+332:     history: list[dict[str, Any]],
+333:     *,
+334:     uncertainty_by_side: dict[str, float] | None = None,
+335: ) -> dict[str, Any] | None:
+336:     offered_pair = row.get("offered_odds_ou25")
+337:     if not offered_pair or not valid_ou25_price_pair(offered_pair):
+338:         return None
+339:     over_odd, under_odd = map(float, offered_pair)
+340:     close_pair = row.get("closing_odds_ou25")
+341:     close_probabilities = (
+342:         devig_proportional(*map(float, close_pair))
+343:         if close_pair and valid_ou25_price_pair(close_pair)
+344:         else (None, None)
+345:     )
+346:     market_over, market_under = devig_proportional(float(over_odd), float(under_odd))
+347:     choices = []
+348:     for side, probability, odd, market_probability, close_probability in (
+349:         ("over", float(row["p_over"]), float(over_odd), market_over, close_probabilities[0]),
+350:         ("under", 1 - float(row["p_over"]), float(under_odd), market_under, close_probabilities[1]),
+351:     ):
+352:         if params.side != "both" and params.side != side:
+353:             continue
+354:         uncertainty = (
+355:             uncertainty_by_side[side]
+356:             if uncertainty_by_side is not None
+357:             else _uncertainty(history, side, params.uncertainty_quantile)
+358:         )
+359:         conservative_ev = max(0.0, probability - uncertainty) * odd - 1 - params.friction_rate
+360:         if not (params.min_conservative_ev <= conservative_ev <= params.max_conservative_ev):
+361:             continue
+362:         if not (params.min_odds <= odd <= params.max_odds):
+363:             continue
+364:         choices.append((conservative_ev, side, probability, odd, market_probability, close_probability, uncertainty))
+365:     if not choices:
+366:         return None
+367:     conservative_ev, side, probability, odd, market_probability, close_probability, uncertainty = max(choices)
+368:     won = bool(row["actual_over"]) == (side == "over")
+369:     clv = odd * float(close_probability) - 1 if close_probability is not None else None
+370:     data_factor = min(1.0, len(history) / 1000)
+371:     indication_score = min(40, max(1, round(40 * min(1.0, conservative_ev / 0.05) * data_factor)))
+372:     return {
+373:         "event_id": row["event_id"],
+374:         "kickoff_at": row["kickoff_at"],
+375:         "season": row["season"],
+376:         "side": side,
+377:         "odd": odd,
+378:         "outcome_probability": probability,
+379:         "market_probability_devig": market_probability,
+380:         "gross_ev": probability * odd - 1,
+381:         "conservative_ev": conservative_ev,
+382:         "indication_strength_0_100": indication_score,
+383:         "strength_cap_reason": "NO_PROSPECTIVE_A1_EVIDENCE",
+384:         "uncertainty_haircut": uncertainty,
+385:         "profit": odd - 1 if won else -1.0,
+386:         "clv": clv,
+387:         "won": won,
+388:         "contaminated": str(row["season"]) in CONTAMINATED_SEASONS,
+389:     }
+392: def _mean_lcb(values: list[float]) -> float | None:
+393:     if len(values) < 2:
+394:         return None
+395:     return mean(values) - 1.96 * float(np.std(values, ddof=1)) / math.sqrt(len(values))
+398: def _metrics(picks: list[dict[str, Any]], *, seed: int, full_bootstrap: bool = True) -> dict[str, Any]:
+399:     profits = [float(p["profit"]) for p in picks]
+400:     clvs = [float(p["clv"]) for p in picks if p.get("clv") is not None]
+401:     season_roi = {s: mean([p["profit"] for p in picks if p["season"] == s]) for s in {p["season"] for p in picks}}
+402:     side_roi = {s: mean([p["profit"] for p in picks if p["side"] == s]) for s in {p["side"] for p in picks}}
+403:     odd_bands = {"low": [], "mid": [], "high": []}
+404:     for p in picks:
+405:         odd_bands["low" if p["odd"] < 1.8 else "mid" if p["odd"] <= 2.2 else "high"].append(p["profit"])
+406:     odd_roi = {k: mean(v) for k, v in odd_bands.items() if v}
+407:     return {
+408:         "n": len(picks),
+409:         "roi": mean(profits) if profits else None,
+410:         "roi_ci95_lower": _moving_block_lcb(profits, seed=seed) if full_bootstrap else _mean_lcb(profits),
+411:         "clv": mean(clvs) if clvs else None,
+412:         "clv_ci95_lower": (
+413:             (_moving_block_lcb(clvs, seed=seed + 1) if full_bootstrap else _mean_lcb(clvs)) if clvs else None
+414:         ),
+415:         "season_roi": season_roi,
+416:         "side_roi": side_roi,
+417:         "odd_band_roi": odd_roi,
+418:         "worst_season_roi": min(season_roi.values()) if season_roi else None,
+419:         "worst_side_roi": min(side_roi.values()) if side_roi else None,
+420:         "worst_odd_band_roi": min(odd_roi.values()) if odd_roi else None,
+421:     }
+424: def _rank_key(metrics: dict[str, Any]) -> tuple[float, ...]:
+425:     def ranked(value: float | None) -> float:
+426:         return float(value) if value is not None and math.isfinite(value) else float("-inf")
+428:     return (
+429:         ranked(metrics["roi_ci95_lower"]),
+430:         ranked(metrics["clv_ci95_lower"]),
+431:         ranked(metrics["worst_season_roi"]),
+432:         ranked(metrics["worst_side_roi"]),
+433:         ranked(metrics["worst_odd_band_roi"]),
+434:         math.log1p(metrics["n"]),
+435:     )
+438: def _split_blocks(rows: list[dict[str, Any]], block_size: int) -> list[list[dict[str, Any]]]:
+439:     return [rows[i : i + block_size] for i in range(0, len(rows), block_size)]
+442: def nested_walk_forward(
+443:     rows: Iterable[dict[str, Any]],
+444:     combinations: Iterable[FilterParameters],
+445:     *,
+446:     minimum_train: int = 380,
+447:     block_size: int = 95,
+448:     seed: int = 20260827,
+449: ) -> dict[str, Any]:
+450:     ordered = sorted((dict(r) for r in rows), key=lambda r: (r["kickoff_at"], r["event_id"]))
+451:     configs = list(combinations)
+452:     if not configs:
+453:         raise ValueError("at least one filter combination is required")
+454:     outer: list[dict[str, Any]] = []
+455:     all_picks: list[dict[str, Any]] = []
+456:     tested: list[dict[str, Any]] = []
+457:     boundaries = _walk_forward_boundaries(ordered, minimum_train, block_size)
+458:     for fold_no, (start, end) in enumerate(boundaries, 1):
+459:         history = ordered[:start]
+460:         test = ordered[start:end]
+461:         if not test:
+462:             break
+463:         config_metrics: dict[str, dict[str, Any]] = {}
+464:         raw_p: dict[str, float] = {}
+465:         for config_no, config in enumerate(configs):
+468:             inner_picks: list[dict[str, Any]] = []
+469:             inner_start = max(40, min(block_size, len(history) // 2))
+470:             for inner_start_pos, inner_end_pos in _walk_forward_boundaries(history, inner_start, block_size):
+471:                 prefix = history[:inner_start_pos]
+472:                 uncertainty_by_side = {
+473:                     side: _uncertainty(prefix, side, config.uncertainty_quantile) for side in ("over", "under")
+474:                 }
+475:                 for row in history[inner_start_pos:inner_end_pos]:
+476:                     pick = score_row(row, config, prefix, uncertainty_by_side=uncertainty_by_side)
+477:                     if pick:
+478:                         inner_picks.append(pick)
+479:             metrics = _metrics(inner_picks, seed=seed + fold_no * 10000 + config_no * 2, full_bootstrap=False)
+480:             config_metrics[config.id] = metrics
+481:             raw_p[config.id] = _normal_p_greater([p["profit"] for p in inner_picks])
+482:         adjusted = holm_adjust(raw_p)
+483:         for config in configs:
+484:             tested.append(
+485:                 {
+486:                     "outer_fold": fold_no,
+487:                     "train_end_exclusive": test[0]["kickoff_at"],
+488:                     "config_id": config.id,
+489:                     "parameters": asdict(config),
+490:                     "metrics": config_metrics[config.id],
+491:                     "p_raw_one_sided": raw_p[config.id],
+492:                     "p_holm": adjusted[config.id],
+493:                 }
+494:             )
+495:         selected = max(configs, key=lambda c: _rank_key(config_metrics[c.id]))
+496:         outer_uncertainty = {
+497:             side: _uncertainty(history, side, selected.uncertainty_quantile) for side in ("over", "under")
+498:         }
+499:         fold_picks = [
+500:             p for row in test if (p := score_row(row, selected, history, uncertainty_by_side=outer_uncertainty))
+501:         ]
+502:         for pick in fold_picks:
+503:             pick["outer_fold"] = fold_no
+504:             pick["config_id"] = selected.id
+505:         all_picks.extend(fold_picks)
+506:         outer.append(
+507:             {
+508:                 "fold": fold_no,
+509:                 "train_n": len(history),
+510:                 "test_n": len(test),
+511:                 "train_max_kickoff": history[-1]["kickoff_at"],
+512:                 "test_min_kickoff": test[0]["kickoff_at"],
+513:                 "selected_config_id": selected.id,
+514:                 "selection_p_holm": adjusted[selected.id],
+515:                 "test_metrics": _metrics(fold_picks, seed=seed + fold_no),
+516:             }
+517:         )
+518:     final_metrics = _metrics(all_picks, seed=seed)
+519:     evaluated_rows = ordered[boundaries[0][0] :] if boundaries else []
+520:     always_picks = []
+521:     market_brier = []
+522:     model_brier = []
+523:     for row in evaluated_rows:
+524:         oo, ou = row["offered_odds_ou25"]
+525:         if not valid_ou25_price_pair((oo, ou)):
+526:             continue
+527:         market_over, _ = devig_proportional(float(oo), float(ou))
+528:         model_brier.append((float(row["p_over"]) - int(row["actual_over"])) ** 2)
+529:         market_brier.append((market_over - int(row["actual_over"])) ** 2)
+530:         sides = [
+531:             (float(row["p_over"]) * float(oo) - 1, "over", float(oo)),
+532:             ((1 - float(row["p_over"])) * float(ou) - 1, "under", float(ou)),
+533:         ]
+534:         _ev, side, odd = max(sides)
+535:         won = bool(row["actual_over"]) == (side == "over")
+536:         always_picks.append(
+537:             {"profit": odd - 1 if won else -1.0, "season": row["season"], "side": side, "odd": odd, "clv": None}
+538:         )
+539:     return {
+540:         "schema_version": "ou25-nested-replay/2",
+541:         "generated_at": datetime.now().astimezone().isoformat(),
+542:         "contaminated_seasons": sorted(CONTAMINATED_SEASONS),
+543:         "capital_enabled": False,
+544:         "strength_cap_without_prospective_a1": 40,
+545:         "selection_priority": [
+546:             "roi_ci95_lower",
+547:             "clv_ci95_lower",
+548:             "worst_season_roi",
+549:             "worst_side_roi",
+550:             "worst_odd_band_roi",
+551:             "sample_size",
+552:         ],
+553:         "multiplicity": "Holm family-wise correction within each outer fold",
+554:         "outer_folds": outer,
+555:         "tested_combinations": tested,
+556:         "picks": all_picks,
+557:         "metrics": final_metrics,
+558:         "baselines": {
+559:             "always_bet_best_model_ev": _metrics(always_picks, seed=seed + 91),
+560:             "never_bet": {"n": 0, "profit": 0.0, "roi": 0.0},
+561:             "market_devig": {
+562:                 "n": len(market_brier),
+563:                 "brier": mean(market_brier) if market_brier else None,
+564:                 "model_brier_same_rows": mean(model_brier) if model_brier else None,
+565:                 "note": "probability benchmark; a de-vigged fair price is not an executable bet",
+566:             },
+567:         },
+568:     }
+571: def freeze_candidate(result: dict[str, Any], destination: Path, *, source_hash: str) -> dict[str, Any]:
+572:     fold_ids = [f["selected_config_id"] for f in result["outer_folds"]]
+573:     candidate_id = fold_ids[-1] if fold_ids else None
+574:     candidate_trial = next((t for t in reversed(result["tested_combinations"]) if t["config_id"] == candidate_id), None)
+575:     metrics = result.get("metrics") or {}
+576:     picks = result.get("picks") or []
+577:     side_counts = {side: sum(pick.get("side") == side for pick in picks) for side in ("over", "under")}
+578:     odd_band_counts = {
+579:         band: sum(
+580:             ("low" if float(pick.get("odd", 0.0)) < 1.8 else "mid" if float(pick.get("odd", 0.0)) <= 2.2 else "high")
+581:             == band
+582:             for pick in picks
+583:         )
+584:         for band in ("low", "mid", "high")
+585:     }
+586:     populated_odd_bands_have_minimum = all(count >= 30 for count in odd_band_counts.values() if count > 0)
+587:     stability_checks = {
+588:         "worst_season_roi_nonnegative": metrics.get("worst_season_roi") is not None
+589:         and metrics["worst_season_roi"] >= 0,
+590:         "worst_side_roi_nonnegative": metrics.get("worst_side_roi") is not None and metrics["worst_side_roi"] >= 0,
+591:         "worst_odd_band_roi_nonnegative": metrics.get("worst_odd_band_roi") is not None
+592:         and metrics["worst_odd_band_roi"] >= 0,
+593:     }
+594:     eligible = bool(
+595:         metrics.get("n", 0) >= 200
+596:         and all(count >= 30 for count in side_counts.values())
+597:         and populated_odd_bands_have_minimum
+598:         and all(stability_checks.values())
+599:         and metrics.get("roi_ci95_lower") is not None
+600:         and metrics["roi_ci95_lower"] > 0
+601:         and metrics.get("clv_ci95_lower") is not None
+602:         and metrics["clv_ci95_lower"] > 0
+603:     )
+604:     frozen = {
+605:         "schema_version": "ou25-frozen-candidate/2",
+606:         "candidate_id": candidate_id if eligible else None,
+607:         "parameters": candidate_trial["parameters"] if candidate_trial and eligible else None,
+608:         "frozen_from_observed_data": True,
+609:         "observed_contaminated_seasons": sorted(CONTAMINATED_SEASONS),
+610:         "validation_status": "FUTURE_PROSPECTIVE_A1_REQUIRED",
+611:         "capital_enabled": False,
+612:         "maximum_indication_score": 40,
+613:         "current_action": "SHADOW_CANDIDATE" if eligible else "NO_BET",
+614:         "eligible_at_freeze": eligible,
+615:         "side_counts": side_counts,
+616:         "odd_band_counts": odd_band_counts,
+617:         "stability_checks": stability_checks,
+618:         "source_sha256": source_hash,
+619:     }
+620:     destination.write_text(json.dumps(frozen, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
+621:     return frozen
+624: def file_sha256(path: Path) -> str:
+625:     digest = hashlib.sha256()
+626:     with path.open("rb") as handle:
+627:         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+628:             digest.update(chunk)
+629:     return digest.hexdigest()

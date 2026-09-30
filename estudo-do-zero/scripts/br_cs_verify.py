@@ -1,0 +1,10 @@
+import study,json,pathlib
+s=study.read('brasileirao-shared',pathlib.Path('C:/BRASILEIRAO/brasileirao-predictor/dotnet/LineupWorker/packages.lock.json'))
+count=len(json.loads(s)['dependencies']['net10.0'])
+print('packages',count)
+notes=json.loads(study.read('brasileirao-shared',study.ROOT/'evidencias/brasileirao-predictor/shared-dotnet-notes.json'))
+for row in notes: row['notes']=row['notes'].replace('workerlock32packages',f'worker lock {count} packages')
+study.save('evidencias/brasileirao-predictor/shared-dotnet-notes.json',notes)
+md=study.read('brasileirao-shared',study.ROOT/'evidencias/brasileirao-predictor/shared-dotnet-review.md').replace('workerlock32packages',f'worker lock {count} packages')
+study.save('evidencias/brasileirao-predictor/shared-dotnet-review.md',md)
+study.log('brasileirao-shared',study.ROOT,'Verificar contagem lock .NET e corrigir notas',0,str(count),artifacts='brasileirao-predictor/shared-dotnet-notes.json')

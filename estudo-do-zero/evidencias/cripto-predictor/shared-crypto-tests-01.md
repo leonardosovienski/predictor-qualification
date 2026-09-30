@@ -1,0 +1,43 @@
+# Revisão semântica dos testes Crypto — bloco 01
+
+Leitura integral de fixtures, mocks e assertions; nenhuma execução. Os cenários demonstram contratos sintéticos ou reconciliação de artefatos, sem estabelecer lucro futuro, autorização ou execução real.
+
+## tests/test_aave_economic_evidence.py
+
+Reconcilia hashes físicos do manifesto Aave e submanifestos, confinamento de caminhos, eth_call congelado por bloco/selector e normalized_income reconstruído dentro de uma unidade Ray. Recalcula 1728 cenários de custos/juros com Fraction e arredondamento, compara resultados e flags capital_permission/personal_profit_validated/future_profit_validated falsas. Não chama RPC, não demonstra rendimento pessoal nem liquidez/executabilidade futura.
+
+## tests/test_absolute_research.py
+
+Fixtures de spot/perp constantes e funding sintético validam quatro pernas e custos -6.25, reconciliação semanal/anual, insolvência de margem apesar de exposição líquida zero, exclusão de funding na entrada/saída, funding negativo sob stress, ausência de bucket e futuro incapaz de alterar seleção passada. AR2 rolagens, semanas caixa e bootstrap degenerado não inventam ganho; passos .003/.002 combinam .006. Mudança de filtros atuais não altera quantidades históricas: não prova disponibilidade histórica dos filtros nem execução.
+
+## tests/test_adversarial_hardening.py
+
+Settings rejeita ensemble multi-provider não permitido; calendário macro seleciona vintage disponível antes da decisão, sem revisão futura; retornos usam somente candle fechado e ignoram candle aberto extremo. Dados e chaves são fabricados, sem fonte externa.
+
+## tests/test_ai_insights_ensemble.py
+
+Fake analyze_once demonstra N=1 preservar resposta, N=3 chamar três vezes e mediana/summary/sentiment/std derivados dos escores. Fallbacks são excluídos e all-fallback marcado; N<=0 rejeitado e assinatura de juiz diferencia ensemble. Nenhuma chamada real ou evidência de calibração/qualidade do LLM.
+
+## tests/test_ai_insights_retry.py
+
+Fake erros Gemini/OpenAI e sleep substituído validam quota diária sem retry, quota minuto/RetryInfo e Retry-After, parse fracionário/clamp/fallback e backoff exponencial; 400 sem retry, Timeout/readtimeout retry; função falha duas vezes e retorna na terceira. Não mede latência real nem comportamento de provedores.
+
+## tests/test_altcoin_analogs.py
+
+Barras sintéticas e perturbadas mostram features/volume prefixáveis, endpoint sábado para entrada segunda, passado faltante desqualifica e futuro faltante mantém feature mas outcome perda/stress. Custos de compra/venda, timestamps micro/milli, amostragem deduplicada/ordenada e purge por datas explícitas são verificados. Controle positivo AnalogModel separa estado e nulo permutado não; scaler não muda na predição; bootstrap agrupa 52 semanas com effective_n heurístico13. Não prova generalização econômica.
+
+## tests/test_altcoin_forward.py
+
+Livro artificial demonstra VWAP/profundidade/custos e rejeita cruzamento/duplicatas/negativo. Ledger tmp verifica duplicação/tamper e lock de escritor; clocks/snapshot/freeze/PublicSource são mocks. DECISION deve preceder cotação, tick idempotente, saída vencida censurada, entrada tardia não retropreenchida, crash gera ENTRY_INTERRUPTED e falha aquisição persiste status. 13 ticks sintéticos completam 12 observações com prejuízo de custos; calendário sem observação mantém lucro desconhecido. Allowlist rejeita rotas conta/ordem/URL; sem fill real.
+
+## tests/test_altcoin_observer_review.py
+
+Teste de subprocesso os._exit tenta mostrar liberação OS do lock após morte e ignora arquivo antigo desbloqueado; não foi executado aqui. Ledger sintético: nenhuma observação aguarda, missed slots são desconhecidos, semanas caixa não contam trade vencedor, lucro parcial não apaga semana faltante, status censurado incompatível com retorno é rejeitado. Profit realizado permanece None.
+
+## tests/test_altcoin_payoff.py
+
+Fixtures Decimal/redenominação/conversão quote demonstram ausência de ganho artificial por redenominação, uso de taxa observada em vez de peg e custo de pernas. exact_close não usa listing futuro. Vizinho censurado força abstention, moedas da mesma semana não dão independência; payoff negativo/fee-only não qualifica e positivo sintético qualifica. Nomes JUP/SYRUP não tratados como tokens alavancados; reparo preserva original stress e censura/targetNone.
+
+## tests/test_altcoin_retro.py
+
+Catálogo conserva ativos mortos/JUP/SYRUP e exclui alavancados/stables; perturbando retornos futuros não altera decisões/scores e universo9 não força entrada. Haircuts Decimal, pesos20% de resultado censurado, caixa sem winrate/CI, missing data inconclusivo e resolução declarada diária positive-but-sparse são verificados. Training que cruza avaliação rejeitado; features prefixáveis; compounding/drawdown multiplicativos; dias parciais/invalid timestamps preservam símbolo com NaN. Fonte da resolução é só string fixture: não autentica preço nem fill.

@@ -1,0 +1,260 @@
+### brasileirao_predictor/research/market_residual.py
+7: from __future__ import annotations
+9: import math
+10: from dataclasses import dataclass
+11: from numbers import Real
+13: import numpy as np
+14: from scipy.optimize import minimize
+15: from scipy.special import expit
+18: def _logit(probability: float) -> float:
+19:     if not 0 < probability < 1:
+20:         raise ValueError("probability must be strictly between zero and one")
+21:     return math.log(probability / (1.0 - probability))
+24: def _sigmoid(value):
+25:     return expit(np.asarray(value, dtype=float))
+28: def _nonnegative(value, name):
+29:     if isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value) or value < 0:
+30:         raise ValueError(f"{name} must be finite and nonnegative")
+33: def _feature_names(names, count):
+34:     if (
+35:         not isinstance(names, (list, tuple))
+36:         or len(names) != count
+37:         or any(not isinstance(name, str) or not name.strip() for name in names)
+38:         or len(set(names)) != count
+39:     ):
+40:         raise ValueError("feature_names must be unique nonblank names matching feature count")
+41:     return tuple(names)
+44: def _validate_arrays(coefficients, means, scales, *, multinomial=False):
+45:     if coefficients is None or means is None or scales is None:
+46:         raise RuntimeError("residual model is not fitted")
+47:     if means.ndim != 1 or scales.shape != means.shape:
+48:         raise ValueError("residual model artifact has incompatible shapes")
+49:     expected = (2, len(means) + 1) if multinomial else (len(means) + 1,)
+50:     if coefficients.shape != expected or any(not np.isfinite(a).all() for a in (coefficients, means, scales)):
+51:         raise ValueError("residual model artifact has invalid coefficients or preprocessing")
+52:     if np.any(scales <= 0):
+53:         raise ValueError("residual model scales must be positive")
+56: def _optimization_coefficients(result, shape):
+57:     beta = np.asarray(result.x, dtype=float)
+58:     if not result.success or not np.isfinite(result.fun) or beta.shape != shape or not np.isfinite(beta).all():
+59:         raise RuntimeError("residual optimization failed")
+60:     return beta
+63: @dataclass(frozen=True)
+64: class ResidualPrediction:
+65:     probability: float
+66:     lower_probability: float
+67:     upper_probability: float
+68:     market_probability: float
+69:     residual_log_odds: float
+72: @dataclass
+73: class MarketResidualModel:
+74:     l2: float = 5.0
+75:     feature_names: tuple[str, ...] = ()
+76:     coefficients: np.ndarray | None = None
+77:     means: np.ndarray | None = None
+78:     scales: np.ndarray | None = None
+79:     covariance: np.ndarray | None = None
+81:     def _validate_state(self):
+82:         _nonnegative(self.l2, "l2")
+83:         _validate_arrays(self.coefficients, self.means, self.scales)
+84:         assert self.means is not None
+85:         _feature_names(self.feature_names, len(self.means))
+86:         covariance = self.covariance
+87:         if covariance is None:
+88:             raise RuntimeError("residual model is not fitted")
+89:         if covariance.shape != (len(self.means) + 1, len(self.means) + 1) or not np.isfinite(covariance).all():
+90:             raise ValueError("residual covariance has invalid shape or values")
+91:         tolerance = 1e-12 * max(1.0, float(np.abs(covariance).max()))
+92:         if not np.allclose(covariance, covariance.T, rtol=0, atol=tolerance):
+93:             raise ValueError("residual covariance must be symmetric")
+94:         if float(np.linalg.eigvalsh(covariance).min()) < -tolerance:
+95:             raise ValueError("residual covariance must be positive semidefinite")
+97:     def fit(
+98:         self,
+99:         features: np.ndarray,
+100:         outcomes: np.ndarray,
+101:         market_probabilities: np.ndarray,
+102:         *,
+103:         feature_names: tuple[str, ...] | None = None,
+104:     ) -> MarketResidualModel:
+105:         _nonnegative(self.l2, "l2")
+106:         x = np.asarray(features, dtype=float)
+107:         y = np.asarray(outcomes, dtype=float)
+108:         market = np.asarray(market_probabilities, dtype=float)
+109:         if x.ndim != 2 or y.shape != (len(x),) or market.shape != (len(x),):
+110:             raise ValueError("incompatible residual training shapes")
+111:         if len(x) < max(20, x.shape[1] * 5) or not set(np.unique(y)).issubset({0.0, 1.0}):
+112:             raise ValueError("insufficient or invalid residual training sample")
+113:         if np.any((market <= 0) | (market >= 1)) or not np.isfinite(market).all() or not np.isfinite(x).all():
+114:             raise ValueError("training data contains invalid values")
+115:         names = _feature_names(
+116:             feature_names if feature_names is not None else tuple(f"x{i}" for i in range(x.shape[1])), x.shape[1]
+117:         )
+118:         means = x.mean(axis=0)
+119:         scales = x.std(axis=0)
+120:         scales[scales < 1e-12] = 1.0
+121:         z = (x - means) / scales
+122:         design = np.column_stack([np.ones(len(z)), z])
+123:         offset = np.array([_logit(float(p)) for p in market])
+125:         def objective(beta):
+126:             eta = offset + design @ beta
+127:             loss = np.logaddexp(0.0, eta).sum() - y @ eta
+128:             penalty = 0.5 * self.l2 * float(beta[1:] @ beta[1:])
+129:             return float(loss + penalty)
+131:         def gradient(beta):
+132:             grad = design.T @ (_sigmoid(offset + design @ beta) - y)
+133:             grad[1:] += self.l2 * beta[1:]
+134:             return grad
+136:         result = minimize(objective, np.zeros(design.shape[1]), jac=gradient, method="BFGS")
+137:         beta = _optimization_coefficients(result, (design.shape[1],))
+138:         fitted = _sigmoid(offset + design @ beta)
+139:         weights = fitted * (1.0 - fitted)
+140:         hessian = design.T @ (design * weights[:, None])
+141:         hessian[1:, 1:] += self.l2 * np.eye(design.shape[1] - 1)
+142:         candidate = MarketResidualModel(self.l2, names, beta, means, scales, np.linalg.pinv(hessian))
+143:         candidate._validate_state()
+144:         self.coefficients, self.means, self.scales = beta, means, scales
+145:         self.covariance, self.feature_names = candidate.covariance, names
+146:         return self
+148:     def predict(self, features: np.ndarray, market_probability: float, *, z_score: float = 1.96) -> ResidualPrediction:
+149:         self._validate_state()
+150:         _nonnegative(z_score, "z_score")
+151:         if self.coefficients is None or self.means is None or self.scales is None or self.covariance is None:
+152:             raise RuntimeError("residual model is not fitted")
+153:         row = np.asarray(features, dtype=float)
+154:         if row.shape != self.means.shape or not np.isfinite(row).all():
+155:             raise ValueError("invalid residual feature row")
+156:         design = np.r_[1.0, (row - self.means) / self.scales]
+157:         residual = float(design @ self.coefficients)
+158:         variance = float(design @ self.covariance @ design)
+159:         if not math.isfinite(residual) or not math.isfinite(variance):
+160:             raise ValueError("residual prediction overflow")
+161:         standard_error = math.sqrt(max(0.0, variance))
+162:         anchor = _logit(market_probability)
+163:         probability = float(_sigmoid(anchor + residual))
+164:         lower = float(_sigmoid(anchor + residual - z_score * standard_error))
+165:         upper = float(_sigmoid(anchor + residual + z_score * standard_error))
+166:         return ResidualPrediction(probability, lower, upper, market_probability, residual)
+168:     def to_dict(self) -> dict:
+169:         self._validate_state()
+170:         if self.coefficients is None or self.means is None or self.scales is None or self.covariance is None:
+171:             raise RuntimeError("residual model is not fitted")
+172:         return {
+173:             "schema_version": "market-residual/1",
+174:             "l2": self.l2,
+175:             "feature_names": list(self.feature_names),
+176:             "coefficients": self.coefficients.tolist(),
+177:             "means": self.means.tolist(),
+178:             "scales": self.scales.tolist(),
+179:             "covariance": self.covariance.tolist(),
+180:             "capital_enabled": False,
+181:             "reader_contract_version": "residual-numerics/2",
+182:             "evidence_scope": "MODEL_CONTRACT_ONLY",
+183:             "provenance_verified": False,
+184:             "economic_evidence_eligible": False,
+185:         }
+187:     @classmethod
+188:     def from_dict(cls, payload: dict) -> MarketResidualModel:
+189:         if (
+190:             not isinstance(payload, dict)
+191:             or payload.get("schema_version") != "market-residual/1"
+192:             or payload.get("capital_enabled") is not False
+193:         ):
+194:             raise ValueError("invalid or unsafe residual model artifact")
+195:         try:
+196:             _nonnegative(payload["l2"], "l2")
+197:             model = cls(l2=float(payload["l2"]), feature_names=tuple(payload["feature_names"]))
+198:             model.coefficients = np.array(payload["coefficients"], dtype=float, copy=True)
+199:             model.means = np.array(payload["means"], dtype=float, copy=True)
+200:             model.scales = np.array(payload["scales"], dtype=float, copy=True)
+201:             model.covariance = np.array(payload["covariance"], dtype=float, copy=True)
+202:             _feature_names(payload["feature_names"], len(model.means))
+203:             model._validate_state()
+204:         except (KeyError, TypeError) as exc:
+205:             raise ValueError("residual model artifact is incomplete or invalid") from exc
+206:         return model
+209: @dataclass
+210: class MultinomialMarketResidualModel:
+218:     l2: float = 5.0
+219:     coefficients: np.ndarray | None = None
+220:     means: np.ndarray | None = None
+221:     scales: np.ndarray | None = None
+223:     def fit(
+224:         self, features: np.ndarray, outcomes: np.ndarray, market_probabilities: np.ndarray
+225:     ) -> MultinomialMarketResidualModel:
+226:         _nonnegative(self.l2, "l2")
+227:         x = np.asarray(features, dtype=float)
+228:         y = np.asarray(outcomes)
+229:         market = np.asarray(market_probabilities, dtype=float)
+230:         if x.ndim != 2 or y.shape != (len(x),) or market.shape != (len(x), 3):
+231:             raise ValueError("incompatible multinomial residual training shapes")
+232:         if len(x) < max(50, x.shape[1] * 10) or not set(np.unique(y)).issubset({0, 1, 2}):
+233:             raise ValueError("insufficient or invalid multinomial residual sample")
+234:         y = y.astype(int)
+235:         if (
+236:             np.any((market <= 0) | (market >= 1))
+237:             or not np.isfinite(market).all()
+238:             or not np.allclose(market.sum(axis=1), 1.0, atol=1e-8)
+239:             or not np.isfinite(x).all()
+240:         ):
+241:             raise ValueError("training data contains invalid values")
+242:         means = x.mean(axis=0)
+243:         scales = x.std(axis=0)
+244:         scales[scales < 1e-12] = 1.0
+245:         design = np.column_stack([np.ones(len(x)), (x - means) / scales])
+246:         offsets = np.log(market)
+247:         width = design.shape[1]
+249:         def objective(flat):
+250:             beta = np.asarray(flat).reshape(2, width)
+251:             logits = offsets.copy()
+252:             logits[:, 0] += design @ beta[0]
+253:             logits[:, 1] += design @ beta[1]
+254:             logits -= logits.max(axis=1, keepdims=True)
+255:             log_norm = np.log(np.exp(logits).sum(axis=1))
+256:             loss = -(logits[np.arange(len(y)), y] - log_norm).sum()
+257:             return float(loss + 0.5 * self.l2 * (beta[:, 1:] ** 2).sum())
+259:         def gradient(flat):
+260:             beta = np.asarray(flat).reshape(2, width)
+261:             logits = offsets.copy()
+262:             logits[:, :2] += design @ beta.T
+263:             logits -= logits.max(axis=1, keepdims=True)
+264:             probabilities = np.exp(logits)
+265:             probabilities /= probabilities.sum(axis=1, keepdims=True)
+266:             errors = probabilities - np.eye(3)[y]
+267:             grad = errors[:, :2].T @ design
+268:             grad[:, 1:] += self.l2 * beta[:, 1:]
+269:             return grad.ravel()
+271:         result = minimize(objective, np.zeros(2 * width), jac=gradient, method="BFGS")
+272:         beta = _optimization_coefficients(result, (2 * width,)).reshape(2, width)
+273:         _validate_arrays(beta, means, scales, multinomial=True)
+274:         self.coefficients, self.means, self.scales = beta, means, scales
+275:         return self
+277:     def predict_proba(self, features: np.ndarray, market_probabilities: np.ndarray) -> np.ndarray:
+278:         _nonnegative(self.l2, "l2")
+279:         _validate_arrays(self.coefficients, self.means, self.scales, multinomial=True)
+280:         if self.coefficients is None or self.means is None or self.scales is None:
+281:             raise RuntimeError("multinomial residual model is not fitted")
+282:         x = np.asarray(features, dtype=float)
+283:         market = np.asarray(market_probabilities, dtype=float)
+284:         one = x.ndim == 1
+285:         if one:
+286:             x, market = x[None, :], market[None, :]
+287:         if x.ndim != 2 or x.shape[1:] != self.means.shape or market.shape != (len(x), 3):
+288:             raise ValueError("invalid multinomial residual prediction shapes")
+289:         if (
+290:             not np.isfinite(x).all()
+291:             or not np.isfinite(market).all()
+292:             or np.any((market <= 0) | (market >= 1))
+293:             or not np.allclose(market.sum(axis=1), 1.0, atol=1e-8)
+294:         ):
+295:             raise ValueError("invalid multinomial residual prediction values")
+296:         design = np.column_stack([np.ones(len(x)), (x - self.means) / self.scales])
+297:         logits = np.log(market)
+298:         logits[:, 0] += design @ self.coefficients[0]
+299:         logits[:, 1] += design @ self.coefficients[1]
+300:         if not np.isfinite(logits).all():
+301:             raise ValueError("multinomial residual prediction overflow")
+302:         logits -= logits.max(axis=1, keepdims=True)
+303:         probabilities = np.exp(logits)
+304:         probabilities /= probabilities.sum(axis=1, keepdims=True)
+305:         return probabilities[0] if one else probabilities

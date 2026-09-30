@@ -156,3 +156,7 @@ Backup completo tira snapshots independentes de workspace e research e copia doc
 ## Ordem de leitura
 
 Comece por pyproject.toml, settings.py, runtime.py, orchestrator/__init__.py, agents/__init__.py e workspace.py. Depois identity/explicit.py e persistence/adapters/sqlite.py. Para pesquisa: service.py → objects.py/bundles.py → inspection.py → grounding.py → analysis.py/historian.py → workflows.py. Evaluation, harnesses de CI e relatórios antigos ficam para a segunda passagem. A revisão integral desses últimos continua pendente no coverage.json.
+
+## Limites da revisão concluída
+
+A revisão semântica dos executáveis próprios selecionados desta árvore foi concluída. Esse estado não certifica instalação, modelo vivo, dados de mercado ou lucro. Notas e hashes por arquivo delimitam exatamente a fonte examinada; fontes remotas e versões posteriores exigem sua própria revisão. Consulte o suplemento final de cobertura para testes executados e apenas lidos.

@@ -1,0 +1,459 @@
+### tests/test_redis_integration.py
+7: import asyncio
+8: import json
+9: import os
+10: from urllib.parse import urlparse
+11: from uuid import uuid4
+13: import numpy as np
+14: import pytest
+15: import redis.asyncio as redis
+17: from brasileirao_predictor import kernel_daemon
+18: from brasileirao_predictor import kernel_redis_v2 as protocol
+20: pytestmark = pytest.mark.integration
+21: PARAMS = (0.2, 1.0, 0.1, 0.0, 0.0, 6)
+24: def _test_endpoint():
+25:     url = os.environ.get("LINEUP_TEST_REDIS_URL")
+26:     instance = os.environ.get("LINEUP_TEST_REDIS_RUN_ID")
+27:     if not url and not instance:
+28:         pytest.skip("explicit disposable Redis URL and run_id are required")
+29:     assert url and instance, "both disposable Redis URL and run_id are required"
+30:     target = urlparse(url)
+31:     assert target.scheme == "redis" and target.hostname in {"127.0.0.1", "localhost", "::1"}
+32:     assert target.port and target.port != 6379
+33:     assert target.path.lstrip("/").isdigit() and 1 <= int(target.path[1:]) <= 15
+34:     return url, instance
+37: class Scenario:
+38:     def __init__(self, client):
+39:         self.client = client
+40:         self.match = "synthetic-kernel-" + uuid4().hex
+41:         self.keys = {protocol.CURRENT_PREFIX + self.match, "fair_odds:" + self.match, "lineup_state:" + self.match}
+42:         self.runs = set()
+44:     def request(self, *, version="1", elo_a=1500):
+45:         run = uuid4().hex
+46:         self.runs.add(run)
+47:         self.keys.update({protocol.REQUEST_PREFIX + run, protocol.LEASE_PREFIX + run})
+48:         return json.dumps(
+49:             {
+50:                 "protocol_version": protocol.PROTOCOL_VERSION,
+51:                 "job_id": self.match,
+52:                 "run_id": run,
+53:                 "match_id": self.match,
+54:                 "idempotency_key": "synthetic:" + uuid4().hex,
+55:                 "state_version": version,
+56:                 "elo_a": elo_a,
+57:                 "elo_b": 1500,
+58:                 "dvorp_a": 0,
+59:                 "dvorp_b": 0,
+60:                 "timestamp_t3": 1,
+61:             },
+62:             separators=(",", ":"),
+63:         ).encode()
+65:     async def register(self, raw, *, ttl_ms=60000):
+66:         run = json.loads(raw)["run_id"]
+67:         async with self.client.pipeline(transaction=True) as pipe:
+68:             pipe.set(protocol.CURRENT_PREFIX + self.match, raw, px=60000)
+69:             pipe.set("lineup_state:" + self.match, "{}", px=60000)
+70:             pipe.hset(
+71:                 protocol.REQUEST_PREFIX + run, mapping={"payload": raw, "status": "pending", "lineup_state": "{}"}
+72:             )
+73:             pipe.pexpire(protocol.REQUEST_PREFIX + run, ttl_ms)
+74:             pipe.zadd(protocol.PENDING_KEY, {run: 0})
+75:             await pipe.execute()
+77:     async def claim(self, raw, token):
+78:         run = json.loads(raw)["run_id"]
+79:         return await self.client.eval(
+80:             protocol.CLAIM_SCRIPT,
+81:             5,
+82:             protocol.CURRENT_PREFIX + self.match,
+83:             protocol.REQUEST_PREFIX + run,
+84:             protocol.LEASE_PREFIX + run,
+85:             protocol.PENDING_KEY,
+86:             "lineup_state:" + self.match,
+87:             raw,
+88:             run,
+89:             token,
+90:             protocol.LEASE_MS,
+91:         )
+93:     async def complete(self, raw, token, *, client=None):
+94:         msg = json.loads(raw)
+95:         fair = {
+96:             key: msg[key]
+97:             for key in ("protocol_version", "job_id", "run_id", "match_id", "idempotency_key", "state_version")
+98:         }
+99:         fair.update({"1": 2.5, "X": 4.0, "2": 2.8571, "o25": 2.0, "u25": 2.0})
+100:         return await (client or self.client).eval(
+101:             protocol.COMPLETE_SCRIPT,
+102:             7,
+103:             protocol.CURRENT_PREFIX + self.match,
+104:             protocol.REQUEST_PREFIX + msg["run_id"],
+105:             protocol.LEASE_PREFIX + msg["run_id"],
+106:             "fair_odds:" + self.match,
+107:             protocol.PENDING_KEY,
+108:             "lineup_state:" + self.match,
+109:             protocol.READY_KEY,
+110:             raw,
+111:             msg["run_id"],
+112:             token,
+113:             json.dumps(fair),
+114:             protocol.FAIR_MS,
+115:             "fair_odds_ready:" + self.match,
+116:         )
+118:     async def release(self, raw, token):
+119:         run = json.loads(raw)["run_id"]
+120:         return await self.client.eval(
+121:             protocol.RELEASE_SCRIPT,
+122:             5,
+123:             protocol.CURRENT_PREFIX + self.match,
+124:             protocol.REQUEST_PREFIX + run,
+125:             protocol.LEASE_PREFIX + run,
+126:             protocol.PENDING_KEY,
+127:             "lineup_state:" + self.match,
+128:             raw,
+129:             run,
+130:             token,
+131:             protocol.RETRY_MS,
+132:         )
+134:     async def poll(self):
+135:         return await self.client.eval(
+136:             protocol.POLL_SCRIPT,
+137:             1,
+138:             protocol.PENDING_KEY,
+139:             protocol.POLL_LIMIT,
+140:             protocol.REQUEST_PREFIX,
+141:             protocol.CURRENT_PREFIX,
+142:             protocol.LEASE_PREFIX,
+143:         )
+146: def run_scenario(scenario):
+147:     url, instance = _test_endpoint()
+149:     async def exercise():
+150:         client = redis.from_url(url, decode_responses=False)
+151:         state = Scenario(client)
+152:         verified = False
+153:         try:
+154:             assert (await client.info("server"))["run_id"] == instance
+155:             verified = True
+156:             await scenario(state)
+157:         finally:
+159:             try:
+160:                 if verified and (await client.info("server"))["run_id"] == instance:
+161:                     await client.delete(*state.keys)
+162:                     if state.runs:
+163:                         await client.zrem(protocol.PENDING_KEY, *state.runs)
+164:                         await client.zrem(protocol.READY_KEY, *state.runs)
+165:             finally:
+166:                 await client.aclose()
+168:     asyncio.run(exercise())
+171: @pytest.fixture(autouse=True)
+172: def synthetic_grid(monkeypatch):
+173:     def grid(lam_a, lam_b, *_):
+174:         result = np.ones((4, 4))
+175:         result[1, 0] += lam_a
+176:         result[0, 1] += lam_b
+177:         return result / result.sum()
+179:     monkeypatch.setattr(kernel_daemon, "_compute_grid_jit", grid)
+182: def test_registered_request_completes_once_without_extending_ttl():
+183:     async def scenario(s):
+184:         raw = s.request()
+185:         await s.register(raw)
+186:         subscriber = s.client.pubsub()
+187:         await subscriber.subscribe("fair_odds_ready:" + s.match)
+188:         await subscriber.get_message(timeout=1)
+189:         try:
+190:             await asyncio.gather(*(kernel_daemon._handle_invoke(s.client, raw, PARAMS) for _ in range(8)))
+191:             fair_key = "fair_odds:" + s.match
+192:             fair = json.loads(await s.client.get(fair_key))
+193:             run = json.loads(raw)["run_id"]
+194:             assert fair["run_id"] == run and fair["state_version"] == "1"
+195:             assert await s.client.hget(protocol.REQUEST_PREFIX + run, "status") == b"completed"
+196:             assert await s.client.zscore(protocol.PENDING_KEY, run) is None
+197:             assert await s.client.get(protocol.LEASE_PREFIX + run) is None
+198:             message = await subscriber.get_message(ignore_subscribe_messages=True, timeout=1)
+199:             assert message and json.loads(message["data"]) == fair
+200:             await s.client.pexpire(fair_key, 1000)
+201:             await kernel_daemon._handle_invoke(s.client, raw, PARAMS)
+202:             assert 0 < await s.client.pttl(fair_key) <= 1000
+203:             assert await subscriber.get_message(ignore_subscribe_messages=True, timeout=0.05) is None
+204:         finally:
+205:             await subscriber.aclose()
+207:     run_scenario(scenario)
+210: def test_completed_result_is_discoverable_after_ready_notification_is_lost():
+211:     async def scenario(s):
+212:         raw = s.request()
+213:         await s.register(raw)
+215:         await kernel_daemon._handle_invoke(s.client, raw, PARAMS)
+216:         run = json.loads(raw)["run_id"]
+217:         fair_key = "fair_odds:" + s.match
+218:         assert await s.client.hget(protocol.REQUEST_PREFIX + run, "status") == b"completed"
+219:         deadline = await s.client.zscore(protocol.READY_KEY, run)
+220:         assert deadline is not None, "completed fair result must remain discoverable without Pub/Sub delivery"
+221:         assert deadline == await s.client.pexpiretime(fair_key)
+222:         original = await s.client.get(fair_key)
+223:         await asyncio.sleep(0.01)
+224:         await kernel_daemon._handle_invoke(s.client, raw, PARAMS)
+225:         assert await s.client.get(fair_key) == original
+226:         assert await s.client.pexpiretime(fair_key) == deadline
+227:         assert await s.client.zscore(protocol.READY_KEY, run) == deadline
+229:     run_scenario(scenario)
+232: def test_completion_replay_removes_expired_ready_without_recreating_fair():
+233:     async def scenario(s):
+234:         raw = s.request()
+235:         await s.register(raw)
+236:         await kernel_daemon._handle_invoke(s.client, raw, PARAMS)
+237:         run = json.loads(raw)["run_id"]
+238:         assert await s.client.zscore(protocol.READY_KEY, run) is not None
+239:         await s.client.pexpire("fair_odds:" + s.match, 1)
+240:         await asyncio.sleep(0.01)
+241:         assert await s.complete(raw, "old-completed-token") == b"COMPLETED"
+242:         assert await s.client.zscore(protocol.READY_KEY, run) is None
+243:         assert await s.client.get("fair_odds:" + s.match) is None
+244:         assert await s.client.hget(protocol.REQUEST_PREFIX + run, "status") == b"completed"
+246:     run_scenario(scenario)
+249: def test_old_completion_removes_only_its_ready_member():
+250:     async def scenario(s):
+251:         old, new = s.request(), s.request(version="2")
+252:         await s.register(old)
+253:         await kernel_daemon._handle_invoke(s.client, old, PARAMS)
+254:         old_run, new_run = json.loads(old)["run_id"], json.loads(new)["run_id"]
+255:         assert await s.client.zscore(protocol.READY_KEY, old_run) is not None
+258:         await s.register(new)
+259:         await kernel_daemon._handle_invoke(s.client, new, PARAMS)
+260:         deadline = await s.client.zscore(protocol.READY_KEY, new_run)
+261:         assert await s.complete(old, "old-completed-token") == b"STALE"
+262:         assert await s.client.zscore(protocol.READY_KEY, old_run) is None
+263:         assert await s.client.zscore(protocol.READY_KEY, new_run) == deadline
+264:         assert await s.client.pexpiretime("fair_odds:" + s.match) == deadline
+265:         assert json.loads(await s.client.get("fair_odds:" + s.match))["run_id"] == new_run
+267:     run_scenario(scenario)
+270: def test_invalid_ready_index_type_is_rejected_before_fair_write(monkeypatch):
+271:     async def scenario(s):
+272:         raw = s.request()
+273:         await s.register(raw)
+274:         assert await s.claim(raw, "owner") == b"CLAIMED"
+275:         bad_ready = "synthetic-invalid-ready:" + s.match
+276:         s.keys.add(bad_ready)
+277:         monkeypatch.setattr(protocol, "READY_KEY", bad_ready)
+278:         await s.client.set(bad_ready, "wrong-type")
+279:         assert await s.complete(raw, "owner") == b"INVALID_STATE"
+280:         assert await s.client.get("fair_odds:" + s.match) is None
+281:         run = json.loads(raw)["run_id"]
+282:         assert await s.client.hget(protocol.REQUEST_PREFIX + run, "status") == b"pending"
+283:         assert await s.client.get(protocol.LEASE_PREFIX + run) == b"owner"
+285:     run_scenario(scenario)
+288: def test_older_completion_cannot_overwrite_newer_current():
+289:     async def scenario(s):
+290:         old, new = s.request(), s.request(version="2", elo_a=1700)
+291:         await s.register(old)
+292:         assert await s.claim(old, "old-token") == b"CLAIMED"
+293:         await s.register(new)
+294:         await kernel_daemon._handle_invoke(s.client, new, PARAMS)
+295:         before = await s.client.get("fair_odds:" + s.match)
+296:         assert await s.complete(old, "old-token") == b"STALE"
+297:         assert await s.client.get("fair_odds:" + s.match) == before
+298:         assert json.loads(before)["run_id"] == json.loads(new)["run_id"]
+299:         assert await s.client.zscore(protocol.PENDING_KEY, json.loads(old)["run_id"]) is None
+301:     run_scenario(scenario)
+304: def test_unregistered_or_modified_payload_cannot_claim_current_request():
+305:     async def scenario(s):
+306:         raw = s.request()
+307:         assert await s.claim(raw, "unregistered") == b"EXPIRED"
+308:         await s.register(raw)
+309:         modified = json.dumps({**json.loads(raw), "elo_a": 1900}).encode()
+310:         assert await s.claim(modified, "modified") == b"UNREGISTERED"
+311:         assert await s.client.zscore(protocol.PENDING_KEY, json.loads(raw)["run_id"]) is not None
+312:         assert await s.client.get(protocol.LEASE_PREFIX + json.loads(raw)["run_id"]) is None
+313:         assert await s.claim(raw, "correct") == b"CLAIMED"
+315:     run_scenario(scenario)
+318: def test_lineup_snapshot_change_blocks_claim_and_completion_without_head_change():
+319:     async def scenario(s):
+320:         raw = s.request()
+321:         await s.register(raw)
+322:         assert await s.claim(raw, "token") == b"CLAIMED"
+323:         await s.client.set("lineup_state:" + s.match, '{"changed":true}')
+324:         assert await s.complete(raw, "token") == b"STALE"
+325:         assert await s.client.get("fair_odds:" + s.match) is None
+326:         await s.register(raw)
+327:         await s.client.set("lineup_state:" + s.match, '{"changed":true}')
+328:         assert await s.claim(raw, "later") == b"STALE"
+329:         assert await s.client.get("fair_odds:" + s.match) is None
+331:     run_scenario(scenario)
+334: def test_lost_completion_response_cannot_reset_completed_work_or_republish():
+335:     async def scenario(s):
+336:         raw = s.request()
+337:         await s.register(raw)
+339:         class LostResponse:
+340:             async def eval(self, script, *args):
+341:                 value = await s.client.eval(script, *args)
+342:                 if script == protocol.COMPLETE_SCRIPT:
+343:                     raise ConnectionError("synthetic loss after real commit")
+344:                 return value
+346:         await kernel_daemon._handle_invoke(LostResponse(), raw, PARAMS)
+347:         run = json.loads(raw)["run_id"]
+348:         assert await s.client.hget(protocol.REQUEST_PREFIX + run, "status") == b"completed"
+349:         before = await s.client.get("fair_odds:" + s.match)
+350:         await s.client.pexpire("fair_odds:" + s.match, 1000)
+351:         await kernel_daemon._handle_invoke(s.client, raw, PARAMS)
+352:         assert await s.client.get("fair_odds:" + s.match) == before
+353:         assert 0 < await s.client.pttl("fair_odds:" + s.match) <= 1000
+355:     run_scenario(scenario)
+358: def test_lost_owner_cannot_finish_or_release_reclaimed_attempt():
+359:     async def scenario(s):
+360:         raw = s.request()
+361:         run = json.loads(raw)["run_id"]
+362:         await s.register(raw)
+363:         assert await s.claim(raw, "old") == b"CLAIMED"
+364:         await s.client.pexpire(protocol.LEASE_PREFIX + run, 1)
+365:         await asyncio.sleep(0.01)
+366:         assert await s.claim(raw, "new") == b"CLAIMED"
+367:         assert await s.complete(raw, "old") == b"LEASE_LOST"
+368:         assert await s.release(raw, "old") == b"LEASE_LOST"
+369:         assert await s.client.get(protocol.LEASE_PREFIX + run) == b"new"
+370:         assert await s.complete(raw, "new") == b"COMPLETED"
+372:     run_scenario(scenario)
+375: def test_poll_recovers_lost_wakeup_and_removes_superseded_or_expired():
+376:     async def scenario(s):
+377:         old, raw = s.request(), s.request(version="2")
+378:         await s.register(old)
+379:         await s.register(raw)
+380:         assert await s.poll() == [raw]
+381:         run = json.loads(raw)["run_id"]
+382:         assert await s.claim(raw, "dead-worker") == b"CLAIMED"
+383:         await s.client.pexpire(protocol.LEASE_PREFIX + run, 1)
+384:         await s.client.zadd(protocol.PENDING_KEY, {run: 0})
+385:         await asyncio.sleep(0.01)
+386:         assert await s.poll() == [raw]
+387:         await kernel_daemon._handle_invoke(s.client, raw, PARAMS)
+388:         assert await s.client.hget(protocol.REQUEST_PREFIX + run, "status") == b"completed"
+389:         expired = s.request(version="3")
+390:         await s.register(expired, ttl_ms=1)
+391:         await asyncio.sleep(0.01)
+392:         assert await s.poll() == []
+393:         assert await s.claim(expired, "too-late") == b"EXPIRED"
+395:     run_scenario(scenario)
+398: def test_request_expiry_blocks_completion_and_completion_does_not_renew_request():
+399:     async def scenario(s):
+400:         raw = s.request()
+401:         await s.register(raw)
+402:         run = json.loads(raw)["run_id"]
+403:         assert await s.claim(raw, "token") == b"CLAIMED"
+404:         await s.client.pexpire(protocol.REQUEST_PREFIX + run, 1)
+405:         await asyncio.sleep(0.01)
+406:         assert await s.complete(raw, "token") == b"STALE"
+407:         assert await s.client.get("fair_odds:" + s.match) is None
+408:         current = s.request(version="2")
+409:         await s.register(current)
+410:         run = json.loads(current)["run_id"]
+411:         await s.client.pexpire(protocol.REQUEST_PREFIX + run, 1000)
+412:         await kernel_daemon._handle_invoke(s.client, current, PARAMS)
+413:         assert 0 < await s.client.pttl(protocol.REQUEST_PREFIX + run) <= 1000
+414:         assert 0 < await s.client.pttl("fair_odds:" + s.match) <= 1000
+416:     run_scenario(scenario)
+419: @pytest.mark.parametrize("denied", ["channel", "hset", "zrem", "zadd", "pexpiretime", "del", "set", "publish"])
+420: def test_acl_error_keeps_work_retryable_without_fair_output(denied):
+421:     async def scenario(s):
+422:         raw = s.request()
+423:         await s.register(raw)
+424:         run = json.loads(raw)["run_id"]
+425:         assert await s.claim(raw, "token") == b"CLAIMED"
+426:         user = "synthetic-kernel-" + uuid4().hex
+427:         restrictions = ["resetchannels"] if denied == "channel" else ["allchannels", "-" + denied]
+428:         await s.client.execute_command("ACL", "SETUSER", user, "on", "nopass", "~*", "+@all", *restrictions)
+429:         restricted = redis.from_url(os.environ["LINEUP_TEST_REDIS_URL"], username=user, decode_responses=False)
+430:         try:
+431:             assert await s.complete(raw, "token", client=restricted) == b"ACL_DENIED"
+432:             assert await s.client.hget(protocol.REQUEST_PREFIX + run, "status") == b"pending"
+433:             assert await s.client.get("fair_odds:" + s.match) is None
+434:             assert await s.client.zscore(protocol.READY_KEY, run) is None
+435:             assert await s.client.get(protocol.LEASE_PREFIX + run) == b"token"
+436:             assert await s.client.zscore(protocol.PENDING_KEY, run) is not None
+437:             assert await s.release(raw, "token") == b"RETRY"
+438:             assert await s.claim(raw, "retry") == b"CLAIMED"
+439:             assert await s.complete(raw, "retry") == b"COMPLETED"
+440:         finally:
+441:             await restricted.aclose()
+442:             if (await s.client.info("server"))["run_id"] == os.environ["LINEUP_TEST_REDIS_RUN_ID"]:
+443:                 await s.client.execute_command("ACL", "DELUSER", user)
+445:     run_scenario(scenario)
+448: def test_health_heartbeat_expires_after_crash_without_cleanup():
+449:     async def scenario(s):
+450:         key = "synthetic-health:" + s.match
+451:         s.keys.add(key)
+452:         value = json.dumps({"protocol_version": protocol.PROTOCOL_VERSION, "session_id": "crashed"})
+453:         assert await s.client.eval(protocol.HEARTBEAT_SCRIPT, 1, key, value, 50, "start") == 1
+454:         assert await s.client.eval(protocol.HEALTHCHECK_SCRIPT, 1, key) == 1
+455:         await asyncio.sleep(0.06)
+456:         assert await s.client.eval(protocol.HEALTHCHECK_SCRIPT, 1, key) == 0
+458:     run_scenario(scenario)
+461: def test_old_session_cannot_renew_or_remove_new_session_heartbeat():
+462:     async def scenario(s):
+463:         key = "synthetic-health:" + s.match
+464:         s.keys.add(key)
+465:         old = json.dumps({"protocol_version": protocol.PROTOCOL_VERSION, "session_id": "old"})
+466:         new = json.dumps({"protocol_version": protocol.PROTOCOL_VERSION, "session_id": "new"})
+467:         assert await s.client.eval(protocol.HEARTBEAT_SCRIPT, 1, key, old, 5000, "start") == 1
+468:         assert await s.client.eval(protocol.HEARTBEAT_SCRIPT, 1, key, new, 5000, "start") == 1
+469:         assert await s.client.eval(protocol.HEARTBEAT_SCRIPT, 1, key, old, 5000, "renew") == 0
+470:         assert await s.client.eval(protocol.HEARTBEAT_SCRIPT, 1, key, old, 5000, "release") == 0
+471:         assert await s.client.get(key) == new.encode()
+472:         assert await s.client.eval(protocol.HEALTHCHECK_SCRIPT, 1, key) == 1
+474:     run_scenario(scenario)
+477: def test_disconnected_poller_stops_renewal_and_health_expires(monkeypatch):
+478:     async def scenario(s):
+479:         key = "synthetic-health:" + s.match
+480:         s.keys.add(key)
+481:         monkeypatch.setattr(protocol, "HEALTH_KEY", key)
+482:         value = json.dumps({"protocol_version": protocol.PROTOCOL_VERSION, "session_id": "disconnected"})
+483:         await s.client.eval(protocol.HEARTBEAT_SCRIPT, 1, key, value, 50, "start")
+485:         class Disconnected:
+486:             async def eval(self, script, *args):
+487:                 if script == protocol.HEARTBEAT_SCRIPT:
+488:                     raise ConnectionError("synthetic disconnected socket")
+489:                 return await s.client.eval(script, *args)
+491:         with pytest.raises(ConnectionError):
+492:             await kernel_daemon._poll_pending(Disconnected(), PARAMS, asyncio.Event(), value)
+493:         await asyncio.sleep(0.06)
+494:         assert await s.client.eval(protocol.HEALTHCHECK_SCRIPT, 1, key) == 0
+496:     run_scenario(scenario)
+499: def test_healthcheck_rejects_legacy_or_durable_flags():
+500:     async def scenario(s):
+501:         key = "synthetic-health:" + s.match
+502:         s.keys.add(key)
+503:         await s.client.set(key, "ready")
+504:         assert await s.client.eval(protocol.HEALTHCHECK_SCRIPT, 1, key) == 0
+505:         value = json.dumps({"protocol_version": protocol.PROTOCOL_VERSION, "session_id": "no-deadline"})
+506:         await s.client.set(key, value)
+507:         assert await s.client.eval(protocol.HEALTHCHECK_SCRIPT, 1, key) == 0
+508:         await s.client.set(key, json.dumps({"protocol_version": "brasileirao.redis/1", "session_id": "old"}), px=5000)
+509:         assert await s.client.eval(protocol.HEALTHCHECK_SCRIPT, 1, key) == 0
+511:     run_scenario(scenario)
+### tests/test_repo_hygiene.py
+3: import shutil
+4: import subprocess
+5: from pathlib import Path
+7: import pytest
+9: ROOT = Path(__file__).resolve().parents[1]
+10: GIT = shutil.which("git")
+12: pytestmark = pytest.mark.skipif(
+13:     not (GIT and (ROOT / ".git").exists()),
+14:     reason="git hygiene requires a Git checkout",
+15: )
+18: def test_no_code_file_is_gitignored() -> None:
+19:     files = [
+20:         path
+21:         for package in ("brasileirao_predictor", "brasileirao_scripts", "tests")
+22:         for path in (ROOT / package).rglob("*.py")
+23:         if "__pycache__" not in path.parts and ".venv" not in path.parts
+24:     ]
+25:     ignored: list[str] = []
+26:     relative = [str(path.relative_to(ROOT)) for path in files]
+27:     for index in range(0, len(relative), 100):
+28:         process = subprocess.run(
+29:             [GIT, "-C", str(ROOT), "check-ignore", *relative[index : index + 100]],
+30:             capture_output=True,
+31:             text=True,
+32:             check=False,
+33:         )
+34:         if process.returncode == 0:
+35:             ignored.extend(process.stdout.splitlines())
+36:     assert not ignored, f"Python code is ignored by Git: {ignored}"
+39: def test_vendor_is_absent() -> None:
+40:     assert not (ROOT / "vendor").exists()

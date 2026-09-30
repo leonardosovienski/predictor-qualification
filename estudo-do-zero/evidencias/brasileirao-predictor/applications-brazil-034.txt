@@ -1,0 +1,380 @@
+### brasileirao_predictor/research/shadow_portfolio.py
+6: from __future__ import annotations
+8: import math
+9: from datetime import UTC, datetime
+10: from decimal import Decimal, localcontext
+11: from numbers import Real
+12: from typing import Any
+15: def finite(value: Any, name: str) -> float:
+16:     if isinstance(value, bool) or not isinstance(value, Real):
+17:         raise ValueError(f"{name} must be a finite number")
+18:     try:
+19:         value = float(value)
+20:     except (ValueError, OverflowError) as exc:
+21:         raise ValueError(f"{name} must be a finite number") from exc
+22:     if not math.isfinite(value):
+23:         raise ValueError(f"{name} must be a finite number")
+24:     return value
+27: def utc(value: Any) -> datetime:
+28:     if not isinstance(value, str):
+29:         raise ValueError("timestamp must be an aware ISO string")
+30:     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+31:     if parsed.tzinfo is None or parsed.utcoffset() is None:
+32:         raise ValueError("timestamp must be timezone-aware")
+33:     return parsed.astimezone(UTC)
+36: def binary_outcome(value: Any) -> int | None:
+37:     if value is None:
+38:         return None
+39:     number = finite(value, "outcome")
+40:     if number not in (0, 1):
+41:         raise ValueError("outcome must be binary or explicitly unsettled (None)")
+42:     return int(number)
+45: def replay_shadow_portfolio(
+46:     orders: list[dict[str, Any]], *, reference_bankroll: float = 100.0, as_of: str | None = None
+47: ) -> dict[str, Any]:
+53:     initial = finite(reference_bankroll, "reference_bankroll")
+54:     if initial <= 0:
+55:         raise ValueError("reference_bankroll must be positive")
+56:     cutoff = utc(as_of) if as_of is not None else None
+57:     prepared, identities = [], set()
+58:     for row in orders:
+59:         event = row["event_id"]
+60:         if not isinstance(event, str) or not event.strip() or event in identities:
+61:             raise ValueError("orders require unique nonblank event_id")
+62:         identities.add(event)
+63:         decision = utc(row["predicted_at"])
+64:         settled = utc(row["settled_at"]) if row.get("settled_at") is not None else None
+65:         outcome = binary_outcome(row.get("outcome"))
+66:         if (settled is None) != (outcome is None) or (settled is not None and settled <= decision):
+67:             raise ValueError("invalid order settlement chronology")
+68:         fraction = finite(row["stake_fraction"], "stake_fraction")
+69:         odds, fee = finite(row["odds"], "odds"), finite(row["friction_rate"], "friction_rate")
+70:         if fraction < 0 or odds <= 1 or not 0 <= fee < 1 or row["selection"] not in {"over", "under"}:
+71:             raise ValueError("invalid binary-back order")
+72:         prepared.append((decision, event, settled, outcome, fraction, odds, fee, row["selection"]))
+74:     with localcontext() as context:
+75:         context.prec = 50
+76:         bank = Decimal(str(initial))
+77:         cash = bank
+78:         stakes = costs = returns = locked = peak_locked = Decimal(0)
+79:         pending, receipts = [], []
+81:         def release(at):
+82:             nonlocal cash, returns, locked
+83:             for position in sorted(pending[:], key=lambda item: (item[0] or datetime.max.replace(tzinfo=UTC), item[1])):
+84:                 settled, event, stake, payout = position
+85:                 if settled is not None and (at is None or settled <= at):
+86:                     cash += payout
+87:                     returns += payout
+88:                     locked -= stake
+89:                     pending.remove(position)
+90:                     receipts.append(
+91:                         {"event_id": event, "action": "SETTLED", "at": settled.isoformat(), "return": float(payout)}
+92:                     )
+94:         for decision, event, settled, outcome, fraction, odds, fee, side in sorted(prepared):
+95:             if cutoff is not None and decision > cutoff:
+96:                 receipts.append({"event_id": event, "action": "AFTER_CUTOFF"})
+97:                 continue
+98:             release(decision)
+99:             stake = bank * Decimal(str(fraction))
+100:             charge = stake * Decimal(str(fee))
+101:             if stake == 0 or cash < stake + charge:
+102:                 receipts.append({"event_id": event, "action": "NO_CAPITAL" if stake else "NO_STAKE"})
+103:                 continue
+104:             cash -= stake + charge
+105:             stakes += stake
+106:             costs += charge
+107:             locked += stake
+108:             peak_locked = max(peak_locked, locked)
+109:             won = outcome is not None and ((outcome == 1) if side == "over" else (outcome == 0))
+110:             payout = stake * Decimal(str(odds)) if won else Decimal(0)
+111:             pending.append((settled, event, stake, payout))
+112:             receipts.append(
+113:                 {
+114:                     "event_id": event,
+115:                     "action": "SIMULATED_FILL",
+116:                     "at": decision.isoformat(),
+117:                     "stake": float(stake),
+118:                     "cost": float(charge),
+119:                 }
+120:             )
+121:         release(cutoff)
+122:         pnl = returns - (stakes - locked) - costs
+123:         if cash + locked != bank + pnl:
+124:             raise ArithmeticError("portfolio cash reconciliation failed")
+125:         for amount in (cash, locked, stakes, costs, returns, pnl, peak_locked):
+126:             if not math.isfinite(float(amount)):
+127:                 raise ValueError("portfolio amounts must remain finite at the output boundary")
+128:         return {
+129:             "schema_version": "shadow-portfolio/v1",
+130:             "execution_assumption": "hypothetical_full_fill_if_cash_available",
+131:             "cost_scope": "caller_declared_flat_cost_per_staked_unit_only",
+132:             "unit": "symbolic_reference_units",
+133:             "stake_basis": "fraction_of_initial_reference_bankroll",
+134:             "initial_bankroll": float(bank),
+135:             "final_cash": float(cash),
+136:             "open_stakes": float(locked),
+137:             "total_stakes": float(stakes),
+138:             "total_costs": float(costs),
+139:             "returns_including_principal": float(returns),
+140:             "net_pnl": float(pnl),
+141:             "roi": float(pnl / stakes) if stakes and not pending else None,
+142:             "return_on_bankroll": float(pnl / bank) if not pending else None,
+143:             "maximum_simultaneous_stakes": float(peak_locked),
+144:             "open_positions": len(pending),
+145:             "receipts": receipts,
+146:             "capital_enabled": False,
+147:             "economic_evidence": False,
+148:         }
+### brasileirao_predictor/research/sofascore_probe.py
+20: import argparse
+21: import json
+22: import sys
+24: from .. import db
+25: from ..ingest import ROOT, load_config
+36: def summarize_odds(raw: dict | None) -> dict:
+39:     markets = (raw or {}).get("markets", []) or []
+40:     out = []
+41:     for m in markets:
+42:         out.append(
+43:             {
+44:                 "marketId": m.get("marketId"),
+45:                 "marketName": m.get("marketName"),
+46:                 "choiceGroup": m.get("choiceGroup"),
+47:                 "choices": [c.get("name") for c in (m.get("choices") or [])],
+48:             }
+49:         )
+50:     return {"n_markets": len(out), "markets": out}
+53: def summarize_statistics(raw: dict | None) -> dict:
+56:     periods = (raw or {}).get("statistics", []) or []
+57:     out = []
+58:     for period in periods:
+59:         items = []
+60:         for group in period.get("groups", []) or []:
+61:             for it in group.get("statisticsItems", []) or []:
+62:                 items.append(it.get("name"))
+63:         out.append({"period": period.get("period"), "items": items})
+64:     return {"n_periods": len(out), "periods": out}
+67: def summarize_lineups(raw: dict | None) -> dict:
+70:     sample_keys = set()
+71:     n_players = 0
+72:     for side in ("home", "away"):
+73:         for p in (raw or {}).get(side, {}).get("players", []) or []:
+74:             n_players += 1
+75:             sample_keys.update((p.get("statistics") or {}).keys())
+76:     return {"n_players": n_players, "player_stat_keys": sorted(sample_keys)}
+84: def _pick_event(conn) -> int | None:
+87:     row = conn.execute(
+88:         "SELECT event_id FROM sofascore_matches WHERE home_score IS NULL ORDER BY date LIMIT 1"
+89:     ).fetchone()
+90:     if row:
+91:         return row[0]
+92:     row = conn.execute("SELECT event_id FROM sofascore_matches ORDER BY date DESC LIMIT 1").fetchone()
+93:     return row[0] if row else None
+96: def run(event_id: int | None = None) -> int:
+97:     cfg = load_config()
+98:     conn = db.connect(str(ROOT / cfg["database"]))
+100:     if event_id is None:
+101:         event_id = _pick_event(conn)
+102:         if event_id is None:
+103:             print("Nenhum event_id em sofascore_matches — rode a coleta primeiro.", file=sys.stderr)
+104:             return 1
+105:     print(f"[probe] event_id = {event_id}")
+108:     from ..sofascore import Sofascore
+110:     scfg = cfg.get("sofascore", {})
+111:     client = Sofascore(rate_limit=float(scfg.get("rate_limit_seconds", 1.5)))
+113:     raw_odds = client.event_odds(event_id)  # fixture: odds ao vivo
+114:     raw_stats = client.event_statistics(event_id)
+115:     raw_lineups = client.event_lineups(event_id)
+117:     report = {
+118:         "event_id": event_id,
+119:         "odds": summarize_odds(raw_odds),
+120:         "statistics": summarize_statistics(raw_stats),
+121:         "lineups": summarize_lineups(raw_lineups),
+122:     }
+124:     out_dir = ROOT / "data" / "research"
+125:     out_dir.mkdir(parents=True, exist_ok=True)
+126:     out_path = out_dir / f"sofascore_probe_{event_id}.json"
+127:     out_path.write_text(
+128:         json.dumps(
+129:             {
+130:                 "summary": report,
+131:                 "raw_odds": raw_odds,
+132:                 "raw_statistics": raw_stats,
+133:                 "raw_lineups": raw_lineups,
+134:             },
+135:             indent=2,
+136:             ensure_ascii=False,
+137:         ),
+138:         encoding="utf-8",
+139:     )
+142:     print(f"\n=== MERCADOS DE ODDS ({report['odds']['n_markets']}) ===")
+143:     for m in report["odds"]["markets"]:
+144:         print(f"  [{m['marketId']}] {m['marketName']}  choices={m['choices']}")
+145:     print("\n=== ESTATÍSTICAS DISPONÍVEIS ===")
+146:     for p in report["statistics"]["periods"]:
+147:         print(f"  período {p['period']}: {p['items']}")
+148:     print("\n=== STATS DE JOGADOR (chaves) ===")
+149:     print(f"  {report['lineups']['n_players']} jogadores; chaves: {report['lineups']['player_stat_keys']}")
+150:     print(f"\n[probe] cru + resumo salvos em: {out_path}")
+151:     print("[probe] me envie esse arquivo (ou o resumo acima) para desenhar a expansão sobre fatos.")
+152:     return 0
+155: def _main() -> int:
+156:     ap = argparse.ArgumentParser(description="Sonda de diagnóstico do Sofascore")
+157:     ap.add_argument(
+158:         "--event-id",
+159:         type=int,
+160:         default=None,
+161:         help="event_id específico (default: auto — fixture futuro da base)",
+162:     )
+163:     args = ap.parse_args()
+164:     return run(event_id=args.event_id)
+167: if __name__ == "__main__":
+168:     sys.exit(_main())
+### brasileirao_predictor/research/structural_edge.py
+7: from __future__ import annotations
+9: import math
+10: from collections.abc import Mapping
+11: from dataclasses import dataclass
+12: from datetime import datetime
+13: from numbers import Real
+14: from types import MappingProxyType
+15: from typing import Literal
+17: import numpy as np
+18: from scipy.optimize import brentq
+20: from brasileirao_predictor.math_utils import shin_probabilities
+22: CapitalGate = Literal["CAPITAL_GATE: LOCKED"]
+23: DevigMethod = Literal["shin", "power"]
+26: def _require_aware(value: datetime, field: str) -> None:
+27:     if value.tzinfo is None or value.utcoffset() is None:
+28:         raise ValueError(f"{field} must be timezone-aware")
+31: def _finite(value: object) -> bool:
+32:     try:
+33:         return not isinstance(value, bool) and isinstance(value, Real) and math.isfinite(value)
+34:     except (OverflowError, TypeError):
+35:         return False
+38: @dataclass(frozen=True)
+39: class MarketSnapshot:
+46:     event_id: str
+47:     bookmaker: str
+48:     market: str
+49:     line: float | None
+50:     captured_at: datetime
+51:     kickoff_at: datetime
+52:     odds: Mapping[str, float]
+53:     mapping_version: str
+55:     def __post_init__(self) -> None:
+56:         _require_aware(self.captured_at, "captured_at")
+57:         _require_aware(self.kickoff_at, "kickoff_at")
+58:         if not self.event_id.strip() or not self.bookmaker.strip() or not self.market.strip():
+59:             raise ValueError("event_id, bookmaker and market are required")
+60:         if not self.mapping_version.strip():
+61:             raise ValueError("mapping_version is required for auditable identity")
+62:         if self.captured_at >= self.kickoff_at:
+63:             raise ValueError("snapshot must be available strictly before kickoff")
+64:         if self.line is not None and not _finite(self.line):
+65:             raise ValueError("market line must be finite or absent")
+66:         if not isinstance(self.odds, Mapping) or len(self.odds) < 2:
+67:             raise ValueError("a complete market needs at least two selections")
+68:         copied = dict(self.odds)
+69:         for selection, odd in copied.items():
+70:             if not isinstance(selection, str) or not selection.strip() or not _finite(odd) or odd <= 1.0:
+71:                 raise ValueError("selections must be named and decimal odds finite and > 1")
+72:         object.__setattr__(self, "odds", MappingProxyType(copied))
+75: @dataclass(frozen=True)
+76: class StructuralEdgePolicy:
+77:     reference_book: str = "pinnacle"
+78:     ev_threshold: float = 0.03
+79:     max_reference_staleness_seconds: int = 300
+80:     devig_method: DevigMethod = "shin"
+82:     def __post_init__(self) -> None:
+83:         if not _finite(self.ev_threshold) or not 0.0 < self.ev_threshold < 1.0:
+84:             raise ValueError("ev_threshold must be between 0 and 1")
+85:         if not _finite(self.max_reference_staleness_seconds) or self.max_reference_staleness_seconds <= 0:
+86:             raise ValueError("max_reference_staleness_seconds must be positive")
+87:         if not isinstance(self.reference_book, str) or not self.reference_book.strip():
+88:             raise ValueError("reference_book must be explicit")
+89:         if self.devig_method not in {"shin", "power"}:
+90:             raise ValueError("devig_method must be shin or power")
+93: @dataclass(frozen=True)
+94: class StructuralEdgeAlert:
+95:     event_id: str
+96:     market: str
+97:     line: float | None
+98:     selection: str
+99:     reference_book: str
+100:     soft_book: str
+101:     fair_probability: float
+102:     soft_odds: float
+103:     expected_value: float
+104:     evaluated_at: datetime
+105:     signal: Literal["PAPER_CANDIDATE"] = "PAPER_CANDIDATE"
+106:     scientific_state: Literal["SHADOW_ONLY"] = "SHADOW_ONLY"
+107:     economic_evidence_eligible: Literal[False] = False
+108:     capital_gate: CapitalGate = "CAPITAL_GATE: LOCKED"
+111: @dataclass(frozen=True)
+112: class StructuralEdgeEvaluation:
+113:     fair_probabilities: dict[str, float]
+114:     reference_overround: float
+115:     alerts: tuple[StructuralEdgeAlert, ...]
+116:     capital_gate: CapitalGate = "CAPITAL_GATE: LOCKED"
+119: def power_probabilities(odds: list[float]) -> tuple[np.ndarray, float, float]:
+122:     if len(odds) < 2 or any(not _finite(odd) or odd <= 1.0 for odd in odds):
+123:         raise ValueError("power devig requires at least two finite decimal odds > 1")
+124:     implied = np.asarray([1.0 / odd for odd in odds], dtype=float)
+125:     booksum = float(implied.sum())
+126:     if booksum <= 1.0:
+127:         return implied / booksum, 1.0, booksum - 1.0
+130:     upper = max(2.0, 2 * math.log(len(odds)) / -math.log(float(implied.max())))
+131:     root, _ = brentq(lambda k: float(np.power(implied, k).sum()) - 1.0, 1.0, upper, full_output=True)
+132:     exponent = float(root)
+133:     probabilities = np.power(implied, exponent)
+134:     return probabilities / probabilities.sum(), exponent, booksum - 1.0
+137: def detect_structural_edges(
+138:     reference: MarketSnapshot,
+139:     soft: MarketSnapshot,
+140:     *,
+141:     evaluated_at: datetime,
+142:     policy: StructuralEdgePolicy = StructuralEdgePolicy(),
+143: ) -> StructuralEdgeEvaluation:
+151:     _require_aware(evaluated_at, "evaluated_at")
+152:     if reference.bookmaker.casefold() != policy.reference_book.casefold():
+153:         raise ValueError("reference snapshot is not from the frozen reference book")
+154:     if soft.bookmaker.casefold() == reference.bookmaker.casefold():
+155:         raise ValueError("soft book must differ from reference book")
+156:     reference_key = (reference.event_id, reference.market, reference.line, reference.mapping_version)
+157:     soft_key = (soft.event_id, soft.market, soft.line, soft.mapping_version)
+158:     if reference_key != soft_key or set(reference.odds) != set(soft.odds):
+159:         raise ValueError("event, market, line, mapping version and selections must match exactly")
+160:     if reference.kickoff_at != soft.kickoff_at or evaluated_at >= reference.kickoff_at:
+161:         raise ValueError("kickoff identity must match and evaluation must be pre-kickoff")
+162:     if reference.captured_at > evaluated_at or soft.captured_at > evaluated_at:
+163:         raise ValueError("future snapshots are forbidden")
+164:     staleness = (evaluated_at - reference.captured_at).total_seconds()
+165:     if staleness > policy.max_reference_staleness_seconds:
+166:         raise ValueError("reference snapshot is stale")
+167:     if (evaluated_at - soft.captured_at).total_seconds() > policy.max_reference_staleness_seconds:
+168:         raise ValueError("offer snapshot is stale")
+170:     selections = sorted(reference.odds)
+171:     reference_odds = [reference.odds[selection] for selection in selections]
+172:     if policy.devig_method == "shin":
+173:         probabilities, _, overround = shin_probabilities(reference_odds)
+174:     else:
+175:         probabilities, _, overround = power_probabilities(reference_odds)
+176:     fair = {selection: float(probability) for selection, probability in zip(selections, probabilities, strict=True)}
+177:     alerts = tuple(
+178:         StructuralEdgeAlert(
+179:             event_id=reference.event_id,
+180:             market=reference.market,
+181:             line=reference.line,
+182:             selection=selection,
+183:             reference_book=reference.bookmaker,
+184:             soft_book=soft.bookmaker,
+185:             fair_probability=fair[selection],
+186:             soft_odds=soft.odds[selection],
+187:             expected_value=fair[selection] * soft.odds[selection] - 1.0,
+188:             evaluated_at=evaluated_at,
+189:         )
+190:         for selection in selections
+191:         if fair[selection] * soft.odds[selection] - 1.0 > policy.ev_threshold
+192:     )
+193:     return StructuralEdgeEvaluation(fair_probabilities=fair, reference_overround=float(overround), alerts=alerts)

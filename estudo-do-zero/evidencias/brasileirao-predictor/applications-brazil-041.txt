@@ -1,0 +1,355 @@
+### tests/test_backup_restore.py
+1: import json
+2: import sqlite3
+3: from pathlib import Path
+5: import pytest
+7: from brasileirao_predictor.backup_restore import BackupError, create_backup, restore_backup, verify_backup
+10: def _root(path: Path) -> Path:
+11:     (path / "data").mkdir(parents=True)
+12:     conn = sqlite3.connect(path / "data" / "matches.db")
+13:     conn.execute("create table matches (id integer primary key, team text)")
+14:     conn.execute("insert into matches values (1, 'Palmeiras')")
+15:     conn.commit()
+16:     conn.close()
+17:     (path / "data" / "sombra_picks.jsonl").write_text('{"event_id": 1}\n', encoding="utf-8")
+18:     (path / "data" / "trials.json").write_text("[]", encoding="utf-8")
+19:     return path
+22: def test_backup_verify_restore_roundtrip(tmp_path):
+23:     source = _root(tmp_path / "source")
+24:     backup = create_backup(tmp_path / "backup", root=source)
+25:     assert verify_backup(backup)["schema_version"] == "brasileirao-backup/1.0"
+26:     assert not list((backup / "data").glob("matches.db-*"))
+27:     restored = restore_backup(backup, tmp_path / "restored")
+28:     conn = sqlite3.connect(restored / "data" / "matches.db")
+29:     assert conn.execute("select * from matches").fetchall() == [(1, "Palmeiras")]
+30:     conn.close()
+31:     assert json.loads((restored / "data" / "trials.json").read_text()) == []
+34: def test_backup_includes_research_and_runtime(tmp_path):
+35:     source = _root(tmp_path / "source")
+36:     (source / "data" / "research").mkdir()
+37:     (source / "data" / "research" / "h9_shadow.jsonl").write_text("{}\n")
+38:     (source / "data" / "runtime").mkdir()
+39:     (source / "data" / "runtime" / "heartbeat.json").write_text("{}\n")
+40:     backup = create_backup(tmp_path / "backup", root=source)
+41:     assert (backup / "data" / "research" / "h9_shadow.jsonl").is_file()
+42:     assert (backup / "data" / "runtime" / "heartbeat.json").is_file()
+45: def test_backup_includes_operational_odds_and_audit_files(tmp_path):
+46:     source = _root(tmp_path / "source")
+47:     with sqlite3.connect(source / "data" / "odds_operational.db") as connection:
+48:         connection.execute("CREATE TABLE snapshots (id INTEGER PRIMARY KEY)")
+49:     for directory, filename in (
+50:         ("odds_snapshots", "2026-08-28.jsonl"),
+51:         ("odds_quarantine", "quarantine.jsonl"),
+52:         ("collector_state", "collector_heartbeat.json"),
+53:         ("collector_metrics", "gate_a1_verdict.json"),
+54:     ):
+55:         path = source / "data" / directory
+56:         path.mkdir()
+57:         (path / filename).write_text("{}\n", encoding="utf-8")
+58:     backup = create_backup(tmp_path / "backup", root=source)
+59:     assert (backup / "data" / "odds_operational.db").is_file()
+60:     assert (backup / "data" / "odds_snapshots" / "2026-08-28.jsonl").is_file()
+61:     assert verify_backup(backup)["schema_version"] == "brasileirao-backup/1.0"
+64: def test_backup_includes_trial_v2_paper_capital_and_reports(tmp_path):
+65:     source = _root(tmp_path / "source")
+66:     (source / "data" / "trials.v2.json").write_text("[]", encoding="utf-8")
+67:     paper = source / "data" / "paper_capital"
+68:     paper.mkdir()
+69:     (paper / "forecast.json").write_text("{}\n", encoding="utf-8")
+70:     reports = source / "reports"
+71:     reports.mkdir()
+72:     (reports / "ledger.jsonl").write_text("{}\n", encoding="utf-8")
+73:     backup = create_backup(tmp_path / "backup", root=source)
+74:     assert (backup / "data" / "trials.v2.json").is_file()
+75:     assert (backup / "data" / "paper_capital" / "forecast.json").is_file()
+76:     assert (backup / "reports" / "ledger.jsonl").is_file()
+77:     assert verify_backup(backup)["schema_version"] == "brasileirao-backup/1.0"
+80: def test_backup_rejeita_tamper_e_overwrite(tmp_path):
+81:     source = _root(tmp_path / "source")
+82:     backup = create_backup(tmp_path / "backup", root=source)
+83:     (backup / "data" / "sombra_picks.jsonl").write_text("", encoding="utf-8")
+84:     with pytest.raises(BackupError, match="diverge"):
+85:         verify_backup(backup)
+86:     clean = create_backup(tmp_path / "clean", root=source)
+87:     with pytest.raises(BackupError, match="já existe"):
+88:         restore_backup(clean, tmp_path)
+### tests/test_benchmark_panel_fixes.py
+8: from __future__ import annotations
+10: import pytest
+12: from brasileirao_predictor.evaluator import BrasileiraoDixonColesEvaluator
+13: from brasileirao_predictor.serving_evaluator import ServingStackEvaluator
+14: from brasileirao_scripts import benchmark_predictor as bp
+19: def test_metric_record_carrega_delta_ci95_quando_fornecido() -> None:
+20:     rec = bp._metric_record("rps", 0.21, baseline_value=0.23, n=100, is_primary=True, delta_ci95=(-0.03, -0.01))
+21:     assert rec["delta_ci95"] == [-0.03, -0.01]
+22:     assert rec["delta"] == pytest.approx(-0.02)
+25: def test_delta_ci95_tem_o_sinal_do_campo_delta() -> None:
+28:     modelo = [0.10] * 300
+29:     baseline = [0.20] * 300
+30:     ci = bp._delta_ci95(modelo, baseline)
+31:     assert ci is not None
+32:     assert ci[0] < 0 and ci[1] < 0, "modelo melhor deve dar IC do delta negativo"
+34:     skill = bp._skill_score_ci(modelo, baseline)
+35:     assert skill is not None
+36:     assert skill[0] > 0, "o mesmo ganho, na orientação de skill score, é positivo"
+37:     assert ci == pytest.approx((-skill[1], -skill[0]))
+40: def test_delta_ci95_recusa_series_desalinhadas() -> None:
+41:     assert bp._delta_ci95([0.1, 0.2], [0.1]) is None
+42:     assert bp._delta_ci95([], []) is None
+45: def test_turnos_usam_primeiro_e_segundo_confronto_em_temporada_incompleta() -> None:
+46:     rows = [
+47:         {"season": "2026", "date": "2026-01-10", "home": "A", "away": "B"},
+48:         {"season": "2026", "date": "2026-01-11", "home": "C", "away": "D"},
+49:         {"season": "2026", "date": "2026-07-10", "home": "B", "away": "A"},
+50:     ]
+52:     bp._tag_turno(rows)
+54:     assert [row["turno"] for row in rows] == ["T1", "T1", "T2"]
+57: def test_turnos_falham_alto_com_terceiro_confronto_na_mesma_temporada() -> None:
+58:     rows = [
+59:         {"season": "2026", "date": f"2026-0{i + 1}-01", "home": home, "away": away}
+60:         for i, (home, away) in enumerate((("A", "B"), ("B", "A"), ("A", "B")))
+61:     ]
+63:     with pytest.raises(ValueError, match="mais de dois confrontos"):
+64:         bp._tag_turno(rows)
+67: def test_metrica_de_turno_carrega_baseline_delta_ic_e_n() -> None:
+68:     rows = [
+69:         {
+70:             "p_loss": 0.2,
+71:             "p_draw": 0.3,
+72:             "p_win": 0.5,
+73:             "actual_1x2": 2,
+74:             "_baseline_probs_1x2": [0.4, 0.3, 0.3],
+75:         }
+76:         for _ in range(30)
+77:     ]
+79:     result = bp._stratum_metrics(rows, baseline="climatology")
+81:     assert result["n"] == 30
+82:     assert result["baseline"] == "climatology"
+83:     assert result["rps_delta"] < 0
+84:     assert result["rps_delta_ci95"][1] < 0
+87: def test_metrica_de_turno_reporta_ou_e_accuracy_apenas_como_diagnostico() -> None:
+88:     rows = [
+89:         {
+90:             "p_loss": 0.2,
+91:             "p_draw": 0.3,
+92:             "p_win": 0.5,
+93:             "actual_1x2": 2,
+94:             "p_over": 0.7,
+95:             "actual_over": 1,
+96:         }
+97:     ]
+99:     result = bp._stratum_metrics(rows)
+101:     assert result["brier_ou25"] == pytest.approx(0.18)
+102:     assert result["diagnostic_accuracy_1x2"] == 1.0
+103:     assert result["diagnostic_ou25_hit_rate"] == 1.0
+109: def test_bootstrap_usa_bloco_movel() -> None:
+112:     assert bp.BLOCK_LENGTH > 1
+113:     ci = bp._bootstrap_mean_ci([0.05] * 300)
+114:     assert ci is not None and ci[0] <= ci[1]
+117: def test_bootstrap_mean_ci_vazio_e_none() -> None:
+118:     assert bp._bootstrap_mean_ci([]) is None
+121: def test_bootstrap_estrato_menor_que_bloco_retorna_none_sem_quebrar_relatorio() -> None:
+122:     assert bp._bootstrap_mean_ci([0.1] * (bp.BLOCK_LENGTH - 1)) is None
+128: def _rows_ou(pairs: list[tuple[float, int]]) -> list[dict]:
+129:     return [{"p_over": p, "actual_over": y} for p, y in pairs]
+132: def test_slope_ignora_bin_minusculo_fora_da_curva() -> None:
+135:     bem_calibrado = [(0.3, 0) for _ in range(200)] + [(0.7, 1) for _ in range(200)]
+136:     ruido_de_cauda = [(0.95, 0), (0.05, 1)]
+137:     com_ruido = bp._guardrails_ou25(_rows_ou(bem_calibrado + ruido_de_cauda))
+138:     sem_ruido = bp._guardrails_ou25(_rows_ou(bem_calibrado))
+139:     assert com_ruido["calibration_slope"] is not None
+140:     assert sem_ruido["calibration_slope"] is not None
+142:     assert abs(com_ruido["calibration_slope"] - sem_ruido["calibration_slope"]) < 0.35
+145: def test_guardrails_sem_observacao_devolvem_none() -> None:
+146:     g = bp._guardrails_ou25([])
+147:     assert g == {"ece": None, "calibration_slope": None, "resolution": None, "sharpness": None}
+153: def test_baseline_desconhecido_falha_alto() -> None:
+157:     with pytest.raises(NotImplementedError, match="elo_baseline"):
+158:         bp.run(model_tag="qualquer", start="", end="", baseline="current_v3")
+161: def test_climatology_e_o_baseline_suportado() -> None:
+162:     assert "climatology" in bp.SUPPORTED_BASELINES
+163:     assert "market_no_vig" not in bp.SUPPORTED_BASELINES
+164:     assert "sofascore_aggregate_no_vig" in bp.SUPPORTED_BASELINES
+167: def test_climatologia_e_prequential_e_congela_jogos_do_mesmo_dia() -> None:
+168:     prior = [{"date": "2025-12-31", "actual_1x2": 2}]
+169:     rows = [
+170:         {"date": "2026-01-01", "actual_1x2": 0},
+171:         {"date": "2026-01-01", "actual_1x2": 1},
+172:         {"date": "2026-01-02", "actual_1x2": 2},
+173:     ]
+174:     probs = bp._climatology_probs(rows, prior)
+175:     assert probs[0] == probs[1]
+176:     assert probs[0] == pytest.approx([0.25, 0.25, 0.5])
+177:     assert probs[2] == pytest.approx([2 / 6, 2 / 6, 2 / 6])
+180: def test_climatologia_inclui_burn_in_observado_antes_da_coorte() -> None:
+181:     observations = [
+182:         {"date": "2025-12-30", "result": {"home_goals": 0, "away_goals": 1}},
+183:         {"date": "2025-12-31", "result": {"home_goals": 2, "away_goals": 2}},
+184:         {"date": "2026-01-01", "result": {"home_goals": 3, "away_goals": 0}},
+185:     ]
+187:     history = bp._climatology_history(observations, "2026-01-01")
+189:     assert history == [{"actual_1x2": 0}, {"actual_1x2": 1}]
+192: def test_market_no_vig_e_shin_na_orientacao_do_rps() -> None:
+193:     probs = bp._market_no_vig_probs({"market_odds_1x2": (2.0, 3.5, 4.0)})
+194:     assert probs is not None
+195:     assert sum(probs) == pytest.approx(1.0)
+196:     assert probs[2] > probs[0]
+199: def test_market_no_vig_rejeita_mercado_incompleto_ou_invalido() -> None:
+200:     assert bp._market_no_vig_probs({"market_odds_1x2": (2.0, None, 4.0)}) is None
+201:     assert bp._market_no_vig_probs({"market_odds_1x2": (2.0, 1.0, 4.0)}) is None
+207: def test_engine_desconhecido_falha_alto() -> None:
+208:     with pytest.raises(NotImplementedError, match="engine"):
+209:         bp._make_evaluator("regressao_magica", 120.0, None)
+212: def test_engine_default_continua_sendo_dixon_coles() -> None:
+215:     assert bp.DEFAULT_ENGINE == "dixon_coles"
+216:     ev = bp._make_evaluator("dixon_coles", 120.0, None)
+217:     assert isinstance(ev, BrasileiraoDixonColesEvaluator)
+220: def test_engine_serving_instancia_a_pilha_de_producao() -> None:
+221:     cfg = {
+222:         "tournament_name": "Brasileirão Série A",
+223:         "elo": {
+224:             "initial_rating": 1500,
+225:             "home_advantage": 100,
+226:             "window_years": 6,
+227:             "form_half_life_years": 4.0,
+228:             "k_factors": {"default": 30},
+229:         },
+230:         "model": {"calibration_window_years": 4, "goal_half_life_days": 360, "max_goals": 6},
+231:         "ensemble_xg": {"enabled": True, "blend_weight": 0.5},
+232:     }
+233:     ev = bp._make_evaluator("serving", 120.0, cfg)
+234:     assert isinstance(ev, ServingStackEvaluator)
+235:     assert ev.ensemble_enabled is True
+238: def test_engine_serving_exige_config() -> None:
+241:     with pytest.raises(SystemExit, match="config.yaml"):
+242:         bp._make_evaluator("serving", 120.0, None)
+248: def _liga_sintetica(monkeypatch, rodadas: int = 90) -> None:
+254:     import pathlib
+255:     import tempfile
+256:     from datetime import UTC, datetime, timedelta
+258:     from brasileirao_predictor import db as _db
+260:     times = ["flamengo", "palmeiras", "gremio", "santos", "corinthians", "bahia"]
+261:     path = pathlib.Path(tempfile.mkdtemp()) / "m.db"
+262:     conn = _db.connect(str(path))
+263:     eid = 0
+264:     for rodada in range(rodadas):
+265:         dia = datetime(2021, 4, 3, tzinfo=UTC) + timedelta(days=7 * rodada)
+266:         pares = [(times[0], times[1]), (times[2], times[3]), (times[4], times[5])]
+267:         if rodada % 2:
+268:             pares = [(a, h) for h, a in pares]
+269:         for j, (casa, fora) in enumerate(pares):
+270:             d = dia.strftime("%Y-%m-%d")
+272:             kickoff = (dia + timedelta(hours=16 + 2 * (j // 2))).isoformat(timespec="seconds")
+273:             gols_casa, gols_fora = (rodada + j) % 4, (rodada + 2 * j) % 3
+274:             conn.execute(
+275:                 "INSERT INTO matches (date, home_team, away_team, home_score, away_score, tournament, neutral)"
+276:                 " VALUES (?,?,?,?,?,?,0)",
+277:                 (d, casa, fora, gols_casa, gols_fora, "Brasileirão Série A"),
+278:             )
+279:             conn.execute(
+280:                 "INSERT INTO sofascore_matches (event_id, date, kickoff_at, home_team, away_team,"
+281:                 " home_score, away_score, home_xg, away_xg) VALUES (?,?,?,?,?,?,?,?,?)",
+282:                 (eid, d, kickoff, casa, fora, gols_casa, gols_fora, gols_casa + 0.3, gols_fora + 0.2),
+283:             )
+284:             eid += 1
+285:     conn.commit()
+286:     conn.close()
+287:     monkeypatch.setattr(bp, "DB", path)
+290: def test_p_over_do_serving_vem_da_grade_servida() -> None:
+292:     assert bp._p_over_from({"lam": 1.4, "mu": 1.1, "p_over": 0.61}) == pytest.approx(0.61)
+295: def test_p_over_do_dixon_coles_reconstroi_a_matriz() -> None:
+297:     p = bp._p_over_from({"lam": 1.4, "mu": 1.1, "rho": -0.05})
+298:     assert 0.0 < p < 1.0
+301: def test_p_over_falha_alto_sem_p_over_e_sem_rho() -> None:
+303:     with pytest.raises(KeyError, match="p_over.*rho|rho"):
+304:         bp._p_over_from({"lam": 1.4, "mu": 1.1})
+307: def test_walkforward_serving_produz_linhas_de_ponta_a_ponta(monkeypatch) -> None:
+315:     _liga_sintetica(monkeypatch)
+316:     monkeypatch.setattr(bp, "MIN_HISTORY", 30)
+317:     cfg = bp.load_config()
+318:     observations = bp._load_observations("")
+320:     rows, ev = bp._run_walkforward(observations, half_life=120.0, retrain_every=20, engine="serving", cfg=cfg)
+322:     assert rows, "walk-forward do serving não produziu linhas"
+323:     assert isinstance(ev, ServingStackEvaluator)
+324:     for r in rows:
+325:         assert 0.0 < r["p_over"] < 1.0, "P(over 2.5) fora de (0,1)"
+326:         assert r["p_win"] + r["p_draw"] + r["p_loss"] == pytest.approx(1.0, abs=1e-6)
+327:         assert r["lambda_total"] > 0
+333: class _EvFake:
+336:     def __init__(self, **kw) -> None:
+337:         self.__dict__.update(kw)
+340: def test_ensemble_state_none_no_motor_sem_xg() -> None:
+342:     assert bp._ensemble_state(_EvFake(blocked_observations=0)) is None
+345: def test_ensemble_state_carimba_ligado() -> None:
+346:     st = bp._ensemble_state(_EvFake(ensemble_enabled=True, blend_weight=0.5))
+347:     assert st == {"enabled": True, "blend_weight": 0.5}
+350: def test_ensemble_state_carimba_desligado() -> None:
+353:     st = bp._ensemble_state(_EvFake(ensemble_enabled=False, blend_weight=0.5))
+354:     assert st == {"enabled": False, "blend_weight": None}
+357: def test_xg_fit_failures_none_quando_nem_foi_tentado() -> None:
+361:     assert bp._xg_fit_failures(_EvFake(ensemble_enabled=False, xg_fit_failures=0)) is None
+362:     assert bp._xg_fit_failures(_EvFake(blocked_observations=0)) is None
+365: def test_xg_fit_failures_conta_quando_foi_tentado() -> None:
+366:     assert bp._xg_fit_failures(_EvFake(ensemble_enabled=True, xg_fit_failures=0)) == 0
+367:     assert bp._xg_fit_failures(_EvFake(ensemble_enabled=True, xg_fit_failures=7)) == 7
+370: def test_relatorio_do_serving_carimba_o_ensemble_de_ponta_a_ponta(monkeypatch) -> None:
+373:     _liga_sintetica(monkeypatch)
+374:     monkeypatch.setattr(bp, "MIN_HISTORY", 30)
+378:     base = bp.load_config()
+379:     cfg_on = {**base, "ensemble_xg": {**(base.get("ensemble_xg") or {}), "enabled": True}}
+380:     cfg_off = {**base, "ensemble_xg": {**(base.get("ensemble_xg") or {}), "enabled": False}}
+381:     observations = bp._load_observations("")
+383:     _rows, ev_on = bp._run_walkforward(observations, half_life=120.0, retrain_every=20, engine="serving", cfg=cfg_on)
+384:     assert bp._ensemble_state(ev_on)["enabled"] is True
+385:     assert bp._xg_fit_failures(ev_on) is not None
+387:     _rows, ev_off = bp._run_walkforward(observations, half_life=120.0, retrain_every=20, engine="serving", cfg=cfg_off)
+388:     assert bp._ensemble_state(ev_off)["enabled"] is False
+389:     assert bp._xg_fit_failures(ev_off) is None
+### tests/test_bet_id.py
+3: import json
+5: from brasileirao_predictor.bet_log import add_bet, list_bets, settle_bet
+8: def test_bet_id_unico_e_presente(tmp_path):
+9:     p = tmp_path / "bets.jsonl"
+10:     r1 = add_bet("Spain", "France", "ou25", "under", 1.9, path=p)
+11:     r2 = add_bet("Spain", "France", "ou15", "over", 2.4, path=p)
+12:     assert r1["bet_id"] and r2["bet_id"]
+13:     assert r1["bet_id"] != r2["bet_id"]
+14:     assert len(r1["bet_id"]) == 36  # uuid4 canônico
+17: def test_bet_id_injetavel_e_carimbado_no_settlement(tmp_path):
+18:     p = tmp_path / "bets.jsonl"
+19:     add_bet("Spain", "France", "ou25", "under", 1.9, path=p, bet_id="teste-0001")
+20:     recs = settle_bet("Spain", "France", 1, 0, path=p)
+21:     assert len(recs) == 1
+22:     assert recs[0]["bet_id"] == "teste-0001"
+24:     bets = list_bets(path=p)
+25:     assert bets[0]["bet_id"] == "teste-0001"
+26:     assert bets[0]["result"]["bet_id"] == "teste-0001"
+29: def test_aposta_legada_sem_bet_id_liquida_normal(tmp_path):
+32:     p = tmp_path / "bets.jsonl"
+33:     legado = {
+34:         "logged_at": "2026-07-08T00:00:00+00:00",
+35:         "kind": "bet",
+36:         "status": "open",
+37:         "home": "Norway",
+38:         "away": "England",
+39:         "match_date": None,
+40:         "kickoff": None,
+41:         "late": None,
+42:         "market": "ou25",
+43:         "line": 2.5,
+44:         "period": "FT",
+45:         "selection": "under",
+46:         "odds": 2.1,
+47:         "book": None,
+48:         "stake": 1.0,
+49:         "model_prob": None,
+50:         "edge": None,
+51:         "note": None,
+52:         "validated": True,
+53:         "duplicate_of_open": False,
+54:     }
+55:     p.write_text(json.dumps(legado) + "\n", encoding="utf-8")
+56:     recs = settle_bet("Norway", "England", 0, 1, path=p)
+57:     assert len(recs) == 1
+58:     assert recs[0]["bet_id"] is None
+59:     assert recs[0]["won"] is True  # under 2.5, total 1

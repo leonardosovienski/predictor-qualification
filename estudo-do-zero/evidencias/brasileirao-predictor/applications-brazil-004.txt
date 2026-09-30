@@ -1,0 +1,380 @@
+### brasileirao_predictor/cron_update_models.py
+8: import hashlib
+9: import json
+10: import sys
+11: from datetime import UTC, date, datetime, timedelta
+13: from . import db, model, ratings
+14: from .ingest import ROOT, load_config
+16: MODEL_ALGORITHM_VERSION = "nbdc-normalized-elo-horizon-v2"
+19: def config_hash(cfg) -> str:
+20:     relevant = {
+21:         "model_algorithm_version": MODEL_ALGORITHM_VERSION,
+22:         "elo": cfg["elo"],
+23:         "calibration_window_years": cfg["model"]["calibration_window_years"],
+24:         "goal_half_life_days": cfg["model"]["goal_half_life_days"],
+25:     }
+28:     if (cfg.get("ensemble_xg") or {}).get("enabled"):
+29:         relevant["ensemble_xg"] = cfg["ensemble_xg"]
+30:     blob = json.dumps(relevant, sort_keys=True).encode()
+31:     return hashlib.sha256(blob).hexdigest()[:16]
+34: def cache_is_current(cfg, conn, params_row) -> bool:
+36:     if not params_row or len(params_row) < 7:
+37:         return False
+38:     n_now = conn.execute("SELECT COUNT(*) FROM matches WHERE home_score IS NOT NULL").fetchone()[0]
+39:     return params_row[5] == config_hash(cfg) and params_row[4] == n_now
+42: def _windowed(cfg, conn):
+43:     rows = db.completed_matches_with_kickoff(conn)
+44:     if not rows:
+45:         return None
+46:     window = cfg["elo"].get("window_years")
+47:     if window:
+48:         cut = (date.fromisoformat(rows[-1][0]) - timedelta(days=int(window * 365.25))).isoformat()
+49:         rows = [r for r in rows if r[0] >= cut]
+50:     return rows
+53: def compute(cfg, conn):
+54:     rows = _windowed(cfg, conn)
+55:     if not rows:
+56:         return None
+57:     elo, history = ratings.compute_ratings(rows, cfg["elo"], asof=date.today())
+58:     cal_cut = (
+59:         date.fromisoformat(rows[-1][0]) - timedelta(days=int(cfg["model"]["calibration_window_years"] * 365.25))
+60:     ).isoformat()
+61:     hist_cal_rows = [(h, r) for h, r in zip(history, rows) if r[0] >= cal_cut]
+62:     hist_cal = [h for h, _r in hist_cal_rows]
+63:     fit_rows = [r for _h, r in hist_cal_rows]
+64:     asof = date.fromisoformat(rows[-1][0][:10])
+65:     weights = model.exponential_recency_weights([r[0] for r in fit_rows], asof, cfg["model"]["goal_half_life_days"])
+66:     params = model.fit_goal_model(hist_cal, sample_weights=weights)
+67:     return elo, params, len(rows)
+70: def compute_xg(cfg, conn):
+74:     rows = _windowed(cfg, conn)
+75:     if not rows:
+76:         return None
+77:     xg_map = {}
+78:     for d, h, a, hx, ax in conn.execute(
+79:         "SELECT date, home_team, away_team, home_xg, away_xg FROM sofascore_matches WHERE home_score IS NOT NULL"
+80:     ):
+81:         xg_map[(d[:10], h, a)] = (hx, ax)
+82:     from . import xg_model
+84:     matches = [(r[0], r[1], r[2], r[3], r[4]) for r in rows]
+85:     return xg_model.fit(matches, xg_map, rows[-1][0], cfg.get("ensemble_xg"))
+88: def run():
+89:     cfg = load_config()
+90:     conn = db.connect(str(ROOT / cfg["database"]))
+91:     out = compute(cfg, conn)
+92:     if not out:
+93:         sys.exit("banco vazio — rode `python -m brasileirao_predictor.ingest` primeiro")
+94:     elo, fitted_params, n = out
+95:     a, b, alpha, rho = fitted_params[:4]
+96:     n_total = conn.execute("SELECT COUNT(*) FROM matches WHERE home_score IS NOT NULL").fetchone()[0]
+97:     now = datetime.now(UTC).isoformat(timespec="seconds")
+98:     db.save_elo(conn, list(elo.items()))
+99:     db.save_params(conn, a, b, alpha, rho, n_total, config_hash(cfg), now)
+100:     print(
+101:         f"cache atualizado: {len(elo)} times | "
+102:         f"a={a:.3f} b={b:.3f} alpha={alpha:.4f} rho={rho:.4f} | {n} jogos na janela"
+103:     )
+104:     if (cfg.get("ensemble_xg") or {}).get("enabled"):
+105:         xgp = compute_xg(cfg, conn)
+106:         if xgp:
+107:             db.save_xg_params(conn, xgp, n_total, config_hash(cfg), now)
+108:             print(
+109:                 f"ensemble_xg atualizado: {len(xgp['atk'])} times | "
+110:                 f"mu={xgp['mu']:.3f} ha={xgp['ha']:.3f} "
+111:                 f"alpha={xgp['alpha']:.4f} rho={xgp['rho']:.4f} | "
+112:                 f"{xgp['n_matches']} jogos" + ("" if xgp["ok"] else " | AVISO: otimizacao nao convergiu")
+113:             )
+116: if __name__ == "__main__":
+117:     run()
+### brasileirao_predictor/data/api_football_provider.py
+7: from __future__ import annotations
+9: import hashlib
+10: import json
+11: import os
+12: import urllib.request
+13: from collections.abc import Callable
+14: from datetime import UTC, datetime
+15: from typing import Any
+16: from urllib.parse import urlencode
+18: from predictor_core.data.contracts import DataUnavailableError
+20: BASE = "https://v3.football.api-sports.io"
+21: BRASILEIRAO_SERIE_A_ID = 71
+24: class ApiFootballProvider:
+25:     def __init__(
+26:         self,
+27:         *,
+28:         api_key: str | None = None,
+29:         timeout: float = 30.0,
+30:         get_json: Callable[[str, dict[str, str]], Any] | None = None,
+31:     ):
+32:         if api_key is None:
+35:             api_key = os.environ.get("API_FOOTBALL_KEY")
+36:         self.api_key = api_key
+37:         self.timeout = timeout
+38:         self._get_json = get_json or self._http_get_json
+40:     def _headers(self) -> dict[str, str]:
+41:         if not self.api_key:
+42:             raise DataUnavailableError("API_FOOTBALL_KEY ausente")
+43:         return {
+44:             "x-apisports-key": self.api_key,
+45:             "User-Agent": "brasileirao-predictor-source-audit/1.0",
+46:         }
+48:     def _http_get_json(self, url: str, headers: dict[str, str]) -> Any:
+49:         try:
+50:             request = urllib.request.Request(url, headers=headers)
+51:             with urllib.request.urlopen(request, timeout=self.timeout) as response:
+52:                 return json.loads(response.read())
+53:         except (OSError, ValueError):
+54:             raise DataUnavailableError("API-Football indisponível; transporte ou JSON inválido") from None
+56:     def _request(self, path: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+57:         url = f"{BASE}/{path}?{urlencode(params)}"
+58:         payload = self._get_json(url, self._headers())
+59:         if not isinstance(payload, dict):
+60:             raise DataUnavailableError("API-Football retornou payload inválido")
+61:         errors = payload.get("errors")
+62:         if errors:
+63:             raise DataUnavailableError(
+64:                 "API-Football recusou a consulta; resposta de erro omitida para proteger credenciais"
+65:             )
+66:         rows = payload.get("response")
+67:         if not isinstance(rows, list):
+68:             raise DataUnavailableError("API-Football retornou resposta inválida")
+69:         if any(not isinstance(row, dict) for row in rows):
+70:             raise DataUnavailableError("API-Football retornou registros inválidos")
+71:         return rows
+73:     def brasileirao_seasons(self) -> list[int]:
+74:         rows = self._request("leagues", {"id": BRASILEIRAO_SERIE_A_ID})
+75:         if (
+76:             len(rows) != 1
+77:             or rows[0].get("league", {}).get("name") != "Serie A"
+78:             or rows[0].get("country", {}).get("name") != "Brazil"
+79:         ):
+80:             raise DataUnavailableError("API-Football não confirmou o Brasileirão Série A")
+81:         return sorted(int(item["year"]) for item in rows[0].get("seasons", []) if item.get("year") is not None)
+83:     def list_fixtures(self, *, season: int, observed_at: datetime | None = None) -> list[dict[str, Any]]:
+84:         if not isinstance(season, int) or season < 2000 or season > datetime.now(UTC).year + 1:
+85:             raise ValueError("season fora do intervalo plausível")
+86:         observed = observed_at or datetime.now(UTC)
+87:         if observed.tzinfo is None or observed.utcoffset() is None:
+88:             raise ValueError("observed_at deve conter timezone")
+89:         observed = observed.astimezone(UTC)
+90:         raw_rows = self._request(
+91:             "fixtures",
+92:             {
+93:                 "league": BRASILEIRAO_SERIE_A_ID,
+94:                 "season": season,
+95:             },
+96:         )
+97:         observed = (observed_at or datetime.now(UTC)).astimezone(UTC)
+98:         rows = []
+99:         for item in raw_rows:
+100:             fixture = item.get("fixture") or {}
+101:             teams = item.get("teams") or {}
+102:             home = teams.get("home") or {}
+103:             away = teams.get("away") or {}
+104:             try:
+105:                 scheduled = datetime.fromisoformat(str(fixture["date"]).replace("Z", "+00:00"))
+106:                 event_id = str(fixture["id"])
+107:                 if scheduled.tzinfo is None or not home.get("name") or not away.get("name"):
+108:                     raise ValueError
+109:             except (KeyError, TypeError, ValueError):
+110:                 continue
+111:             goals = item.get("goals") or {}
+112:             rows.append(
+113:                 {
+114:                     "source": "api_football",
+115:                     "source_event_id": event_id,
+116:                     "source_league_id": BRASILEIRAO_SERIE_A_ID,
+117:                     "season": season,
+118:                     "scheduled_at": scheduled.astimezone(UTC).isoformat(timespec="seconds"),
+119:                     "observed_at": observed.isoformat(timespec="seconds"),
+120:                     "home_team": home["name"],
+121:                     "away_team": away["name"],
+122:                     "home_goals": goals.get("home"),
+123:                     "away_goals": goals.get("away"),
+124:                     "status": (fixture.get("status") or {}).get("short"),
+125:                     "shadow_only": True,
+126:                 }
+127:             )
+128:         return sorted(rows, key=lambda row: (row["scheduled_at"], row["source_event_id"]))
+130:     def fixture_lineups(self, fixture_id: int | str, *, observed_at: datetime | None = None) -> list[dict[str, Any]]:
+132:         observed = observed_at or datetime.now(UTC)
+133:         if observed.tzinfo is None or observed.utcoffset() is None:
+134:             raise ValueError("observed_at deve conter timezone")
+135:         raw_rows = self._request("fixtures/lineups", {"fixture": fixture_id})
+136:         observed = (observed_at or datetime.now(UTC)).astimezone(UTC)
+137:         payload_hash = hashlib.sha256(
+138:             json.dumps(raw_rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+139:         ).hexdigest()
+140:         output = []
+141:         for side in raw_rows:
+142:             team, coach = side.get("team") or {}, side.get("coach") or {}
+143:             team_id, team_name = team.get("id"), team.get("name")
+144:             if team_id is None or not isinstance(team_name, str) or not team_name:
+145:                 continue
+146:             for role, entries in (
+147:                 ("starter", side.get("startXI") or []),
+148:                 ("substitute", side.get("substitutes") or []),
+149:             ):
+150:                 for entry in entries:
+151:                     player = entry.get("player") or {}
+152:                     player_id, player_name = player.get("id"), player.get("name")
+153:                     if player_id is None or not isinstance(player_name, str) or not player_name:
+154:                         continue
+155:                     output.append(
+156:                         {
+157:                             "schema_version": "lineup-observation/2",
+158:                             "source": "api_football",
+159:                             "source_event_id": str(fixture_id),
+160:                             "team_id": str(team_id),
+161:                             "team_name": team_name,
+162:                             "player_id": str(player_id),
+163:                             "player_name": player_name,
+164:                             "role": role,
+165:                             "position": player.get("pos"),
+166:                             "grid": player.get("grid"),
+167:                             "formation": side.get("formation"),
+168:                             "coach_id": str(coach["id"]) if coach.get("id") is not None else None,
+169:                             "coach_name": coach.get("name"),
+170:                             "published_at": None,
+171:                             "observed_at": observed.isoformat(timespec="seconds"),
+172:                             "ingested_at": observed.astimezone(UTC).isoformat(timespec="seconds"),
+173:                             "content_hash": payload_hash,
+174:                             "collector_version": "api-football-lineups/2",
+175:                             "quality_flags": ["published_at_unknown"],
+176:                             "scientific_state": "COLLECTION_ONLY",
+177:                         }
+178:                     )
+179:         return output
+### brasileirao_predictor/data/bookmaker_odds.py
+18: from __future__ import annotations
+20: import json
+21: import unicodedata
+22: from collections.abc import Iterable
+23: from datetime import datetime, timedelta
+24: from pathlib import Path
+25: from typing import Any
+27: SNAPSHOTS = "bookmaker_odds_snapshots.jsonl"
+28: MAPPING_VERSION = "brasileirao-bookmaker-identity/1.0"
+37: KICKOFF_TOLERANCE = timedelta(hours=36)
+41: EXPLICIT_ALIASES = {
+42:     "Bragantino-SP": "Red Bull Bragantino",
+43:     "Athletico-PR": "Athletico",
+44:     "Athletico Paranaense": "Athletico",
+45:     "Atletico Paranaense": "Athletico",  # a API omite o "h" do nome oficial
+46:     "Atletico-GO": "Atlético Goianiense",
+47:     "Atletico-MG": "Atlético Mineiro",
+48:     "Sport Club Recife": "Sport Recife",
+49:     "Vasco": "Vasco da Gama",
+50: }
+53: def fold(value: str) -> str:
+58:     decomposed = unicodedata.normalize("NFD", value.strip())
+59:     stripped = "".join(c for c in decomposed if not unicodedata.combining(c))
+60:     return unicodedata.normalize("NFC", stripped).casefold()
+63: def resolve_team(raw_name: str, known: Iterable[str]) -> tuple[str | None, str]:
+65:     known = list(known)
+66:     if raw_name in known:
+67:         return raw_name, "EXACT"
+68:     alias = EXPLICIT_ALIASES.get(raw_name)
+69:     if alias is not None:
+70:         return (alias, "RULE_BASED") if alias in known else (None, "REJECTED")
+71:     candidates = [name for name in known if fold(name) == fold(raw_name)]
+72:     if len(candidates) == 1:
+73:         return candidates[0], "RULE_BASED"
+74:     if len(candidates) > 1:
+75:         return None, "AMBIGUOUS"
+76:     return None, "REJECTED"
+79: def _utc(value: str) -> datetime | None:
+80:     if not isinstance(value, str):
+81:         return None
+82:     try:
+83:         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+84:     except ValueError:
+85:         return None
+86:     return parsed if parsed.tzinfo else None
+89: def match_fixture(row: dict[str, Any], fixtures: list[dict[str, Any]]) -> tuple[dict | None, str]:
+93:     known = {f["home_team"] for f in fixtures} | {f["away_team"] for f in fixtures}
+94:     home, hs = resolve_team(row.get("home_team") or "", known)
+95:     away, aws = resolve_team(row.get("away_team") or "", known)
+96:     if home is None or away is None:
+97:         return None, f"identidade_nao_resolvida:{hs}/{aws}"
+98:     if home == away:
+99:         return None, "identidade_degenerada"
+100:     kickoff = _utc(row.get("kickoff_at") or "")
+101:     if kickoff is None:
+102:         return None, "kickoff_invalido"
+103:     hits = []
+104:     for f in fixtures:
+105:         if f["home_team"] != home or f["away_team"] != away:
+106:             continue
+107:         fk = _utc(f.get("kickoff_at") or "")
+108:         if fk is None or abs(fk - kickoff) > KICKOFF_TOLERANCE:
+109:             continue
+110:         hits.append(f)
+111:     if len(hits) == 1:
+112:         return hits[0], "RULE_BASED" if (hs != "EXACT" or aws != "EXACT") else "EXACT"
+113:     return None, "sem_fixture" if not hits else "fixture_ambiguo"
+116: def persist_snapshots(path: Path, rows: list[dict[str, Any]]) -> int:
+119:     def identity(row):
+120:         return (
+121:             row.get("source"),
+122:             row.get("source_event_id"),
+123:             row.get("event_id"),
+124:             row.get("bookmaker"),
+125:             row.get("market"),
+126:             row.get("selection"),
+127:             row.get("line"),
+128:             row.get("odds_captured_at"),
+129:         )
+131:     path.parent.mkdir(parents=True, exist_ok=True)
+132:     seen = set()
+133:     if path.exists():
+134:         for line in path.read_text(encoding="utf-8").splitlines():
+135:             if not line.strip():
+136:                 continue
+137:             try:
+138:                 r = json.loads(line)
+139:             except json.JSONDecodeError:
+140:                 continue
+141:             seen.add(identity(r))
+142:     novos = 0
+143:     with path.open("a", encoding="utf-8") as fh:
+144:         for row in rows:
+145:             key = identity(row)
+146:             if key in seen:
+147:                 continue
+148:             seen.add(key)
+149:             fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+150:             novos += 1
+151:     return novos
+154: def load_snapshots(path: Path) -> list[dict[str, Any]]:
+155:     if not path.exists():
+156:         return []
+157:     out = []
+158:     for line in path.read_text(encoding="utf-8").splitlines():
+159:         if line.strip():
+160:             try:
+161:                 out.append(json.loads(line))
+162:             except json.JSONDecodeError:
+163:                 continue
+164:     return out
+167: def closing_quote(
+168:     snapshots: list[dict[str, Any]], *, event_id: Any, market: str, selection: str, kickoff_at: str
+169: ) -> dict | None:
+174:     kickoff = _utc(kickoff_at)
+175:     if kickoff is None:
+176:         return None
+177:     elegiveis = []
+178:     for s in snapshots:
+179:         if s.get("event_id") != event_id or s.get("market") != market or s.get("selection") != selection:
+180:             continue
+181:         captured = _utc(s.get("odds_captured_at") or "")
+182:         odd = s.get("odd")
+183:         if captured is None or captured >= kickoff:
+184:             continue
+185:         if not isinstance(odd, (int, float)) or odd <= 1:
+186:             continue
+187:         elegiveis.append((captured, s))
+188:     if not elegiveis:
+189:         return None
+190:     return max(elegiveis, key=lambda pair: pair[0])[1]

@@ -1,0 +1,415 @@
+### brasileirao_predictor/research/price_strength/study.py
+3: from __future__ import annotations
+5: import math
+6: from dataclasses import asdict, is_dataclass
+7: from datetime import UTC, datetime
+8: from typing import Any
+10: from .dynamic_xg import DynamicXGConfig, Fixture, XGObservation, fit_calibration, forecast
+11: from .quotes import PricePolicy, scan_quotes
+13: MARKETS = {"1x2": ("home", "draw", "away"), "ou25": ("over", "under"), "btts": ("yes", "no")}
+14: PROTOCOL_KEYS = {
+15:     "schema_version",
+16:     "study_id",
+17:     "data_kind",
+18:     "hypothesis",
+19:     "stopping_rule",
+20:     "training_end",
+21:     "calibration_end",
+22:     "evaluation_start",
+23:     "evaluation_end",
+24:     "report_as_of",
+25:     "xg_config",
+26:     "price_policy",
+27: }
+30: def timestamp(value: Any) -> datetime:
+31:     if not isinstance(value, str):
+32:         raise ValueError("timestamp must be an ISO string with timezone")
+33:     result = datetime.fromisoformat(value.replace("Z", "+00:00"))
+34:     if result.tzinfo is None or result.utcoffset() is None:
+35:         raise ValueError("timestamp requires timezone")
+36:     return result.astimezone(UTC)
+39: def jsonable(value: Any) -> Any:
+40:     if is_dataclass(value) and not isinstance(value, type):
+41:         return jsonable(asdict(value))
+42:     if isinstance(value, datetime):
+43:         return value.isoformat()
+44:     if isinstance(value, dict):
+45:         return {key: jsonable(item) for key, item in value.items()}
+46:     if isinstance(value, (tuple, list)):
+47:         return [jsonable(item) for item in value]
+48:     return value
+51: def price_policy(raw: dict) -> PricePolicy:
+52:     if not isinstance(raw, dict) or not isinstance(raw.get("reference_books"), list):
+53:         raise ValueError("price_policy requires explicit reference_books list")
+54:     return PricePolicy(**{**raw, "reference_books": tuple(raw["reference_books"])})
+57: def validate_probabilities(raw: Any) -> dict:
+58:     if not isinstance(raw, dict) or set(raw) != set(MARKETS):
+59:         raise ValueError("probabilities require exactly 1x2, ou25 and btts")
+60:     for market, selections in MARKETS.items():
+61:         vector = raw[market]
+62:         if not isinstance(vector, dict) or set(vector) != set(selections):
+63:             raise ValueError(f"incomplete probability vector: {market}")
+64:         if any(type(p) not in (int, float) or not math.isfinite(p) or not 0 <= p <= 1 for p in vector.values()):
+65:             raise ValueError("invalid probability")
+66:         if not math.isclose(sum(vector.values()), 1.0, abs_tol=1e-9):
+67:             raise ValueError("probabilities must sum to one")
+68:     return raw
+71: def _protocol(raw: dict) -> tuple[dict[str, datetime], DynamicXGConfig, PricePolicy]:
+72:     if set(raw) != PROTOCOL_KEYS or raw.get("schema_version") != "price-strength-study/1":
+73:         raise ValueError("invalid protocol schema or fields")
+74:     if raw["data_kind"] not in {"SYNTHETIC_DEMONSTRATION", "EXPLORATORY_REPLAY"}:
+75:         raise ValueError("only synthetic or explicitly exploratory studies are supported")
+76:     for key in ("study_id", "hypothesis", "stopping_rule"):
+77:         if not isinstance(raw[key], str) or not raw[key].strip():
+78:             raise ValueError(f"protocol requires {key}")
+79:     clocks = {
+80:         name: timestamp(raw[name])
+81:         for name in ("training_end", "calibration_end", "evaluation_start", "evaluation_end", "report_as_of")
+82:     }
+83:     if not (
+84:         clocks["training_end"]
+85:         < clocks["calibration_end"]
+86:         < clocks["evaluation_start"]
+87:         <= clocks["evaluation_end"]
+88:         <= clocks["report_as_of"]
+89:     ):
+90:         raise ValueError("training, calibration, evaluation and reporting windows must be ordered")
+91:     if not isinstance(raw["xg_config"], dict):
+92:         raise ValueError("xg_config must be explicit")
+93:     return clocks, DynamicXGConfig(**raw["xg_config"]), price_policy(raw["price_policy"])
+96: def _observations(rows: list[dict]) -> list[XGObservation]:
+97:     observations = []
+98:     for row in rows:
+99:         values = dict(row)
+100:         for key in ("kickoff", "completed_at", "available_at"):
+101:             values[key] = timestamp(values[key])
+102:         observations.append(XGObservation(**values))
+103:     return observations
+106: def _quote_received_at(row: dict) -> datetime | None:
+112:     try:
+113:         return timestamp(row.get("received_at"))
+114:     except (TypeError, ValueError):
+115:         return None
+118: def _validate_quote_event_mapping(quotes: list[dict], decisions: dict[str, datetime]) -> None:
+122:     mapped: dict[tuple[str, str], str] = {}
+123:     for row in quotes:
+124:         event_id = row["event_id"]
+125:         received = _quote_received_at(row)
+126:         if received is None or received > decisions[event_id]:
+127:             continue
+128:         source, source_event_id = row.get("source"), row.get("source_event_id")
+129:         if not isinstance(source, str) or not isinstance(source_event_id, str):
+130:             continue  # Invalid source fields remain subject to snapshot validation.
+131:         identity = (source, source_event_id)
+132:         if any(not value.strip() or value != value.strip() for value in identity):
+133:             continue  # Invalid source fields remain subject to snapshot validation.
+134:         previous = mapped.setdefault(identity, event_id)
+135:         if previous != event_id:
+136:             raise ValueError("source event maps to multiple canonical fixture IDs")
+139: def _score(probabilities: dict, observation: XGObservation) -> dict:
+140:     h, a = observation.home_goals, observation.away_goals
+141:     if h is None or a is None:
+142:         raise ValueError("scoring requires both goal counts")
+143:     outcomes = {
+144:         "1x2": "home" if h > a else "away" if a > h else "draw",
+145:         "ou25": "over" if h + a > 2 else "under",
+146:         "btts": "yes" if h > 0 and a > 0 else "no",
+147:     }
+148:     scores = {}
+149:     for market, selections in MARKETS.items():
+150:         vector = probabilities.get(market)
+151:         if vector is None:
+152:             continue
+153:         actual = outcomes[market]
+155:         if market == "1x2":
+156:             brier = sum((vector[s] - int(s == actual)) ** 2 for s in selections)
+157:         else:
+158:             brier = (vector[selections[0]] - int(actual == selections[0])) ** 2
+159:         scores[market] = {"brier": brier, "log_loss": -math.log(max(vector[actual], 1e-15))}
+160:     return scores
+163: def _market_reference(scan: dict, policy: PricePolicy) -> tuple[dict, dict]:
+165:     probabilities, provenance = {}, {}
+166:     for row in sorted(scan["evaluations"], key=lambda row: (row["market"], row["bookmaker"])):
+167:         market = row["market"]
+168:         if market in probabilities or row["bookmaker"] in policy.reference_books:
+169:             continue
+170:         vector = row.get("reference_probabilities")
+171:         if vector:
+172:             probabilities[market] = vector
+173:             provenance[market] = {
+174:                 "comparison_book": row["bookmaker"],
+175:                 "reference_provenance": row["reference_provenance"],
+176:             }
+177:     return probabilities, provenance
+180: def _paired_metrics(comparisons: list[dict]) -> dict:
+181:     paired = {}
+182:     for candidate in ("raw_xg", "calibrated_xg"):
+183:         paired[candidate] = {}
+184:         for comparator in ("market", "frozen_baseline"):
+185:             paired[candidate][comparator] = {}
+186:             for market in MARKETS:
+187:                 pairs = [
+188:                     (row["scores"][candidate][market], row["scores"][comparator][market])
+189:                     for row in comparisons
+190:                     if market in row["scores"].get(candidate, {}) and market in row["scores"].get(comparator, {})
+191:                 ]
+192:                 paired[candidate][comparator][market] = {
+193:                     "n": len(pairs),
+194:                     "mean_delta_brier": math.fsum(a["brier"] - b["brier"] for a, b in pairs) / len(pairs)
+195:                     if pairs
+196:                     else None,
+197:                     "mean_delta_log_loss": math.fsum(a["log_loss"] - b["log_loss"] for a, b in pairs) / len(pairs)
+198:                     if pairs
+199:                     else None,
+200:                 }
+201:     return paired
+204: def run_study(
+205:     *, protocol: dict, history: list[dict], fixtures: list[dict], quotes: list[dict], baseline: list[dict] | None = None
+206: ) -> dict[str, Any]:
+208:     clocks, config, policy = _protocol(protocol)
+209:     observations = _observations(history)
+210:     if not fixtures:
+211:         raise ValueError("at least one evaluation fixture is required")
+212:     planned = []
+213:     for raw in fixtures:
+214:         if set(raw) != {"match_id", "home_team", "away_team", "kickoff", "decision_at"}:
+215:             raise ValueError("invalid fixture fields")
+216:         decision = timestamp(raw["decision_at"])
+217:         if not clocks["evaluation_start"] <= decision <= clocks["evaluation_end"]:
+218:             raise ValueError("fixture decision outside declared evaluation window")
+219:         fixture = Fixture(raw["match_id"], raw["home_team"], raw["away_team"], timestamp(raw["kickoff"]))
+220:         if decision >= fixture.kickoff:
+221:             raise ValueError("decisions must precede kickoff")
+222:         planned.append((decision, fixture))
+223:     if len({f.match_id for _, f in planned}) != len(planned):
+224:         raise ValueError("duplicate evaluation match_id")
+225:     planned.sort(key=lambda pair: (pair[0], pair[1].match_id))
+226:     fixture_ids = {fixture.match_id for _, fixture in planned}
+227:     if any(row.get("event_id") not in fixture_ids for row in quotes):
+228:         raise ValueError("all quote event IDs must belong to the explicit fixture universe")
+229:     _validate_quote_event_mapping(quotes, {fixture.match_id: decision for decision, fixture in planned})
+230:     baseline_index = {}
+231:     for row in baseline or []:
+232:         if set(row) != {"match_id", "decision_at", "generated_at", "candidate_id", "probabilities"}:
+233:             raise ValueError("invalid frozen baseline fields")
+234:         if row["match_id"] in baseline_index:
+235:             raise ValueError("duplicate baseline match_id")
+236:         if not isinstance(row["candidate_id"], str) or not row["candidate_id"].strip():
+237:             raise ValueError("baseline requires candidate_id")
+238:         validate_probabilities(row["probabilities"])
+239:         if timestamp(row["generated_at"]) > timestamp(row["decision_at"]):
+240:             raise ValueError("baseline was generated after its decision")
+241:         baseline_index[row["match_id"]] = row
+242:     if set(baseline_index) - fixture_ids:
+243:         raise ValueError("baseline contains a match outside the fixture universe")
+244:     calibration = fit_calibration(
+245:         observations, training_end=clocks["training_end"], calibration_end=clocks["calibration_end"], config=config
+246:     )
+247:     forecasts, scans, comparisons, rejected = [], [], [], []
+248:     for decision, fixture in planned:
+249:         raw_prediction = forecast(observations, fixture, decision_at=decision, config=config)
+250:         calibrated = forecast(observations, fixture, decision_at=decision, config=config, calibration=calibration)
+251:         forecast_row = {
+252:             "match_id": fixture.match_id,
+253:             "decision_at": decision,
+254:             "raw": raw_prediction,
+255:             "calibrated": calibrated,
+256:         }
+257:         forecasts.append(jsonable(forecast_row))
+258:         event_quotes = [row for row in quotes if row.get("event_id") == fixture.match_id]
+259:         for quote in event_quotes:
+260:             received = _quote_received_at(quote)
+261:             if received is None or received > decision:
+262:                 continue  # Unknown clocks are validated by scan_quotes, never treated as future.
+263:             if timestamp(quote.get("kickoff_at")) != fixture.kickoff:
+264:                 raise ValueError("quote kickoff does not match fixture identity")
+265:         scan = scan_quotes(event_quotes, as_of=decision, policy=policy)
+266:         scan["match_id"] = fixture.match_id
+267:         for evaluation in scan["evaluations"]:
+268:             if evaluation.get("reference_probability") is None:
+269:                 continue
+270:             model_diagnostics = {}
+271:             for name, prediction in (("raw_xg", raw_prediction), ("calibrated_xg", calibrated)):
+272:                 if prediction.eligible:
+273:                     p = prediction.probabilities[evaluation["market"]][evaluation["selection"]]
+274:                     odd = evaluation["decimal_odds"]
+275:                     model_diagnostics[name] = {
+276:                         "probability": p,
+277:                         "difference_from_reference": p - evaluation["reference_probability"],
+278:                         "net_ev": p * (1 + (odd - 1) * (1 - policy.commission_on_profit)) - 1 - policy.cost_per_unit,
+279:                     }
+280:             evaluation["xg_diagnostics"] = model_diagnostics
+281:         market_probabilities, market_provenance = _market_reference(scan, policy)
+282:         scans.append(scan)
+283:         for error in scan["validation_errors"]:
+284:             rejected.append({"match_id": fixture.match_id, "kind": "quote_validation", "detail": error})
+285:         for name, prediction in (("raw_xg", raw_prediction), ("calibrated_xg", calibrated)):
+286:             if not prediction.eligible:
+287:                 rejected.append({"match_id": fixture.match_id, "kind": name, "reason": prediction.reason})
+288:         labels = [
+289:             obs
+290:             for obs in observations
+291:             if obs.match_id == fixture.match_id
+292:             and obs.available_at <= clocks["report_as_of"]
+293:             and obs.home_goals is not None
+294:         ]
+295:         if len(labels) > 1:
+297:             distinct = {(o.home_goals, o.away_goals) for o in labels}
+298:             if len(distinct) != 1:
+299:                 raise ValueError("conflicting evaluation labels")
+300:         if any(
+301:             (obs.home_team, obs.away_team, obs.kickoff) != (fixture.home_team, fixture.away_team, fixture.kickoff)
+302:             for obs in labels
+303:         ):
+304:             raise ValueError("evaluation label identity does not match fixture")
+305:         label = labels[0] if labels else None
+306:         comparison = {"match_id": fixture.match_id, "label_available": label is not None, "scores": {}}
+307:         comparison["market_reference"] = market_provenance
+308:         if label is not None:
+309:             for name, prediction in (("raw_xg", raw_prediction), ("calibrated_xg", calibrated)):
+310:                 if prediction.eligible:
+311:                     comparison["scores"][name] = _score(prediction.probabilities, label)
+312:             comparison["scores"]["market"] = _score(market_probabilities, label)
+313:         supplied = baseline_index.get(fixture.match_id)
+314:         if supplied is not None:
+315:             if timestamp(supplied["decision_at"]) != decision:
+316:                 raise ValueError("baseline decision does not match fixture")
+317:             comparison["baseline_candidate_id"] = supplied["candidate_id"]
+318:             if label is not None:
+319:                 comparison["scores"]["frozen_baseline"] = _score(supplied["probabilities"], label)
+320:         comparisons.append(comparison)
+321:     summary = {
+322:         "status": "RESEARCH_ONLY",
+323:         "data_kind": protocol["data_kind"],
+324:         "study_id": protocol["study_id"],
+325:         "lineage": "INDEPENDENT_ROLLING_XG_PRICE_STRENGTH_V1",
+326:         "execution_proven": False,
+327:         "real_capital_enabled": False,
+328:         "profitability_established": False,
+329:         "fixtures": len(planned),
+330:         "calibrated_forecasts": sum(row["calibrated"]["eligible"] for row in forecasts),
+331:         "quote_candidates": sum(len(scan["selected_candidates"]) for scan in scans),
+332:         "labelled_fixtures": sum(row["label_available"] for row in comparisons),
+333:         "calibration": jsonable(calibration),
+334:         "paired_metrics": _paired_metrics(comparisons),
+335:         "metric_policy": (
+336:             "Same fixtures per candidate/comparator/market; negative loss deltas favor candidate; descriptive only."
+337:         ),
+338:         "market_benchmark_policy": (
+339:             "First eligible non-reference offer book in lexical order per market; no EV/result selection."
+340:         ),
+341:         "limitations": [
+342:             "Explicit input clocks are declarations, not independent source verification.",
+343:             "Observed quotes do not establish execution or available stake.",
+344:             "Exploratory history cannot establish a new untouched holdout.",
+345:             "No legacy model, protected cohort or training gate is changed.",
+346:         ],
+347:     }
+348:     return {
+349:         "protocol.json": protocol,
+350:         "forecasts.jsonl": forecasts,
+351:         "price_scans.jsonl": scans,
+352:         "comparisons.jsonl": comparisons,
+353:         "rejections.jsonl": rejected,
+354:         "summary.json": summary,
+355:     }
+### brasileirao_predictor/research/price_strength_reliability.py
+18: from __future__ import annotations
+20: import math
+21: from collections.abc import Iterable, Mapping, Set
+22: from dataclasses import dataclass
+23: from numbers import Real
+25: _NORMALIZATION_TOLERANCE = 1e-9
+28: @dataclass(frozen=True)
+29: class ReliabilityWeight:
+32:     weight: float
+33:     n: int
+34:     dimension: int
+35:     model_loss: float
+36:     market_loss: float
+37:     blended_loss: float
+38:     numerator: float
+39:     denominator: float
+42: def _ordered_tuple(values: Iterable, name: str) -> tuple:
+43:     if isinstance(values, (str, bytes, Mapping, Set)):
+44:         raise ValueError(f"{name} must be an ordered iterable")
+45:     try:
+46:         return tuple(values)
+47:     except TypeError as exc:
+48:         raise ValueError(f"{name} must be an ordered iterable") from exc
+51: def _probability(value: float, name: str) -> float:
+53:     if isinstance(value, bool) or not isinstance(value, Real) or not 0 <= value <= 1:
+54:         raise ValueError(f"{name} must be a finite number in [0, 1]")
+55:     result = float(value)
+56:     if not math.isfinite(result):
+57:         raise ValueError(f"{name} must be a finite number in [0, 1]")
+58:     return result
+61: def _vector(values: Iterable[float], name: str) -> tuple[float, ...]:
+62:     raw = _ordered_tuple(values, name)
+63:     if len(raw) not in (2, 3):
+64:         raise ValueError(f"{name} must contain 2 or 3 probabilities")
+65:     vector = tuple(_probability(value, f"{name}[{index}]") for index, value in enumerate(raw))
+66:     if not math.isclose(math.fsum(vector), 1.0, rel_tol=0.0, abs_tol=_NORMALIZATION_TOLERANCE):
+67:         raise ValueError(f"{name} probabilities must sum to 1")
+68:     return vector
+71: def _combine(model: tuple[float, ...], market: tuple[float, ...], weight: float) -> tuple[float, ...]:
+72:     if weight == 0:
+73:         return market
+74:     if weight == 1:
+75:         return model
+76:     return tuple(weight * p + (1.0 - weight) * q for p, q in zip(model, market, strict=True))
+79: def blend(vector: Iterable[float], market: Iterable[float], weight: float) -> tuple[float, ...]:
+86:     model_vector = _vector(vector, "vector")
+87:     market_vector = _vector(market, "market")
+88:     if len(model_vector) != len(market_vector):
+89:         raise ValueError("model and market dimensions must match")
+90:     alpha = _probability(weight, "weight")
+91:     return _combine(model_vector, market_vector, alpha)
+94: def fit_weight(
+95:     model_vectors: Iterable[Iterable[float]],
+96:     market_vectors: Iterable[Iterable[float]],
+97:     outcomes: Iterable[int],
+98: ) -> ReliabilityWeight:
+108:     raw_models = _ordered_tuple(model_vectors, "model_vectors")
+109:     raw_markets = _ordered_tuple(market_vectors, "market_vectors")
+110:     labels = _ordered_tuple(outcomes, "outcomes")
+111:     n = len(raw_models)
+112:     if not n:
+113:         raise ValueError("fitting sample must be nonempty")
+114:     if len(raw_markets) != n or len(labels) != n:
+115:         raise ValueError("model_vectors, market_vectors and outcomes lengths must match")
+116:     models = tuple(_vector(value, f"model_vectors[{i}]") for i, value in enumerate(raw_models))
+117:     markets = tuple(_vector(value, f"market_vectors[{i}]") for i, value in enumerate(raw_markets))
+118:     dimension = len(models[0])
+119:     if any(len(value) != dimension for value in (*models, *markets)):
+120:         raise ValueError("all model and market dimensions must match")
+121:     if any(type(value) is not int or not 0 <= value < dimension for value in labels):
+122:         raise ValueError("outcomes must be integer class indices within the vector dimension")
+124:     scored_classes = range(dimension) if dimension == 3 else range(1)
+125:     terms = tuple(
+126:         (p[index], q[index], float(outcome == index))
+127:         for p, q, outcome in zip(models, markets, labels, strict=True)
+128:         for index in scored_classes
+129:     )
+130:     numerator = math.fsum((p - q) * (y - q) for p, q, y in terms)
+131:     denominator = math.fsum((p - q) ** 2 for p, q, _ in terms)
+132:     weight = 0.0 if denominator == 0 else max(0.0, min(1.0, numerator / denominator))
+133:     blended = tuple(_combine(p, q, weight) for p, q in zip(models, markets, strict=True))
+134:     blended_loss = (
+135:         math.fsum(
+136:             (vector[index] - float(outcome == index)) ** 2
+137:             for vector, outcome in zip(blended, labels, strict=True)
+138:             for index in scored_classes
+139:         )
+140:         / n
+141:     )
+142:     return ReliabilityWeight(
+143:         weight=weight,
+144:         n=n,
+145:         dimension=dimension,
+146:         model_loss=math.fsum((p - y) ** 2 for p, _, y in terms) / n,
+147:         market_loss=math.fsum((q - y) ** 2 for _, q, y in terms) / n,
+148:         blended_loss=blended_loss,
+149:         numerator=numerator,
+150:         denominator=denominator,
+151:     )

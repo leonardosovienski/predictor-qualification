@@ -1,0 +1,405 @@
+### brasileirao_predictor/research/residual_dataset.py
+7: from __future__ import annotations
+9: import statistics as st
+10: from collections import defaultdict
+11: from datetime import timedelta
+12: from numbers import Integral
+13: from typing import Any
+15: from brasileirao_predictor.data.market_anchor import remove_overround
+16: from brasileirao_predictor.research.residual_features import build_residual_features
+17: from brasileirao_predictor.research.shadow_portfolio import finite, utc
+20: def materialize_total_market_records(
+21:     observations: list[dict[str, Any]],
+22:     results: list[dict[str, Any]],
+23:     *,
+24:     offer_bookmaker: str,
+25:     horizon_hours: float = 24.0,
+26:     max_pair_skew_seconds: float = 60.0,
+27:     max_quote_age_seconds: float = 120.0,
+28:     total_line: float = 2.5,
+29:     context: dict[str, dict[str, Any]] | None = None,
+30: ) -> list[dict[str, Any]]:
+37:     if not isinstance(offer_bookmaker, str) or not offer_bookmaker.strip():
+38:         raise ValueError("offer_bookmaker must be fixed explicitly")
+39:     horizon_hours = finite(horizon_hours, "horizon_hours")
+40:     max_pair_skew_seconds = finite(max_pair_skew_seconds, "max_pair_skew_seconds")
+41:     max_quote_age_seconds = finite(max_quote_age_seconds, "max_quote_age_seconds")
+42:     total_line = finite(total_line, "total_line")
+43:     if (
+44:         horizon_hours <= 0
+45:         or max_pair_skew_seconds < 0
+46:         or max_quote_age_seconds <= 0
+47:         or total_line < 0
+48:         or total_line % 1 != 0.5
+49:     ):
+50:         raise ValueError("positive horizon/age and a binary half-goal line are required")
+51:     result_by_event = {}
+52:     for row in results:
+53:         identity = row.get("source_event_id")
+54:         if isinstance(identity, bool) or not isinstance(identity, (str, int)) or not str(identity).strip():
+55:             raise ValueError("source_event_id is required")
+56:         event = str(identity)
+57:         if event in result_by_event:
+58:             raise ValueError("duplicate result event; reconcile revisions before materialization")
+59:         for key in ("home_goals", "away_goals"):
+60:             value = row.get(key)
+61:             if value is not None and (isinstance(value, bool) or not isinstance(value, Integral) or value < 0):
+62:                 raise ValueError("goals must be nonnegative integer counts")
+63:         result_by_event[event] = row
+64:     market = f"ou{total_line:g}"
+65:     events = defaultdict(list)
+66:     for row in observations:
+67:         if row.get("market") == market and row.get("line") == total_line:
+68:             event = row.get("source_event_id")
+69:             if isinstance(event, bool) or not isinstance(event, (str, int)) or not str(event).strip():
+70:                 raise ValueError("source_event_id is required")
+71:             events[str(event)].append(row)
+72:     records = []
+73:     for event, rows in sorted(events.items()):
+74:         kickoffs = {utc(row["kickoff_at"]) for row in rows}
+75:         if len(kickoffs) != 1:
+76:             raise ValueError("conflicting kickoff revisions require an as-of fixture snapshot")
+77:         kickoff = kickoffs.pop()
+78:         cutoff = kickoff - timedelta(hours=horizon_hours)
+79:         result = result_by_event.get(event, {})
+80:         outcome, settled = None, None
+81:         if result.get("home_goals") is not None and result.get("away_goals") is not None:
+82:             settled = utc(result["settled_at"])
+83:             if settled <= kickoff:
+84:                 raise ValueError("result settlement must follow kickoff")
+85:             outcome = int(result["home_goals"] + result["away_goals"] > total_line)
+86:         record = {
+87:             "event_id": event,
+88:             "market": market,
+89:             "period": "FT",
+90:             "line": total_line,
+91:             "kickoff_at": kickoff.isoformat(),
+92:             "predicted_at": cutoff.isoformat(),
+93:             "settled_at": settled.isoformat() if settled else None,
+94:             "outcome": outcome,
+95:             "features": None,
+96:             "market_probability": None,
+97:             "best_odds": None,
+98:             "best_odds_by_selection": None,
+99:             "offer_bookmaker": offer_bookmaker,
+100:             "reference_books": [],
+101:             "book_count": 0,
+102:             "data_status": "ABSTAIN_DATA",
+103:             "abstention_reason": "NO_ADMISSIBLE_OFFER_OR_REFERENCE",
+104:             "scientific_state": "COLLECTION_ONLY",
+105:             "capital_enabled": False,
+106:             "economic_evidence": False,
+107:             "input_scope": "caller_declared_clocks_and_status",
+108:         }
+109:         if result.get("label_available_at") is not None:
+110:             record["label_available_at"] = result["label_available_at"]
+111:         latest, invalid_books = {}, set()
+112:         for row in rows:
+113:             book, side = row.get("bookmaker"), row.get("selection")
+114:             if not isinstance(book, str) or not book.strip() or side not in {"over", "under"}:
+115:                 continue
+116:             try:
+117:                 received = utc(row["retrieved_at"])
+118:                 if received > cutoff:
+119:                     continue
+120:                 observed, available = utc(row["observed_at"]), utc(row["available_at"])
+121:                 if observed > available or available > received or row.get("period") != "FT":
+122:                     raise ValueError("invalid quote clocks or period")
+123:                 if row.get("published_at") is not None and utc(row["published_at"]) > available:
+124:                     raise ValueError("publication unavailable at declared availability")
+125:             except (ValueError, KeyError, TypeError):
+126:                 invalid_books.add(book)
+127:                 continue
+128:             key = (book, side)
+129:             if key not in latest or received > latest[key][0]:
+130:                 latest[key] = (received, row, False)
+131:             elif received == latest[key][0] and row != latest[key][1]:
+132:                 latest[key] = (received, row, True)
+133:         pairs, fair_by_book, pair_clocks = {}, {}, {}
+134:         for book in sorted({key[0] for key in latest} - invalid_books):
+135:             over, under = latest.get((book, "over")), latest.get((book, "under"))
+136:             if over is None or under is None:
+137:                 continue
+138:             pair = [over, under]
+139:             if any(item[2] or item[1].get("status") != "ACTIVE" for item in pair):
+140:                 continue
+141:             source = pair[0][1].get("source")
+142:             if not isinstance(source, str) or not source.strip() or pair[1][1].get("source") != source:
+143:                 continue
+144:             observed = [utc(item[1]["observed_at"]) for item in pair]
+145:             if (max(observed) - min(observed)).total_seconds() > max_pair_skew_seconds or (
+146:                 cutoff - min(observed)
+147:             ).total_seconds() > max_quote_age_seconds:
+148:                 continue
+149:             try:
+150:                 prices = {
+151:                     side: finite(item[1]["decimal_odds"], "decimal_odds") for side, item in zip(("over", "under"), pair)
+152:                 }
+153:                 if any(price <= 1 for price in prices.values()):
+154:                     raise ValueError("invalid decimal odds")
+155:             except (ValueError, KeyError, TypeError):
+156:                 continue
+157:             pairs[book] = prices
+158:             pair_clocks[book] = [
+159:                 utc(item[1][field]) for item in pair for field in ("observed_at", "available_at", "retrieved_at")
+160:             ]
+161:             if book != offer_bookmaker:
+162:                 try:
+163:                     fair_by_book[book] = remove_overround(prices)["over"]
+164:                 except ValueError:
+165:                     continue  # Explicit legacy reference policy: positive overround.
+166:         offer_clocks = pair_clocks.get(offer_bookmaker, [])
+167:         references = sorted(
+168:             book
+169:             for book in fair_by_book
+170:             if offer_clocks
+171:             and (max(offer_clocks + pair_clocks[book]) - min(offer_clocks + pair_clocks[book])).total_seconds()
+172:             <= max_pair_skew_seconds
+173:         )
+174:         if offer_bookmaker in pairs and references:
+175:             probabilities = [fair_by_book[book] for book in references]
+176:             record.update(reference_books=references, book_count=len(references))
+177:             ctx = (context or {}).get(event)
+178:             record["abstention_reason"] = "MISSING_OR_UNAVAILABLE_FEATURE_CONTEXT"
+179:             if ctx is not None and ctx.get("available_at") is not None and utc(ctx["available_at"]) <= cutoff:
+180:                 current, expected = ctx.get("current_starters"), ctx.get("expected_starters")
+181:                 if (
+182:                     not isinstance(current, list)
+183:                     or not isinstance(expected, list)
+184:                     or any(not isinstance(player, str) or not player for player in current + expected)
+185:                 ):
+186:                     raise ValueError("feature context requires explicit starter lists")
+187:                 if (
+188:                     len(current) > 11
+189:                     or len(expected) > 11
+190:                     or len(set(current)) != len(current)
+191:                     or len(set(expected)) != len(expected)
+192:                 ):
+193:                     raise ValueError("starter lists must be unique and contain at most eleven players")
+194:                 features = build_residual_features(
+195:                     book_probabilities=probabilities,
+196:                     captured_at=cutoff.isoformat(),
+197:                     kickoff_at=kickoff.isoformat(),
+198:                     current_starters=set(current),
+199:                     expected_starters=set(expected),
+200:                     xg_form_delta=finite(ctx["xg_form_delta"], "xg_form_delta"),
+201:                     rest_days_delta=finite(ctx["rest_days_delta"], "rest_days_delta"),
+202:                 )
+203:                 record.update(
+204:                     features=features,
+205:                     features_available_at=ctx["available_at"],
+206:                     market_probability=st.median(probabilities),
+207:                     best_odds=pairs[offer_bookmaker]["over"],
+208:                     best_odds_by_selection=pairs[offer_bookmaker],
+209:                     quote_available_at=max(
+210:                         offer_clocks + [clock for book in references for clock in pair_clocks[book]]
+211:                     ).isoformat(),
+212:                     quote_provenance={
+213:                         book: {side: dict(latest[(book, side)][1]) for side in ("over", "under")}
+214:                         for book in [offer_bookmaker, *references]
+215:                     },
+216:                     data_status="READY_FOR_CONDITIONAL_REPLAY",
+217:                     abstention_reason=None,
+218:                 )
+219:         records.append(record)
+220:     return sorted(records, key=lambda row: (row["predicted_at"], row["event_id"]))
+### brasileirao_predictor/research/residual_features.py
+3: from __future__ import annotations
+5: import math
+6: import statistics as st
+7: from collections import defaultdict
+8: from datetime import datetime
+9: from typing import Any
+11: FEATURE_NAMES = (
+12:     "book_dispersion",
+13:     "book_count_log",
+14:     "hours_to_kickoff_log",
+15:     "lineup_completeness",
+16:     "starter_change_share",
+17:     "xg_form_delta",
+18:     "rest_days_delta",
+19: )
+22: def _utc(value: str) -> datetime:
+23:     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+24:     if parsed.tzinfo is None:
+25:         raise ValueError("timestamp must be timezone-aware")
+26:     return parsed
+29: def lineup_state_asof(rows: list[dict[str, Any]], *, event_id: str, asof: str) -> dict[str, set[str]]:
+30:     if any("schema_version" in row for row in rows):
+33:         from brasileirao_predictor.data.lineup_envelopes import snapshot_state_asof
+35:         return snapshot_state_asof(rows, event_id=event_id, asof=asof)
+36:     cutoff = _utc(asof)
+37:     vintages: dict[str, tuple[datetime, str, list[dict[str, Any]]]] = {}
+38:     grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+39:     for row in rows:
+40:         if str(row.get("source_event_id")) != str(event_id):
+41:             continue
+42:         try:
+43:             received = _utc(str(row["ingested_at"]))
+44:             published = _utc(str(row["published_at"])) if row.get("published_at") else None
+45:         except (KeyError, TypeError, ValueError):
+46:             continue
+47:         if received <= cutoff and (published is None or published <= received):
+48:             grouped[(str(row.get("team_id")), str(row.get("content_hash")))].append(row)
+49:     for (team_id, content_hash), items in grouped.items():
+50:         received = max(_utc(str(item["ingested_at"])) for item in items)
+51:         if team_id in vintages and received == vintages[team_id][0] and content_hash != vintages[team_id][1]:
+52:             raise ValueError("conflicting lineup vintages at the same receipt time")
+53:         if team_id not in vintages or received > vintages[team_id][0]:
+54:             vintages[team_id] = (received, content_hash, items)
+55:     return {
+56:         team_id: {str(item["player_id"]) for item in items if item.get("role") == "starter"}
+57:         for team_id, (_, _, items) in vintages.items()
+58:     }
+61: def build_residual_features(
+62:     *,
+63:     book_probabilities: list[float],
+64:     captured_at: str,
+65:     kickoff_at: str,
+66:     current_starters: set[str] | None = None,
+67:     expected_starters: set[str] | None = None,
+68:     xg_form_delta: float = 0.0,
+69:     rest_days_delta: float = 0.0,
+70: ) -> list[float]:
+71:     if len(book_probabilities) < 1 or any(not 0 < p < 1 for p in book_probabilities):
+72:         raise ValueError("book probabilities are invalid")
+73:     hours = (_utc(kickoff_at) - _utc(captured_at)).total_seconds() / 3600.0
+74:     if hours <= 0:
+75:         raise ValueError("features must be observed before kickoff")
+76:     current, expected = current_starters or set(), expected_starters or set()
+77:     lineup_completeness = min(1.0, len(current) / 11.0)
+78:     starter_change_share = len(current.symmetric_difference(expected)) / 22.0 if expected else 0.0
+79:     return [
+80:         st.pstdev(book_probabilities),
+81:         math.log1p(len(book_probabilities)),
+82:         math.log1p(hours),
+83:         lineup_completeness,
+84:         starter_change_share,
+85:         float(xg_form_delta),
+86:         float(rest_days_delta),
+87:     ]
+### brasileirao_predictor/research/residual_gate.py
+3: from __future__ import annotations
+5: import math
+6: import statistics as st
+7: from collections import defaultdict
+8: from numbers import Integral, Real
+9: from typing import Any
+11: from predictor_core.measurement.bootstrap import bootstrap_ci
+12: from predictor_core.measurement.stats import probabilistic_sharpe_ratio
+15: def _finite_number(value: Any, name: str) -> float:
+16:     if isinstance(value, bool) or not isinstance(value, Real):
+17:         raise ValueError(f"{name} must be a finite number")
+18:     try:
+19:         result = float(value)
+20:     except (OverflowError, ValueError) as exc:
+21:         raise ValueError(f"{name} must be a finite number") from exc
+22:     if not math.isfinite(result):
+23:         raise ValueError(f"{name} must be a finite number")
+24:     return result
+27: def _probability(value: Any, name: str) -> float:
+28:     result = _finite_number(value, name)
+29:     if not 0 <= result <= 1:
+30:         raise ValueError(f"{name} must be in [0, 1]")
+31:     return result
+34: def evaluate_economic_gate(
+35:     settlements: list[dict[str, Any]],
+36:     *,
+37:     dsr: float,
+38:     minimum_sample: int = 200,
+39:     minimum_psr: float = 0.80,
+40:     minimum_dsr: float = 0.95,
+41:     n_boot: int = 2000,
+42: ) -> dict[str, Any]:
+43:     dsr = _probability(dsr, "dsr")
+44:     minimum_psr = _probability(minimum_psr, "minimum_psr")
+45:     minimum_dsr = _probability(minimum_dsr, "minimum_dsr")
+46:     for name, value in (("minimum_sample", minimum_sample), ("n_boot", n_boot)):
+47:         if isinstance(value, bool) or not isinstance(value, Integral) or value < 2:
+48:             raise ValueError(f"{name} must be an integer >= 2")
+49:     if not isinstance(settlements, list):
+50:         raise ValueError("settlements must be a list")
+51:     complete = []
+52:     for index, row in enumerate(settlements):
+53:         if not isinstance(row, dict):
+54:             raise ValueError(f"settlements[{index}] must be an object")
+55:         event_id = row.get("event_id")
+56:         if event_id is not None and (
+57:             isinstance(event_id, bool)
+58:             or not isinstance(event_id, (str, int))
+59:             or (isinstance(event_id, str) and not event_id.strip())
+60:         ):
+61:             raise ValueError(f"settlements[{index}].event_id must be a nonblank string or integer")
+62:         values = {}
+63:         for field in ("pnl", "clv"):
+64:             if row.get(field) is not None:
+65:                 values[field] = _finite_number(row[field], f"settlements[{index}].{field}")
+68:         if "stake" in row and _finite_number(row["stake"], "unit stake") != 1.0:
+69:             raise ValueError("residual gate requires unit stake; variable stakes need a portfolio evaluator")
+70:         if len(values) == 2 and event_id is not None:
+71:             complete.append({"event_id": event_id, **values})
+72:     event_pnl = defaultdict(list)
+73:     for row in complete:
+74:         event_pnl[str(row["event_id"])].append(row["pnl"])
+75:     metadata = {
+76:         "schema_version": "residual-shadow-gate/v3",
+77:         "n": len(complete),
+78:         "n_events": len(event_pnl),
+79:         "n_input": len(settlements),
+80:         "n_incomplete": len(settlements) - len(complete),
+81:         "minimum_sample": int(minimum_sample),
+82:         "roi_scope": "mean_pnl_assuming_one_unit_staked_per_row",
+83:         "dsr_source": "caller_declared_unverified",
+84:         "psr_scope": "one_mean_unit_return_per_event_iid_diagnostic_only",
+85:         "dsr_used_for_promotion": False,
+86:         "promotion_requires": [
+87:             "registered_trial_inventory_and_return_matrix",
+88:             "preregistered_temporal_dependence_design",
+89:         ],
+90:         "provenance_verified": False,
+91:         "economic_evidence": False,
+92:         "capital_enabled": False,
+93:     }
+94:     if len(complete) != len(settlements) or len(event_pnl) < minimum_sample:
+95:         return {
+96:             **metadata,
+97:             "verdict": "PENDING_DATA" if len(complete) != len(settlements) else "PENDING_SAMPLE",
+98:         }
+99:     pnl = [float(row["pnl"]) for row in complete]
+100:     clv = [float(row["clv"]) for row in complete]
+101:     roi_lo, roi_hi, _ = bootstrap_ci(
+102:         complete,
+103:         lambda sample: st.mean(float(row["pnl"]) for row in sample),
+104:         scheme="cluster",
+105:         cluster_key=lambda row: row["event_id"],
+106:         n_boot=n_boot,
+107:         seed=13,
+108:     )
+109:     clv_lo, clv_hi, _ = bootstrap_ci(
+110:         complete,
+111:         lambda sample: st.mean(float(row["clv"]) for row in sample),
+112:         scheme="cluster",
+113:         cluster_key=lambda row: row["event_id"],
+114:         n_boot=n_boot,
+115:         seed=17,
+116:     )
+120:     raw_psr = probabilistic_sharpe_ratio([st.mean(values) for values in event_pnl.values()], 0.0)
+121:     psr = float(raw_psr) if raw_psr is not None and math.isfinite(raw_psr) else None
+122:     passed = bool(
+123:         roi_lo is not None
+124:         and clv_lo is not None
+125:         and roi_lo > 0
+126:         and clv_lo > 0
+127:         and psr is not None
+128:         and psr >= minimum_psr
+129:     )
+130:     return {
+131:         **metadata,
+134:         "verdict": "PENDING_DESIGN" if passed else "NO_GO",
+135:         "roi": st.mean(pnl),
+136:         "roi_ci95": [roi_lo, roi_hi],
+137:         "clv": st.mean(clv),
+138:         "clv_ci95": [clv_lo, clv_hi],
+139:         "psr": psr,
+140:         "dsr": dsr,
+141:     }

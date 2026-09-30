@@ -1,0 +1,446 @@
+### tests/test_residual_artifact_integrity.py
+3: import copy
+4: from types import SimpleNamespace
+6: import numpy as np
+7: import pytest
+9: from brasileirao_predictor.research import market_residual as module
+12: def artifact():
+13:     return dict(
+14:         schema_version="market-residual/1",
+15:         capital_enabled=False,
+16:         l2=5.0,
+17:         feature_names=["signal"],
+18:         coefficients=[0.0, 0.1],
+19:         means=[0.0],
+20:         scales=[1.0],
+21:         covariance=[[1.0, 0.0], [0.0, 1.0]],
+22:     )
+25: @pytest.mark.parametrize(
+26:     "change",
+27:     [
+28:         {"coefficients": [0.0, float("nan")]},
+29:         {"means": [float("inf")]},
+30:         {"scales": [0.0]},
+31:         {"scales": [-1.0]},
+32:         {"scales": [float("nan")]},
+33:         {"covariance": [[1.0, 2.0], [0.0, 1.0]]},
+34:         {"covariance": [[1.0, 2.0], [2.0, 1.0]]},
+35:         {"covariance": [[float("inf"), 0.0], [0.0, 1.0]]},
+36:         {"l2": -1},
+37:         {"l2": True},
+38:         {"l2": float("nan")},
+39:         {"feature_names": [" "]},
+40:     ],
+41: )
+42: def test_invalid_artifact_cannot_be_loaded(change):
+43:     with pytest.raises(ValueError):
+44:         module.MarketResidualModel.from_dict({**artifact(), **change})
+47: def test_duplicate_feature_names_are_rejected():
+48:     payload = {
+49:         **artifact(),
+50:         "feature_names": ["x", "x"],
+51:         "coefficients": [0, 0, 0],
+52:         "means": [0, 0],
+53:         "scales": [1, 1],
+54:         "covariance": np.eye(3).tolist(),
+55:     }
+56:     with pytest.raises(ValueError):
+57:         module.MarketResidualModel.from_dict(payload)
+60: @pytest.mark.parametrize("z", [-1.0, float("nan"), float("inf"), True])
+61: def test_interval_multiplier_must_be_finite_nonnegative(z):
+62:     model = module.MarketResidualModel.from_dict(artifact())
+63:     with pytest.raises(ValueError):
+64:         model.predict(np.zeros(1), 0.5, z_score=z)
+67: def test_sigmoid_handles_extreme_logits_without_overflow():
+68:     with np.errstate(over="raise", invalid="raise"):
+69:         result = module._sigmoid(np.array([-1000.0, 0.0, 1000.0]))
+70:     assert np.array_equal(result, [0.0, 0.5, 1.0])
+73: def test_predict_and_export_reject_mutated_invalid_state():
+74:     model = module.MarketResidualModel.from_dict(artifact())
+75:     model.covariance = np.array([[-1.0, 0.0], [0.0, 1.0]])
+76:     with pytest.raises(ValueError):
+77:         model.predict(np.zeros(1), 0.5)
+78:     with pytest.raises(ValueError):
+79:         model.to_dict()
+82: def test_loading_copies_arrays_instead_of_borrowing_mutable_payload():
+83:     coefficients = np.array([0.0, 0.1])
+84:     payload = {**artifact(), "coefficients": coefficients}
+85:     model = module.MarketResidualModel.from_dict(payload)
+86:     coefficients[0] = 999.0
+87:     assert model.coefficients is not None
+88:     assert model.coefficients[0] == 0.0
+91: def synthetic(kind):
+92:     x = np.linspace(-1, 1, 60).reshape(-1, 1)
+93:     if kind == "binary":
+94:         return x, np.tile([0, 1], 30), np.full(60, 0.5)
+95:     return x, np.tile([0, 1, 2], 20), np.tile([0.3, 0.3, 0.4], (60, 1))
+98: @pytest.mark.parametrize("kind", ["binary", "multinomial"])
+99: def test_failed_optimizer_never_publishes_model(kind, monkeypatch):
+100:     def failed(objective, initial, **kwargs):
+101:         return SimpleNamespace(success=False, fun=1.0, x=initial)
+103:     monkeypatch.setattr(module, "minimize", failed)
+104:     cls = module.MarketResidualModel if kind == "binary" else module.MultinomialMarketResidualModel
+105:     model = cls()
+106:     with pytest.raises(RuntimeError, match="optimization failed"):
+107:         model.fit(*synthetic(kind))
+108:     assert model.coefficients is None and model.means is None and model.scales is None
+111: def test_invalid_refit_does_not_replace_existing_model():
+112:     model = module.MarketResidualModel.from_dict(artifact())
+113:     before = copy.deepcopy(model.to_dict())
+114:     with pytest.raises(ValueError):
+115:         model.fit(*synthetic("binary"), feature_names=("x", "extra"))
+116:     assert model.to_dict() == before
+119: def test_multinomial_outcome_cannot_be_silently_truncated():
+120:     x, y, market = synthetic("multinomial")
+121:     y = y.astype(float)
+122:     y[0] = 1.9
+123:     with pytest.raises(ValueError):
+124:         module.MultinomialMarketResidualModel().fit(x, y, market)
+127: @pytest.mark.parametrize("kind", ["binary", "multinomial"])
+128: def test_analytic_gradient_agrees_with_independent_central_difference(kind, monkeypatch):
+129:     original = module.minimize
+130:     checked = []
+132:     def inspect_gradient(objective, initial, *, jac, **kwargs):
+133:         point = np.linspace(-0.3, 0.7, len(initial))
+134:         epsilon = 1e-6
+135:         basis = np.eye(len(initial)) * epsilon
+136:         numeric = np.array([(objective(point + step) - objective(point - step)) / (2 * epsilon) for step in basis])
+137:         np.testing.assert_allclose(jac(point), numeric, rtol=2e-5, atol=1e-6)
+138:         checked.append(True)
+139:         return original(objective, initial, jac=jac, **kwargs)
+141:     monkeypatch.setattr(module, "minimize", inspect_gradient)
+142:     cls = module.MarketResidualModel if kind == "binary" else module.MultinomialMarketResidualModel
+143:     cls().fit(*synthetic(kind))
+144:     assert checked == [True]
+### tests/test_residual_dataset.py
+1: from brasileirao_predictor.research.residual_dataset import materialize_total_market_records
+4: def _quote(book, selection, odd, captured="2026-08-10T11:59:00+00:00"):
+5:     return {
+6:         "source_event_id": "e",
+7:         "market": "ou2.5",
+8:         "line": 2.5,
+9:         "selection": selection,
+10:         "bookmaker": book,
+11:         "decimal_odds": odd,
+12:         "odds_captured_at": captured,
+13:         "kickoff_at": "2026-08-11T12:00:00+00:00",
+14:         "source": "synthetic",
+15:         "period": "FT",
+16:         "status": "ACTIVE",
+17:         "observed_at": captured,
+18:         "available_at": captured,
+19:         "retrieved_at": captured,
+20:     }
+23: def _context():
+24:     return {
+25:         "e": {
+26:             "available_at": "2026-08-10T11:58:00+00:00",
+27:             "xg_form_delta": 0,
+28:             "rest_days_delta": 0,
+29:             "current_starters": [],
+30:             "expected_starters": [],
+31:         }
+32:     }
+35: def test_materializes_only_complete_books_available_at_horizon():
+36:     observations = [
+37:         _quote("a", "over", 2.0),
+38:         _quote("a", "under", 1.9),
+39:         _quote("b", "over", 2.1),
+40:         _quote("b", "under", 1.8),
+41:         _quote("late", "over", 9.0, "2026-08-11T11:00:00+00:00"),
+42:         _quote("late", "under", 9.0, "2026-08-11T11:00:00+00:00"),
+43:     ]
+44:     results = [{"source_event_id": "e", "home_goals": 2, "away_goals": 1, "settled_at": "2026-08-11T14:00:00+00:00"}]
+45:     rows = materialize_total_market_records(
+46:         observations, results, horizon_hours=24, offer_bookmaker="b", context=_context()
+47:     )
+48:     assert len(rows) == 1
+49:     assert rows[0]["outcome"] == 1
+50:     assert rows[0]["best_odds"] == 2.1
+51:     assert rows[0]["best_odds_by_selection"] == {"over": 2.1, "under": 1.8}
+52:     assert rows[0]["book_count"] == 1
+53:     assert rows[0]["scientific_state"] == "COLLECTION_ONLY"
+56: def test_keeps_unfinished_event_and_incomplete_market_as_abstention():
+57:     rows = materialize_total_market_records([_quote("a", "over", 2.0)], [], horizon_hours=24, offer_bookmaker="b")
+58:     assert len(rows) == 1 and rows[0]["outcome"] is None
+59:     assert rows[0]["data_status"] == "ABSTAIN_DATA"
+62: def test_rejects_synthetic_pair_from_different_market_states():
+63:     observations = [
+64:         _quote("a", "over", 2.0, "2026-08-10T11:50:00+00:00"),
+65:         _quote("a", "under", 1.9, "2026-08-10T11:55:00+00:00"),
+66:         _quote("b", "over", 2.1),
+67:         _quote("b", "under", 1.8),
+68:     ]
+69:     results = [{"source_event_id": "e", "home_goals": 2, "away_goals": 1, "settled_at": "2026-08-11T14:00:00+00:00"}]
+70:     rows = materialize_total_market_records(
+71:         observations, results, horizon_hours=24, max_quote_age_seconds=3600, offer_bookmaker="b", context=_context()
+72:     )
+73:     assert rows[0]["data_status"] == "ABSTAIN_DATA"
+74:     assert rows[0]["best_odds_by_selection"] is None
+### tests/test_residual_diagnostics.py
+1: from __future__ import annotations
+3: import pytest
+5: from brasileirao_scripts import research_residual_diagnostics as d
+8: def test_losses_are_zero_for_certain_correct_prediction() -> None:
+9:     assert d._losses([0.0, 0.0, 1.0], 2) == pytest.approx((0.0, 0.0, 0.0))
+12: def test_confidence_bins_have_frozen_boundaries() -> None:
+13:     assert [d._confidence_bin(value) for value in (0.39, 0.40, 0.50, 0.60)] == [
+14:         "lt_40",
+15:         "40_50",
+16:         "50_60",
+17:         "ge_60",
+18:     ]
+21: def test_market_home_bins_have_frozen_boundaries() -> None:
+22:     assert [d._market_home_bin(value) for value in (0.34, 0.35, 0.45, 0.55)] == [
+23:         "lt_35",
+24:         "35_45",
+25:         "45_55",
+26:         "ge_55",
+27:     ]
+### tests/test_residual_features.py
+1: import pytest
+3: from brasileirao_predictor.research.residual_features import build_residual_features, lineup_state_asof
+6: def test_lineup_state_uses_latest_vintage_available_asof():
+7:     rows = [
+8:         {
+9:             "source_event_id": "1",
+10:             "team_id": "a",
+11:             "player_id": "old",
+12:             "role": "starter",
+13:             "content_hash": "v1",
+14:             "published_at": "2026-08-10T10:00:00+00:00",
+15:             "ingested_at": "2026-08-10T10:00:01+00:00",
+16:         },
+17:         {
+18:             "source_event_id": "1",
+19:             "team_id": "a",
+20:             "player_id": "new",
+21:             "role": "starter",
+22:             "content_hash": "v2",
+23:             "published_at": "2026-08-10T11:00:00+00:00",
+24:             "ingested_at": "2026-08-10T11:00:01+00:00",
+25:         },
+26:     ]
+27:     assert lineup_state_asof(rows, event_id="1", asof="2026-08-10T10:30:00+00:00") == {"a": {"old"}}
+28:     assert lineup_state_asof(rows, event_id="1", asof="2026-08-10T11:30:00+00:00") == {"a": {"new"}}
+31: def test_residual_features_capture_dispersion_time_and_lineup_change():
+32:     features = build_residual_features(
+33:         book_probabilities=[0.45, 0.50, 0.55],
+34:         captured_at="2026-08-10T10:00:00+00:00",
+35:         kickoff_at="2026-08-11T10:00:00+00:00",
+36:         current_starters={"a", "b"},
+37:         expected_starters={"a", "c"},
+38:         xg_form_delta=0.3,
+39:         rest_days_delta=-2,
+40:     )
+41:     assert len(features) == 7
+42:     assert features[0] > 0
+43:     assert features[3] == pytest.approx(2 / 11)
+44:     assert features[4] == pytest.approx(2 / 22)
+47: def test_residual_features_reject_post_kickoff_observation():
+48:     with pytest.raises(ValueError, match="before kickoff"):
+49:         build_residual_features(
+50:             book_probabilities=[0.5],
+51:             captured_at="2026-08-11T10:00:00+00:00",
+52:             kickoff_at="2026-08-11T09:00:00+00:00",
+53:         )
+### tests/test_residual_gate.py
+1: from brasileirao_predictor.research.residual_gate import evaluate_economic_gate
+4: def test_gate_is_pending_below_sample_floor():
+5:     result = evaluate_economic_gate([], dsr=1.0, minimum_sample=10)
+6:     assert result["verdict"] == "PENDING_SAMPLE"
+7:     assert result["capital_enabled"] is False
+10: def test_gate_rejects_negative_economics_even_with_high_dsr():
+11:     rows = [{"event_id": str(index), "pnl": -1.0 if index % 2 else 0.5, "clv": -0.01} for index in range(30)]
+12:     result = evaluate_economic_gate(rows, dsr=0.99, minimum_sample=20, n_boot=200)
+13:     assert result["verdict"] == "NO_GO"
+14:     assert result["capital_enabled"] is False
+17: def test_gate_can_only_return_candidate_not_enable_capital():
+18:     rows = [{"event_id": str(index), "pnl": 0.2, "clv": 0.03} for index in range(30)]
+19:     result = evaluate_economic_gate(rows, dsr=0.99, minimum_sample=20, n_boot=200)
+21:     assert result["verdict"] == "NO_GO"
+22:     assert result["capital_enabled"] is False
+### tests/test_residual_walkforward.py
+1: from datetime import UTC, datetime, timedelta
+3: import numpy as np
+5: from brasileirao_predictor.research.residual_walkforward import evaluate_walkforward
+8: def test_walkforward_respects_maturity_and_never_enables_capital():
+9:     rng = np.random.default_rng(7)
+10:     base = datetime(2024, 1, 1, tzinfo=UTC)
+11:     records = []
+12:     for index in range(180):
+13:         kickoff = base + timedelta(days=index)
+14:         signal = float(rng.normal())
+15:         probability = 1 / (1 + np.exp(-signal))
+16:         records.append(
+17:             {
+18:                 "event_id": str(index),
+19:                 "kickoff_at": kickoff.isoformat(),
+20:                 "predicted_at": (kickoff - timedelta(hours=24)).isoformat(),
+21:                 "settled_at": (kickoff + timedelta(hours=2)).isoformat(),
+22:                 "features": [signal, 1.0, 3.0, 1.0, 0.0, signal, 0.0],
+23:                 "market_probability": 0.5,
+24:                 "best_odds": 2.05,
+25:                 "best_odds_by_selection": {"over": 2.05, "under": 2.05},
+26:                 "outcome": int(rng.random() < probability),
+27:             }
+28:         )
+29:     result = evaluate_walkforward(records, minimum_train=100, block_size=20)
+30:     assert result["status"] == "SHADOW"
+31:     assert result["n"] > 0
+32:     assert result["capital_enabled"] is False
+35: def test_walkforward_reports_post_friction_policy():
+36:     rng = np.random.default_rng(11)
+37:     base = datetime(2024, 1, 1, tzinfo=UTC)
+38:     records = []
+39:     for index in range(80):
+40:         kickoff = base + timedelta(days=index)
+41:         signal = float(rng.normal())
+42:         records.append(
+43:             {
+44:                 "event_id": str(index),
+45:                 "kickoff_at": kickoff.isoformat(),
+46:                 "predicted_at": (kickoff - timedelta(hours=24)).isoformat(),
+47:                 "settled_at": (kickoff + timedelta(hours=2)).isoformat(),
+48:                 "features": [signal, 1.0, 3.0, 1.0, 0.0, signal, 0.0],
+49:                 "market_probability": 0.5,
+50:                 "best_odds": 2.0,
+51:                 "best_odds_by_selection": {"over": 2.0, "under": 2.0},
+52:                 "outcome": int(rng.random() < 1 / (1 + np.exp(-signal))),
+53:             }
+54:         )
+55:     result = evaluate_walkforward(records, minimum_train=40, block_size=20, friction_rate=0.03)
+56:     assert result["friction_rate"] == 0.03
+57:     assert result["capital_enabled"] is False
+### tests/test_resolution_bank.py
+1: import threading
+2: from concurrent.futures import ThreadPoolExecutor
+4: import pytest
+6: from brasileirao_predictor import bet_log as book
+9: def test_bank_snapshot_locks_both_books(tmp_path, monkeypatch):
+10:     bank, bets = tmp_path / "bank.jsonl", tmp_path / "bets.jsonl"
+11:     book.bank_init(100, 1, path=bank, at="2024-01-01T00:00:00Z")
+12:     original = book._read_bank
+13:     entered, release = threading.Event(), threading.Event()
+14:     owner = []
+16:     def paused(path):
+17:         rows = original(path)
+18:         if threading.get_ident() == owner[0]:
+19:             entered.set()
+20:             assert release.wait(5)
+21:         return rows
+23:     def read():
+24:         owner.append(threading.get_ident())
+25:         return book.bank_state(bank, bets)
+27:     monkeypatch.setattr(book, "_read_bank", paused)
+28:     with ThreadPoolExecutor(max_workers=1) as pool:
+29:         future = pool.submit(read)
+30:         assert entered.wait(5)
+31:         try:
+32:             with pytest.raises(OSError):
+33:                 book.bank_flow("deposit", 20, path=bank, at="2024-01-01T01:00:00Z")
+34:         finally:
+35:             release.set()
+36:         state = future.result(timeout=5)
+37:         assert state is not None and state["balance"] == 100
+40: def test_old_stake_is_not_revalued_by_new_unit(tmp_path):
+41:     bank, bets = tmp_path / "bank.jsonl", tmp_path / "bets.jsonl"
+42:     book.bank_init(100, 1, path=bank, at="2024-01-01T00:00:00Z")
+43:     book.add_bet("A", "B", "ou25", "over", 2, path=bets, logged_at="2024-01-01T01:00:00Z")
+44:     book.bank_init(200, 10, path=bank, at="2024-01-02T00:00:00Z")
+45:     state = book.bank_state(bank, bets)
+46:     assert state is not None and state["open_money"] == 1
+47:     book.settle_bet("A", "B", 3, 0, path=bets, recorded_at="2024-01-02T02:00:00Z")
+48:     state = book.bank_state(bank, bets)
+49:     assert state is not None and state["profit_money"] == 1
+52: def test_currency_change_requires_reconciliation_for_old_open_stake(tmp_path):
+53:     bank, bets = tmp_path / "bank.jsonl", tmp_path / "bets.jsonl"
+54:     book.bank_init(100, 1, currency="BRL", path=bank, at="2024-01-01T00:00:00Z")
+55:     book.add_bet("A", "B", "ou25", "over", 2, path=bets, logged_at="2024-01-01T01:00:00Z")
+56:     book.bank_init(100, 1, currency="USD", path=bank, at="2024-01-02T00:00:00Z")
+57:     state = book.bank_state(bank, bets)
+58:     assert state is not None
+59:     assert state["available_money"] is None
+60:     assert state["valuation_status"] == "PENDING_RECONCILIATION"
+63: def test_flow_requires_initial_bank_and_monotonic_clock(tmp_path):
+64:     bank = tmp_path / "bank.jsonl"
+65:     with pytest.raises(ValueError):
+66:         book.bank_flow("deposit", 10, path=bank, at="2024-01-01T00:00:00Z")
+67:     book.bank_init(100, 1, path=bank, at="2024-01-02T00:00:00Z")
+68:     before = bank.read_bytes()
+69:     with pytest.raises(ValueError):
+70:         book.bank_flow("deposit", 10, path=bank, at="2024-01-01T00:00:00Z")
+71:     assert bank.read_bytes() == before
+74: def test_drawdown_accounts_for_time_of_contribution(tmp_path):
+75:     bank, bets = tmp_path / "bank.jsonl", tmp_path / "bets.jsonl"
+76:     book.bank_init(100, 10, path=bank, at="2024-01-01T00:00:00Z")
+77:     book.add_bet("A", "B", "ou25", "over", 2, path=bets, logged_at="2024-01-01T01:00:00Z")
+78:     book.settle_bet("A", "B", 0, 0, path=bets, recorded_at="2024-01-01T02:00:00Z")
+79:     book.bank_flow("deposit", 1000, path=bank, at="2024-01-01T03:00:00Z")
+80:     state = book.bank_state(bank, bets)
+81:     assert state is not None
+82:     assert state["max_drawdown_pct"] == pytest.approx(0.1)
+83:     assert state["balance"] == 1090
+### tests/test_resolution_coverage.py
+3: import copy
+4: import json
+5: import sys
+7: import pytest
+9: from brasileirao_scripts import coverage_report as report
+12: def payload():
+13:     names = report.RUNTIME | report.PROVIDERS | report.KERNEL | report.EVIDENCIA | report.REDIS_INTEGRATION
+14:     return {
+15:         "meta": {"branch_coverage": True},
+16:         "files": {
+17:             name: {"summary": {"covered_lines": 8, "num_statements": 10, "covered_branches": 8, "num_branches": 10}}
+18:             for name in names
+19:         },
+20:         "totals": {"percent_covered": 80.0},
+21:     }
+24: def invoke(tmp_path, monkeypatch, raw):
+25:     source, output = tmp_path / "coverage.json", tmp_path / "report.md"
+26:     source.write_text(json.dumps(raw), encoding="utf-8")
+27:     monkeypatch.setattr(sys, "argv", ["coverage-report", str(source), "--output", str(output)])
+28:     return report.main(), output.read_text(encoding="utf-8")
+31: def test_empty_input_cannot_approve(tmp_path, monkeypatch):
+32:     raw = payload()
+33:     raw["files"] = {}
+34:     code, text = invoke(tmp_path, monkeypatch, raw)
+35:     assert code == 1
+36:     assert "100.00%" not in text
+37:     assert "N/A" in text
+40: def test_one_missing_required_file_cannot_approve(tmp_path, monkeypatch, capsys):
+41:     raw = payload()
+42:     missing = sorted(report.RUNTIME)[0]
+43:     del raw["files"][missing]
+44:     assert invoke(tmp_path, monkeypatch, raw)[0] == 1
+45:     assert missing in capsys.readouterr().out
+48: def test_zero_denominator_is_unknown():
+49:     assert report._percent({}, [])[0] is None
+52: @pytest.mark.parametrize("name", ["kernel_cli.py", "kernel_redis_v2.py"])
+53: def test_current_kernel_surface_is_gated(name):
+54:     assert report.classify("brasileirao_predictor/" + name) == "kernel"
+57: def test_report_never_invents_dotnet_rates(tmp_path, monkeypatch):
+58:     code, text = invoke(tmp_path, monkeypatch, payload())
+59:     assert code == 0
+60:     assert "85,15" not in text and "80,92" not in text
+61:     assert "Cobertura" in text
+64: def test_line_only_coverage_cannot_approve(tmp_path, monkeypatch):
+65:     raw = payload()
+66:     raw["meta"]["branch_coverage"] = False
+67:     assert invoke(tmp_path, monkeypatch, raw)[0] == 1
+70: @pytest.mark.parametrize("value", [True, -1, 11, 1.5])
+71: def test_invalid_counts_cannot_approve(value):
+72:     raw = payload()
+73:     name = sorted(raw["files"])[0]
+74:     item = copy.deepcopy(raw["files"][name])
+75:     item["summary"]["covered_lines"] = value
+76:     with pytest.raises(ValueError):
+77:         report._percent({name: item}, [name])
+80: def test_real_regression_keeps_ratchet(tmp_path, monkeypatch):
+81:     raw = payload()
+82:     for name in report.EVIDENCIA:
+83:         raw["files"][name]["summary"]["covered_lines"] = 5
+84:         raw["files"][name]["summary"]["covered_branches"] = 5
+85:     assert report.EVIDENCIA_PISO == 56.0
+86:     assert invoke(tmp_path, monkeypatch, raw)[0] == 1

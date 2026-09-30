@@ -1,0 +1,461 @@
+### brasileirao_predictor/predict.py
+1: import argparse
+2: import json
+3: import sys
+4: from datetime import date
+5: from pathlib import Path
+7: from predictor_core.kernel.obs import emit_event
+9: from . import db, model
+10: from .identity import legacy_canonical_name as _canon
+11: from .ingest import ROOT, load_config
+13: _DOMAIN = "brasileirao"
+16: def build(cfg):
+19:     conn = db.connect(str(ROOT / cfg["database"]), read_only=True)
+20:     elo = db.load_elo(conn)
+21:     prow = db.load_params(conn)
+23:     if not elo or not prow:
+24:         print(
+25:             "[cache vazio — calculando agora; rode "
+26:             "`python -m brasileirao_predictor.cron_update_models` para tornar a CLI instantânea]",
+27:             file=sys.stderr,
+28:         )
+29:         from .cron_update_models import compute
+31:         out = compute(cfg, conn)
+32:         if not out:
+33:             sys.exit("banco vazio — rode `python -m brasileirao_predictor.ingest` primeiro")
+34:         elo, params, _ = out
+35:         return conn, elo, params
+37:     a, b, alpha, rho, _n_cached, _cfg_hash, _computed_at = prow
+38:     from .cron_update_models import cache_is_current
+40:     if not cache_is_current(cfg, conn, prow):
+41:         print(
+42:             "[cache desatualizado (config ou dados mudaram) — recalculando em memória; "
+43:             "rode `python -m brasileirao_predictor.cron_update_models` para persistir]",
+44:             file=sys.stderr,
+45:         )
+46:         from .cron_update_models import compute
+48:         out = compute(cfg, conn)
+49:         if not out:
+50:             sys.exit("banco vazio — rode `python -m brasileirao_predictor.ingest` primeiro")
+51:         fresh_elo, fresh_params, _ = out
+52:         return conn, fresh_elo, fresh_params
+53:     return conn, elo, (a, b, alpha, rho)
+56: def upcoming_fixtures(conn, limit: int, *, as_of: str | None = None):
+65:     cutoff = as_of or date.today().isoformat()
+66:     return conn.execute(
+67:         """SELECT date, home_team, away_team, neutral FROM matches
+68:            WHERE home_score IS NULL AND date >= ? ORDER BY date LIMIT ?""",
+69:         (cutoff, limit),
+70:     ).fetchall()
+73: def _market_probs(conn, name_a, name_b, match_date=None):
+88:     from datetime import date
+90:     target = None
+91:     if match_date:
+92:         try:
+93:             target = date.fromisoformat(str(match_date)[:10])
+94:         except ValueError as exc:
+95:             raise ValueError("invalid match_date") from exc
+96:     try:
+97:         rows = conn.execute(
+98:             "SELECT date, home_team, away_team, odds_home, odds_draw, odds_away, "
+99:             "odds_over, odds_under FROM sofascore_matches "
+100:             "WHERE odds_home IS NOT NULL"
+101:         ).fetchall()
+102:     except Exception:
+103:         return None
+104:     na, nb = _canon(name_a), _canon(name_b)
+109:     import math as _math
+111:     def _odd_ok(o):
+112:         return o is not None and _math.isfinite(o) and o > 1.0
+114:     best = None  # (chave_de_desempate, linha)
+115:     for d, h, a, oh, od, oa, o_over, o_under in rows:
+116:         if {_canon(h), _canon(a)} != {na, nb}:
+117:             continue
+118:         if not (_odd_ok(oh) and _odd_ok(od) and _odd_ok(oa)):
+119:             continue
+120:         if target is not None:
+121:             try:
+122:                 dd = abs((date.fromisoformat(str(d)[:10]) - target).days)
+123:             except (TypeError, ValueError):
+124:                 continue
+125:             if dd > 3:
+126:                 continue
+127:             key = -dd  # menor distância vence
+128:         else:
+129:             try:
+130:                 key = date.fromisoformat(str(d)[:10]).toordinal()  # mais recente vence
+131:             except (TypeError, ValueError):
+132:                 key = 0
+133:         if best is None or key > best[0]:
+134:             best = (key, (h, oh, od, oa, o_over, o_under))
+135:     if best is None:
+136:         return None
+137:     h, oh, od, oa, o_over, o_under = best[1]
+138:     if _canon(h) != na:  # reorienta pra (a, b) como pedido
+139:         oh, oa = oa, oh
+140:     from .math_utils import shin_probabilities
+142:     p1, _z1, over1 = shin_probabilities([oh, od, oa])
+143:     out = {
+144:         "odds_home": oh,
+145:         "odds_draw": od,
+146:         "odds_away": oa,
+147:         "p_home": float(p1[0]),
+148:         "p_draw": float(p1[1]),
+149:         "p_away": float(p1[2]),
+150:         "overround_1x2": over1,
+151:         "odds_over": None,
+152:         "odds_under": None,
+153:         "p_over": None,
+154:         "p_under": None,
+155:         "overround_ou25": None,
+156:     }
+157:     if _odd_ok(o_over) and _odd_ok(o_under):
+158:         p2, _z2, over2 = shin_probabilities([o_over, o_under])
+159:         out.update(
+160:             odds_over=o_over,
+161:             odds_under=o_under,
+162:             p_over=float(p2[0]),
+163:             p_under=float(p2[1]),
+164:             overround_ou25=over2,
+165:         )
+166:     return out
+169: def show(
+170:     name_a,
+171:     name_b,
+172:     elo,
+173:     params,
+174:     cfg,
+175:     neutral,
+176:     conn=None,
+177:     match_date=None,
+178:     level=0,
+179:     as_json=False,
+180:     quiet=False,
+181:     corners=False,
+182:     cards=False,
+183:     formal_context=None,
+184:     identity_resolver=None,
+185: ):
+194:     formal = None
+195:     if formal_context is not None:
+196:         from .formal_prediction import prepare_context
+198:         if identity_resolver is None or match_date is None:
+199:             raise ValueError("formal prediction requires identity resolver and match_date")
+200:         formal = prepare_context(formal_context, name_a, name_b, match_date, identity_resolver)
+201:     for t in (name_a, name_b):
+202:         if t not in elo:
+203:             sys.exit(f"time desconhecido: {t}")
+204:     adv = 0.0 if neutral else cfg["elo"]["home_advantage"]
+205:     r = model.predict_match(elo[name_a], elo[name_b], params, adv, max_goals=cfg["model"]["max_goals"])
+206:     from .xg_model import maybe_blend
+208:     r = maybe_blend(r, conn, cfg, name_a, name_b, neutral)
+209:     if formal is not None:
+210:         mk = None if formal["quote"] is None else formal["quote"]["market"]
+211:     else:
+212:         mk = _market_probs(conn, name_a, name_b, match_date=match_date) if conn is not None else None
+216:     try:
+217:         from .prediction_log import log_prediction
+219:         logged = log_prediction(
+220:             name_a,
+221:             name_b,
+222:             neutral,
+223:             elo[name_a],
+224:             elo[name_b],
+225:             params,
+226:             r,
+227:             match_date=match_date,
+228:             market=mk,
+229:             formal_context=formal,
+230:         )
+231:     except Exception as e:
+232:         raise RuntimeError("prediction audit log persistence failed") from e
+234:     emit_event(
+235:         _DOMAIN,
+236:         "prediction",
+237:         metrics={
+238:             "home_goals_pred": round(float(r["lambda_a"]), 3),
+239:             "away_goals_pred": round(float(r["lambda_b"]), 3),
+240:             "p_win": round(float(r["p_win"]), 4),
+241:             "p_draw": round(float(r["p_draw"]), 4),
+242:             "p_loss": round(float(r["p_loss"]), 4),
+243:         },
+244:         metadata={
+245:             "model": "Ensemble(NB+DC, AtkDef-xG)" if r.get("ensemble") else "NegBin+DixonColes",
+246:             "fixture_id": f"{name_a}_vs_{name_b}",
+247:             "neutral": neutral,
+248:         },
+249:     )
+251:     from . import display
+253:     data = display.from_prediction(name_a, name_b, elo, params, cfg, neutral, r, mk, match_date=match_date)
+254:     if formal is not None:
+255:         data["prediction_id"] = logged["prediction_id"]
+256:         data["event_id"] = logged["event_id"]
+257:     if not quiet:
+258:         display.render(data, level=level, as_json=as_json)
+259:         if not as_json and conn is not None:
+260:             if corners:
+261:                 ev = display.compute_event(conn, elo, name_a, name_b, "Corner kicks", (7.5, 8.5, 9.5))
+262:                 display.render_event("Escanteios", ev, name_a, name_b, (7.5, 8.5, 9.5))
+263:             if cards:
+264:                 ev = display.compute_event(conn, elo, name_a, name_b, "Yellow cards", (2.5, 3.5, 4.5))
+265:                 display.render_event("Cartões amarelos", ev, name_a, name_b, (2.5, 3.5, 4.5))
+266:     return data
+269: def main():
+270:     ap = argparse.ArgumentParser(description="Preditor de partidas internacionais")
+271:     ap.add_argument("teams", nargs="*", help="TIME_A TIME_B (em inglês, ex: Brazil)")
+272:     ap.add_argument("--neutral", action="store_true", help="campo neutro")
+273:     ap.add_argument("--date", help="data UTC do jogo (YYYY-MM-DD)")
+274:     ap.add_argument("--formal-context", type=Path)
+275:     ap.add_argument("--team-aliases", type=Path)
+276:     ap.add_argument("--team-catalog", type=Path)
+277:     ap.add_argument("--fixtures", type=int, metavar="N", help="prevê os próximos N fixtures da base")
+278:     ap.add_argument("--rankings", type=int, metavar="N", help="top N do Elo")
+279:     ap.add_argument(
+280:         "--resumo",
+281:         action="store_true",
+282:         help="modo lote: só a tabela resumo ao final, sem os blocos por jogo "
+283:         "(--fixtures continua computando e registrando cada predição)",
+284:     )
+285:     verbosity = ap.add_mutually_exclusive_group()
+286:     verbosity.add_argument(
+287:         "--expand",
+288:         action="store_true",
+289:         help="nível 1: gols esperados, edge detalhado, placar top-1",
+290:     )
+291:     verbosity.add_argument(
+292:         "--stats",
+293:         action="store_true",
+294:         help="nível 2: Shin completo, placares top-5, parâmetros do modelo",
+295:     )
+296:     verbosity.add_argument("--full", action="store_true", help="nível 3: dupla chance, draw no bet, handicap asiático")
+297:     verbosity.add_argument(
+298:         "--json",
+299:         action="store_true",
+300:         help="saída estruturada (machine-output), ignora os outros níveis",
+301:     )
+302:     ap.add_argument(
+303:         "--corners",
+304:         action="store_true",
+305:         help="injeta escanteios (SEM validação de CLV) sem precisar de --full",
+306:     )
+307:     ap.add_argument(
+308:         "--cards",
+309:         action="store_true",
+310:         help="injeta cartões (SEM validação de CLV) sem precisar de --full",
+311:     )
+312:     args = ap.parse_args()
+313:     formal_context = resolver = None
+314:     if args.formal_context:
+315:         from .identity import CanonicalTeamResolver
+317:         if args.fixtures or args.rankings or not (args.date and args.team_aliases and args.team_catalog):
+318:             ap.error("formal context requires one match, --date, --team-aliases and --team-catalog")
+319:         formal_context = json.loads(args.formal_context.read_text(encoding="utf-8"))
+320:         resolver = CanonicalTeamResolver(args.team_aliases, args.team_catalog)
+321:     level = 3 if args.full else 2 if args.stats else 1 if args.expand else 0
+323:     cfg = load_config()
+324:     conn, elo, params = build(cfg)
+326:     if args.rankings:
+327:         for i, (t, r) in enumerate(sorted(elo.items(), key=lambda x: -x[1])[: args.rankings], 1):
+328:             print(f"{i:>3}. {t:<20} {r:.0f}")
+329:         return
+331:     if args.fixtures:
+332:         rows = upcoming_fixtures(conn, args.fixtures)
+333:         batch = []
+334:         for date, h, a, n in rows:
+339:             if not args.json and not args.resumo:
+340:                 print(f"\n[{date}]", end="")
+341:             data = show(
+342:                 h,
+343:                 a,
+344:                 elo,
+345:                 params,
+346:                 cfg,
+347:                 bool(n),
+348:                 conn,
+349:                 match_date=date,
+350:                 level=level,
+351:                 as_json=args.json,
+352:                 quiet=args.resumo and not args.json,
+353:                 corners=args.corners,
+354:                 cards=args.cards,
+355:             )
+356:             batch.append((date, data))
+357:         if not args.json:
+358:             from . import display
+360:             display.render_summary_table(batch)
+361:         return
+363:     if len(args.teams) != 2:
+364:         ap.error("informe TIME_A TIME_B, ou use --fixtures/--rankings")
+365:     show(
+366:         args.teams[0],
+367:         args.teams[1],
+368:         elo,
+369:         params,
+370:         cfg,
+371:         args.neutral,
+372:         conn,
+373:         match_date=args.date,
+374:         formal_context=formal_context,
+375:         identity_resolver=resolver,
+376:         level=level,
+377:         as_json=args.json,
+378:         corners=args.corners,
+379:         cards=args.cards,
+380:     )
+383: if __name__ == "__main__":
+384:     main()
+### brasileirao_predictor/prediction_log.py
+12: import hashlib
+13: import json
+14: import os
+15: from datetime import UTC, datetime
+16: from pathlib import Path
+18: from .paths import project_root
+20: ENV_PATH = "PREDICTIONS_LOG_PATH"
+21: ENV_PERIOD_PATH = "PERIOD_LOG_PATH"
+22: ROOT = project_root()
+23: _DEFAULT = ROOT / "data" / "predictions.jsonl"
+24: _PERIOD_DEFAULT = ROOT / "data" / "period_predictions.jsonl"
+27: def _resolve(path=None) -> Path:
+28:     return Path(path or os.environ.get(ENV_PATH) or _DEFAULT)
+31: def _resolve_period(path=None) -> Path:
+32:     return Path(path or os.environ.get(ENV_PERIOD_PATH) or _PERIOD_DEFAULT)
+35: def log_prediction(
+36:     home,
+37:     away,
+38:     neutral,
+39:     elo_home,
+40:     elo_away,
+41:     params,
+42:     pred,
+43:     match_date=None,
+44:     path=None,
+45:     logged_at=None,
+46:     market=None,
+47:     formal_context=None,
+48: ) -> dict:
+53:     if isinstance(params, dict):
+54:         parameter_record = {key: float(params[key]) for key in ("a", "b", "alpha", "rho")}
+55:         if "theta" in params:
+56:             parameter_record["theta"] = float(params["theta"])
+57:     else:
+58:         if len(params) not in {4, 5}:
+59:             raise ValueError("model parameters require four or five values")
+60:         parameter_record = dict(zip(("a", "b", "alpha", "rho", "theta"), map(float, params)))
+61:     over = {str(k): round(v, 4) for k, v in pred["over"].items()}
+62:     record = {
+63:         "logged_at": logged_at or datetime.now(UTC).isoformat(timespec="seconds"),
+64:         "match_date": match_date,
+65:         "home": home,
+66:         "away": away,
+67:         "neutral": bool(neutral),
+68:         "elo_home": round(float(elo_home), 1),
+69:         "elo_away": round(float(elo_away), 1),
+70:         "lambda_home": round(pred["lambda_a"], 4),
+71:         "lambda_away": round(pred["lambda_b"], 4),
+72:         "total_goals": round(pred["total_goals"], 4),
+73:         "p_home": round(pred["p_win"], 4),
+74:         "p_draw": round(pred["p_draw"], 4),
+75:         "p_away": round(pred["p_loss"], 4),
+76:         "over": over,
+77:         "under": {k: round(1.0 - v, 4) for k, v in over.items()},
+78:         "btts_yes": round(pred["btts"], 4),
+79:         "btts_no": round(1.0 - pred["btts"], 4),
+81:         "top_scores": [[[int(sc[0]), int(sc[1])], round(p, 4)] for sc, p in pred["top_scores"]],
+82:         "params": parameter_record,
+83:     }
+84:     if pred.get("draw_diagnostics") is not None:
+85:         record["draw_diagnostics"] = pred["draw_diagnostics"]
+86:     if pred.get("ensemble"):
+89:         record["model"] = "ensemble_xg"
+90:     if market is not None:  # comparação vs mercado, se houver odds
+95:         record["market"] = {
+96:             "odds_home": market["odds_home"],
+97:             "odds_draw": market["odds_draw"],
+98:             "odds_away": market["odds_away"],
+99:             "p_home": round(market["p_home"], 4),
+100:             "p_draw": round(market["p_draw"], 4),
+101:             "p_away": round(market["p_away"], 4),
+102:             "overround_1x2": round(market["overround_1x2"], 4),
+103:             "edge_home_vs_price": round(pred["p_win"] - (1.0 / market["odds_home"]), 4),
+104:             "edge_draw_vs_price": round(pred["p_draw"] - (1.0 / market["odds_draw"]), 4),
+105:             "edge_away_vs_price": round(pred["p_loss"] - (1.0 / market["odds_away"]), 4),
+106:         }
+107:         if market.get("odds_over") and market.get("odds_under"):
+108:             p_over = pred["over"][2.5]
+109:             record["market"].update(
+110:                 {
+111:                     "odds_over": market["odds_over"],
+112:                     "odds_under": market["odds_under"],
+113:                     "p_over": round(market["p_over"], 4),
+114:                     "p_under": round(market["p_under"], 4),
+115:                     "overround_ou25": round(market["overround_ou25"], 4),
+116:                     "edge_over_vs_price": round(p_over - (1.0 / market["odds_over"]), 4),
+117:                     "edge_under_vs_price": round((1.0 - p_over) - (1.0 / market["odds_under"]), 4),
+118:                 }
+119:             )
+120:     if formal_context is not None:
+121:         record["formal_context"] = formal_context
+122:         record["event_id"] = formal_context["event_id"]
+123:         record["prediction_id"] = hashlib.sha256(
+124:             json.dumps(record, sort_keys=True, ensure_ascii=False, allow_nan=False).encode()
+125:         ).hexdigest()
+126:     encoded = json.dumps(record, ensure_ascii=False, allow_nan=False)
+127:     dest = _resolve(path)
+128:     dest.parent.mkdir(parents=True, exist_ok=True)
+129:     with open(dest, "a", encoding="utf-8") as f:
+130:         f.write(encoded + "\n")
+131:     return record
+134: def log_period_prediction(
+135:     home,
+136:     away,
+137:     neutral,
+138:     period,
+139:     fraction,
+140:     live,
+141:     calibration=None,
+142:     match_date=None,
+143:     path=None,
+144:     logged_at=None,
+145: ) -> dict:
+152:     per, fin, meta = live["period"], live["final"], live["meta"]
+153:     record = {
+154:         "logged_at": logged_at or datetime.now(UTC).isoformat(timespec="seconds"),
+155:         "kind": "period",
+156:         "period": period,
+157:         "match_date": match_date,
+158:         "home": home,
+159:         "away": away,
+160:         "neutral": bool(neutral),
+161:         "current_score": list(meta["current_score"]),
+162:         "fraction": round(float(fraction), 4),
+163:         "calibration": None
+164:         if calibration is None
+165:         else {
+166:             "frac1": round(calibration["frac1"], 4),
+167:             "n": calibration["n"],
+168:             "ci_low": None if calibration.get("ci_low") is None else round(calibration["ci_low"], 4),
+169:             "ci_high": None if calibration.get("ci_high") is None else round(calibration["ci_high"], 4),
+170:         },
+171:         "period_pred": {
+172:             "lambda_home": round(per["lambda_a"], 4),
+173:             "lambda_away": round(per["lambda_b"], 4),
+174:             "p_home": round(per["p_win"], 4),
+175:             "p_draw": round(per["p_draw"], 4),
+176:             "p_away": round(per["p_loss"], 4),
+177:             "over": {str(k): round(v, 4) for k, v in per["over"].items()},
+178:         },
+179:         "final_pred": {
+180:             "p_home": round(fin["p_win"], 4),
+181:             "p_draw": round(fin["p_draw"], 4),
+182:             "p_away": round(fin["p_loss"], 4),
+183:             "over": {str(k): round(v, 4) for k, v in fin["over"].items()},
+184:             "top_scores": [[[int(sc[0]), int(sc[1])], round(p, 4)] for sc, p in fin["top_scores"]],
+185:         },
+186:     }
+187:     encoded = json.dumps(record, ensure_ascii=False, allow_nan=False)
+188:     dest = _resolve_period(path)
+189:     dest.parent.mkdir(parents=True, exist_ok=True)
+190:     with open(dest, "a", encoding="utf-8") as f:
+191:         f.write(encoded + "\n")
+192:     return record
