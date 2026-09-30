@@ -22,7 +22,7 @@ on:
       - "integration-crypto/runtime-*"
 
 permissions:
-  contents: read
+  contents: write   # só para devolver a saída bruta por branch integration-crypto/raw-<run>-<job> (o ambiente da missão não baixa artefatos)
 
 jobs:
   runtime:
@@ -47,6 +47,13 @@ jobs:
           fi
           echo "fases: $PHASES"
           bash qualification/integration-crypto/scripts/ci_runtime.sh "$PHASES" "$RUNNER_TEMP/work" "$RUNNER_TEMP/out"
+      - name: Identidade das wheels no runtime (C4)
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/clones" "$RUNNER_TEMP/out/static"
+          for r in cain cripto-predictor; do git clone -q "https://github.com/leonardosovienski/$r.git" "$RUNNER_TEMP/clones/$r"; done
+          "$(uv python find 3.13)" qualification/integration-crypto/scripts/core_identity.py "$RUNNER_TEMP/clones" qualification/integration-crypto/runtime_targets.json "$RUNNER_TEMP/out" "$RUNNER_TEMP/out/static/core_identity.json" || echo "core_identity exit $?" | tee -a "$RUNNER_TEMP/out/ci_runtime.log"
       - name: sem dados versionáveis no artefato
         if: always()
         shell: bash
@@ -59,3 +66,71 @@ jobs:
           name: integration-crypto-runtime
           path: ${{ runner.temp }}/out
           if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/integration-crypto/RAW_LOGS/runtime/run${{ github.run_id }}
+          BRANCH: integration-crypto/raw-${{ github.run_id }}-runtime
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid" && git checkout -q -b "$BRANCH" && mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/out/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="integration-crypto-runtime" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-crypto: saída bruta do run ${{ github.run_id }} (runtime)"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"
+
+  static:
+    # conferências estáticas do ciclo (C21, C24.3 a/b/e/f, C15.1, SECRETS_CLEAN) com gh e clones completos, que o
+    # ambiente da missão não tem; saída devolvida por branch integration-crypto/raw-<run>-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: conferências
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          PY="$(uv python find 3.13)"; OUT="$RUNNER_TEMP/static"; mkdir -p "$OUT" "$RUNNER_TEMP/clones"
+          for r in cain ecosystem-predictor cripto-predictor stocks-predictor brasileirao-predictor; do git clone -q "https://github.com/leonardosovienski/$r.git" "$RUNNER_TEMP/clones/$r"; done
+          M=qualification/integration-crypto; CR=$(jq -r .cripto.commit $M/runtime_targets.json)
+          echo "static run_at=$(date -u +%FT%TZ) cripto_final=$CR" | tee "$OUT/static.log"
+          "$PY" $M/scripts/hosted_ci.py $M/hosted_ci_final_targets_rc15.json "$OUT/hosted-ci" 2>&1 | tee -a "$OUT/static.log"; echo "hosted_ci exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
+          "$PY" $M/scripts/contract_revalidation.py "$RUNNER_TEMP/clones/cripto-predictor" "$CR" $M "$OUT/contract-revalidation/static_checks.json" 2>&1 | tee -a "$OUT/static.log"; echo "contract_revalidation exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
+          "$PY" $M/scripts/protected_check.py "$PWD" "$RUNNER_TEMP/clones" "$CR" "$OUT/protected/protected_check.json" 2>&1 | tee -a "$OUT/static.log"; echo "protected_check exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
+          "$PY" $M/scripts/secrets_scan.py "$RUNNER_TEMP/clones" "$PWD" "$OUT/secrets/secrets_scan.json" 2>&1 | tee -a "$OUT/static.log"; echo "secrets_scan exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-crypto-static
+          path: ${{ runner.temp }}/static
+          if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/integration-crypto/RAW_LOGS/static-rc15/run${{ github.run_id }}
+          BRANCH: integration-crypto/raw-${{ github.run_id }}-static
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid" && git checkout -q -b "$BRANCH" && mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/static/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="integration-crypto-runtime" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-crypto: conferências estáticas do run ${{ github.run_id }}"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"

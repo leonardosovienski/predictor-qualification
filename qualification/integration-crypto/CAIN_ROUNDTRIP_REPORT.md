@@ -6,11 +6,11 @@ Circuito: `cain research propose` → DecisionPolicy → TaskOutbox → spool �
 
 | Cenário | Ambiente | Conferências OK | Falhas | Fonte |
 |---|---|--:|--:|---|
-| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run36462444590` | 56 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/e2e/SUMMARY.json` (sha256 `e1bcdd0a45a85b1b…`) |
-| E2E + restart (WINDOWS_SMOKE) | Windows local do **PC 2** | 56 | 0 | `qualification/integration-crypto/RAW_LOGS/windows-smoke-rc13/e2e/SUMMARY.json` (sha256 `96bd2b4d6e4382d4…`) |
-| N+1 (3 processos, receipt byte a byte) | Linux primário | 21 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/n-plus-1/SUMMARY.json` (sha256 `d71f64e440cda1e3…`) |
-| Isolamento, IDs com domínio, contradição | Linux primário | 22 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/isolation/SUMMARY.json` (sha256 `a5974b4c853f7d5c…`) |
-| Contrato C24.3 (d) | Linux primário | 10 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/contract-revalidation/SUMMARY.json` (sha256 `3103b15a95919af4…`) |
+| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run36648103793` | 56 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36648103793/e2e/SUMMARY.json` (sha256 `3db7a3bb31e0fbbf…`) |
+| E2E + restart (WINDOWS_SMOKE) | Windows local do **PC 2** | NOT_RUN | BLOCKED (PC 2 do dono) | sem evidência neste ciclo |
+| N+1 (3 processos, receipt byte a byte) | Linux primário | 21 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36648103793/n-plus-1/SUMMARY.json` (sha256 `ab08caacebc086b1…`) |
+| Isolamento, IDs com domínio, contradição | Linux primário | 22 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36648103793/isolation/SUMMARY.json` (sha256 `3f09f92b6b474bc6…`) |
+| Contrato C24.3 (d) | Linux primário | 10 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run36648103793/contract-revalidation/SUMMARY.json` (sha256 `1f3a3c5208daffe1…`) |
 
 Decisões do E2E (em ordem): ALLOW, ALLOW, ALLOW, DUPLICATE, BLOCK, BLOCK, ALLOW.
 
@@ -18,12 +18,12 @@ Decisões do E2E (em ordem): ALLOW, ALLOW, ALLOW, DUPLICATE, BLOCK, BLOCK, ALLOW
 
 | Candidata | Decisão | Motivo | Regra | receipt sha256 |
 |---|---|---|---|---|
-| 01-next | ALLOW | ALLOWED | R14 | `8a6a0ad36f8e9649…` |
-| 02-duplicate | DUPLICATE | DUPLICATE_REQUEST | R08 | `cd95e7e44beac0b7…` |
-| 03-crypto-h9 | BLOCK | HYPOTHESIS_CLOSED | R05 | `89886db8d2969e2f…` |
-| 04-stocks-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `b4f42591602d9bcc…` |
-| 05-brasileirao-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `f468f3bcd749f06c…` |
-| 06-new-hypothesis | REQUIRE_HUMAN | NEW_HYPOTHESIS | R11 | `b448c93a706ec94e…` |
+| 01-next | ALLOW | ALLOWED | R14 | `71d6140a6ecc6223…` |
+| 02-duplicate | DUPLICATE | DUPLICATE_REQUEST | R08 | `4248b65a175f9ccb…` |
+| 03-crypto-h9 | BLOCK | HYPOTHESIS_CLOSED | R05 | `6e93c1b9b92be51b…` |
+| 04-stocks-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `ab3e278595078964…` |
+| 05-brasileirao-h9 | BLOCK | DOMAIN_MISMATCH | R01 | `625783418346761c…` |
+| 06-new-hypothesis | REQUIRE_HUMAN | NEW_HYPOTHESIS | R11 | `791d2ff3804ef464…` |
 
 ## Matriz de falhas (FAILURE_MATRIX.json)
 
@@ -45,7 +45,7 @@ Decisões do E2E (em ordem): ALLOW, ALLOW, ALLOW, DUPLICATE, BLOCK, BLOCK, ALLOW
 | F14 | 3 | 0 |
 | F15 | 4 | 0 |
 
-Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36462444590/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
+Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run36648103793/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
 
 ## Parecer de contenção (CAIN_CONTAINMENT)
 

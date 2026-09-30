@@ -1,0 +1,42 @@
+{"n": 1, "label": "propose 1", "at": "2026-09-30T00:03:08Z", "seconds": 0.147, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F12/proposals/1.json", "--as-of", "2026-09-30T00:03:08Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "crypto:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "02e22a9136c9a5ca84a3b41e7a3819b2c8760d6d02e8a8e2de7a87ff95895d6a", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "1868861355763c27636bd8e1691d0d1e8b19fcbe74f77fabba5d33bc85b776a3", "previous_task_id": null, "task_id": "crypto:TASK-bc2a9d8a9fcb53f2c6340c62bfc80406"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch 1", "at": "2026-09-30T00:03:08Z", "seconds": 0.124, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "crypto/tasks/TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.json", "spool": "WRITTEN", "task_id": "crypto:TASK-bc2a9d8a9fcb53f2c6340c62bfc80406"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer 1", "at": "2026-09-30T00:03:09Z", "seconds": 0.454, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "crypto", "--spool", "/home/runner/work/_temp/work/failures/F12/spool", "--ledger", "/home/runner/work/_temp/work/failures/F12/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F12/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "crypto:episode-1", "result_file": "crypto/results/TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.e6c7cc7665d48aaf.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "crypto:TASK-bc2a9d8a9fcb53f2c6340c62bfc80406"}
+--- stderr
+{"duration_ms": 208, "event": "job_finished", "job_id": "crypto-research-a4c3fdada009df5b52cf8f95", "level": "INFO", "run_id": "b1a688de191a4deb921a3548453da024", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-30T00:03:09.173003Z"}
+--- end
+{"n": 4, "label": "ingest 1", "at": "2026-09-30T00:03:09Z", "seconds": 0.129, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:f67ba8b1c9424d7d88f5e6e311c3549e", "file": "TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.e6c7cc7665d48aaf.json", "status": "RESULT", "task_id": "crypto:TASK-bc2a9d8a9fcb53f2c6340c62bfc80406"}
+--- stderr
+--- end
+{"n": 5, "label": "tamper other-payload", "at": "2026-09-30T00:03:09Z", "seconds": 0.056, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/python", "-I", "/home/runner/work/_temp/work/failures/F12/tamper.py", "other-payload", "/home/runner/work/_temp/work/failures/F12/spool/crypto/tasks/TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.json", "/home/runner/work/_temp/work/failures/F12/spool/crypto/results/TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.e6c7cc7665d48aaf.json", "/home/runner/work/_temp/work/failures/F12/spool/crypto/results/other-payload.json"], "fault_env": {}, "exit": 0}
+--- stdout
+{"mode": "other-payload", "bytes": 6556}
+--- stderr
+--- end
+{"n": 6, "label": "ingest other payload", "at": "2026-09-30T00:03:09Z", "seconds": 0.124, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool"], "fault_env": {}, "exit": 2}
+--- stdout
+{"action": "duplicate", "file": "TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.e6c7cc7665d48aaf.json"}
+{"action": "rejected", "code": "CONFLICT", "file": "other-payload.json", "reason": "another domain payload was already ingested for this task"}
+--- stderr
+--- end
+{"n": 7, "label": "re-dispatch over tampered spool file", "at": "2026-09-30T00:03:09Z", "seconds": 0.118, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool", "--resend"], "fault_env": {}, "exit": 2}
+--- stdout
+{"detail": "CONFLICT: tasks/TASK-bc2a9d8a9fcb53f2c6340c62bfc80406.json already has other bytes", "error": "CONFLICT"}
+--- stderr
+--- end
+{"n": 8, "label": "original kept", "at": "2026-09-30T00:03:09Z", "seconds": 0.12, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "crypto", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "crypto", "episodes": [{"as_of": "2026-09-30T00:03:08Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "crypto:TASK-bc2a9d8a9fcb53f2c6340c62bfc80406"}, "proposal_id": "cain:FM-F12-1", "reason_code": "ALLOWED", "receipt_sha256": "02e22a9136c9a5ca84a3b41e7a3819b2c8760d6d02e8a8e2de7a87ff95895d6a", "source": "operator", "task_id": "crypto:TASK-bc2a9d8a9fcb53f2c6340c62bfc80406"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:f67ba8b1c9424d7d88f5e6e311c3549e", "payload_sha256": "705a494d770807aadcde16dd4a29ba7c85510e90e7cab0cdb00f11ba10cb3306", "status": "RESULT", "task_id": "crypto:TASK-bc2a9d8a9fcb53f2c6340c62bfc80406"}], "memory": {"broken_at": null, "cube": "crypto", "facts": 1, "log": "shared across domains", "projection": "consistent", "status": "intact"}, "rejections": [{"code": "CONFLICT", "file": "other-payload.json"}]}
+--- stderr
+--- end
