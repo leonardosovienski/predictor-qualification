@@ -156,3 +156,32 @@ A sessão STOCKS publicou a cain 0.4.13rc13, por decisão do dono lá: molde do 
 | `RAW_LOGS/windows-smoke-rc13/` | E2E + restart no PC 2: 56/56. `logs`/`out` da rc12 renomeados para `logs-rc12-ciclo3`/`out-rc12-ciclo3`; nada apagado | C14, WINDOWS_SMOKE | — |
 | `RAW_LOGS/{core-identity,contract-revalidation,protected,final-wheels,secrets}-rc13/`, `RAW_LOGS/hosted-ci/final-rc13/` | conferências com os final_commits `960fb25`/`bac1f7b`/`ee3d3d1`; CI de push verde nos três (no cain, main e tag) | C14, C21 | — |
 | `QUALIFICATION_ATTESTATION_superseded_a071fe2ca22e.json`, `ATTESTATION_PARTIAL_rc13-attestation.json`, `QUALIFICATION_ATTESTATION.json` | a attestation anterior (QUALIFIED, rc12) é preservada. A nova aponta para ela | C7.1 regra 8 | — |
+
+## 2026-09-30 — C14 na cain 0.4.13rc15 + transporte 0.1.0rc7 + cripto 1.2.0rc4 (D-27; sessão Linux na nuvem + GitHub Actions)
+
+Por quê: as correções de 2026-09-29 foram publicadas como cain v0.4.13rc15 (`ae00017a`), transporte v0.1.0rc7 (`b0da4fd8`) e cripto v1.2.0rc4
+(`21f8b182`, main; a Etapa A do crypto foi reaberta como V1.2 para esse alvo e está BLOCKED no Windows local). Pela C14 as fases que exercitam
+essas wheels foram refeitas no Linux primário. `crypto.json`, `stocks.json` e `brasileirao.json` da rc15 são byte a byte os da rc13; `policy.py`
+difere só por uma anotação de tipo (`found: list = []`); `service.py`/`cli.py`/`config.py`/`llm.py` trazem as correções de tipo e a memória por
+domínio (`_memory_view`). O ambiente da sessão não baixa artefatos do Actions: cada job devolve a saída bruta numa branch
+`integration-crypto/raw-<run>-<job>` (SHA256SUMS), copiada sem edição.
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json`, `hosted_ci_final_targets_rc15.json` | alvos rc15 / rc7 / rc4 (commits das tags); `scripts/contract_revalidation.py` lê a Etapa A vigente de `qualification/crypto/runtime_target.json` (V1.2 = 21f8b182); `scripts/secrets_scan.py` com os diffs deste ciclo |
+| `.github/workflows/integration-crypto-runtime.yml` | job `static` (hosted_ci, C24.3 a/b/e/f, protegidos, segredos) e `core_identity` no runtime; saída devolvida por branch |
+| `RAW_LOGS/runtime/run36648103793/` | run [36648103793](https://github.com/leonardosovienski/predictor-qualification/actions/runs/36648103793), push em `integration-crypto/runtime-…-rc15` (`2dbfb0a`), todas as fases exit 0: cleanroom-final (conformidade 48/0 falhas, transporte 20/0, cain 65/0); C24.3 (d) 10/0; e2e 56/0; N+1 21/0; isolamento 22/0; F01–F15 50 conferências, 0 falhas; soak 48/0 (24 ciclos, 18 duplicatas, 6 restarts do domínio, 10 do CAIN, 6 intercalados, 6 propostas do LLM `qwen2.5:0.5b`) |
+| `RAW_LOGS/core-identity-rc15/`, `RAW_LOGS/final-wheels-rc15/` | identidade das wheels 12/0; final_wheels 17/0 (assets baixados e conferidos; instalado no run == declarado) |
+| `RAW_LOGS/hosted-ci/final-rc15/` | push verde no SHA exato: cain `ae00017`, ecosystem `b0da4fd`, cripto `21f8b18` |
+| `RAW_LOGS/contract-revalidation-rc15/` | C24.3 estático 6/0 (diff do domínio vazio: a Etapa A vigente já é o alvo) |
+| `RAW_LOGS/protected-rc15/` | domínios intactos (crypto 1387, stocks 89, brasileirao 1884 blobs); FROZEN_PARAMETERS encadeado; **`qualification/crypto/runtime_target.json` alterado pela reabertura V1.2** (D-27): o pin do alvo da Etapa A mudou fora desta missão |
+| `RAW_LOGS/secrets-rc15/` | 0 achados ({'cain 960fb2561470..ae00017ab4a2': 733, 'ecosystem-predictor bac1f7b7b3ae..b0da4fd8d0c4': 240, 'cripto-predictor ee3d3d17de0b..21f8b1822862': 32640, 'qualification/integration-crypto files': 1156}) |
+| `RAW_LOGS/static-rc15/run36648103793/static.log` | log do job `static` (parou no protected_check pela regra da letra; segredos varridos localmente) |
+| `scripts/rc15_gates.py`, `GATES.json`, `ATTESTATION_PARTIAL_rc15-linux-primary.json`, `ATTESTATION_PARTIAL_rc15-final-wheels.json` | ledger do ciclo; `supersedes_sha256` = attestation rc13 vigente (`69fa0393a24c…`), que **continua vigente** (QUALIFIED para rc13/rc6/rc3) |
+| relatórios (`render_reports.py -rc15`), `EVIDENCE_NUMBERS.json` | seções do ciclo; a linha do Windows diz NOT_RUN em vez de inventar número |
+
+**Estado terminal desta sessão: `BLOCKED`** (C7.3; só parciais). Gates PASS: todos menos `WINDOWS_SMOKE` (NOT_RUN: Windows do PC 2 do dono, D-23) e
+`PROTECTED_ARTIFACTS_UNCHANGED` (NOT_RUN: aceitar o pin novo do crypto neste ciclo é decisão do dono, como a IC-F011 fez para o FROZEN_PARAMETERS).
+Além disso, C7.1 regra 7: a attestation da Etapa A do cripto no main é a V1.1 (QUALIFIED para 341d270/rc2); a V1.2 (21f8b182/rc4, alvo deste
+ciclo) só fecha depois do Windows local do dono (`qualification/crypto/REABERTURA_V1.2.md`). O que falta o dono fazer: (1) Windows do crypto V1.2;
+(2) Windows do PC 2 desta integração com os alvos rc15; (3) decidir o pin do conjunto protegido. Depois: `attest.py final` supersede a rc13.

@@ -72,7 +72,9 @@ def main() -> int:
         return json.loads((rt / rel / "SUMMARY.json").read_text(encoding="utf-8"))
 
     e2e, n1, iso, contract = summary("e2e"), summary("n-plus-1"), summary("isolation"), summary("contract-revalidation")
-    win = json.loads((raw / f"windows-smoke{sfx}" / "e2e" / "SUMMARY.json").read_text(encoding="utf-8"))
+    win_path = raw / f"windows-smoke{sfx}" / "e2e" / "SUMMARY.json"
+    # rc15: o Windows do PC 2 ainda não rodou neste ciclo (NOT_RUN/BLOCKED); a linha do relatório diz isso em vez de inventar número
+    win = json.loads(win_path.read_text(encoding="utf-8")) if win_path.exists() else {"passed": "NOT_RUN", "failed": "BLOCKED (PC 2 do dono)"}
     fm = json.loads((rt / "failure-matrix" / "FAILURE_MATRIX_RESULTS.json").read_text(encoding="utf-8"))["points"]
     receipts = "\n".join(f"| {r['candidate']} | {r['decision']} | {r['reason_code']} | {r['rule']} | `{r['receipt_sha256'][:16]}…` |"
                          for r in n1["receipts"])
@@ -88,7 +90,7 @@ def main() -> int:
         "domínio instalado; `runtime_env.sh` confere).\n\n"
         "| Cenário | Ambiente | Conferências OK | Falhas | Fonte |\n|---|---|--:|--:|---|\n"
         f"| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `{run}` | {e2e['passed']} | {e2e['failed']} | {cite(rt / 'e2e' / 'SUMMARY.json')} |\n"
-        f"| E2E + restart (WINDOWS_SMOKE) | Windows local do **PC 2** | {win['passed']} | {win['failed']} | {cite(raw / f'windows-smoke{sfx}' / 'e2e' / 'SUMMARY.json')} |\n"
+        f"| E2E + restart (WINDOWS_SMOKE) | Windows local do **PC 2** | {win['passed']} | {win['failed']} | {cite(win_path) if win_path.exists() else 'sem evidência neste ciclo'} |\n"
         f"| N+1 (3 processos, receipt byte a byte) | Linux primário | {n1['passed']} | {n1['failed']} | {cite(rt / 'n-plus-1' / 'SUMMARY.json')} |\n"
         f"| Isolamento, IDs com domínio, contradição | Linux primário | {iso['passed']} | {iso['failed']} | {cite(rt / 'isolation' / 'SUMMARY.json')} |\n"
         f"| Contrato C24.3 (d) | Linux primário | {contract['passed']} | {contract['failed']} | {cite(rt / 'contract-revalidation' / 'SUMMARY.json')} |\n\n"
