@@ -4,10 +4,10 @@
     "Projeto": "conjunto",
     "Prioridade": "P1",
     "Certeza": "OD confirmado-remotamente",
-    "Afirmação": "HEADs originais diferem main remoto; AnexoA descreve outra época.",
-    "Evidência": "LINHA_DE_BASE.md; */baseline.json; */remote-refs.txt; linked-roots.json",
+    "Afirmação": "HEADs originais diferem do main remoto; o Anexo A descreve outra época. Época main estudada em 2026-09-30 (LINHA_DE_BASE_EPOCA_MAIN.md): os oito HEADs originais são ancestrais dos main atuais; delta inventariado por arquivo e revisado só nos projetos pequenos (ops, core, ecosystem V2/transport) e nos adapters/contratos dos domínios.",
+    "Evidência": "LINHA_DE_BASE.md; LINHA_DE_BASE_EPOCA_MAIN.md; */baseline.json; epoca-main-20260930/baseline/SUMMARY.json; epoca-main-20260930/delta/*.json",
     "Limites": "Main remoto observado por ref e CI, código remoto integral não revisado.",
-    "Próximo passo": "Associar cada conclusão a SHA; estudar nova época em cópia independente se necessário."
+    "Próximo passo": "Associar cada conclusão a SHA (feito nos suplementos); revisar o delta pendente (EPOCA-COBERTURA-1)."
   },
   {
     "ID": "cain-1",
@@ -128,6 +128,26 @@
     "Evidência": "science_real.py main; d16_finalize.py main",
     "Limites": "Risco por leitura, não explorado com fixture",
     "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "EPOCA-QUAL-1",
+    "Projeto": "predictor-qualification",
+    "Prioridade": "P1",
+    "Certeza": "OD (ET-RUN attest.py check)",
+    "Afirmação": "[época main 2026-09-30] No main 3ed750c5 as attestations QUALIFIED de crypto (V1.1), integration-crypto e integration-stocks não validam mais (9, 11 e 18 problemas: sha256 de relatórios, FINDINGS.json, EVIDENCE_NUMBERS.json e render_reports.py divergentes); validam só no commit de emissão (96da7d08, c9e7330e, 59deb091). O ciclo D-27 regravou os artefatos citados no mesmo diretório sem nova attestation (supersedes_sha256).",
+    "Evidência": "evidencias/epoca-main-20260930/runs/attest-check-current-*.log; attest-check-at-issuance-*.log; attestation-issuance-commits.json",
+    "Limites": "C7.1(3) exige sha256 no commit da attestation, que confere; o problema é de reprodutibilidade a partir do main, não de falsidade. Não reexecutado nenhum gate.",
+    "Próximo passo": "Dono decide: reemitir attestations com supersedes_sha256 após D-29/D-30/D-31, ou mover os artefatos dos ciclos novos para subdiretórios próprios."
+  },
+  {
+    "ID": "EPOCA-STOCKS-1",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD (ET-RUN comparação completa do lacre)",
+    "Afirmação": "[época main 2026-09-30] Lacre R8 (current-operational-evidence.json, 263 caminhos) quebrado no main 3ec7e413 por três arquivos, não só o pyproject.toml documentado: .github/workflows/ci.yml (3db4978), pyproject.toml (97979d5, 68a2647) e tools/build-requirements.txt (68a2647, 07f5c7f). O main também contém 24 módulos (v2/, research_*, adapters/) que nenhuma wheel publicada tem (rc4 não publicada).",
+    "Evidência": "evidencias/epoca-main-20260930/runs/stocks-r8-seal-full-compare.log; stocks-verify-operational-evidence.log; built-vs-published-wheels.json",
+    "Limites": "O verificador oficial aborta no primeiro arquivo; a comparação completa reutiliza suas funções. Nenhum efeito em resultado provado.",
+    "Próximo passo": "Relacrar após os bumps (engineering/2026-09-30-license-reseal) e publicar a rc4 são decisões do dono."
   },
   {
     "ID": "G-COBERTURA-RESIDUAL",
@@ -596,5 +616,45 @@
     "Evidência": "QUALIFICATION_PROFILE_CRYPTO_V1.json; soak.py",
     "Limites": "Suítes separadas podem cobrir, não afirmar ausência total",
     "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "EPOCA-ECO-1",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD (METADATA das wheels)",
+    "Afirmação": "[época main 2026-09-30] As quatro subdistribuições (predictor-research-protocol 2.0.0rc2, -transport 0.1.0rc7, -snapshot 1.0.2rc1, -bundle 1.0.1rc1) não têm long description na METADATA, então a regra \"README entra na METADATA e só muda com versão nova\" não se aplica a elas; e não constam em registries/released_architecture.json (só 7 wheels), embora CURRENT_STATE.md as liste como publicadas.",
+    "Evidência": "evidencias/epoca-main-20260930/wheel-readme-metadata-check.json; released-architecture-vs-assets.json",
+    "Limites": "Sem efeito em runtime observado.",
+    "Próximo passo": "Incluir as quatro no registro ou documentar a exceção."
+  },
+  {
+    "ID": "EPOCA-ECO-2",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "[época main 2026-09-30] METADATA das wheels predictor_research_snapshot-1.0.2rc1 e predictor_research_bundle-1.0.1rc1 tem fim de linha CRLF (campo Version lido com \\r), sinal de build em ambiente não normalizado; incoerente com a alegação de build duplo byte-idêntico feita para as demais wheels.",
+    "Evidência": "evidencias/epoca-main-20260930/wheel-readme-metadata-check.json (metadata_version_field)",
+    "Limites": "pip aceita; nenhuma falha de instalação observada.",
+    "Próximo passo": "Reconstruir no CI Linux na próxima versão."
+  },
+  {
+    "ID": "EPOCA-DOCS-1",
+    "Projeto": "conjunto",
+    "Prioridade": "P2",
+    "Certeza": "OD (built-vs-published-wheels.json)",
+    "Afirmação": "[época main 2026-09-30] Frases dos docs/ESTADO_2026-09-30.md contradizem as wheels construídas do main: cain diz que a mudança de licença ficou \"fora da wheel\" (o LICENSE entra em licenses/); ops diz que \"a wheel construída do main é a mesma da release\" e, no mesmo arquivo, que o main declara 4.2.2rc2 não publicada (a construída difere em METADATA e licenses/LICENSE).",
+    "Evidência": "evidencias/epoca-main-20260930/built-vs-published-wheels.json; leituras dos ESTADO no REGISTRO.log",
+    "Limites": "Código-fonte dentro das wheels é idêntico ao publicado em cain, ops, core, cripto e brasileirão.",
+    "Próximo passo": "Corrigir as frases ou publicar as versões declaradas."
+  },
+  {
+    "ID": "EPOCA-COBERTURA-1",
+    "Projeto": "conjunto",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "[época main 2026-09-30] Na época main ficaram sem revisão semântica: cain (356/357 arquivos do delta), predictor-qualification (5.761/5.763), stocks (122/127), cripto (127/132), brasileirão (109/113) e os testes/workflows novos do ecosystem. As conclusões da época original sobre model.py/evaluator.py/serving_evaluator.py do Brasileirão e research_*/v3 do cripto valem só para os SHAs originais.",
+    "Evidência": "evidencias/epoca-main-20260930/delta/*-delta-inventory.json; coverage-by-project.json",
+    "Limites": "Inventário completo com sha256 e linhas; nenhuma leitura parcial foi marcada como revisada.",
+    "Próximo passo": "Missão própria por projeto para o delta, começando pelo caminho de previsão do Brasileirão e pela DecisionPolicy do cain."
   }
 ]

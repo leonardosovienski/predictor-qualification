@@ -1,6 +1,6 @@
 # Guia de leitura
 
-Comece por LINHA_DE_BASE.md e RELATORIO_GERAL.md; depois PRELIMINAR, INVENTARIO e COMO_FUNCIONA de um projeto. Cada path abaixo deve ser confirmado no source-index/source-catalog: alguns itens agrupam nomes para orientar módulos, não são comandos. A cobertura informa onde há aprofundamento pendente.
+Comece por LINHA_DE_BASE.md (época original, raízes Windows), LINHA_DE_BASE_EPOCA_MAIN.md (época `main` remoto de 2026-09-30, nunca misturada com a primeira) e RELATORIO_GERAL.md; a cobertura por projeto em cinco categorias está em COBERTURA_POR_PROJETO.md e o confronto com os documentos de estado, verificadores e wheels da época main em SUPLEMENTO_EPOCA_MAIN_20260930.md; depois PRELIMINAR, INVENTARIO e COMO_FUNCIONA de um projeto. Cada path abaixo deve ser confirmado no source-index/source-catalog: alguns itens agrupam nomes para orientar módulos, não são comandos. A cobertura informa onde há aprofundamento pendente.
 
 ## cain
 
@@ -81,6 +81,7 @@ Na primeira passagem, ignore caches, wheels, ambientes e datasetsbrutos; catalog
 
 Arquivos `.mmd` em `diagramas/` (Mermaid). Os de cain, stocks, cripto e brasileirão também estão incorporados nos respectivos COMO_FUNCIONA; core, ops, ecosystem e qualification têm blocos Mermaid inline nos seus COMO_FUNCIONA e ARQUITETURA_GERAL. Todos são modelos de leitura (INF) sobre código e contratos inspecionados.
 
+- `diagramas/brasileirao-predictor_componentes.mmd`
 - `diagramas/brasileirao-predictor_er.mmd`
 - `diagramas/brasileirao-predictor_estados.mmd`
 - `diagramas/brasileirao-predictor_sequencia.mmd`
@@ -89,6 +90,7 @@ Arquivos `.mmd` em `diagramas/` (Mermaid). Os de cain, stocks, cripto e brasilei
 - `diagramas/cain-er.mmd`
 - `diagramas/cain-pesquisa.mmd`
 - `diagramas/cain-workflow-estados.mmd`
+- `diagramas/cripto-predictor_componentes.mmd`
 - `diagramas/cripto-predictor_er.mmd`
 - `diagramas/cripto-predictor_estados.mmd`
 - `diagramas/cripto-predictor_sequencia.mmd`

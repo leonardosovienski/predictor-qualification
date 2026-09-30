@@ -1,6 +1,6 @@
 # Estudo técnico do zero — oito projetos
 
-Estado: CONCLUÍDO DENTRO DOS LIMITES DECLARADOS (retomada de 2026-09-30, em Linux). A revisão dos executáveis ativos dos oito projetos e do arquivo histórico Crypto está registrada e reconciliada nas coberturas; o residual exato está em [PROBLEMAS_PRIORIZADOS](PROBLEMAS_PRIORIZADOS.md) (`G-COBERTURA-RESIDUAL`). A preservação byte a byte dos originais Windows não pôde ser repetida nesta retomada (sem acesso às raízes locais); a última verificação registrada é a do checkpoint anterior. Histórico da retomada em [CONTINUIDADE.md](CONTINUIDADE.md).
+Estado: CONCLUÍDO DENTRO DOS LIMITES DECLARADOS (retomada de 2026-09-30, em Linux). A revisão dos executáveis ativos dos oito projetos e do arquivo histórico Crypto está registrada e reconciliada nas coberturas; o residual exato está em [PROBLEMAS_PRIORIZADOS](PROBLEMAS_PRIORIZADOS.md) (`G-COBERTURA-RESIDUAL`). A preservação byte a byte dos originais Windows não pôde ser repetida nesta retomada (sem acesso às raízes locais); a última verificação registrada é a do checkpoint anterior. Histórico da retomada em [CONTINUIDADE.md](CONTINUIDADE.md). Na mesma sessão foi aberta uma **segunda época**, o `main` remoto de 2026-09-30 ([linha de base da época main](LINHA_DE_BASE_EPOCA_MAIN.md), [suplemento](SUPLEMENTO_EPOCA_MAIN_20260930.md), [cobertura por projeto](COBERTURA_POR_PROJETO.md)): baseline e delta inventariados por arquivo, verificadores do Anexo A6 executados onde o container permite, wheels publicadas confrontadas com README/METADATA e com wheels construídas do `main`, attestations da qualificação checadas na emissão e no `main`; revisão semântica só nos deltas pequenos (ops, core, ecosystem V2/transport) e nos adapters/contratos V2 dos domínios. As duas épocas nunca se misturam: toda conclusão cita o SHA.
 
 Estado: PAUSADO A PEDIDO DO USUÁRIO para preservar o limite semanal. Estudo incompleto. A revisão dos executáveis ativos dos oito projetos está registrada; parte do arquivo histórico Crypto e a consolidação final permanecem pendentes. Retomar por [CONTINUIDADE.md](CONTINUIDADE.md).
 
@@ -12,7 +12,7 @@ OD identifica observação direta; DD declaração documental; ET-SRC implementa
 
 ## Estado das identidades
 
-Os oito HEADs locais diferem dos oito `main` remotos observados. Portanto versões locais, releases publicadas, clones alternativos e manifests remotos são épocas separadas. A cadeia do Anexo tem assets e manifests remotos verificáveis, mas estes não demonstram integração runtime nem validação econômica. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md) e [identidades](IDENTIDADES_PACOTES_CI.md).
+Os oito HEADs locais diferem dos oito `main` remotos observados; na época `main` (2026-09-30) verificou-se que cada HEAD local é ancestral direto do `main` atual, com deltas de 10 (core) a 5.763 (qualificação) arquivos. Portanto versões locais, releases publicadas, clones alternativos e manifests remotos são épocas separadas. A cadeia do Anexo tem assets e manifests remotos verificáveis, mas estes não demonstram integração runtime nem validação econômica. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md) e [identidades](IDENTIDADES_PACOTES_CI.md).
 
 A arquitetura observada nas raízes primárias usa contratos V1. No `main` remoto foram observadas dependências Protocol V2 e Transport. Não se infere migração completa do conteúdo do manifest. DECISIONS remoto contém D1–D28 APPROVED, incluindo D16/D27; a ausência destes IDs em arquivo local é delimitada àquela revisão.
 
@@ -28,8 +28,9 @@ Ensaios leves discriminados nos suplementos incluem contratos, smoke e unittests
 - [Matriz de integrações](MATRIZ_INTEGRACOES.md), também CSV/JSON.
 - [Problemas priorizados](PROBLEMAS_PRIORIZADOS.md): prioridade e certeza separadas.
 - [Arquitetura geral](docs/ARQUITETURA_GERAL.md), [glossário](docs/GLOSSARIO.md), [guia de leitura](docs/GUIA_DE_LEITURA.md).
-- Oito `INVENTARIO_*.md`, oito `docs/COMO_FUNCIONA_*.md` e 25 diagramas `.mmd` (índice no [guia de leitura](docs/GUIA_DE_LEITURA.md)).
+- Oito `INVENTARIO_*.md`, oito `docs/COMO_FUNCIONA_*.md` e 27 diagramas `.mmd` (índice no [guia de leitura](docs/GUIA_DE_LEITURA.md)).
 - Suplementos da retomada: [Crypto histórico](SUPLEMENTO_CRIPTO_HISTORICO_RETOMADA.md) e [Brasil residual](SUPLEMENTO_BRASIL_RESIDUAL_RETOMADA.md).
+- Época `main` (2026-09-30): [linha de base](LINHA_DE_BASE_EPOCA_MAIN.md), [suplemento](SUPLEMENTO_EPOCA_MAIN_20260930.md) (confronto A3/A4, verificadores A6, wheels, attestations, revisão dos deltas pequenos, inventário dos grandes), [cobertura por projeto](COBERTURA_POR_PROJETO.md) em cinco categorias. Achados novos `EPOCA-*` (2 P1: attestations não reproduzíveis no `main` da qualificação; lacre R8 do Stocks quebrado por três arquivos).
 
 ## Limites econômicos
 

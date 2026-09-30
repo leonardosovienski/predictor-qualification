@@ -143,7 +143,33 @@ Os manifests do main remoto e os assets do Anexo foram verificados separadamente
 
 ## Diagramas (modelos INF sobre os módulos e contratos inspecionados)
 
-Os três arquivos abaixo existem em `diagramas/` e estão incorporados aqui; são modelos de leitura, não máquinas de estado literais do código.
+Os quatro arquivos abaixo existem em `diagramas/` e estão incorporados aqui; são modelos de leitura, não máquinas de estado literais do código. O diagrama de componentes inclui, tracejados, os adapters V2 que só existem na época `main` (ver [suplemento da época](../SUPLEMENTO_EPOCA_MAIN_20260930.md)); os demais nós vêm da época original.
+
+### Componentes
+
+```mermaid
+flowchart TD
+ CLI[brasileirao-predict predict.build show settle] --> DB[(SQLite matches somente leitura)]
+ CLI --> MO[model.predict_match NB e Dixon-Coles]
+ MO --> ELO[elo_baseline current_elo]
+ MO --> MK[market_pricer mercados 1X2 OU BTTS]
+ CLI --> LOG[(prediction_log JSONL prediction_id)]
+ LOG --> SET[settle results.jsonl]
+ ING[ingest sofascore estatísticas] --> DB
+ EVAL[evaluator e serving_evaluator] --> DB
+ EVAL --> PROSP[brasileirao_scripts prospective_protocol_v2 h14 h15]
+ RUN[research_runtime.runner entrypoint por arquivo] --> ADM[research_runtime.admission allowlist]
+ ADM --> EXEC[research_runtime.execution worker]
+ EXEC --> OPS[predictor-ops lock timeout heartbeat]
+ EXEC --> CORE[predictor-core TrialRegistryV2]
+ EXEC --> WF[backtest_walkforward MAX_EVENTS 400]
+ EXEC --> RES[research_runtime.results durable]
+ RES --> REC[research_runtime.recovery reread]
+ ADP[adapters.research_v2 época main] -. adapter_api .-> RUN
+ CT[research_runtime.contract TARGETS LEAD_MINUTES] --> ADM
+ PIT[pit.py corte temporal] --> EXEC
+ NET[Kernel Redis .NET não executado] -.-> DB
+```
 
 ### Sequência
 

@@ -166,7 +166,32 @@ profit_research.py compara só contas com moeda, capital, período, cenário e e
 
 ## Diagramas (modelos INF sobre os módulos e contratos inspecionados)
 
-Os três arquivos abaixo existem em `diagramas/` e estão incorporados aqui; são modelos de leitura, não máquinas de estado literais do código.
+Os quatro arquivos abaixo existem em `diagramas/` e estão incorporados aqui; são modelos de leitura, não máquinas de estado literais do código. O diagrama de componentes inclui, tracejados, os adapters V2 que só existem na época `main` (ver [suplemento da época](../SUPLEMENTO_EPOCA_MAIN_20260930.md)); os demais nós vêm da época original.
+
+### Componentes
+
+```mermaid
+flowchart TD
+ CLI[main.py CLI analyze ingest] --> ING[ingestion.run_ingest]
+ CLI --> AN[analyzers.ai_insights]
+ ING --> COL[v3.collectors binance_vision funding_collector]
+ COL --> FS[(dpl.FeatureStore SQLite)]
+ FS --> AN
+ AN --> LLM[Notícias e juiz LLM via api_guard]
+ AN --> HIST[core.history e output.reporter]
+ HIST --> EXP[export e relatório]
+ RUN[research_runner entrypoint por arquivo] --> ADM[research_admission allowlist]
+ ADM --> EXEC[research_execution Circuit]
+ EXEC --> OPS[predictor-ops lock timeout heartbeat]
+ EXEC --> CORE[predictor-core TrialRegistryV2 replay]
+ EXEC --> V3[v3.backtest_v3 cost_spec]
+ EXEC --> RES[research_results authoritative_result_source]
+ RES --> REC[research_recovery reread após restart]
+ ADP[adapters.research_v2 época main] -. adapter_api .-> RUN
+ CT[research_contract tipos refs estados] --> ADM
+ CT --> RES
+ SS[(charters/scientific_state.json protegido)] -.-> EXEC
+```
 
 ### Sequência
 
