@@ -57,6 +57,27 @@ SUPERSEDED = "SUPERSEDED_C5"  # a attestation do ciclo 4, preservada na reemiss�
 TARGETS = __import__("json").load(open(f"{M}/runtime_targets.json", encoding="utf-8"))
 
 
+
+# ---------------------------------------------------------------- decisões do dono em qualification/DECISIONS.json
+def decision_approved(decision_id):
+    doc = json.load(open("qualification/DECISIONS.json", encoding="utf-8"))
+    return any(d.get("decision_id") == decision_id and d.get("status") == "APPROVED" for d in doc["decisions"])
+
+
+def pin_chained(pin_path, expected_sha256):
+    """D-29: o pin novo da Etapa A encadeia ao conteúdo protegido (previous.commit e previous.wheel_sha256 iguais aos do
+    conteúdo com o sha256 registrado, recuperado do histórico do main)."""
+    import subprocess
+    cur = json.load(open(pin_path, encoding="utf-8"))
+    prev = cur.get("previous") or {}
+    for commit in subprocess.run(["git", "log", "--format=%H", "--", pin_path], capture_output=True, text=True, check=True).stdout.split():
+        blob = subprocess.run(["git", "show", f"{commit}:{pin_path}"], capture_output=True, check=True).stdout
+        if hashlib.sha256(blob).hexdigest() == expected_sha256:
+            old = json.loads(blob)
+            ok = old.get("commit") == prev.get("commit") and old.get("wheel_sha256") == prev.get("wheel_sha256")
+            return ok, commit, old.get("version"), cur.get("version")
+    return False, None, None, cur.get("version")
+
 def p(status, ev, note):
     return {"status": status, "evidence": ev, "note": note}
 
@@ -139,11 +160,21 @@ def contract_revalidation(g, gates):
                          and set(changed) - {pin} <= set(prot.get("chained_items", []))
                          and set(main_changed) - {pin} <= set(main.get("chained_items", [])))
         status = "PASS" if accepted else ("NOT_RUN" if external_only else "FAIL")
+        d29 = None
+        if not accepted and external_only and decision_approved("D-29"):
+            expected = next(s["expected"] for s in prot["shared"] if s["path"] == pin)
+            chained, at_commit, old_v, new_v = pin_chained(pin, expected)
+            d29 = {"chained": chained, "protected_content_commit": at_commit, "from": old_v, "to": new_v}
+            if chained:
+                status, accepted = "PASS", True
         note = (f"{prot['items_total'] - len(changed)} de {prot['items_total']} itens iguais; alterados: "
                 + ", ".join(changed) + ". Cada um com os bytes protegidos preservados e encadeados salto a salto "
                 "(cycle.supersedes nos congelados, supersedes_sha256 nas attestations; conferido no "
                 f"protected_check.json da branch e no do snapshot do main {MAIN_SNAPSHOT}); "
-                + ("aceito pela decisão do dono sobre IS-F008 (opção a)" if accepted else
+                + (f"pin qualification/crypto/runtime_target.json aceito pela D-29: {d29['from']} → {d29['to']}, previous.commit e "
+                   f"previous.wheel_sha256 iguais ao conteúdo protegido (commit {d29['protected_content_commit'][:7]} do main); os 4 itens do "
+                   "IS-F008 aceitos pela decisão do dono (opção a)" if d29 and d29["chained"] else
+                   "aceito pela decisão do dono sobre IS-F008 (opção a)" if accepted else
                    ("BLOCKED: o pin do alvo da Etapa A do crypto mudou pela reabertura V1.2 (D-27), fora desta missão; aceitar o pin novo "
                     "é decisão do dono (mesmo caminho da IS-F008/IC-F011)" if external_only else
                     "FAIL pela letra da C15.1" + ("" if decided else ", decisão do dono pendente (IS-F008)"))))

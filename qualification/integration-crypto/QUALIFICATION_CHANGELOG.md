@@ -185,3 +185,16 @@ domínio (`_memory_view`). O ambiente da sessão não baixa artefatos do Actions
 Além disso, C7.1 regra 7: a attestation da Etapa A do cripto no main é a V1.1 (QUALIFIED para 341d270/rc2); a V1.2 (21f8b182/rc4, alvo deste
 ciclo) só fecha depois do Windows local do dono (`qualification/crypto/REABERTURA_V1.2.md`). O que falta o dono fazer: (1) Windows do crypto V1.2;
 (2) Windows do PC 2 desta integração com os alvos rc15; (3) decidir o pin do conjunto protegido. Depois: `attest.py final` supersede a rc13.
+
+## 2026-09-30 — evidência do Windows no `windows-latest` (run 36665679329), sem mudança de gate
+
+O runtime da missão passou a rodar também no Git Bash do `windows-latest` (`scripts/runtime_env.sh`, `scripts/ci_runtime.sh`; job
+`windows` do `integration-crypto-runtime.yml`, só a fase `e2e`), como a integration-stocks já fazia. Run 36665679329 (branch
+`integration-crypto/runtime-windows-rc15w`, `bd47a9d`), alvos do rc15 (cain 0.4.13rc15, transporte 0.1.0rc7, cripto 1.2.0rc4):
+E2E + restart pelo `e2e.py` **56/0**, venvs limpos só com as wheels publicadas (`runtime_env run_at=2026-09-30T03:44:00Z host=runnervmfi6oq where=github_actions os=Windows_NT uname=MINGW64_NT-10.0-2610…`).
+Saída bruta em `RAW_LOGS/runtime/run36665679329-windows/` (SHA256SUMS do job). O primeiro run (36664202699) falhou na montagem
+do runtime por um caminho MSYS embutido em string Python (`runtime_env.sh`, função `field`), corrigido por argv.
+
+O secundário registrado da missão continua o Windows do PC 2 (D-23): `WINDOWS_SMOKE` segue `NOT_RUN` neste ledger até uma
+decisão do dono em `DECISIONS.json` dizer que este job vale como secundário (proposta D-31 na sessão de 2026-09-30, junto da
+D-29 para o pin do conjunto protegido e da D-30 para o Windows do crypto); o estado do ciclo rc15 continua **BLOCKED**.

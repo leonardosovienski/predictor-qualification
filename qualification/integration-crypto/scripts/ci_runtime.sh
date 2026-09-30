@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# integration-crypto: fases de runtime no Linux primário (workflow integration-crypto-runtime.yml).
+# integration-crypto: fases de runtime (workflow integration-crypto-runtime.yml), Linux primário e Windows (windows-latest, só e2e).
 # Monta o runtime suportado (runtime_env.sh) uma vez e roda as fases pedidas, cada uma num diretório próprio.
 # Uso: ci_runtime.sh "<fases>" <work> <out>     fases ⊆ {cleanroom contract e2e n1 isolation failures soak}
 set -uo pipefail
@@ -8,7 +8,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 MISSION="$(cd "$HERE/.." && pwd)"
 export PYTHON="$(uv python find 3.13)"
 mkdir -p "$WORK" "$OUT"
-echo "ci_runtime phases=[$PHASES] commit=$(git -C "$MISSION" rev-parse HEAD) run_at=$(date -u +%FT%TZ)" | tee "$OUT/ci_runtime.log"
+echo "ci_runtime phases=[$PHASES] commit=$(git -C "$MISSION" rev-parse HEAD) os=${OS:-linux} run_at=$(date -u +%FT%TZ)" | tee "$OUT/ci_runtime.log"
 bash "$HERE/runtime_env.sh" "$MISSION/runtime_targets.json" "$WORK/rt" "$OUT/env" || { echo "RUNTIME_ENV_FAILED" | tee -a "$OUT/ci_runtime.log"; exit 3; }
 # shellcheck disable=SC1091
 source "$WORK/rt/env.sh"

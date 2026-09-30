@@ -6,7 +6,8 @@
 #
 # Disparo: manual (quando este arquivo estiver no main) ou push numa branch integration-crypto/runtime-<fases>-<n>
 # criada no mesmo commit da branch da missão (um workflow novo só pode ser disparado manualmente depois de estar no
-# main). <fases> = nomes separados por "+": cleanroom contract e2e n1 isolation failures soak.
+# main). <fases> = nomes separados por "+": cleanroom contract e2e n1 isolation failures soak windows ("windows" = job
+# windows-latest só com e2e).
 # Não entra no CI de push/PR do repositório: só roda nessas branches (D-15).
 name: integration-crypto runtime
 
@@ -14,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       phases:
-        description: "fases separadas por espaço: cleanroom contract e2e n1 isolation failures soak"
+        description: "fases separadas por espaço: cleanroom contract e2e n1 isolation failures soak windows"
         required: true
         default: "cleanroom contract e2e n1 isolation failures"
   push:
@@ -25,7 +26,28 @@ permissions:
   contents: write   # só para devolver a saída bruta por branch integration-crypto/raw-<run>-<job> (o ambiente da missão não baixa artefatos)
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      linux: ${{ steps.p.outputs.linux }}
+      windows: ${{ steps.p.outputs.windows }}
+    steps:
+      - id: p
+        shell: bash
+        env:
+          INPUT_PHASES: ${{ inputs.phases }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -n "$INPUT_PHASES" ]; then PHASES="$INPUT_PHASES"; else
+            spec="${REF_NAME#integration-crypto/runtime-}"; spec="${spec%-*}"; PHASES="${spec//+/ }"
+          fi
+          linux=""; windows=false
+          for p in $PHASES; do if [ "$p" = windows ]; then windows=true; else linux="$linux $p"; fi; done
+          echo "linux=${linux# }" >> "$GITHUB_OUTPUT"; echo "windows=$windows" >> "$GITHUB_OUTPUT"
+          echo "linux=[${linux# }] windows=$windows"
   runtime:
+    needs: plan
+    if: needs.plan.outputs.linux != ''
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
@@ -39,12 +61,8 @@ jobs:
       - name: fases
         shell: bash
         env:
-          INPUT_PHASES: ${{ inputs.phases }}
-          REF_NAME: ${{ github.ref_name }}
+          PHASES: ${{ needs.plan.outputs.linux }}
         run: |
-          if [ -n "$INPUT_PHASES" ]; then PHASES="$INPUT_PHASES"; else
-            spec="${REF_NAME#integration-crypto/runtime-}"; spec="${spec%-*}"; PHASES="${spec//+/ }"
-          fi
           echo "fases: $PHASES"
           bash qualification/integration-crypto/scripts/ci_runtime.sh "$PHASES" "$RUNNER_TEMP/work" "$RUNNER_TEMP/out"
       - name: Identidade das wheels no runtime (C4)
@@ -81,6 +99,56 @@ jobs:
           ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
           git add -A "$DEST"
           git -c user.name="integration-crypto-runtime" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-crypto: saída bruta do run ${{ github.run_id }} (runtime)"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"
+
+  windows:
+    # WINDOWS_SMOKE no windows-latest × 3.13 (E2E + restart pelo mesmo e2e.py do Linux): só vale como secundário do
+    # domínio se uma decisão em qualification/DECISIONS.json o disser (o secundário registrado é o Windows do PC 2, D-23).
+    needs: plan
+    if: needs.plan.outputs.windows == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: E2E + restart (WINDOWS_SMOKE)
+        shell: bash
+        run: |
+          mkdir -p /c/q && export TMPDIR=/c/q   # raiz curta (MAX_PATH), como na integration-stocks
+          bash qualification/integration-crypto/scripts/ci_runtime.sh "e2e" /c/q/w "$RUNNER_TEMP/out"
+      - name: sem dados versionáveis no artefato
+        if: always()
+        shell: bash
+        run: |
+          find "$RUNNER_TEMP/out" -name '*.zip' -delete
+          find "$RUNNER_TEMP/out" -name 'dataset-*.json' -delete
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-crypto-runtime-windows
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/integration-crypto/RAW_LOGS/runtime/run${{ github.run_id }}-windows
+          BRANCH: integration-crypto/raw-${{ github.run_id }}-windows
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid" && git checkout -q -b "$BRANCH" && mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/out/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="integration-crypto-runtime" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-crypto: saída bruta do run ${{ github.run_id }} (windows)"
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
           echo "branch de evidência: $BRANCH"
 
