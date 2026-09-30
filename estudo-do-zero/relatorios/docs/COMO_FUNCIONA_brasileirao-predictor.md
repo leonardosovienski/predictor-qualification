@@ -135,3 +135,8 @@ Aprofundamento adicional: `brasileirao_predictor/backtest_event.py`: Revisão in
 `brasileirao_predictor/data/lineup_envelopes.py`: Integral: sourceeventteamparser/rawSHAawareUTC observed/published<=received, complete onlyplayers, uniqueid validrole, sortplayers, finiteJSONcanonical, CAS oslink atomic immutable tempflushfsync, retries bytecompare, read filehash+canonical+identityduplicateJSON reject; asof byreceived<=cutoff single source latestteam and sameclockconflict reject, invalid/unavailable omit vs removedempty. rawhash identity not sourceauth; hardlink publish used only internalartifact, no originalread/writes study execution.
 
 `brasileirao_predictor/backtest.py`: Integral594lines em dois blocos: odds latest/open stored pairednames ±3day closest with tie first, no uniqueevent/capture receipt guarantee; extBTTS/DC/halfOU no push. Settlement preferopening elseclose explicitlytagged, gate p-1/odd minstrict maxinclusive, unitPnLno fees, CLV odd*closingShin-1 diagnostic. Frozenfit calibration strictdate except fallback indexprefix if empty/no config: indexprefix may include same date target; chronology availability absent. CLI writableDB DROP/CREATE backtest_bets and CSV rewrite (study never executed). ForwardElo dependent ratings policy; closepopulation inherentlynotexecution, opencolumn alone no independent provenance.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](../CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

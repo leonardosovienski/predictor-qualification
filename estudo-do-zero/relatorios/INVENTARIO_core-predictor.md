@@ -97,3 +97,8 @@ Raiz `C:\PREDICTORS\core-predictor`; HEAD `9bf43efe92459a0b484cac00f51170b2c70d4
 |`uv.lock`|835|`e9512fbdbe1ee69344ee667417c1bbfdb1c521dd2a5ad763f24c07d3c2e030e5`|config/contrato/manifest/lock|
 
 Documentos e demais rastreados não selecionados para código/config são preservados no inventário Git; leitura narrativa material: README.md,ARCHITECTURE_IMPLEMENTATION.md,HANDOFF.md,mais docs temporais/trial(core),OPERATIONS_CONTRACT(ops),CURRENT_STATE/CHARTER(ecosystem). O texto bruto agregado é material intermediário local e não compõe publicação.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

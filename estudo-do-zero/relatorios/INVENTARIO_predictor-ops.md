@@ -47,3 +47,8 @@ Raiz `C:\PREDICTORS\predictor-ops`; HEAD `b19e69527c0fda5cb1f96281d3a984fea14317
 |`windows_integration/test_windows_real.py`|64|`4af1da4795b41c1f0b64645dd43e3c01c4fbb6a4635d5e7614dbe65a4f09c4f4`|código/teste próprio|
 
 Documentos e demais rastreados não selecionados para código/config são preservados no inventário Git; leitura narrativa material: README.md,ARCHITECTURE_IMPLEMENTATION.md,HANDOFF.md,mais docs temporais/trial(core),OPERATIONS_CONTRACT(ops),CURRENT_STATE/CHARTER(ecosystem). O texto bruto agregado é material intermediário local e não compõe publicação.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

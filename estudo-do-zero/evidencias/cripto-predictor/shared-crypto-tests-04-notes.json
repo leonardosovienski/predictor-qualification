@@ -1,0 +1,157 @@
+[
+  {
+    "index": 30,
+    "path": "tests/test_config_news_providers.py",
+    "sha256_utf8": "db0cb73786d96522bfbf07d45ae564ff45f733197a4cdbe4b408b2950cc86770",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_news_provider_desconhecido_e_rejeitado",
+      "test_news_provider_duplicado_e_rejeitado",
+      "test_novos_news_providers_sao_aceitos_sem_gravar_credenciais",
+      "test_fallback_separado_e_validado",
+      "test_teto_negativo_e_rejeitado"
+    ],
+    "notes": "Settings com envfake rejeita newsproviders desconhecido/duplicado, aceita newsapi_ai/mediastack/google_news_rss; fallbackserpapi fora da lista e tetoAPIguardnegativo inválido. Não chama provedores nem grava credenciais."
+  },
+  {
+    "index": 31,
+    "path": "tests/test_config_secrets_resolution.py",
+    "sha256_utf8": "2055d76dc4c349f97f3ccd0b8f0282f909e56374d5eabbe58caebbc3a1ba1989",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_chave_resolvida_via_init_kwarg_e_aceita_mesmo_ausente_de_os_environ",
+      "test_chave_realmente_ausente_ainda_e_rejeitada",
+      "test_chave_com_placeholder_ainda_e_rejeitada_mesmo_resolvida",
+      "test_modo_multi_valida_todas_as_chaves_dos_providers_resolvidos"
+    ],
+    "notes": "Initkwargs resolvidas aceitas sem os.environ, chave vazia/placeholderchangeme rejeitada; modo multi exige todas chaves resolvidas e aceita stringsfake longas. Valida presença/formato, não autenticidade de key."
+  },
+  {
+    "index": 32,
+    "path": "tests/test_continuity_recovery.py",
+    "sha256_utf8": "b9599875f3ff07c69fd5e91220407a3a64a66b4f159598175730d78b66716072",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_transient_state_and_credentials_rejected_before_recovery",
+      "test_unsafe_and_windows_ambiguous_paths_rejected",
+      "test_conflicting_archives_rejected_before_writes",
+      "test_existing_parent_file_and_internal_parent_collision_are_preflight_errors",
+      "test_hash_tampering_and_existing_different_file_refused",
+      "test_identical_existing_files_and_duplicate_content_are_valid",
+      "test_published_archives_match_manifest_and_exclude_runtime_state"
+    ],
+    "notes": "Importa restore_archives físico docscontinuity; ZIPs temporários demonstram preflight sem escrita para estadosSQLite/WAL/SHM/journal/env, traversal/backslash/drive/reservednames/ambiguousWindows, collision case-insensitive e parentfile. Hashmember tampered/existingfiledif recusados e duplicate content existente igual permitido. Teste manifesto arquivos publicados verifica hashes físicos e count, sem enviar remoto. Não executado aqui."
+  },
+  {
+    "index": 33,
+    "path": "tests/test_core_integrity.py",
+    "sha256_utf8": "2da0f9ee48add37d93299603e74202176ab6c6ec8295e720e8e21f240f20deca",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_shared_versions_are_exactly_compatible",
+      "test_shared_libraries_resolve_from_site_packages",
+      "test_wheelhouse_hashes_are_pinned",
+      "test_no_shared_source_copy_exists"
+    ],
+    "notes": "Metadata importada exige core3.2.1/ops4.2.1 site-packages semvendor/packages, uv.lock URLs/hashes exatos e ausência cópias; única subpackage research-export nome correto. Não baixa wheels nem autentica remote; depende instalação disponível."
+  },
+  {
+    "index": 34,
+    "path": "tests/test_dependency_execution_manifest.py",
+    "sha256_utf8": "67ddced3767e9f86b48163ce4a4726bc4ec0147279c2e40fd871356a2dec71ba",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_dependency_execution_evidence_preserves_original_bytes"
+    ],
+    "notes": "Manifesto dependency_execution físico não-vazio, cada caminho confinado e bytesSHA preservados. Não reproduz execução documentada nem valida significado de logs."
+  },
+  {
+    "index": 35,
+    "path": "tests/test_diagnose_h6_mechanism_pit.py",
+    "sha256_utf8": "a3a041e916982f709a576892fb2af815e282d41aa60ae342cfc8d3c1bb2d7c99",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_replay_descarta_feature_publicada_depois_da_previsao",
+      "test_replay_mantem_feature_disponivel_e_desfecho_posterior"
+    ],
+    "notes": "SQLite sintético PIT: rawfeature published depois prediction descartada, feature passada disponível mantida com outcome futuro, normaliza ativo uppercase e calcula past25%/future10%. Não comprova proveniência/qualidade preços."
+  },
+  {
+    "index": 36,
+    "path": "tests/test_discovery.py",
+    "sha256_utf8": "1ff93c3f71b2d8385fed83655e141f42fa7d5700e8f98841725bd99c88f00030",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_ranking_por_momentum_7d",
+      "test_24h_desempata_sem_dominar",
+      "test_top_n_limita",
+      "test_filtra_stablecoin_por_simbolo",
+      "test_filtra_stablecoin_por_heuristica",
+      "test_moeda_de_1_dolar_que_anda_nao_e_stable",
+      "test_filtra_wrapped",
+      "test_filtra_volume_baixo",
+      "test_trending_da_bonus_mas_nao_garante_topo",
+      "test_campos_ausentes_nao_quebram"
+    ],
+    "notes": "Rank fixtures verificam momentum7d dominante/24hdesempate, limite3, heurística stable por símbolo/preço/variação, wrapped/lower volume excluídos e trendingbonus não topo automático; missingcampos tolerados e missingid excluído. Não pesquisa universo real nem demonstra alpha."
+  },
+  {
+    "index": 37,
+    "path": "tests/test_distribution_security.py",
+    "sha256_utf8": "c3590e725043adfe180f464c5d4362a536b1ff0529639ba0458b944586e120a6",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_sdist_contains_build_sources_without_research_archives",
+      "test_built_wheels_contain_no_runtime_artifacts_or_secrets",
+      "test_incident_registra_rotacao_confirmada_pelo_dono_sem_apagar_historico"
+    ],
+    "notes": "Inspeção física dist requer sdist/wheel previamente construídos, semskip: sdist inclui buildsrc/charters/plans e exclui archives/db/env; wheel semruntime/log/db/jsonl e regexsecrets para extensões específicas. Documento incidente exige estadosBLOCKED/ROTATED-confirmed-owner e frasesaçãohumana/abuso. Regex/texto não comprova ausência universal de segredos nem rotação real."
+  },
+  {
+    "index": 38,
+    "path": "tests/test_divergence.py",
+    "sha256_utf8": "1317963c0e36dcfa7c90ea6c1acd8d64e14ea9661140878ec4621c210781bbb5",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_technical_direction_bull",
+      "test_technical_direction_bear",
+      "test_technical_direction_none_without_trend_or_momentum",
+      "test_technical_direction_rsi_overbought_offsets_weak_trend",
+      "test_llm_direction",
+      "test_divergence_flag_contradiction",
+      "test_divergence_flag_aligned",
+      "test_divergence_flag_no_indicators_is_zero",
+      "test_divergence_does_not_mutate_score"
+    ],
+    "notes": "Direções technical/LLM em fixtures, RSIoverbought neutraliza weaktrend, divergência contraditória1/alinhada0/missing0. calculate_final_score preserva88 sem penalizar divergência. Sem acurácia/modelo real."
+  },
+  {
+    "index": 39,
+    "path": "tests/test_dpl.py",
+    "sha256_utf8": "c4b5dcac42d53e3ac5bc72530d8a33a3080083d5a69e2cff25d57434c8030360",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_marketdatapoint_rejeita_high_menor_que_low",
+      "test_marketdatapoint_rejeita_published_antes_do_timestamp",
+      "test_marketdatapoint_eh_imutavel",
+      "test_primaria_ok_nao_chama_secundaria",
+      "test_fallback_usa_secundaria_quando_primaria_falha",
+      "test_todas_falham_levanta_data_unavailable",
+      "test_router_exige_ao_menos_um_provedor",
+      "test_router_emite_telemetria_no_dominio_injetado",
+      "test_fachada_latest_close_delegada_ao_router",
+      "test_fachada_monta_router_do_sources_json"
+    ],
+    "notes": "MarketDataPoint imutável, high<low e published<timestamp rejeitados. Fakeproviders routing primary evita secondary, primaryfail secondary uma vez, allfail DataUnavailable com eventos; routerempty inválido, domínio telemetria injetado stocks preservado, facade latest_close42 delega e default sourcesbinance/coingecko configurados. Teste genérico usa símboloPETR4 mas não integraçãoStocks real; nenhum HTTP."
+  }
+]

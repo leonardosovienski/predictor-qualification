@@ -8,7 +8,8 @@ previous_inventories={p.name for p in (target/'relatorios').glob('INVENTARIO_*.m
 for directory in ['relatorios','evidencias','scripts']:
  for p in (r/directory).rglob('*'):
   if not p.is_file() or p.suffix.lower() not in allowed: continue
-  if p.name.startswith(('source-text','narrative-','raw-source','all-source','executable-','central-extract','remaining-','root-scripts-')): continue
+  if p.name.startswith(('source-text','narrative-','raw-source','all-source','executable-','central-extract','remaining-')): continue
+  if p.suffix == '.txt' and p.name.startswith('root-scripts-'): continue
   if p.name in ('remote-releases.json','ci-head-local.json','ci-main-remoto.json','release-identity-summary.json'): continue
   if any(part in ('__pycache__','.venv','node_modules','.pytest_cache') for part in p.parts):continue
   if active_inventory and p.name.startswith('INVENTARIO_') and p.name != 'INVENTARIO_'+active_inventory+'.md' and p.name not in previous_inventories: continue

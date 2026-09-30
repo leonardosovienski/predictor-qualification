@@ -146,3 +146,8 @@ Admissão/execução primária (revisão integral 484/527 linhas): submit valida
 
 
 Trading primário: execution.py é máquina de estados pura com adapter simulado em memória; microstructure.py anda apenas a profundidade observada e exige resnapshot ao perder sequência. Book/VWAP é cenário, sem fila ou recibo de execução real. cost_policy.py mantém CALIBRATED_FOR_VERDICT vazio; signal_adapter.py exige for_verdict=True, portanto sinais ativos spot/perp não geram intenção nesse estado do código. TradingStore persiste hashes, relógios e sessão, compacta v1/v2 para zlib/layout denso sob verificação de metadados; não há triggers universais de imutabilidade nessas tabelas. Scorecards de cobertura são fração de minutos com observação, não uptime contínuo, e não promovem estado COLLECTION_ONLY. Fontes e SHA: trading/*.py no REGISTRO.log/coverage.json.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](../CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

@@ -43,3 +43,8 @@ Anexo A: papel geral é compatível; datas/versões/requalificações atuais nã
 ## Cobertura e limites
 
 Código próprio executável: 22 Python, 12 shell e 1 PowerShell, seis workflows lidos integralmente e revisados por responsabilidade/efeitos/configuração/erros. Índice e coverage por arquivo estão em evidencias/predictor-qualification. Schema, core de governança, DECISIONS, GATES/FINDINGS, final e parcial selecionado, parâmetros/perfil/matriz de autoridade lidos. Histórico repetitivo catalogado, aprofundado apenas quando sustenta recomputação. Não há teste de domínio real, instalação cleanroom, Linux primário, acesso dados privados, prova financeira, ou implantação observada. Integração V2 remota e ciclo D27 permanecem fora do conteúdo local estudado.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

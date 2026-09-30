@@ -76,3 +76,8 @@ Raiz `C:\CAIN\contrato`; HEAD `a879525c49f1b3ac2050a3a70b10a322501b1e56`; versã
 |`uv.lock`|463|`91e230ab0dea9ef27431e301198457fec892bf287346f1df1024bcbbf7d498cc`|config/contrato/manifest/lock|
 
 Documentos e demais rastreados não selecionados para código/config são preservados no inventário Git; leitura narrativa material: README.md,ARCHITECTURE_IMPLEMENTATION.md,HANDOFF.md,mais docs temporais/trial(core),OPERATIONS_CONTRACT(ops),CURRENT_STATE/CHARTER(ecosystem). O texto bruto agregado é material intermediário local e não compõe publicação.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

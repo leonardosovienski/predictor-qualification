@@ -114,3 +114,8 @@ classDiagram
 ```
 
 O contexto do repositório é evidência versionada. As sequências mostram coleta, construção de atestado e prova de runtime; cada execução pode gravar artefatos e por isso exige ambiente independente. O esquema representa objetos JSON, sem banco próprio demonstrado. QUALIFIED combina estados documentais e checks de identidade; não é previsão validada nem capital autorizado.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](../CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

@@ -1042,3 +1042,8 @@ Leitura estrutural integral bytes + AST não é revisão semântica integral. Ca
 
 | `uv.lock` | 1856 | fonte/teste/config; ver coverage.json |
 
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.
