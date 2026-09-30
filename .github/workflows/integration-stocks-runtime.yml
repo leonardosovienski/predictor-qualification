@@ -23,7 +23,7 @@ on:
       - "integration-stocks/runtime-*"
 
 permissions:
-  contents: read
+  contents: write   # só para devolver a saída bruta por branch integration-stocks/raw-<run>-<job> (o ambiente da missão não baixa artefatos)
 
 jobs:
   plan:
@@ -74,6 +74,23 @@ jobs:
           name: integration-stocks-runtime-linux
           path: ${{ runner.temp }}/out
           if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/integration-stocks/RAW_LOGS/runtime/run${{ github.run_id }}
+          BRANCH: integration-stocks/raw-${{ github.run_id }}-linux
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid" && git checkout -q -b "$BRANCH" && mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/out/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="integration-stocks-runtime" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-stocks: saída bruta do run ${{ github.run_id }} (linux)"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"
   windows:
     needs: plan
     if: needs.plan.outputs.windows == 'true'
@@ -103,3 +120,70 @@ jobs:
           name: integration-stocks-runtime-windows
           path: ${{ runner.temp }}/out
           if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/integration-stocks/RAW_LOGS/runtime/run${{ github.run_id }}-windows
+          BRANCH: integration-stocks/raw-${{ github.run_id }}-windows
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid" && git checkout -q -b "$BRANCH" && mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/out/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="integration-stocks-runtime" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-stocks: saída bruta do run ${{ github.run_id }} (windows)"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"
+  static:
+    # conferências estáticas do ciclo (C21, C24.3 a/b/e/f, C15.1, SECRETS_CLEAN) com gh e clones completos; saída devolvida por branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: conferências
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          PY="$(uv python find 3.13)"; OUT="$RUNNER_TEMP/static"; mkdir -p "$OUT" "$RUNNER_TEMP/clones"
+          for r in cain ecosystem-predictor cripto-predictor stocks-predictor brasileirao-predictor; do git clone -q "https://github.com/leonardosovienski/$r.git" "$RUNNER_TEMP/clones/$r"; done
+          M=qualification/integration-stocks; ST=$(jq -r .stocks.commit $M/runtime_targets.json)
+          echo "static run_at=$(date -u +%FT%TZ) stocks_final=$ST" | tee "$OUT/static.log"
+          "$PY" $M/scripts/hosted_ci.py $M/hosted_ci_targets_rc15.json "$OUT/hosted-ci" >> "$OUT/static.log" 2>&1; echo "hosted_ci exit $?" | tee -a "$OUT/static.log"
+          "$PY" $M/scripts/contract_revalidation.py "$RUNNER_TEMP/clones/stocks-predictor" "$ST" $M "$OUT/contract-revalidation/static_checks.json" >> "$OUT/static.log" 2>&1; echo "contract_revalidation exit $?" | tee -a "$OUT/static.log"
+          "$PY" $M/scripts/protected_check.py "$PWD" "$RUNNER_TEMP/clones" "$ST" "$OUT/protected/protected_check.json" >> "$OUT/static.log" 2>&1; echo "protected_check exit $?" | tee -a "$OUT/static.log"
+          "$PY" $M/scripts/secrets_scan.py "$RUNNER_TEMP/clones" "$PWD" "$OUT/secrets/secrets_scan.json" >> "$OUT/static.log" 2>&1; echo "secrets_scan exit $?" | tee -a "$OUT/static.log"
+          tail -20 "$OUT/static.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-stocks-static
+          path: ${{ runner.temp }}/static
+          if-no-files-found: error
+      - name: Devolver saída bruta por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/integration-stocks/RAW_LOGS/static-rc15/run${{ github.run_id }}
+          BRANCH: integration-stocks/raw-${{ github.run_id }}-static
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid" && git checkout -q -b "$BRANCH" && mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/static/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="integration-stocks-runtime" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-stocks: saída bruta do run ${{ github.run_id }} (static)"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"

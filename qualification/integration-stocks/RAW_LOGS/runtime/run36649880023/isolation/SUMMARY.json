@@ -1,0 +1,313 @@
+{
+ "scenario": "isolation-ids-contradiction",
+ "finished_at": "2026-09-30T00:36:17Z",
+ "checks": [
+  {
+   "check": "result of crypto against task of crypto: ACCEPTED",
+   "ok": true,
+   "got": "ACCEPTED"
+  },
+  {
+   "check": "result of crypto against task of stocks: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of crypto against task of brasileirao: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of stocks against task of crypto: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of stocks against task of stocks: ACCEPTED",
+   "ok": true,
+   "got": "ACCEPTED"
+  },
+  {
+   "check": "result of stocks against task of brasileirao: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of brasileirao against task of crypto: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of brasileirao against task of stocks: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": "DOMAIN_MISMATCH"
+  },
+  {
+   "check": "result of brasileirao against task of brasileirao: ACCEPTED",
+   "ok": true,
+   "got": "ACCEPTED"
+  },
+  {
+   "check": "same H9 in three domains: distinct task_ids, episodes and qualified hypothesis IDs",
+   "ok": true,
+   "got": {
+    "brasileirao->brasileirao": "ACCEPTED",
+    "brasileirao->crypto": "DOMAIN_MISMATCH",
+    "brasileirao->stocks": "DOMAIN_MISMATCH",
+    "crypto->brasileirao": "DOMAIN_MISMATCH",
+    "crypto->crypto": "ACCEPTED",
+    "crypto->stocks": "DOMAIN_MISMATCH",
+    "episode_ids": {
+     "brasileirao": "brasileirao:episode-2",
+     "crypto": "crypto:episode-2",
+     "stocks": "stocks:episode-2"
+    },
+    "hypothesis_ids": {
+     "brasileirao": "brasileirao:H9",
+     "crypto": "crypto:H9",
+     "stocks": "stocks:H9"
+    },
+    "stocks->brasileirao": "DOMAIN_MISMATCH",
+    "stocks->crypto": "DOMAIN_MISMATCH",
+    "stocks->stocks": "ACCEPTED",
+    "task_ids": {
+     "brasileirao": "brasileirao:TASK-a217b64758a0bb915918e79a09d87ac7",
+     "crypto": "crypto:TASK-45b3afb3f4c777ae5aa52020f98afc6a",
+     "stocks": "stocks:TASK-09f813296679d4ab76c537177cd98368"
+    },
+    "unqualified": "ID_NOT_QUALIFIED"
+   }
+  },
+  {
+   "check": "ID without domain rejected by the envelope",
+   "ok": true,
+   "got": "ID_NOT_QUALIFIED"
+  },
+  {
+   "check": "stocks: real proposal ALLOW in the shared CAIN",
+   "ok": true,
+   "got": [
+    {
+     "decision": "ALLOW",
+     "episode_id": "stocks:episode-1",
+     "reason_code": "ALLOWED",
+     "receipt_sha256": "8f92012b48655cb84ca6e558380f73156e266da01c6ada7cc23e91dc1df0f005",
+     "rule": "R14",
+     "status": "RECORDED",
+     "task": {
+      "payload_sha256": "1ab567f89e823fbf11eb893862eeadccf2b0892fb440ea7f822985b615ee8bcb",
+      "previous_task_id": null,
+      "task_id": "stocks:TASK-83a94a32bb1610947ce62ae01bb63631"
+     }
+    }
+   ]
+  },
+  {
+   "check": "one real result per domain",
+   "ok": true,
+   "stocks": {
+    "exit_code": 0,
+    "reason": null,
+    "status": "RESULT"
+   },
+   "crypto": {
+    "exit_code": 0,
+    "reason": null,
+    "status": "RESULT"
+   }
+  },
+  {
+   "check": "stocks:REQ-IS-ISO-001: payload byte-identical to `stocks-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "10e83607d60b4836e3a439318e4073c6f4c73185e8dd3ef489cefe81f44f700f",
+   "show_sha256": "10e83607d60b4836e3a439318e4073c6f4c73185e8dd3ef489cefe81f44f700f"
+  },
+  {
+   "check": "stocks:REQ-IS-ISO-001: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "1ab567f89e823fbf11eb893862eeadccf2b0892fb440ea7f822985b615ee8bcb"
+  },
+  {
+   "check": "stocks:REQ-IS-ISO-001: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "stocks:REQ-IS-ISO-001: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "stocks:REQ-IS-ISO-001: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "stocks:REQ-IS-ISO-001: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "stocks-predictor",
+    "module": "stocks_predictor.adapters.research_v2",
+    "version": "0.3.0rc3"
+   }
+  },
+  {
+   "check": "stocks:REQ-IS-ISO-001: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "real crypto result in the stocks spool: DOMAIN_MISMATCH, not ingested",
+   "ok": true,
+   "got": [
+    {
+     "action": "duplicate",
+     "file": "TASK-83a94a32bb1610947ce62ae01bb63631.a5659f57373ffa8d.json"
+    },
+    {
+     "action": "rejected",
+     "code": "DOMAIN_MISMATCH",
+     "file": "cross-crypto-real.json",
+     "reason": "result of domain crypto"
+    }
+   ]
+  },
+  {
+   "check": "real stocks result in the crypto spool: DOMAIN_MISMATCH, not ingested",
+   "ok": true,
+   "got": [
+    {
+     "action": "duplicate",
+     "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.fddec447b3c40ca7.json"
+    },
+    {
+     "action": "rejected",
+     "code": "DOMAIN_MISMATCH",
+     "file": "cross-stocks-real.json",
+     "reason": "result of domain stocks"
+    }
+   ]
+  },
+  {
+   "check": "crypto task in the stocks consumer spool: rejected, the stocks domain is never called",
+   "ok": true,
+   "got": [
+    {
+     "action": "rejected",
+     "code": "DOMAIN_MISMATCH",
+     "file": "TASK-02bf95b3940c9a226f8a9ae2a37a11a3.json",
+     "reason": "task of domain crypto"
+    },
+    {
+     "action": "skipped",
+     "episode_id": "stocks:episode-1",
+     "state": "TERMINAL_RESULT",
+     "status": "RESULT",
+     "task_id": "stocks:TASK-83a94a32bb1610947ce62ae01bb63631"
+    }
+   ]
+  },
+  {
+   "check": "same H9 in the two integrated orchestrations: closed where it belongs, foreign elsewhere, no task",
+   "ok": true,
+   "got": {
+    "crypto:H9 -> crypto": [
+     "BLOCK",
+     "HYPOTHESIS_CLOSED",
+     null
+    ],
+    "stocks:H9 -> crypto": [
+     "BLOCK",
+     "DOMAIN_MISMATCH",
+     null
+    ],
+    "stocks:H9 -> stocks": [
+     "BLOCK",
+     "HYPOTHESIS_CLOSED",
+     null
+    ],
+    "crypto:H9 -> stocks": [
+     "BLOCK",
+     "DOMAIN_MISMATCH",
+     null
+    ],
+    "brasileirao:H9 -> stocks": [
+     "BLOCK",
+     "DOMAIN_MISMATCH",
+     null
+    ]
+   }
+  },
+  {
+   "check": "memory separated by cube: stocks facts only in the stocks cube, crypto facts only in the crypto cube, no brasileirao cube",
+   "ok": true,
+   "got": {
+    "brasileirao": [],
+    "crypto": [
+     "crypto:QUAL-SHADOW-REAL-001"
+    ],
+    "stocks": [
+     "stocks:QUAL-PIT-MOM-REAL-001"
+    ],
+    "verify": "intact"
+   }
+  },
+  {
+   "check": "brasileirao result in the stocks spool: DOMAIN_MISMATCH",
+   "ok": true,
+   "got": [
+    {
+     "action": "duplicate",
+     "file": "TASK-83a94a32bb1610947ce62ae01bb63631.a5659f57373ffa8d.json"
+    },
+    {
+     "action": "rejected",
+     "code": "DOMAIN_MISMATCH",
+     "file": "brasileirao.json",
+     "reason": "result of domain brasileirao"
+    },
+    {
+     "action": "skipped",
+     "code": "DOMAIN_MISMATCH",
+     "file": "cross-crypto-real.json",
+     "state": "REJECTED"
+    }
+   ]
+  },
+  {
+   "check": "no orchestration for a domain outside the protocol: CONFIG_INVALID, nothing written",
+   "ok": true,
+   "got": [
+    {
+     "detail": "unknown domain 'forex'",
+     "error": "CONFIG_INVALID"
+    }
+   ]
+  },
+  {
+   "check": "stocks proposal in the brasileirao orchestration: BLOCK DOMAIN_MISMATCH, no task",
+   "ok": true,
+   "got": [
+    {
+     "decision": "BLOCK",
+     "episode_id": "brasileirao:episode-1",
+     "reason_code": "DOMAIN_MISMATCH",
+     "receipt_sha256": "1834dadf77239963ab6cbf90bd62f69d5cdf57e8535ff2c8a68624547a9fe73f",
+     "rule": "R01",
+     "status": "RECORDED",
+     "task": null
+    }
+   ]
+  }
+ ],
+ "passed": 28,
+ "failed": 0,
+ "memory_cubes": {
+  "brasileirao": [],
+  "crypto": [
+   "crypto:QUAL-SHADOW-REAL-001"
+  ],
+  "stocks": [
+   "stocks:QUAL-PIT-MOM-REAL-001"
+  ],
+  "verify": "intact"
+ }
+}

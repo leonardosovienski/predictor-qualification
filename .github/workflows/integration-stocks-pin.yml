@@ -1,0 +1,56 @@
+# Missão integration-stocks: pin dos dados públicos (B3 COTAHIST/eventos + CVM FCA/VLMO) ANTES do run de runtime
+# (D-16, D-21: URL + sha256 fixados pela missão antes da execução). Roda qualification/stocks/d16/build_real_panel.py pin
+# no Linux primário (GitHub Actions) e devolve SOURCES.json + log por branch integration-stocks/raw-<run>-pin, para o
+# agente commitar em qualification/integration-stocks/data/ antes de disparar o runtime. Dados não são versionados.
+name: integration-stocks pin
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "integration-stocks/pin-*"
+
+permissions:
+  contents: write
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.1"
+      - run: uv python install 3.13
+      - name: pin
+        shell: bash
+        run: |
+          set -uo pipefail
+          OUT="$RUNNER_TEMP/pin"; mkdir -p "$OUT" "$RUNNER_TEMP/cache"
+          { echo "run_at $(date -u +%FT%TZ) host=github_actions run=$GITHUB_RUN_ID python=$("$(uv python find 3.13)" --version)"
+            echo '$ build_real_panel.py pin'
+            time "$(uv python find 3.13)" qualification/stocks/d16/build_real_panel.py pin "$RUNNER_TEMP/cache" "$OUT/SOURCES.json"; echo "exit_pin=$?"
+            echo '$ build_real_panel.py build (conferência do pin)'
+            time "$(uv python find 3.13)" qualification/stocks/d16/build_real_panel.py build "$RUNNER_TEMP/cache" "$OUT/SOURCES.json" "$RUNNER_TEMP/panel"; echo "exit_build=$?"
+          } > "$OUT/pin.log" 2>&1
+          cat "$OUT/pin.log"
+      - name: Devolver por branch
+        if: always()
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          DEST: qualification/integration-stocks/RAW_LOGS/pin/run${{ github.run_id }}
+          BRANCH: integration-stocks/raw-${{ github.run_id }}-pin
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${GITHUB_REF_NAME}" "https://github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/evid"
+          cd "$RUNNER_TEMP/evid" && git checkout -q -b "$BRANCH" && mkdir -p "$DEST"
+          cp -R "$RUNNER_TEMP/pin/." "$DEST/"
+          ( cd "$DEST" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          git add -A "$DEST"
+          git -c user.name="integration-stocks-pin" -c user.email="actions@users.noreply.github.com" commit -q -m "integration-stocks: pin dos dados públicos (run ${{ github.run_id }})"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" push -q "https://github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "branch de evidência: $BRANCH"

@@ -370,6 +370,41 @@
      }
     ]
    }
+  },
+  {
+   "id": "IS-F010",
+   "severity": "P2",
+   "title": "soak do ciclo 5: piso llm_proposals >= 5 não atingido na primeira execução (4 de 6 tentativas úteis); a CAIN recusou fail-closed as respostas truncadas do modelo local",
+   "description": "Run run36649880023 (todas as fases, cain 0.4.13rc15 + transporte 0.1.0rc7): 41 conferências OK e 1 falha, só no piso llm_proposals (4 < 5). O laço do soak faz 6 tentativas (piso + 1) e em 2 delas o modelo qwen2.5:0.5b (ollama 0.35.0; nos ciclos anteriores, ollama 0.34.4 com 0 ou 1 truncamento) estourou num_predict=256 — 'Modelo atingiu o limite de geração; resposta incompleta.' — e o `cain research explain --propose-for-domain` saiu com código 2 (LLM_PROPOSAL_FAILED), sem proposta. Todas as conferências de tolerância zero (efeito duplicado, resultado perdido, provenance, contaminação) passaram: True. A fase soak foi refeita sozinha, com o mesmo perfil V1 congelado e as mesmas wheels, no run run36652132817: 43 OK, 0 falhas, llm_proposals 5 em 6 tentativas (1 truncamentos). Os dois logs brutos ficam em RAW_LOGS; nenhum foi editado.",
+   "classification": "C6 P2: sem efeito em resultado nem em operação — o caminho com LLM não é prova (C9) e a recusa da resposta incompleta é o comportamento fail-closed esperado; o que faltou foi cobertura do perfil (1 tentativa de folga para o piso) num modelo local não determinístico entre versões do ollama. Perfil congelado não muda neste ciclo (C15); para um perfil V2, fixar a versão do ollama e dar mais folga ao laço de tentativas.",
+   "evidence": [
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/runtime/run36649880023/soak/SUMMARY.json",
+     "sha256": "fd559405756c6e86ee75361eeb0a77bf5654e8ad1d811903dc8a5b8fb598006b"
+    },
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/runtime/run36649880023/soak/commands.log",
+     "sha256": "38ff1907dcdf867cbc83c5bb0f1c620b55a91e79a1167602e511176c154827da"
+    },
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/runtime/run36649880023/soak-llm-setup/ollama_setup.log",
+     "sha256": "ff5df0711005396df7e8f4ba3cd7132bd43cf9e2036b93902599d0d740b7f33b"
+    },
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/runtime/run36652132817/soak/SUMMARY.json",
+     "sha256": "19b3a05a54bc02191545d0b025569bcf8f6cd5ced1e19b166770d46787611c19"
+    },
+    {
+     "file": "qualification/integration-stocks/RAW_LOGS/runtime/run36652132817/soak/commands.log",
+     "sha256": "b0def413f5bbd6898bd93014e2ed2b8937572bae71741798ed77b0f1744d4293"
+    },
+    {
+     "file": "qualification/integration-stocks/scripts/soak.py",
+     "sha256": "61b122656d2a20cd1298f90ec7555fc71e2d9f27786ae107cf043e179c048aca"
+    }
+   ],
+   "status": "ACCEPTED_LIMITATION",
+   "owner_decision": "nenhuma pendente"
   }
  ],
  "c0": {

@@ -62,11 +62,18 @@ def main(argv: list[str]) -> int:
         return 0
     if argv[:2] == ["release", "download"]:
         tag = argv[2]; repo = opt(argv, "-R"); pattern = opt(argv, "-p"); dest = Path(opt(argv, "-D", "."))
-        rel = get(f"repos/{repo}/releases/tags/{tag}")
         dest.mkdir(parents=True, exist_ok=True)
-        for a in rel["assets"]:
-            if pattern is None or a["name"] == pattern:
-                subprocess.run(["curl", "-sS", "--fail", "-L", "-o", str(dest / a["name"]), a["browser_download_url"]], check=True)
+        try:
+            rel = get(f"repos/{repo}/releases/tags/{tag}")
+            names = [a["name"] for a in rel["assets"] if pattern is None or a["name"] == pattern]
+        except subprocess.CalledProcessError:
+            # API de releases fechada para leitura anônima (ex.: stocks-predictor): o asset público ainda baixa pela URL direta
+            if pattern is None:
+                raise
+            names = [pattern]
+        for name in names:
+            subprocess.run(["curl", "-sS", "--fail", "-L", "-o", str(dest / name),
+                            f"https://github.com/{repo}/releases/download/{tag}/{name}"], check=True)
         return 0
     print(f"gh_shim: forma não suportada: {' '.join(argv)}", file=sys.stderr)
     return 2

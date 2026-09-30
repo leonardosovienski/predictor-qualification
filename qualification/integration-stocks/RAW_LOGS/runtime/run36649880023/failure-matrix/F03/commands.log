@@ -1,0 +1,36 @@
+{"effective_proposal": "/home/runner/work/_temp/work/failures/F03/proposals/1.json", "template": "fixtures/proposals/e2e/01-allow.json", "sha256": "e0a69b74a1e432961232be728fd78ec06a3516c2445cff3e8537aad19b0c8444"}
+{"n": 1, "label": "propose 1", "at": "2026-09-30T00:36:35Z", "seconds": 0.139, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F03/proposals/1.json", "--as-of", "2026-09-30T00:36:35Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "stocks:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "aa230c5bc4f4ab0bf554b036c42fe73f96fc63ec2fd282cc48c746174e8407fc", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "00a09cbc699201e22d5b75bcb2da3b157f0cbd6d8ee998b8a65c45f6b36509c3", "previous_task_id": null, "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch", "at": "2026-09-30T00:36:36Z", "seconds": 0.119, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F03/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "stocks/tasks/TASK-64c0d527823c2f288742a0f45b9c6ee0.json", "spool": "WRITTEN", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer", "at": "2026-09-30T00:36:44Z", "seconds": 8.505, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "stocks", "--spool", "/home/runner/work/_temp/work/failures/F03/spool", "--ledger", "/home/runner/work/_temp/work/failures/F03/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F03/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "stocks:episode-1", "result_file": "stocks/results/TASK-64c0d527823c2f288742a0f45b9c6ee0.fb651c893324bd7a.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}
+--- stderr
+{"duration_ms": 8231, "event": "job_finished", "job_id": "stocks-research-66c40311e35df1d42875e08e", "level": "INFO", "run_id": "bea6b03d4e8644018d8e7ca2152f6f65", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-30T00:36:44.478025Z"}
+--- end
+{"n": 4, "label": "ingest (fault)", "at": "2026-09-30T00:36:44Z", "seconds": 0.114, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F03/spool"], "fault_env": {"CAIN_ORCHESTRATION_FAULT": "after_inbox_commit_before_memory"}, "exit": 86}
+--- stdout
+--- stderr
+--- end
+{"n": 5, "label": "inbox without fact before recovery", "at": "2026-09-30T00:36:44Z", "seconds": 0.119, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-09-30T00:36:35Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}, "proposal_id": "cain:FM-F03-1", "reason_code": "ALLOWED", "receipt_sha256": "aa230c5bc4f4ab0bf554b036c42fe73f96fc63ec2fd282cc48c746174e8407fc", "source": "operator", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": null, "payload_sha256": "65ac27ea55daf51b5f2c04c13c3a7665fba6f7cfeb8eecaf70d34ae6f19fb503", "status": "RESULT", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}], "memory": {"broken_at": null, "cube": "stocks", "facts": 0, "log": "shared across domains", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end
+{"n": 6, "label": "ingest after restart", "at": "2026-09-30T00:36:44Z", "seconds": 0.125, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F03/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "remembered", "fact_id": "fact:5421ffde304a4053896a1a34526ce320", "file": "TASK-64c0d527823c2f288742a0f45b9c6ee0.fb651c893324bd7a.json", "reused": false}
+--- stderr
+--- end
+{"n": 7, "label": "memory completed once", "at": "2026-09-30T00:36:45Z", "seconds": 0.121, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F03/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-09-30T00:36:35Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}, "proposal_id": "cain:FM-F03-1", "reason_code": "ALLOWED", "receipt_sha256": "aa230c5bc4f4ab0bf554b036c42fe73f96fc63ec2fd282cc48c746174e8407fc", "source": "operator", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:5421ffde304a4053896a1a34526ce320", "payload_sha256": "65ac27ea55daf51b5f2c04c13c3a7665fba6f7cfeb8eecaf70d34ae6f19fb503", "status": "RESULT", "task_id": "stocks:TASK-64c0d527823c2f288742a0f45b9c6ee0"}], "memory": {"broken_at": null, "cube": "stocks", "facts": 1, "log": "shared across domains", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end

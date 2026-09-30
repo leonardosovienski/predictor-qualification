@@ -365,3 +365,32 @@ Família (D-24) e disputa no código do stocks ficam como estão. **Nenhuma fase
 - `RAW_LOGS/c0/c0_preflight_875e762.log`: pré-voo 4.1–4.7 com 0 falhas.
 
 **O que não muda:** a attestation do ciclo 4 (`60b75594…`) não cita o script. As evidências dela (`RAW_LOGS/protected-c4/`) ficam como estão.
+
+## 2026-09-30 — ciclo 5 (D-27, C14): cain 0.4.13rc15 e transporte 0.1.0rc7, Linux primário e `windows-latest` verdes; **BLOCKED** no pin do conjunto protegido
+
+Ciclo 5 da `freeze-parameters` (C14, wheel nova do cain e do transporte; stocks 0.3.0rc3 `6f857b2` e cripto 1.2.0rc3 `ee3d3d1` sem mudança;
+perfil V1 do soak e vetores congelados sem mudança). Nenhuma release nova publicada por esta missão: a cain v0.4.13rc15 (`ae00017a`) e o
+transporte v0.1.0rc7 (`b0da4fd8`) já existiam (sessões do cain e do ecosystem-predictor). Resultado: **29/30 gates `PASS`**, P0 = P1 = 0;
+`PROTECTED_ARTIFACTS_UNCHANGED` em `NOT_RUN` (`BLOCKED`): o item compartilhado `qualification/crypto/runtime_target.json` mudou pela reabertura
+V1.2 do crypto (D-27), fora desta missão; aceitar o pin novo é decisão do dono (mesmo caminho da IS-F008/IC-F011). Estado C7.3 **BLOCKED**:
+só o parcial `ATTESTATION_PARTIAL_ciclo5-attestation-blocked.json` (`IN_PROGRESS`, schema OK); a attestation vigente continua a do ciclo 4
+(`QUALIFIED`; `supersedes_sha256` do parcial = `60b75594a229…`).
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json`, `hosted_ci_targets_rc15.json`, `data/SOURCES.json` (+ `SOURCES-c4.json`), `RAW_LOGS/pin/pin_5.log`, `RAW_LOGS/pin/run36648601522/` | Alvos na cain rc15 e no transporte rc7; pin novo dos dados públicos antes do run |
+| `RAW_LOGS/runtime/run36649880023/` e `-windows/` | Run de push em `integration-stocks/runtime-…-rc15` (`f696026`): cleanroom-final (suítes pelas wheels publicadas); C24.3 (d) 11/0; e2e 55/0; N+1 crypto-cycle 1/0; n-plus-1 63/0; n-plus-1-integrated 64/0; isolamento/contradição isolation-ids-contradiction 28/0; contradiction 9/0; isolation-crypto-side 0/0; F01–F15 50/0; Windows (`windows-latest`, D-1) E2E + restart 55/0. **Soak 41/1**: só o piso `llm_proposals >= 5` ficou em 4 (IS-F010) |
+| `RAW_LOGS/runtime/run36652132817/` | Só a fase `soak`, mesmo perfil V1 e mesmas wheels (branch `integration-stocks/runtime-soak-rc15b`, `db8305f`): **43/0**, `llm_proposals` 5, tolerância zero intacta. Os dois runs ficam em `RAW_LOGS`; nenhum log editado |
+| `FINDINGS.json`, `scripts/add_finding_is_f010.py` | **IS-F010 (P2, `ACCEPTED_LIMITATION`)**: o modelo local `qwen2.5:0.5b` (ollama 0.35.0; antes 0.34.4) estourou `num_predict=256` em 2 de 6 tentativas e a CAIN recusou fail-closed (`LLM_PROPOSAL_FAILED`); o laço tem 1 tentativa de folga. Caminho com LLM não é prova (C9); perfil congelado não muda neste ciclo (C15) |
+| `RAW_LOGS/core-identity-c5/`, `RAW_LOGS/final-wheels/final_wheels_check_run36649880023.json` | Identidade do Core 13/0; final_wheels 19/0 (assets das releases × instalado no run) |
+| `RAW_LOGS/hosted-ci/final-rc15/`, `RAW_LOGS/static-rc15/` | CI de push verde no SHA exato: cain `ae00017a`, ecosystem `b0da4fd8`. stocks-predictor `6f857b2` sem mudança: aceite do dono (IS-F004/IS-F005 b) e varredura da árvore do ciclo 4 (`final-rc13/`) |
+| `RAW_LOGS/contract-revalidation-rc15/` | C24.3 estático 12/0 (`static_checks.json`, com o arquivo de aceite do dono para (f)); a primeira rodada, sem esse arquivo, fica em `static_checks_sem_aceite.json` (11/1) |
+| `RAW_LOGS/protected-c5/` | Conjunto protegido (3387 itens) na branch e num snapshot do main `7cae574`: 3382 iguais; alterados 5: os 4 do IS-F008 encadeados salto a salto e o pin do crypto (D-27) → `NOT_RUN`/`BLOCKED` |
+| `RAW_LOGS/secrets-c5/` | 0 achados nos diffs até os finais do ciclo 5 e nos arquivos da missão; os logs novos dos runs conferidos por padrão de token/chave: nada |
+| `scripts/cycle5_gates.py`, `scripts/cycle5_publish.py`, `scripts/update_gates_c5.py`, `scripts/render_reports.py` (arg. 8: run do soak), `GATES.json` | Ledger no ciclo 5 (`freeze-parameters-c5` … `soak-c5`); `cycle4_evidence` preservado |
+| relatórios, `EVIDENCE_NUMBERS.json` | Regenerados de `RAW_LOGS` por script (C20); `SOAK_REPORT.md` cita o run do soak refeito |
+| `ATTESTATION_PARTIAL_ciclo5-attestation-blocked.json` | `IN_PROGRESS`, 29/30 `PASS`, P0=P1=P2 abertos = 0, validado contra o schema; `domain_attestations` do stocks com revalidação C24.3 `PASS` |
+
+**Falta (só o dono):** decidir o pin de `qualification/crypto/runtime_target.json` no conjunto protegido compartilhado das três integrações
+(aceitar a V1.2 do crypto como alvo, ou reabrir o conjunto num novo ciclo); com a decisão registrada em `DECISIONS.json`, o ciclo 5 fecha
+com `PROTECTED_ARTIFACTS_UNCHANGED` `PASS` e a attestation é reemitida (`supersedes_sha256` → ciclo 4).
