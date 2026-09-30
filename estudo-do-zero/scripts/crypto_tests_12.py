@@ -11,4 +11,3 @@ record('12',{
 118:'NestedZIPsyntheticmigration separa2codesources+2data, conservaCRLF/negativeoutcomes e excludesvenv, restore newrootonly; tampercode/data failpreflight e unsafepaths rejected. Sourcebytes not shipped dataZIP. Não restoredeploymentreal.',
 119:'Usa setup_stack syntheticexecutor; recoverySQLite/artifacts sourcehashantesdepoisigual, manifestsource_mutatedfalse, newrootrestorefilehash e resultidpreserved, occupiedrefused e artifacttamper detected. Não disasterrecoverydeprodução nem credenciais retornadas.'
 })
-

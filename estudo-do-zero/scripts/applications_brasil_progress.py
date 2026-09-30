@@ -74,4 +74,3 @@ for r in c['files']:
  if r['path'] in previous:r.update(semantic_review='revisao-semantica-integral-do-modulo',semantic_integral_certified=True,notes=previous[r['path']]['notes'])
 study.save(f'evidencias/{p}/coverage.json',c)
 study.log(p,d,'Progresso revisão integral applications',0,str(len(previous))+' módulos próprios',artifacts=p+'/applications-semantic-notes.json')
-
