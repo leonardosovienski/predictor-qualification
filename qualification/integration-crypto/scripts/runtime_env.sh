@@ -25,7 +25,7 @@ mkdir -p "$WORK" "$OUT"
 exec > >(tee -a "$OUT/runtime_env.log") 2>&1
 echo "runtime_env run_at=$(date -u +%FT%TZ) host=$(hostname) where=${GITHUB_ACTIONS:+github_actions} os=${OS:-linux} uname=$(uname -srm)"
 echo "python=$("$PY" --version 2>&1) uv=$(uv --version)"
-field() { "$PY" -c "import json,sys;d=json.load(open('$TARGETS'));print(d$1)"; }
+field() { "$PY" -c "import json,sys;d=json.load(open(sys.argv[1]));print(d$1)" "$TARGETS"; }  # caminho por argv (MSYS converte)
 fetch() {  # url sha256 dest
   curl -sSfL --retry 3 -o "$3" "$1"
   echo "$2  $3" | sha256sum -c -
