@@ -175,3 +175,23 @@ falso positivo IB-F003 no `real_env.policy.sha256` do operador daquele run (7 d�
 RAW_LOGS (privado, SUMMARY do E2E sha256 `978881495657…`); este run tem operador novo e saída limpa. O checker
 não foi alterado. A attestation da rc12 fica preservada em `QUALIFICATION_ATTESTATION_superseded_<sha12>.json`, e a nova
 aponta para ela por `supersedes_sha256`.
+
+## 2026-09-30 — C14 na cain v0.4.13rc15 + transporte v0.1.0rc7 (D-27): só conferências estáticas; runtime BLOCKED (PC 2)
+
+As correções de 2026-09-29 foram publicadas como cain v0.4.13rc15 (`ae00017a`, wheel `ff642b72…`) e transporte v0.1.0rc7 (`b0da4fd8`,
+wheel `d3dfbff4…`). A C14 manda refazer as fases desta missão que os exercitam. Esta sessão (Linux na nuvem, sem o PC 2) fez o que não
+depende do runtime privado; o resto fica para o dono no PC 2 (owner_linux + Windows, D-19/D-25).
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json` (`adopt_release.py record`) | cain rc15 `ae00017a` e transporte rc7 `b0da4fd8`; brasileirao rc4, protocolo rc2, cripto rc3 e stocks rc3 inalterados |
+| `RAW_LOGS/release-rc15/` | `adopt_release.py check` 7/7: wheel = asset; `brasileirao.json` da rc15 pina `FROZEN_PARAMETERS.json` em `0920d903` e é byte a byte o que `tools/build_domain_config.py` de `ae00017a` regenera (`f51ac735…`, igual ao da rc13); 3 sealed_scopes; QUAL-SOAK-001..024; `policy.py` difere da rc13 só por uma anotação de tipo (`release_rc15.log`) |
+| `RAW_LOGS/hosted-ci/final-rc15/`, `hosted_ci_final_targets_rc15.json` | push verde nos SHAs exatos (cain, ecosystem; brasileirao pelo caminho da IB-F005); API pública via `qualification/shared/scripts/gh_shim.py` |
+| `RAW_LOGS/contract-revalidation-rc15/` | C24.3 estático 9/10 ((f) pelo aceite IB-F005, como na rc13); (c)/(d) exigem runtime |
+| `RAW_LOGS/protected-rc15/` | 3397 itens; domínios intactos; itens compartilhados encadeados exceto `qualification/crypto/runtime_target.json`, mudado pela reabertura V1.2 do crypto (D-27) |
+| `RAW_LOGS/secrets-rc15/` | 0 achados |
+| `scripts/rc15_static.py`, `GATES.json`, `ATTESTATION_PARTIAL_rc15-static.json` | ledger do ciclo: HOSTED_CI, SECRETS_CLEAN, SHARED_DEPENDENCY_CLEAR e BLOCKERS_ZERO PASS; os demais NOT_RUN com `BLOCKED: …`; `supersedes_sha256` = attestation rc13 vigente, que **continua vigente** |
+
+**Estado terminal desta sessão: `BLOCKED`** (C7.3; só parcial). Falta o dono, no PC 2: `runtime_env.sh` + cenários (cleanroom-final, C24.3 c/d, e2e,
+N+1, isolamento, F01–F16, soak) e `windows_smoke.ps1` com os alvos rc15; depois `attest.py final` (supersede da rc13). Também pendente a decisão sobre
+o pin do crypto no conjunto protegido (mesma decisão pedida na integration-crypto).

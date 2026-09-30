@@ -1,0 +1,36 @@
+run_at 2026-09-30T00:07:19Z host=linux-cloud-session (só leitura; gh via qualification/shared/scripts/gh_shim.py)
+tag v0.4.13rc15 -> ae00017ab4a2ce602998e8fbdb8b20be95aad99d
+origin/main -> ae00017ab4a2ce602998e8fbdb8b20be95aad99d
+commits rc13..rc15: 23
+brasileirao.json rc13==rc15: yes
+crypto.json rc13==rc15: yes
+stocks.json rc13==rc15: yes
+policy.py rc13==rc15: no (rc13 aff2f5fc6198eb49 rc15 3cea49644e1b2c6a)
+$ git diff 960fb25..ae00017 -- src/cain/orchestration/policy.py
+diff --git a/src/cain/orchestration/policy.py b/src/cain/orchestration/policy.py
+index e4aa488..9ef5444 100644
+--- a/src/cain/orchestration/policy.py
++++ b/src/cain/orchestration/policy.py
+@@ -113,7 +113,7 @@ def _path_values(obj, path: str) -> list | None:
+     for part in path.split("."):
+         many = part.endswith("[]")
+         key = part[:-2] if many else part
+-        found = []
++        found: list = []
+         for node in nodes:
+             if not isinstance(node, dict) or key not in node:
+                 return None
+$ git diff --stat 960fb25..ae00017 -- src/cain/orchestration
+ src/cain/orchestration/cli.py     | 10 +++++---
+ src/cain/orchestration/config.py  |  4 ++--
+ src/cain/orchestration/llm.py     |  4 +++-
+ src/cain/orchestration/policy.py  |  2 +-
+ src/cain/orchestration/service.py | 49 ++++++++++++++++++++++++++++++++++-----
+ 5 files changed, 56 insertions(+), 13 deletions(-)
+transport pin in rc15 uv.lock: v0.1.0rc7 v0.1.0rc7  
+release v0.4.13rc15: prerelease=True cain_research-0.4.13rc15-py3-none-any.whl size=428511 sha256:ff642b7271a7fcad18723b12bc7ebe29f0c2550ecfe178777b5c1481882aacf9
+local_download ff642b7271a7fcad18723b12bc7ebe29f0c2550ecfe178777b5c1481882aacf9
+tool=cain@ae00017ab4a2ce602998e8fbdb8b20be95aad99d:tools/build_domain_config.py sha256=1e5706429a091adaf8a8acd9a575e956a6755347b6d9431e9faafcce263e3a48
+regenerated (contract-commit ebf32fac, o mesmo da rc13) f51ac735c92dd9077fd682f783ab758493b9cc1c900dc9506ac43c0649c4aa09 exit=0
+{"passed": 7, "failed": 0}
+exit=0
