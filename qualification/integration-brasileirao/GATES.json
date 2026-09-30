@@ -2,7 +2,7 @@
  "schema": "integration-brasileirao/GATES/1",
  "note": "Fonte única dos estados de gate para scripts/attest.py. Evidências por caminho relativo à raiz do repositório.",
  "common_baseline_id": "STACK_BASELINE_V2.0",
- "supersedes_sha256": "8aef11046708d53504da06c3796af1d5f14b024524c64290e7792527b517e29e",
+ "supersedes_sha256": "99dd94bdac947860293325e21053dbb6caa941dacb035facd2e57a523e8534d8",
  "phases_completed": [
   "freeze-parameters",
   "baseline",
@@ -38,16 +38,18 @@
   "windows-smoke-rc13",
   "hosted-ci-rc13",
   "soak-rc13",
-  "attestation-rc13"
+  "attestation-rc13",
+  "publish-candidates-rc15",
+  "hosted-ci-rc15"
  ],
  "final_commits": [
   {
    "repo": "cain",
-   "commit_sha": "960fb25614709bd95ce607c8dfb80892d901d883"
+   "commit_sha": "ae00017ab4a2ce602998e8fbdb8b20be95aad99d"
   },
   {
    "repo": "ecosystem-predictor",
-   "commit_sha": "bac1f7b7b3ae687e4c75ff3849ccb1f458dca097"
+   "commit_sha": "b0da4fd8d0c472b3ab7d33acf0946e5d10a02754"
   },
   {
    "repo": "brasileirao-predictor",
@@ -65,9 +67,9 @@
  "final_wheels": [
   {
    "name": "cain-research",
-   "version": "0.4.13rc13",
-   "url": "https://github.com/leonardosovienski/cain/releases/download/v0.4.13rc13/cain_research-0.4.13rc13-py3-none-any.whl",
-   "sha256": "a1d94fd52762d6f8a9587f88064f53996aa46fcddad6be893272cb8079676854"
+   "version": "0.4.13rc15",
+   "url": "https://github.com/leonardosovienski/cain/releases/download/v0.4.13rc15/cain_research-0.4.13rc15-py3-none-any.whl",
+   "sha256": "ff642b7271a7fcad18723b12bc7ebe29f0c2550ecfe178777b5c1481882aacf9"
   },
   {
    "name": "brasileirao-predictor",
@@ -77,9 +79,9 @@
   },
   {
    "name": "predictor-research-transport",
-   "version": "0.1.0rc6",
-   "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-transport-v0.1.0rc6/predictor_research_transport-0.1.0rc6-py3-none-any.whl",
-   "sha256": "6c7e83c4d93d4802b7cdfbc569b0828cde34ccd2241b5a274003ff21c9daec33"
+   "version": "0.1.0rc7",
+   "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-transport-v0.1.0rc7/predictor_research_transport-0.1.0rc7-py3-none-any.whl",
+   "sha256": "d3dfbff4b72d717ed4f655b1c97e85ca909140dcd9ebfb17e9a51a8b089c60c2"
   },
   {
    "name": "predictor-research-protocol",
@@ -106,23 +108,19 @@
    "python": "3.13",
    "role": "primary",
    "where": "owner_linux",
-   "result": "PASS",
+   "result": "NOT_RUN",
    "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/runtime_env.log",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/cleanroom_final.log"
+    "qualification/integration-brasileirao/QUALIFICATION_CHANGELOG.md"
    ]
   },
   {
    "os": "windows",
-   "python": "3.13.15",
+   "python": "3.13",
    "role": "secondary",
    "where": "local_windows",
-   "result": "PASS",
+   "result": "NOT_RUN",
    "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/logs/windows_smoke.log",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/logs/transfer_back.tsv"
+    "qualification/integration-brasileirao/QUALIFICATION_CHANGELOG.md"
    ]
   }
  ],
@@ -142,7 +140,7 @@
    "evidence": [
     "qualification/integration-brasileirao/FINDINGS.json"
    ],
-   "note": "P0=0 P1=0 P2=1 abertos (FINDINGS.json)"
+   "note": "nenhum P0/P1 aberto"
   },
   "STACK_BASELINE_FROZEN": {
    "status": "PASS",
@@ -154,142 +152,80 @@
    "note": "baseline coletado antes de qualquer mudança (2026-09-28), igual ao STACK_BASELINE_V2.0 em todos os repos e wheels, exceto cain e ecosystem-predictor, que estão nos final_commits da integration-stocks QUALIFIED; log bruto do coletor no diretório privado do runtime, sha256 em STACK_BASELINE.json (IB-F003)"
   },
   "LOCK_INTEGRITY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/core-identity-rc13/core_identity.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/runtime_env.log",
-    "qualification/integration-brasileirao/CORE_IDENTITY_REPORT.md"
-   ],
-   "note": "venvs só de uv.lock --require-hashes + wheels publicadas conferidas por sha256"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "CORE_IDENTITY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/core-identity-rc13/core_identity.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/cleanroom_final.log",
-    "qualification/integration-brasileirao/CORE_IDENTITY_REPORT.md"
-   ],
-   "note": "pyproject ↔ uv.sources ↔ uv.lock ↔ wheel ↔ instalado ↔ site-packages; Core 3.2.1 e Ops 4.2.2rc1 os mesmos da Etapa A"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "CLEANROOM_FINAL": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/conformance.junit.xml",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/transport.junit.xml",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/cain.junit.xml",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/cleanroom_final.log",
-    "qualification/integration-brasileirao/CLEANROOM_REPORT.md"
-   ],
-   "note": "owner_linux (PC 2), só as wheels publicadas (cain 0.4.13rc13 (960fb25)), módulos de site-packages"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "HOSTED_CI": {
    "status": "PASS",
    "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/hosted-ci/final-rc13/HOSTED_CI_SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/contract-revalidation/ib_f005_acceptance.json",
-    "qualification/integration-brasileirao/HOSTED_CI_REPORT.md"
+    "qualification/integration-brasileirao/RAW_LOGS/hosted-ci/final-rc15/HOSTED_CI_SUMMARY.json",
+    "qualification/integration-brasileirao/hosted_ci_final_targets_rc15.json"
    ],
-   "note": "push no SHA exato para cain e ecosystem-predictor; brasileirao-predictor pelo caminho aceito pelo dono (IB-F005)"
+   "note": "rc15: runs de push verdes nos SHAs exatos (cain ae00017, ecosystem b0da4fd, brasileirao 1fc2e88 pelo caminho aceito na IB-F005); coletado por API pública (gh_shim)"
   },
   "E2E": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/commands.log",
-    "qualification/integration-brasileirao/CAIN_ROUNDTRIP_REPORT.md"
-   ],
-   "note": "dado real privado, restart do consumidor e do CAIN no meio; cain 0.4.13rc13 (960fb25)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "IDEMPOTENCY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/FAILURE_MATRIX_RESULTS.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F09/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F10/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F12/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/SUMMARY.json"
-   ],
-   "note": "reentregas de task/resultado e repropostas sem segundo efeito (matriz e soak)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "RESTART_RECOVERY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/FAILURE_MATRIX_RESULTS.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F01/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F02/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F03/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F04/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F05/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F06/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F07/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F08/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F16/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/SUMMARY.json"
-   ],
-   "note": "mortes reais (exit 86) e paradas do CAIN, do consumidor e do domínio"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "FAILURE_INJECTION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/FAILURE_MATRIX_RESULTS.json",
-    "qualification/integration-brasileirao/FAILURE_MATRIX.json"
-   ],
-   "note": "F01–F16 da matriz congelada, todos verdes"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "PROVENANCE": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F08/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F16/SUMMARY.json"
-   ],
-   "note": "payload == releitura autoritativa, admission, journal, client_ref, adapter"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "AUTHORITY_SEPARATION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/core-identity-rc13/core_identity.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/runtime_env.log",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/cleanroom_final.log"
-   ],
-   "note": "venv do CAIN sem pacote de domínio; lados só pelo spool"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "FUTURE_CANARY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/SUMMARY.json"
-   ],
-   "note": "canário ausente da memória, do retrieval e das saídas públicas"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "PROTECTED_ARTIFACTS_UNCHANGED": {
-   "status": "PASS",
+   "status": "NOT_RUN",
    "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/protected-rc13/protected_check.json",
-    "qualification/integration-brasileirao/PROTECTED_ARTIFACT_REPORT.md"
+    "qualification/integration-brasileirao/RAW_LOGS/protected-rc15/protected_check.json",
+    "qualification/integration-brasileirao/PROTECTED_SET.json"
    ],
-   "note": "regra da cadeia preservada (decisão do dono, IB-F008)"
+   "note": "BLOCKED: domínios intactos (3397 itens); alterado fora desta missão: ['qualification/crypto/runtime_target.json'] (pin do alvo da Etapa A do crypto, reabertura V1.2/D-27) — aceitar é decisão do dono."
   },
   "SOAK": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/commands.log",
-    "qualification/integration-brasileirao/FINDINGS.json",
-    "qualification/integration-brasileirao/SOAK_REPORT.md"
-   ],
-   "note": "todos os pisos do perfil congelado atingidos, exceto o de LLM (0 de 5), dispensado pelo dono só para o Brasileirão (IB-F009); a conferência que falhou segue no SUMMARY.json"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "WINDOWS_SMOKE": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/logs/windows_smoke.log",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/logs/data_copy.tsv",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/logs/transfer_back.tsv",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13-windows/no_data_rows_check.json"
-   ],
-   "note": "PC 2, C:\\QUALIFICACAO\\runtime\\integration-brasileirao\\, E2E + restart; dado real devolvido ao WSL com bytes e sha256 conferidos, nenhum banco restante no Windows"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: Windows do PC 2 do dono (D-25), fora desta sessão."
   },
   "SHARED_DEPENDENCY_CLEAR": {
    "status": "PASS",
@@ -297,119 +233,76 @@
     "qualification/integration-brasileirao/RAW_LOGS/core-identity-rc13/core_identity.json",
     "qualification/integration-brasileirao/RAW_LOGS/hosted-ci/final-rc13/HOSTED_CI_SUMMARY.json"
    ],
-   "note": "nenhuma falha de dependência compartilhada; nenhum veredito"
+   "note": "rc15: Ops 4.2.2rc1 e Core inalterados; nenhuma falha de dependência compartilhada; nenhum veredito"
   },
   "EVIDENCE_CONSISTENCY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/EVIDENCE_NUMBERS.json",
-    "qualification/integration-brasileirao/CLEANROOM_REPORT.md",
-    "qualification/integration-brasileirao/SOAK_REPORT.md",
-    "qualification/integration-brasileirao/DECISION_POLICY_REPORT.md"
-   ],
-   "note": "todo número dos relatórios gerado de RAW_LOGS por evidence_numbers.py e render_reports.py"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "SECRETS_CLEAN": {
    "status": "PASS",
    "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/secrets-rc13/secrets_scan.json"
+    "qualification/integration-brasileirao/RAW_LOGS/secrets-rc15/secrets_scan.json"
    ],
-   "note": "diffs da missão e arquivos da missão sem segredos"
+   "note": "rc15: 0 achados nos diffs até ae00017 (cain), b0da4fd (ecosystem), 1fc2e88 (brasileirao) e nos arquivos da missão"
   },
   "CAPITAL_FORBIDDEN": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/SUMMARY.json"
-   ],
-   "note": "capital_permission false no envelope e no payload; nenhum true em estado ou spool"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "ENVELOPE_V2_CONFORMANCE": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/transport.junit.xml",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/SUMMARY.json",
-    "qualification/integration-brasileirao/ENVELOPE_V2_CONFORMANCE_REPORT.md"
-   ],
-   "note": "protocolo 2.0.0rc2 congelado; transporte 0.1.0rc5 com o Brasileirão"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "CAIN_INGESTION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/FAILURE_MATRIX_RESULTS.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F03/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F04/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F13/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/e2e/SUMMARY.json"
-   ],
-   "note": "ingestão idempotente, só referências na memória"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "CAIN_CONTAINMENT": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/isolation/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/core-identity-rc13/core_identity.json"
-   ],
-   "note": "nenhuma task de hipótese fechada/protegida, nenhum pedido de 2025+ despachado"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "DECISION_POLICY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/n-plus-1/frozen/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/n-plus-1/integrated/SUMMARY.json",
-    "qualification/integration-brasileirao/DECISION_POLICY_REPORT.md"
-   ],
-   "note": "holdout 2025 → REQUIRE_HUMAN SEALED_SCOPE (R16); R17 EQUIVALENT_REQUEST"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "N_PLUS_1_DETERMINISTIC": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/n-plus-1/frozen/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/n-plus-1/integrated/SUMMARY.json"
-   ],
-   "note": "receipts iguais byte a byte em 3 processos novos"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "NEGATIVE_RESULT_NEUTRALITY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/n-plus-1/frozen/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/soak/SUMMARY.json"
-   ],
-   "note": "resultado negativo nunca aumenta budget, prioridade ou escopo"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "CROSS_DOMAIN_ISOLATION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/isolation/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/failure-matrix/F13/SUMMARY.json"
-   ],
-   "note": "três orquestrações no mesmo estado, runtimes integrados reais"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "DOMAIN_QUALIFIED_IDS": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/isolation/SUMMARY.json"
-   ],
-   "note": "ID sem domínio recusado"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "CONTRADICTION_PRESERVATION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/isolation/contradiction/SUMMARY.json"
-   ],
-   "note": "SUPPORTED × REFUTED → REQUIRE_HUMAN; nada por maioria"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "BLOCKED: fase de runtime do Linux primário desta missão (PC 2 do dono, owner_linux, dado privado; D-19/D-25); não roda nesta sessão. Refazer no PC 2 com os alvos rc15."
   },
   "DOMAIN_CONTRACTS_PRESERVED": {
-   "status": "PASS",
+   "status": "NOT_RUN",
    "evidence": [
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/contract-revalidation/static.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/contract-revalidation/ib_f005_acceptance.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/contract-revalidation/SUMMARY.json",
-    "qualification/integration-brasileirao/RAW_LOGS/runtime/run-20260928T183300Z-br13/cleanroom-final/conformance.junit.xml",
-    "qualification/integration-brasileirao/CONTRACT_REVALIDATION_REPORT.md"
+    "qualification/integration-brasileirao/RAW_LOGS/contract-revalidation-rc15/static_checks.json"
    ],
-   "note": "(a)–(e) verdes; (f) pelo caminho aceito pelo dono (IB-F005)"
+   "note": "BLOCKED: parte estática 9/10 ((f) passa só pelo aceite IB-F005, como na rc13); (c) e (d) exigem o runtime do PC 2."
   }
  },
  "cycle": {
@@ -456,5 +349,12 @@
   "qualification/integration-brasileirao/RAW_LOGS/freeze/cycle4_check.json"
  ],
  "runtime_run": "run-20260928T183300Z-br13",
- "final_result": "QUALIFIED"
+ "final_result": "QUALIFIED",
+ "cycle_rc15": {
+  "why": "D-27 (2026-09-30): cain 0.4.13rc15 e transporte 0.1.0rc7; C14 manda refazer as fases que os exercitam",
+  "state_this_session": "BLOCKED",
+  "note": "sessão sem acesso ao PC 2 (owner_linux/Windows): só conferências estáticas; runtime, soak e Windows ficam para o dono no PC 2 (scripts desta missão: runtime_env.sh, run_scenario.sh, windows_stage.sh, windows_smoke.ps1) com os alvos de runtime_targets.json",
+  "previous_cycle": "rc13 (run-20260928T183300Z-br13, QUALIFIED, attestation atual)",
+  "release_check": "qualification/integration-brasileirao/RAW_LOGS/release-rc15/release_check.json"
+ }
 }
