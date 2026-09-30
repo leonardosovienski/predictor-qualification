@@ -34,7 +34,7 @@ def inspect(b):
        row['computed_sha256']=hashlib.sha256(raw).hexdigest()
        with zipfile.ZipFile(io.BytesIO(raw)) as z:
         metadata=next(x for x in z.namelist() if x.endswith('.dist-info/METADATA'))
-        md=email.message_from_bytes(z.read(metadata)); body=md.get_payload()
+        metadata_text=z.read(metadata).decode('utf-8').replace('\r\n','\n'); md=email.message_from_string(metadata_text); body=metadata_text.split('\n\n',1)[1] if '\n\n' in metadata_text else ''
         readme=p.get('readme','README.md'); readme=readme.get('file') if isinstance(readme,dict) else readme
         local=study.read(project,mf.parent/readme) if readme and (mf.parent/readme).is_file() else None
         row['metadata_version']=md.get('Version'); row['readme_equal_normalized_newline']=(body.replace('\r\n','\n').rstrip()==local.replace('\r\n','\n').rstrip()) if local else None
@@ -44,7 +44,9 @@ def inspect(b):
        row['download_error']=type(exc).__name__+': '+str(exc)[:160]
        study.log(project,row['url'],'Download wheel público; inspeção identidade',1,type(exc).__name__,status='NV',limits='Hash conteúdo/METADATA indisponíveis')
      found.append(row)
-  rows.append({'manifest':str(mf.relative_to(root)),'name':pname,'version':version,'python':p.get('requires-python'),'tag_refs':relevant,'release_assets':found,'publication_state':('não publicada (sem tag correspondente na consulta)' if not relevant else 'tag observada; asset '+('observado' if found else 'não encontrado nas 100 releases consultadas')) if releases is not None else 'NV'})
+  release_tags={x['tag'] for x in found}
+  relevant=list(dict.fromkeys(relevant+[x for x in refs if any(x.split()[-1].removesuffix('^{}')=='refs/tags/'+tag for tag in release_tags)]))
+  rows.append({'manifest':str(mf.relative_to(root)),'name':pname,'version':version,'python':p.get('requires-python'),'tag_refs':relevant,'release_assets':found,'publication_state':('não publicada (sem tag correspondente na consulta)' if not relevant and not found else 'tag/release observada; asset '+('observado' if found else 'não encontrado nas 100 releases consultadas')) if releases is not None else 'NV'})
  study.save('evidencias/'+project+'/release-identity.json',rows)
  for label,sha in [('head-local',b['head']),('main-remoto',b['origin_main_remote'])]:
   if sha: api(project,f'https://api.github.com/repos/leonardosovienski/{repo}/actions/runs?head_sha={sha}&per_page=100',project+'/ci-'+label+'.json')

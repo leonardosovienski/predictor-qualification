@@ -1,0 +1,202 @@
+[
+  {
+    "id": "fachadas",
+    "path": "src/predictor_core/__init__.py",
+    "symbol": "__getattr__",
+    "role": "Exportações lazy; versão obtida de importlib.metadata; import da raiz requer distribuição instalada.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "172f0b30af694e5f2e4e9a3ce9154eca753e9917e93c9b9a8efa9c45c30df490",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "contratos",
+    "path": "src/predictor_core/contracts/scientific.py",
+    "symbol": "DatasetFreeze",
+    "role": "Charter, SLA, recursos e congelamento com hash; validação estrutural e temporal de metadados.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "0cdf9e31d11105fa336405e38afd554f0fb6ecc635edd09dea4a83d204de8045",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "dados",
+    "path": "src/predictor_core/data/contracts.py",
+    "symbol": "PredictionPoint",
+    "role": "OHLCV, sinal com proveniência e previsão; providers abstratos; não busca dados por si.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "33476efcd3691ca876c1a5f5441925819808a68f5fc5fd25dfbb8088a453df73",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "roteadores",
+    "path": "src/predictor_core/data/router.py",
+    "symbol": "FallbackRouter",
+    "role": "Fallback sequencial aceita retorno sem exceção inclusive lista vazia; AggregationRouter consulta em paralelo e exige sobreviventes não vazios, aplica mediana/média por timestamp.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "b705467dc8f292026b6722d467786ad557e0b8b39e07523d1e565a554ef76d7b",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "circuito",
+    "path": "src/predictor_core/data/circuit_breaker.py",
+    "symbol": "CircuitBreaker",
+    "role": "Closed/open/half_open com contador e monotonic clock; libera uma probe e emite evento nas transições.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "3552515b5fa500982be462e5b959649e72659d29f7fcd062d0fe4aa58d1280d9",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "qualidade",
+    "path": "src/predictor_core/data/source_quality.py",
+    "symbol": "source_quality_scorecard",
+    "role": "Coverage/freshness/gaps/revisions/availability/divergence; causality/integrity violadas levam QUARANTINED. Freshness calcula ingested-published, não idade atual do dado.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "dba7d377308f361d231df0a2850ebda88e0aee41e7952def280e99a029ad4205",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "ajustes",
+    "path": "src/predictor_core/data/quality.py",
+    "symbol": "infer_split_factor",
+    "role": "Heurística de splits razão2/3/4/5/6/8/10 com tolerância; ajustes aplicam fator às datas anteriores e não recuperam corporate action oficial.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "942f1012e271e5ced989a4b77adc3ed820ce6e80a35d3763e989183edcaa5f9e",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "replay",
+    "path": "src/predictor_core/measurement/replay.py",
+    "symbol": "PastView",
+    "role": "Iteração com prefixo passado e ordem temporal opcional; available_at pré-validado; objetos de eventos continuam referências compartilhadas.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "f4a2854e8a68c9532c8256ab94d6e9d7c68fac6d50fcf5298980d6b4830accec",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "métricas",
+    "path": "src/predictor_core/measurement/metrics.py",
+    "symbol": "brier",
+    "role": "Brier/log-loss/RPS/calibração/Diebold-Mariano; as entradas continuam exigindo premissas estatísticas do chamador.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "b8fda9f55369aafbd0a8a35da2f2be255446a122ae7826a0fb6291d67be69b68",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "estatística",
+    "path": "src/predictor_core/measurement/stats.py",
+    "symbol": "sharpe",
+    "role": "Sharpe, Sortino, drawdown, PSR e correlações; não substituem avaliação econômica prospectiva.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "a3d4a956ca19e3dd62c94651c7d5015649380ca9b797bf57681bfcd337a6136c",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "bootstrap",
+    "path": "src/predictor_core/measurement/bootstrap.py",
+    "symbol": "bootstrap_ci",
+    "role": "Reamostragem iid, moving, stationary e cluster; estatísticas não finitas são filtradas e a cobertura é condicional às réplicas válidas.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "39b8105f530ba77424fc5270fd408c57796ea2d4fb7c298f5928adab869c6b4b",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "registro V1",
+    "path": "src/predictor_core/measurement/trials.py",
+    "symbol": "TrialRegistry",
+    "role": "Registro JSON com trava PID, atualização atômica, histórico superseded e power attestation; bypass explícito power_attestation=False.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "3b66f38e6c5808e183e5d06e0fc3970fac9cd9f93d0c1eb4280ae697b0fcef8c",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "registro V2",
+    "path": "src/predictor_core/contracts/trial_v2.py",
+    "symbol": "TrialRegistryV2",
+    "role": "Registro prospectivo com seleção e proveniência exigidas; read/append/replace não tem a trava do V1.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "05f17f4f6d4169769b74804c3cca3be717099f4fa4d8638a1404f97183bc8e0a",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "coleção",
+    "path": "src/predictor_core/data/collection.py",
+    "symbol": "CollectionArchive",
+    "role": "Histórico JSONL com ciclo de coleta; proíbe converter coleta automaticamente em trial científico.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "24b30e2e77c9d7053927ce0765f03c048edb488d27ca2365d513de150e4f785b",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "kernel",
+    "path": "src/predictor_core/kernel/jsonl_store.py",
+    "symbol": "JsonlStore",
+    "role": "SQLite/WAL/migrações e JSONL/fsync; funções só produzem efeitos quando chamadas.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "d3b0281c20eb40d32e6444c9810509bc2d59d307b4dad6d47c85a67242cc01dd",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "SQLite",
+    "path": "src/predictor_core/kernel/infra.py",
+    "symbol": "connect",
+    "role": "Abre SQLite com WAL,busy_timeout,foreign_keys; run_migrations rastreia nomes aplicados em _migrations.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "f619bc31df62c5dccfca9fcac937a742bd67d474cd618d05b07305341361b21a",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "meta",
+    "path": "src/predictor_core/kernel/meta.py",
+    "symbol": "validate",
+    "role": "Fingerprints de arquivo/parametrização e gate StaleModelError; não garante adequação científica do modelo.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "a5d31fd26a2e9d4a334fef232da456d645730ab71dc0c78240395ba5d6dd2c0f",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "prequential",
+    "path": "src/predictor_core/testing/prequential.py",
+    "symbol": "PrequentialEvaluator",
+    "role": "Orquestra callbacks train/predict em progressão temporal; algoritmo/modelo é injetado pelo consumidor.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "e635905ab8cb751fd5f57f9e9de0498b440e55eb15b4ba908ff21aee790095ad",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "rede",
+    "path": "src/predictor_core/kernel/net.py",
+    "symbol": "download_file",
+    "role": "Downloads temporários/retry/replace; HTTPX e curl-cffi opcionais; endpoints pertencem ao chamador.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "cbc64c72d9c8a6bbdb8c767500903dc64d06bff74512c7f2c5a25c2a73efe079",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "harness",
+    "path": "src/predictor_core/testing/harness.py",
+    "symbol": "attest_pipeline_power",
+    "role": "Callbacks sintéticos de edge e noise produzem atestado temporal; não confirma lucro ou capital.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "cb4ab95b439abaffba9698392fe45a7625fc67a6bb5a2a1783d9a61c74cf6d5a",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  }
+]

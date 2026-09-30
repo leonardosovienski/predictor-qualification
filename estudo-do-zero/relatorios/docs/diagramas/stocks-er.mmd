@@ -1,0 +1,25 @@
+erDiagram
+ source_versions ||--o{ prices_raw : source_file
+ source_versions {
+  string source_id PK
+  string publisher
+  string dataset
+  string version
+  string policy
+  string sha256
+  string observed_at
+ }
+ prices_raw {
+  string date
+  string ticker
+  string source_file FK
+  int quote_factor
+  float close
+ }
+ rj_universe ||--o{ rj_episodes : ticker
+ rj_episodes ||--o{ rj_family_scores : episode_id
+ external_raw_objects ||--o{ external_source_versions : sha256
+ external_source_versions ||--o{ external_observations : source_version_id
+ external_source_versions ||--o{ external_rejections : source_version_id
+ external_source_versions ||--o{ external_fund_holdings_documents : source_version_id
+ external_fund_holdings_documents ||--o{ external_fund_holdings_observations : holdings_document_id

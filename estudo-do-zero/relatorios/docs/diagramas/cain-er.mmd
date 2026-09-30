@@ -1,0 +1,27 @@
+erDiagram
+ projects ||--o{ project_documents : owns
+ ui_sessions ||--o{ ui_turns : contains
+ ui_turns ||--o{ response_feedback : receives
+ identities ||--o{ identity_signals : observes
+ identities ||--o{ scoped_preferences : scopes
+ publications ||--o{ membership : includes
+ records ||--o{ membership : referenced
+ publications {
+  string scope PK
+  string id PK
+  blob raw
+ }
+ records {
+  string scope PK
+  string id PK
+  string source_id
+  string revision
+  string signature
+ }
+ membership {
+  string scope PK
+  string publication PK
+  string record PK
+ }
+ agent_jobs ||--o{ agent_steps : application_scope_job
+ agent_jobs ||--o{ agent_attempts : application_scope_job

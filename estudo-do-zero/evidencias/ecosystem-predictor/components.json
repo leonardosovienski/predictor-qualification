@@ -1,0 +1,122 @@
+[
+  {
+    "id": "registro",
+    "path": "src/ecosystem/registry/__init__.py",
+    "symbol": "Registry",
+    "role": "Descobre entry points predictor.plugins; duplicatas antes de load; diagnóstico separado por domínio e fail-closed.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "1e70a36b9e9e29c2a7be0a06cedf6e46fa054f163546d66fa291d4a438b2bb3e",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "contrato plugin",
+    "path": "src/ecosystem/contracts/v1.py",
+    "symbol": "PluginV1",
+    "role": "Protocol health/capabilities e tipos request/response; não implementa handler de inferência.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "3d5c9a063d1e30456af8f9440160e5861835e4c7b127c8382a8962dfb2486f57",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "diagnóstico",
+    "path": "src/ecosystem/contracts/diagnostics.py",
+    "symbol": "NativeCapabilities",
+    "role": "Estados nativos separados; capital_authorized_by_diagnostic=False; não converte nativo em enum legado.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "1ab8f38f669c02839d4c8791c66bc4782e45f29d7b2e439565ea589c30bcaeee",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "snapshot",
+    "path": "packages/research-snapshot/src/research_snapshot/publication.py",
+    "symbol": "publish",
+    "role": "JSON canon/seal, identidade origin4partes,evidence hash/offset; hardlink sem sobrescrever e idempotência por bytes.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "751041b91735fce82b91bdedd9a1ed6bee19b1bc58d7e27fcdf5079f4054f2e6",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "bundle",
+    "path": "packages/research-bundle/src/research_bundle/__init__.py",
+    "symbol": "validate",
+    "role": "Manifest com entidades,evidências,relações,artefatos; limites,hashes e referência local consistente.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "eadc9bffface70cfe79ba1cd2a0b50a18358f5d1d6dd3d9224bb732df85a2d36",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "filesystem",
+    "path": "packages/research-bundle/src/research_bundle/files.py",
+    "symbol": "safe_open",
+    "role": "Leitura descriptor/handle sem symlinks/reparse; tamanho/hash/stat; escrita/durabilidade conforme SO.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "e428434ccfcdaa62011b9693cdcd3a50dab9ce4cfa03328de58264a495363585",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "exportador",
+    "path": "packages/research-bundle/src/research_bundle/export.py",
+    "symbol": "Builder",
+    "role": "Admissão explícita de fontes,tamanhoUTF8/secret heuristics,trackedcommit,exporterfingerprint e publication fora da raiz produtora.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "834c7894dd995330cc8fb46ca594b72aeae449d613ba2a43a40151bcafdce0c5",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "protocolo",
+    "path": "packages/research-protocol/src/research_protocol/__init__.py",
+    "symbol": "verify_task",
+    "role": "Task/Result/EnvelopeV1 NFC sem floats,HMAC; cálculo de net/cutoff/estados restritos e resolver externo de chave.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "574d4cd0f62d3d22d00877ad68b4cee61364730ae1238a3c53e921dabc3b01ad",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "chaves",
+    "path": "packages/research-protocol/src/research_protocol/key_store.py",
+    "symbol": "HmacKeyStore",
+    "role": "SQLite metadata/vault separado,ACL,rotação,VERIFY_ONLY grace,revoke,backup/restore; não aberto nos originais.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "22f9c3a8ad9ed9ed5bffeff5b3477b95b90065ab92c46d23ddafdf3bdfb3d093",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "inventário/drift",
+    "path": "scripts/check_ecosystem_drift.py",
+    "symbol": "check_offline",
+    "role": "Confronta registros,hashes declarados e validade temporal de attestations; não prova ciência.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "cd1862ed39efd805c97df60837ad0c5a7b0ee45ddbd3a5246ee81477f1941e4f",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "integração real",
+    "path": "scripts/check_real_plugin_integration.py",
+    "symbol": "main",
+    "role": "Valida fontes/wheel precisas e plugins instalados e produz receipt de ambiente; não executado.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "3e63ad883adb97147cad4c8c711fce27c1bf9a567654ea5fae478ad753623105",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "saúde externa",
+    "path": "ecosystem_health.ps1",
+    "symbol": "wrapper",
+    "role": "Chama script fora da raiz e append log C:/CAIN; comentário read-only não garante leitura pura.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "6e789a4808118c18f990ee591a75da213de9b634546335584765b1b8c3a9ddd3",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  }
+]

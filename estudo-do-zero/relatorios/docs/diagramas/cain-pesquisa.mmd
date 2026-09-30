@@ -1,0 +1,25 @@
+sequenceDiagram
+ participant O as Operador
+ participant S as ResearchService
+ participant P as Politica receptor
+ participant D as SQLite
+ participant A as Analysis ou Historian
+ participant L as Ollama local
+ O->>S: ingest snapshot relativo e scope
+ S->>P: conferir root grants e restrictions
+ S->>S: validar contrato e namespace revision hash
+ S->>D: raw projeções membership receipt em transacao
+ O->>S: query ou explain
+ S->>P: reautorizar leitura e geracao
+ S->>D: verificar arquivo e projeção
+ S->>D: registrar query
+ S-->>A: recorte de evidencia autorizada
+ A->>A: cards, offsets, contexto e limites
+ alt Transcricao literal reconhecida
+ A-->>O: campos da fonte sem modelo
+ else Geracao permitida
+ A->>L: prompt schema e trechos
+ L-->>A: proposta JSON
+ A->>A: verificar IDs e quotes
+ A-->>O: proposta not_certified ou generation_failed
+ end

@@ -1,0 +1,74 @@
+[
+  {
+    "project": "brasileirao-predictor",
+    "component": "Serving",
+    "evidence": "brasileirao_predictor/predict.py:build/show/main",
+    "behavior": "SQLite read-only→cache/Elo/params→grade→display/prediction_log",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "Matemática",
+    "evidence": "brasileirao_predictor/model.py:fit_goal_model/predict_match; xg_model.py:fit/blend",
+    "behavior": "NB+DC normalizado e ensemble grade; múltiplos mercados",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "Persistência",
+    "evidence": "brasileirao_predictor/db.py:connect/_migrate",
+    "behavior": "SQLite partidas/estatísticas/odds/cache/kickoff versions",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "Kernel/worker",
+    "evidence": "brasileirao_predictor/kernel_daemon.py:_handle_invoke; dotnet/LineupWorker/Worker.cs",
+    "behavior": "Lineup/VORP/CAS→Redis invocation→grade/fair odds correlacionadas",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "Prontidão",
+    "evidence": "brasileirao_predictor/prediction_protocol.py:assess_prediction_readiness",
+    "behavior": "Declarações temporais caller-only, capital proibido, provenance não autenticada",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "Prospectivo sucessor local",
+    "evidence": "brasileirao_scripts/prospective_protocol_v2.py; prospective_metrics.py",
+    "behavior": "Não rastreado/spec não ativada/escrow+900+bootstrap/Holm",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "Contabilidade manual",
+    "evidence": "brasileirao_predictor/bet_log.py:bank_state; settle.py:record_result",
+    "behavior": "Livros manual/gross/não reconciliado/exclui evidência econômica",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "CAIN export",
+    "evidence": "tools/export_cain_status.py:export; export_cain_bundle.py:export",
+    "behavior": "Relatos selecionados explícitos sem fabricar prediction/settlement",
+    "status": "OD",
+    "runtime": "NV"
+  },
+  {
+    "project": "brasileirao-predictor",
+    "component": "Plugin",
+    "evidence": "brasileirao_predictor/ecosystem_plugin.py:BrasileiraoPredictorPlugin",
+    "behavior": "Metadados declarativos saúde WAITING",
+    "status": "OD",
+    "runtime": "NV"
+  }
+]

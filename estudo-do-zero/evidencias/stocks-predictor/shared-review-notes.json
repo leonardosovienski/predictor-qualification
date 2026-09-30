@@ -1,0 +1,172 @@
+[
+  {
+    "path": "stocks_predictor/discovery_h17.py",
+    "symbols": "score_outcome/build_cross_sections/summarize/run",
+    "aggregate": "executable-09.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "0254b3542f014649e4512daf40cbf3c63cbe8ee12640808775df397f5f97d4cc",
+    "semantic_note": "H17 price diagnostic: hashes protocolo fixo e arquivos antes/depois; SQLite mode=ro normaliza quote_factor; universo snapshots2018-2025 até60 emissores dedupeCNPJ/PITfiles. Ordena accruals asc seleciona quintil mínimo20; nextsessionopen e nextmonthopen. Rejeita ausênciaendpoint/identitybreak/fatores conflitantes/unmodelled/overnight>30%. Available-caseIC versus complete-case spread; gates por metades fixas. Outputexclusive JSON com investable_alphaFalse e executableprofitNone.",
+    "limitation": "Retorno é preço sem todos proventos/custos; classificação promising é screen não capital. Constância hash não autentica fonte. Calendário insuficiente pode gerar IndexError; não foi executado."
+  },
+  {
+    "path": "stocks_predictor/discovery_reorganizations.py",
+    "symbols": "validate_terms/score/run",
+    "aggregate": "executable-10.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "359b3301baf44bc61f89fb3148bf689dec0036da232ae8a02a14be95c10fd304",
+    "semantic_note": "Recalcula coortes congeladas com ledger de conversão/entitlements. Validaterms únicos ticker/ISIN/exdate,originsSHAURLs,ratiospositivos e datas. followrecursivo depth20; segmentos validamidentidade,fatores,jumps e successors; rights subscriptions zero semexercise. Stockmarks e cashreceivables teóricos somamterminal,creditdate marcadoverificadoantesexit. Dataset/primarysources/protocolhash comparados before/after;outputexclusive.",
+    "limitation": "Inclui recebíveis NÃO spendable e frações teóricas na marca, não dinheiroexecutável. Não muda seleção/fatores dofirst. Physicalcredit verified é teste da data declarada, não brokercredit verificado nesta investigação."
+  },
+  {
+    "path": "stocks_predictor/discovery_value.py",
+    "symbols": "value_feature/observe/period_statistics/summarize/run",
+    "aggregate": "executable-11.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "ac9096efeff26f2d5672e0d08437f07aec779135da22017146baeb98b74e9347",
+    "semantic_note": "H18earnings/capitalproxy,H19equity/capitalproxy. ExactdocumentkeyCNPJ/ref/version,receipt+1dia,PITsecuritydocuments,age<=550d,volume>=1MBRL,ONsingleclassACNOR,cotaçãofiscalpróxima<=10d. Ajusta sharesproxy por splitfactor desdefiscal e usa rawcloseasof; earningsannual330-400d. Quartetofamily×horizon1/3m;min20/topquintil;priceoutcomes. Cenáriomissing selected=-100%,other=+100%;haircuts36/72bp/horizonte;stablehalves/material>=.0042/coverage para priorizarrepair.",
+    "limitation": "Decisão é alocação de pesquisa. investablealphaFalse/executableprofitNone; shares reportadas antigas e ausênciaeventosfull/totreturn mantêm proxy limitado."
+  },
+  {
+    "path": "stocks_predictor/discovery_value_repair.py",
+    "symbols": "score/run",
+    "aggregate": "executable-11.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "6c44d04b6f8cfede0f8e5ba00401528e83139ed9d0e7350b4ba98384df316453",
+    "semantic_note": "Remeasure preço conservando features e seleção congelada. Overnight>30 só aceito se reviewedmove casa exatamente ticker/date/ISIN/previousclose/nextopen/factor; notes explicitam override. Protocolhash e inputhash vinculados before/after. Changedreturns auditados; JSONexclusive.",
+    "limitation": "Reviewedmoves/hash não transformam histórico exposto em holdout. Não há custos/totalreturn; aceite fonte declarada não comprova fonteexterna atual."
+  },
+  {
+    "path": "stocks_predictor/document_panel.py",
+    "symbols": "fundamentals_asof/capital_from_viewer",
+    "aggregate": "executable-11.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "a8590fe6d3f9efb6586e502ef88cf6311cbee09ce892f305c05deaeccf59dc03",
+    "semantic_note": "Filtra financialavailable/ref<=asof e seleciona latestref/version; filings conflitantes fora campossourcehash rejeitados. Security metadataoptional newestdoc e tickerissuer ambiguity rejeitada. HTML capital parsescellsIDsCVM,escala unidade/mil única,basisdate presente,classsums/treasurybounds;hashraw;outstanding emitido.",
+    "limitation": "capital_from_viewer marca eligible_for_valuation=False/class-price equivalence/interveningevents restantes. Parser é layoutespecífico, sem webreal executado."
+  },
+  {
+    "path": "stocks_predictor/big_winner_v2.py",
+    "symbols": "verify_selection_freeze/momentum_12_1/generate_decision",
+    "aggregate": "executable-02.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "190b90e5a0939b5460b98db4c4d4dea357b282014d211e4f27620683d18547aa",
+    "semantic_note": "Modelo frozenidentity BIG_WINNER_V2_MOMENTUM_12_1_BASELINE; freezehashcanonical removeartifacthash. Momentum usa apenas datas<asof,253history,value[-253]→[-22];rankingfinite tiebreakticker/topceil20%;fallbacktickeronlyidentity. Shareadjustments<=asof aplicamem datasanteriores.",
+    "limitation": "UNVALIDATED_PROSPECTIVE_CANDIDATE explícito. generate_decision expande **metadata apóscamposfixos, caller pode sobreporidentidade/status/cutoff; canonicalhash por si não verifica esses significados. Sérieschronological/corporateactionsadequados dependem caller."
+  },
+  {
+    "path": "stocks_predictor/buffered_rebalance.py",
+    "symbols": "freeze_rebalance/execute_rebalance",
+    "aggregate": "executable-02.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "66ff3940575b47a778651a53e90f2f46f560895c2ab512b8efc2c278bfe57a39",
+    "semantic_note": "FrozenRebalance holdbookdigest projectedentry deepcopied,signalcrossidentity/date/lot/cashceiling. Integer_targets capital;buffer2.5% suprimedifference de holdingscontinuing. Exec requiresreviewedorderunitsTrue,digestentrymatch,execidentity/datelot,stageddeepcopy;rebalance e clearingcheck beforecommitbookdict.",
+    "limitation": "Result SIMULATED_REBALANCE_NOT_PROFIT_EVIDENCE,incrementalsaletaxesFalse/profitNone. Pendingreceivables incluídos sizingceiling; atual funding é RetailBook. Deepcopy+commit não é transação concorrente crossprocess."
+  },
+  {
+    "path": "stocks_predictor/cash_events.py",
+    "symbols": "import_verified_events/require_coverage/total_return_series",
+    "aggregate": "executable-02.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "a20d9680d84bf5fffe380ec812ed155d107b6452157f85791c081a69801e8de7",
+    "semantic_note": "CSVcash exige ticker/eventid/ex/pay/value/source;pay>=ex,finitepositive,coveredintervals,uniqueduplicate. Savepoint juntaevent ecoverage rows ourollback. Coverage uniãointervals contínuos; totalreturn exigefullcoverage e calcula units/splits+dividends por exdate nos intervalos e reinveste valor econômico.",
+    "limitation": "Coverage fornecida pelo caller não prova fontes completas. Totalreturn econômica por exdate não simula availability de cash na paymentdate; não generalizar para carteira financável."
+  },
+  {
+    "path": "stocks_predictor/economics.py",
+    "symbols": "screen/classify",
+    "aggregate": "executable-12.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "fa1778ac2e9274f00b5e882a0b30f08e4412d97236550735164665ae103d0098",
+    "semantic_note": "Screen compounding CAGR,populationstdvol/sharpe/drawdown comruin. Configdeclaredfinite(notbool)capital/minannualprofit/maxDD; falta retornaNAO_DECLARADO. Classifica equivalente histórico capital*CAGR vsmin/DD; esperadofutureprofitNone,forecastNOT_ESTIMATED,capacityNone.",
+    "limitation": "BACKTEST_IN_SAMPLE_NET_OF_MODELED_COSTS; passage mínima explicitamente não deploy/capital. Valores declarados não têm boundspositivos todos; estatísticas nãovalidaminputsfiniteindividual neste módulo."
+  },
+  {
+    "path": "stocks_predictor/entry_feasibility.py",
+    "symbols": "entry_case/load_unit_reviews",
+    "aggregate": "executable-12.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "0a4aafcdea65541eca50ada7cdb30b1d1c592f8c9a7d86034530296053482651",
+    "semantic_note": "Entrysignal→integersizing→emptyRetailBook→trade→settlement. Açõesentreasof/entry exigemreviewspecialbonusdifferentclass semremover original/unitsunchanged,known<=entry,hashsourceconfinement. Boundary semreview bloqueia,exceptions retornam BLOCKED. Outputstandard/fractional/unfilled/fundedcash.",
+    "limitation": "SIMULATED_ENTRY_ONLY/profitNone/actualcontinuousturnoverNone; novaentrada não recebebonusright. Históriacontínua não qualificada."
+  },
+  {
+    "path": "stocks_predictor/etf_hold.py",
+    "symbols": "validate_quotes/simulate/selic_reference",
+    "aggregate": "executable-12.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "c254225e605593efddb9dddeaf1e5a0287f57a19df742a3a414f0b7a4095e9b6",
+    "semantic_note": "BOVA11/BRBOVACTF003market010R$factor1,OHLC+volpositive,calendarcoverageexact. Decimalcentcost/tax; buy integerlot,opens ouworstopenclose,costtax15%default,unsettledsalereceivable,settleD+3before2019-05-27/D+2after. EquityyearPnl reconcile,equitymarkedDD/underwater/liquidityparticipation;grossSelicdaily series11 benchmarkrequirescoverage.",
+    "limitation": "Singlehold conditionalprofit beforeunknownexpenses; fullynetexecutablenone/futureprofitnone/eventinventoryFalse/capacitynone. Model nãoauditaETFactions; nomes de regras tributárias são modelo implementado, não opinião jurídica atual."
+  },
+  {
+    "path": "stocks_predictor/h20_research.py",
+    "symbols": "verify_sources/signal_diagnostics/entry_diagnostics/run",
+    "aggregate": "executable-15.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "23e3a7763a3121fcbe72f80fd9c2d48a8f8400513193197de2b7aa02e843ed28",
+    "semantic_note": "Protocol/inputrawfixedhash,accountarchivesconfinement+binding,executionmanifest. QuarterlyH20 ARMS selection rank,previousINTENDEDmembershipbuffer comparisons; freshentryemptybookcases capital/costgrid throughentry_case;optionalentryreviewaddendum frozenhash. Exposure sourcegate explicit.",
+    "limitation": "COMPLETE_H20_SIGNAL_AND_FEASIBILITY_DIAGNOSTIC_NOT_RETURN_EVIDENCE; nofreshholdout,plannednames notrealturnover,casesprofitNone,newhistoricalreturneval0. Read source/input current via inspectnotlongrun."
+  },
+  {
+    "path": "stocks_predictor/ingest_cotahist.py",
+    "symbols": "download_cotahist/_pick_cotahist_txt/parse_cotahist",
+    "aggregate": "executable-15.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "40316fceaf8a8b43725203f4497b2cf817d09543d44ab77ddbf85ca6d0a0ab33",
+    "semantic_note": "Corekernelnetdownload B3annualCOTAHIST ZIP. TXTselectionpreferssingleCOTAHIST named orsingleTXT elseerrorambiguity. Streaminglatin1decode zippedfile→cotahist.load_prices→dbconnection closed.",
+    "limitation": "Networkdownload eDBingestmutáveis; nãoexecutados. Imports barecotahist/db exigem configuração de módulo/entrada adequada; arquivo ZIP nãoextraído globalmente por código."
+  },
+  {
+    "path": "stocks_predictor/ingest_rj_universe.py",
+    "symbols": "parse_b3_rj_list_html/save_snapshot/propose_universe_rows",
+    "aggregate": "executable-17.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "209da4863c556c9dec2ad19180ca6e4fdf1ff3d2982527bef41d5d5d2009c1a5",
+    "semantic_note": "urllib currentB3HTMLURLUserAgenttimeout60;HTMLtablecelltickerregexdedupe. Snapshot16hexhashrowsINSERTORIGNORE commit. Diffobservedsnapshot dates entries/exits;propose firstseen as candidate pendingreview,semalteraruniverso. Emptyparse failsbeforewrite.",
+    "limitation": "Livecurrent list não fornece RJrequesthistoricaldate; firstseen écandidate. DefaultURL genericempresaslistadas; parser extrai tickerdequalquertable, nãoevidencia classificaçãoRJ real. save_snapshot retorna leninput mesmoINSERTIGNORE, não rowcountinserido."
+  },
+  {
+    "path": "stocks_predictor/monthly_etf.py",
+    "symbols": "monthly_signals/MonthlyTax/simulate",
+    "aggregate": "executable-17.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "56b4d8c1246c5107f5f962b3c8df5b24fa4f279611a4ba80f7526f1b815f2c2a",
+    "semantic_note": "BOVA11quotescalendarcanonicalexactOHLC/BDI02or14,quantitypositive;10completedmonthSMA longclose>SMA,nextexecsession. Hold/trendarms;reserveallmonthlycostsupfront;lots10;cash onlysettled+taxreserved,feesfixedvariable,worstcloseoption. SellpendingD+2/3,monthlyloss carrytax15%,terminal sale,wealthcent/yearaccounting.",
+    "limitation": "CONDITIONAL_SIMULATION; external event/costcertification. Target flips only triggertrade; rejectednoaffordablebuy still sets previous_target=True so retry waits targetcycle. Terminal sell explicitlastday liquidationscenario,notfreshsignal. Não prova legislação/taxreal correctness."
+  },
+  {
+    "path": "stocks_predictor/prospective_big_winner.py",
+    "symbols": "append_decision/verify_chain/append_outcome_observation",
+    "aggregate": "executable-19.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "081c6670fb81ef7826162847af52b52585719f82ca0d7a68b20d26dc9c1ce805",
+    "semantic_note": "SQLiteledger_eventsDECISION/CORRECTION sequentialhashchain,uniquepayload,eventhash,triggersforbidUPDATE/DELETE;outcomes uniqueid/horizonmetricsha andtriggers. Decisionid logicalhashasof/model/config/dataset;duplicatepayload idempotent,differentreject;backfill andsignaldayafterfreeze+nonemptycommit eligibility. Correction pointsoriginalhash;artifacthashimmutable compare existing.",
+    "limitation": "verify_chain recomputa eventhash de payload_hash stored, não recomputa payload_json actualhash. Eligible usa signaldate lexical e truthycommit, semverifiedfreezecommit/schema/awaretime. primary_endpoint_mature=int(horizon==12),nãoelapsedtime12m nem observed_at causalvalidation. Leitura integral mostrou gates sãodeclarações estruturais; estudo nãoexecutou."
+  },
+  {
+    "path": "stocks_predictor/report.py",
+    "symbols": "build_markdown/write_report",
+    "aggregate": "executable-19.txt",
+    "category": "OD",
+    "scope": "fonte primária stocks local; nenhuma execução",
+    "sha256": "df758c42f9e66be6ea959808d652eefb96424be269f0acc0786d91b433d40c82",
+    "semantic_note": "Summarizeseries uses corestatsSharpe/Sortino/maxDD+equity,nonfiniteformatn/d. TemplateverdictPSR/bootstrapDSR/DD e _BIAS_NOTE H1..H19, avisos históricos/price/proventos; default reports path env/configROOT,filenamehypothesis/run writesoverwrite;emitcoreeventcodeversion metricsfinite.",
+    "limitation": "BIAS_NOTE textos são DD embutida, não provaempírica de direção do viés. Mesmo runid pode sobrescreverMD. Template linha custo proportionalturnover/D+1 é declaração fixa não valida upstream execução específica."
+  }
+]

@@ -1,0 +1,3 @@
+# Caracterização antes da narrativa: predictor-ops alternativa
+
+Raiz `C:\QUALIFICACAO\repos\predictor-ops`, HEAD `31d393973e27a34292e86df054fb5ea7e206570f` limpo conforme linked-roots.json. Manifest `predictor-ops` versão `4.2.2rc1`. Método: hash de todos rastreados; leitura integral de todo código/config/teste alterado; trechos idênticos referenciados à leitura semântica da fonte primária, sem reconstruir execução. Material e hashes em alternative-changes.json/alternative-hashes.json; diff preservado. Nenhum código da raiz alternativa executado. Narrativa alternativa ainda não lida neste bloco.

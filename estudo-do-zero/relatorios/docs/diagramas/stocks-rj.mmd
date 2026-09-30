@@ -1,0 +1,18 @@
+sequenceDiagram
+ participant U as CLI RJ
+ participant D as SQLite legado
+ participant P as rj_pipeline
+ participant F as rj_families
+ participant J as rj_judge
+ U->>P: config asof e free_float opcional
+ P->>D: universo e eventos approved_by
+ D-->>P: precos e calendario
+ P->>P: candidatos causais, primeiro episodio, outcomes e censura
+ P->>F: features no trough
+ F-->>P: valores ou None; ownership indisponivel no pipeline
+ P->>J: uma unidade por empresa
+ J->>J: bootstrap, permutacao e BH-FDR
+ J-->>P: efeito CI p e influencia LOCO
+ P->>P: bloquear secundarios com empresas repetidas
+ P->>D: atualizar episodes scores e company_observations
+ P-->>U: relatorio e faltas; sem capital
