@@ -2,7 +2,7 @@
  "schema": "integration-stocks/GATES/1",
  "note": "Fonte única dos estados de gate para scripts/attest.py. Evidências por caminho relativo à raiz do repositório.",
  "common_baseline_id": "STACK_BASELINE_V2.0",
- "supersedes_sha256": "9979d19be7fc22f4731878d77496b91489b60fdf0bf350ff3336e81986791eae",
+ "supersedes_sha256": "60b75594a229b0bffb9078302e791fc1cf7b7a6f332a2b7f8c36e18fb521846c",
  "phases_completed": [
   "freeze-parameters",
   "baseline",
@@ -43,7 +43,9 @@
   "idempotency-failure-c4",
   "windows-smoke-c4",
   "hosted-ci-c4",
-  "soak-c4"
+  "soak-c4",
+  "freeze-parameters-c5",
+  "publish-candidates-c5"
  ],
  "final_commits": [
   {
@@ -52,11 +54,11 @@
   },
   {
    "repo": "cain",
-   "commit_sha": "960fb25614709bd95ce607c8dfb80892d901d883"
+   "commit_sha": "ae00017ab4a2ce602998e8fbdb8b20be95aad99d"
   },
   {
    "repo": "ecosystem-predictor",
-   "commit_sha": "bac1f7b7b3ae687e4c75ff3849ccb1f458dca097"
+   "commit_sha": "b0da4fd8d0c472b3ab7d33acf0946e5d10a02754"
   },
   {
    "repo": "cripto-predictor",
@@ -80,15 +82,15 @@
   },
   {
    "name": "cain-research",
-   "version": "0.4.13rc13",
-   "url": "https://github.com/leonardosovienski/cain/releases/download/v0.4.13rc13/cain_research-0.4.13rc13-py3-none-any.whl",
-   "sha256": "a1d94fd52762d6f8a9587f88064f53996aa46fcddad6be893272cb8079676854"
+   "version": "0.4.13rc15",
+   "url": "https://github.com/leonardosovienski/cain/releases/download/v0.4.13rc15/cain_research-0.4.13rc15-py3-none-any.whl",
+   "sha256": "ff642b7271a7fcad18723b12bc7ebe29f0c2550ecfe178777b5c1481882aacf9"
   },
   {
    "name": "predictor-research-transport",
-   "version": "0.1.0rc6",
-   "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-transport-v0.1.0rc6/predictor_research_transport-0.1.0rc6-py3-none-any.whl",
-   "sha256": "6c7e83c4d93d4802b7cdfbc569b0828cde34ccd2241b5a274003ff21c9daec33"
+   "version": "0.1.0rc7",
+   "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-transport-v0.1.0rc7/predictor_research_transport-0.1.0rc7-py3-none-any.whl",
+   "sha256": "d3dfbff4b72d717ed4f655b1c97e85ca909140dcd9ebfb17e9a51a8b089c60c2"
   },
   {
    "name": "predictor-research-protocol",
@@ -127,42 +129,11 @@
    "sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3"
   }
  ],
- "environments": [
-  {
-   "os": "linux",
-   "python": "3.13.14",
-   "role": "primary",
-   "where": "github_actions",
-   "result": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/run.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/ci_runtime.log",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/env/runtime_env.log",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
-   ]
-  },
-  {
-   "os": "windows",
-   "python": "3.13.14",
-   "role": "secondary",
-   "where": "github_actions",
-   "result": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/run.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/ci_runtime.log",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/env/runtime_env.log",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/e2e/SUMMARY.json"
-   ]
-  }
- ],
+ "environments": [],
  "shared_dependency_verdicts": [],
  "domain_revalidation": {
-  "status": "PASS",
-  "evidence": [
-   "qualification/integration-stocks/RAW_LOGS/contract-revalidation-rc13/static_checks.json",
-   "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/conformance.junit.xml",
-   "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/contract-revalidation/SUMMARY.json"
-  ]
+  "status": "NOT_RUN",
+  "evidence": []
  },
  "gates": {
   "BLOCKERS_ZERO": {
@@ -184,268 +155,144 @@
    "note": "baseline coletado antes de qualquer mudança da missão (2026-09-28T00:24Z): igual ao STACK_BASELINE_V2.0 exceto cain e ecosystem-predictor, cujas bases são os final_commits da integration-crypto (10744a9, 61f3ac4); final_wheels 6/6 conferidas; cripto-predictor só com estado remoto novo (main 905ab7a, release v1.2.0rc3)"
   },
   "LOCK_INTEGRITY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/core-identity-c4/core_identity.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/env/runtime_env.log",
-    "qualification/integration-stocks/CORE_IDENTITY_REPORT.md"
-   ],
-   "note": "runtimes só de uv.lock --require-hashes + wheels publicadas conferidas por sha256"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "CORE_IDENTITY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/core-identity-c4/core_identity.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cleanroom_final.log",
-    "qualification/integration-stocks/CORE_IDENTITY_REPORT.md"
-   ],
-   "note": "pyproject ↔ uv.sources ↔ uv.lock ↔ wheel ↔ instalado ↔ site-packages; Core 3.2.1 e Ops 4.2.2rc1 os mesmos da Etapa A do Stocks"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "CLEANROOM_FINAL": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cleanroom_final.log",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/conformance.junit.xml",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/adapters.junit.xml",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/transport.junit.xml",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
-    "qualification/integration-stocks/CLEANROOM_REPORT.md"
-   ],
-   "note": "só wheels publicadas, venvs limpos fora dos checkouts"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "HOSTED_CI": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks_dispatch_acceptance.json",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/HOSTED_CI_SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks-predictor_run36363108348.json",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks-predictor_run35953418753.json",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks-predictor_run36363108348_secrets_job.log",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/secrets_job_steps.json",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/tree_scan_local.log",
-    "qualification/integration-stocks/HOSTED_CI_REPORT.md"
-   ],
-   "note": "cain 960fb25 e ecosystem bac1f7b: run de push verde no SHA exato; stocks-predictor 6f857b2: run workflow_dispatch 36363108348 no SHA exato aceito pelo dono (\"aceita o run workflow_dispatch (b) e reemite\", IS-F004/IS-F005 ACCEPTED_LIMITATION), conferido: Quality 3.13/3.14 verdes, secrets vermelho só por 1 vazamento de um commit fora da branch da missão; com o gitleaks vermelho, a varredura da árvore e o controle não rodaram no Actions e foram reproduzidos localmente como diagnóstico (PASS); base 61fc017: run workflow_dispatch da Etapa A, verde"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "E2E": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/commands.log",
-    "qualification/integration-stocks/CAIN_ROUNDTRIP_REPORT.md"
-   ],
-   "note": "entrypoints cain e predictor-research-consumer, dados reais públicos (B3/CVM), restart do consumidor e do CAIN, outros domínios intercalados"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "IDEMPOTENCY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/FAILURE_MATRIX_RESULTS.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F09/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F10/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F12/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
-   ],
-   "note": "retry, reentrega e reproposta sem segundo efeito"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "RESTART_RECOVERY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F01/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F02/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F03/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F04/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F05/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F06/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F07/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F08/SUMMARY.json"
-   ],
-   "note": "morte real (exit 86) em cada ponto crítico do CAIN e do consumidor"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "FAILURE_INJECTION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/FAILURE_MATRIX_RESULTS.json",
-    "qualification/integration-stocks/FAILURE_MATRIX.json"
-   ],
-   "note": "F01–F15 na borda, fail closed"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "PROVENANCE": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F08/SUMMARY.json"
-   ],
-   "note": "envelope ↔ show ↔ admission ↔ journal ↔ Ops ↔ task ↔ adapter em cada resultado"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "AUTHORITY_SEPARATION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F14/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F15/SUMMARY.json"
-   ],
-   "note": "estados copiados como vieram; RETRYABLE não é resultado; RECONCILIATION_REQUIRED para o domínio; capital sempre false"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "FUTURE_CANARY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
-   ],
-   "note": "canário FUTURE_CANARY_STOCKS_INTEGRATION_001 recusado pelo domínio; token e instantes pós-cutoff ausentes da memória do CAIN"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "PROTECTED_ARTIFACTS_UNCHANGED": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/protected-c4/protected_check.json",
-    "qualification/integration-stocks/RAW_LOGS/protected-c4/protected_check_main_37a0e28.json",
-    "qualification/integration-stocks/PROTECTED_SET.json",
-    "qualification/integration-stocks/FINDINGS.json",
-    "qualification/integration-stocks/PROTECTED_ARTIFACT_REPORT.md"
-   ],
-   "note": "3383 de 3387 itens iguais; alterados: qualification/integration-crypto/QUALIFICATION_ATTESTATION.json, qualification/integration-crypto/FROZEN_PARAMETERS.json, qualification/integration-stocks/FROZEN_PARAMETERS.json, qualification/integration-stocks/FROZEN_VECTORS.json. Cada um com os bytes protegidos preservados e encadeados salto a salto (cycle.supersedes nos congelados, supersedes_sha256 nas attestations; conferido no protected_check.json da branch e no do snapshot do main 37a0e28); aceito pela decisão do dono sobre IS-F008 (opção a)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "SOAK": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/run.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/soak/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/soak/commands.log",
-    "qualification/integration-stocks/QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json",
-    "qualification/integration-stocks/SOAK_REPORT.md"
-   ],
-   "note": "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais; propostas de LLM das hipóteses só para o LLM do ciclo 4 (8 hipóteses, sementes 9001–9008)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "WINDOWS_SMOKE": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/e2e/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/e2e/commands.log",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/ci_runtime.log"
-   ],
-   "note": "GitHub Actions windows-latest (D-1: nada instalado no Windows do PC 2), E2E + restart com as wheels publicadas"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "SHARED_DEPENDENCY_CLEAR": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/c0/c0_preflight_37a0e28.log",
-    "qualification/shared/SHARED_ISSUES.json"
-   ],
-   "note": "nenhum issue bloqueante para as wheels usadas (Ops 4.2.2rc1, Core 3.2.1)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "EVIDENCE_CONSISTENCY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/EVIDENCE_NUMBERS.json",
-    "qualification/integration-stocks/scripts/evidence_numbers.py",
-    "qualification/integration-stocks/scripts/render_reports.py",
-    "qualification/integration-stocks/RAW_LOGS/final-wheels/final_wheels_check_run36462320273.json"
-   ],
-   "note": "números dos relatórios gerados de RAW_LOGS por script versionado; final_wheels conferidas contra os assets e contra o instalado no run (C7.1 regra 4)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "SECRETS_CLEAN": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/secrets-c4/secrets_scan.json",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/tree_scan_local.log"
-   ],
-   "note": "0 achados nos diffs da missão e nos arquivos da missão; o job secrets do CI do stocks-predictor acusa só 1 vazamento de um commit fora da branch da missão (IS-F005); a árvore do final_commit com o .gitleaks.toml do repo está limpa (reprodução local do passo pulado)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "CAPITAL_FORBIDDEN": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json",
-    "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
-   ],
-   "note": "nenhum caminho concede capital; receipts e resultados com capital_permission=false"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "ENVELOPE_V2_CONFORMANCE": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/contract-revalidation/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F11/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F13/SUMMARY.json",
-    "qualification/integration-stocks/ENVELOPE_V2_CONFORMANCE_REPORT.md"
-   ],
-   "note": "release congelada 2.0.0rc2; adapter só pela adapter_api; payload byte-idêntico"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "CAIN_INGESTION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F11/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F12/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F13/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
-   ],
-   "note": "só V2 conhecido, task existente do mesmo domínio, correlação e provenance válidas"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "CAIN_CONTAINMENT": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/env/runtime_env.log",
-    "qualification/integration-stocks/CAIN_ROUNDTRIP_REPORT.md"
-   ],
-   "note": "modo operacional do CAIN fora do runtime; venv do CAIN sem domínio; o loop só propõe pela DecisionPolicy"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "DECISION_POLICY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json",
-    "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
-   ],
-   "note": "determinística, versionada (código + configuração do stocks), receipt sem LLM; política v2 (R01–R17, policy.py com os bytes congelados) e configuração do stocks do ciclo 4 (17 famílias congeladas pela D-26; 8 hipóteses só para o LLM); IS-F002 e IS-F003 corrigidos no cain#62 (17-collection ALLOW no N+1)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "N_PLUS_1_DETERMINISTIC": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/integrated/SUMMARY.json"
-   ],
-   "note": "candidatas congeladas × 3 processos novos, receipts byte a byte iguais, estado inalterado; variante integrada com resultado real no spool"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "NEGATIVE_RESULT_NEUTRALITY": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
-    "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
-   ],
-   "note": "budget, prioridade e escopo são constantes da configuração do stocks; teste de neutralidade contra a wheel publicada"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "CROSS_DOMAIN_ISOLATION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/isolation/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
-   ],
-   "note": "cripto integrado no mesmo estado do CAIN e fixtures V2 congeladas do brasileirao recusadas nos dois sentidos"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "DOMAIN_QUALIFIED_IDS": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/isolation/SUMMARY.json"
-   ],
-   "note": "mesmo H<n> em domínios diferentes, IDs distintos; ID sem domínio recusado"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "CONTRADICTION_PRESERVATION": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/isolation/contradiction/SUMMARY.json"
-   ],
-   "note": "SUPPORTED × REFUTED → REQUIRE_HUMAN; os dois fatos preservados; sem maioria"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   },
   "DOMAIN_CONTRACTS_PRESERVED": {
-   "status": "PASS",
-   "evidence": [
-    "qualification/integration-stocks/RAW_LOGS/contract-revalidation-rc13/static_checks.json",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/conformance.junit.xml",
-    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/contract-revalidation/SUMMARY.json",
-    "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks_dispatch_acceptance.json",
-    "qualification/integration-stocks/CONTRACT_REVALIDATION_REPORT.md"
-   ],
-   "note": "C24.3 (a)–(f) verdes; (f) pelo run workflow_dispatch aceito pelo dono (IS-F004/IS-F005 b)"
+   "status": "NOT_RUN",
+   "evidence": [],
+   "note": "ciclo 5: refazer na cain 0.4.13rc15 com o transporte 0.1.0rc7 (ciclo 4, cain 0.4.13rc13 + transporte rc6, em cycle4_evidence)"
   }
  },
  "cycle1_evidence": {
@@ -838,14 +685,9 @@
   "supersedes_sha256": "a441c88dfbbeb20afdd09db1dc4d7b3cf1016c06d1b623926ebc6078ab88d516"
  },
  "cycle": {
-  "number": 4,
-  "why": "decisões do dono (2026-09-28, \"arruma os não resolvidos\"): D-26 (\"Somar as famílias do main\"), \"Só o transporte\" (transporte 0.1.0rc6) e a calibração do embedding (fica só revisão); pela C14, as fases a partir de publish-candidates são refeitas; nenhum gate do ciclo 3 chegou a rodar",
-  "supersedes_on_attestation": "supersedes_sha256 = a attestation atual (ciclo 2), preservada como _superseded_ na reemissão",
-  "cycle3": {
-   "number": 3,
-   "why": "decisão do dono (2026-09-28, \"cain rc13 + ciclo 3 (Recomendado)\"): correções da rodada de utilidade no cain 0.4.13rc13 e 8 hipóteses só para o LLM; pela C14, as fases a partir de publish-candidates são refeitas; ciclo 2 preservado nos parciais, na attestation atual e nos arquivos *_cycle2_*",
-   "supersedes_on_attestation": "supersedes_sha256 = a attestation atual (ciclo 2), preservada como _superseded_ na reemissão"
-  }
+  "number": 5,
+  "why": "D-27 (2026-09-30): cain 0.4.13rc15 e transporte 0.1.0rc7 publicados com as correções de 2026-09-29; pela C14, as fases a partir de publish-candidates são refeitas; stocks 0.3.0rc3, cripto 1.2.0rc3 e protocolo rc2 inalterados; ciclo 4 preservado nos parciais, na attestation atual e em cycle4_evidence",
+  "supersedes_on_attestation": "supersedes_sha256 = a attestation atual (ciclo 2), preservada como _superseded_ na reemissão"
  },
  "cycle2_evidence": {
   "gates": {
@@ -1241,5 +1083,403 @@
    "supersedes_on_attestation": "supersedes_sha256 = a attestation atual (QUALIFICATION_ATTESTATION.json do ciclo 1, reemissão 1), preservada como _superseded_ na reemissão"
   }
  },
- "final_result": "QUALIFIED"
+ "cycle4_evidence": {
+  "gates": {
+   "LOCK_INTEGRITY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/core-identity-c4/core_identity.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/env/runtime_env.log",
+     "qualification/integration-stocks/CORE_IDENTITY_REPORT.md"
+    ],
+    "note": "runtimes só de uv.lock --require-hashes + wheels publicadas conferidas por sha256"
+   },
+   "CORE_IDENTITY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/core-identity-c4/core_identity.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cleanroom_final.log",
+     "qualification/integration-stocks/CORE_IDENTITY_REPORT.md"
+    ],
+    "note": "pyproject ↔ uv.sources ↔ uv.lock ↔ wheel ↔ instalado ↔ site-packages; Core 3.2.1 e Ops 4.2.2rc1 os mesmos da Etapa A do Stocks"
+   },
+   "CLEANROOM_FINAL": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cleanroom_final.log",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/conformance.junit.xml",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/adapters.junit.xml",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/transport.junit.xml",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
+     "qualification/integration-stocks/CLEANROOM_REPORT.md"
+    ],
+    "note": "só wheels publicadas, venvs limpos fora dos checkouts"
+   },
+   "HOSTED_CI": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks_dispatch_acceptance.json",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/HOSTED_CI_SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks-predictor_run36363108348.json",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks-predictor_run35953418753.json",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks-predictor_run36363108348_secrets_job.log",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/secrets_job_steps.json",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/tree_scan_local.log",
+     "qualification/integration-stocks/HOSTED_CI_REPORT.md"
+    ],
+    "note": "cain 960fb25 e ecosystem bac1f7b: run de push verde no SHA exato; stocks-predictor 6f857b2: run workflow_dispatch 36363108348 no SHA exato aceito pelo dono (\"aceita o run workflow_dispatch (b) e reemite\", IS-F004/IS-F005 ACCEPTED_LIMITATION), conferido: Quality 3.13/3.14 verdes, secrets vermelho só por 1 vazamento de um commit fora da branch da missão; com o gitleaks vermelho, a varredura da árvore e o controle não rodaram no Actions e foram reproduzidos localmente como diagnóstico (PASS); base 61fc017: run workflow_dispatch da Etapa A, verde"
+   },
+   "E2E": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/commands.log",
+     "qualification/integration-stocks/CAIN_ROUNDTRIP_REPORT.md"
+    ],
+    "note": "entrypoints cain e predictor-research-consumer, dados reais públicos (B3/CVM), restart do consumidor e do CAIN, outros domínios intercalados"
+   },
+   "IDEMPOTENCY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/FAILURE_MATRIX_RESULTS.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F09/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F10/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F12/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
+    ],
+    "note": "retry, reentrega e reproposta sem segundo efeito"
+   },
+   "RESTART_RECOVERY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F01/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F02/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F03/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F04/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F05/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F06/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F07/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F08/SUMMARY.json"
+    ],
+    "note": "morte real (exit 86) em cada ponto crítico do CAIN e do consumidor"
+   },
+   "FAILURE_INJECTION": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/FAILURE_MATRIX_RESULTS.json",
+     "qualification/integration-stocks/FAILURE_MATRIX.json"
+    ],
+    "note": "F01–F15 na borda, fail closed"
+   },
+   "PROVENANCE": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F08/SUMMARY.json"
+    ],
+    "note": "envelope ↔ show ↔ admission ↔ journal ↔ Ops ↔ task ↔ adapter em cada resultado"
+   },
+   "AUTHORITY_SEPARATION": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F14/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F15/SUMMARY.json"
+    ],
+    "note": "estados copiados como vieram; RETRYABLE não é resultado; RECONCILIATION_REQUIRED para o domínio; capital sempre false"
+   },
+   "FUTURE_CANARY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
+    ],
+    "note": "canário FUTURE_CANARY_STOCKS_INTEGRATION_001 recusado pelo domínio; token e instantes pós-cutoff ausentes da memória do CAIN"
+   },
+   "PROTECTED_ARTIFACTS_UNCHANGED": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/protected-c4/protected_check.json",
+     "qualification/integration-stocks/RAW_LOGS/protected-c4/protected_check_main_37a0e28.json",
+     "qualification/integration-stocks/PROTECTED_SET.json",
+     "qualification/integration-stocks/FINDINGS.json",
+     "qualification/integration-stocks/PROTECTED_ARTIFACT_REPORT.md"
+    ],
+    "note": "3383 de 3387 itens iguais; alterados: qualification/integration-crypto/QUALIFICATION_ATTESTATION.json, qualification/integration-crypto/FROZEN_PARAMETERS.json, qualification/integration-stocks/FROZEN_PARAMETERS.json, qualification/integration-stocks/FROZEN_VECTORS.json. Cada um com os bytes protegidos preservados e encadeados salto a salto (cycle.supersedes nos congelados, supersedes_sha256 nas attestations; conferido no protected_check.json da branch e no do snapshot do main 37a0e28); aceito pela decisão do dono sobre IS-F008 (opção a)"
+   },
+   "SOAK": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/run.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/soak/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/soak/commands.log",
+     "qualification/integration-stocks/QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json",
+     "qualification/integration-stocks/SOAK_REPORT.md"
+    ],
+    "note": "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais; propostas de LLM das hipóteses só para o LLM do ciclo 4 (8 hipóteses, sementes 9001–9008)"
+   },
+   "WINDOWS_SMOKE": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/e2e/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/e2e/commands.log",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/ci_runtime.log"
+    ],
+    "note": "GitHub Actions windows-latest (D-1: nada instalado no Windows do PC 2), E2E + restart com as wheels publicadas"
+   },
+   "SHARED_DEPENDENCY_CLEAR": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/c0/c0_preflight_37a0e28.log",
+     "qualification/shared/SHARED_ISSUES.json"
+    ],
+    "note": "nenhum issue bloqueante para as wheels usadas (Ops 4.2.2rc1, Core 3.2.1)"
+   },
+   "EVIDENCE_CONSISTENCY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/EVIDENCE_NUMBERS.json",
+     "qualification/integration-stocks/scripts/evidence_numbers.py",
+     "qualification/integration-stocks/scripts/render_reports.py",
+     "qualification/integration-stocks/RAW_LOGS/final-wheels/final_wheels_check_run36462320273.json"
+    ],
+    "note": "números dos relatórios gerados de RAW_LOGS por script versionado; final_wheels conferidas contra os assets e contra o instalado no run (C7.1 regra 4)"
+   },
+   "SECRETS_CLEAN": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/secrets-c4/secrets_scan.json",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/tree_scan_local.log"
+    ],
+    "note": "0 achados nos diffs da missão e nos arquivos da missão; o job secrets do CI do stocks-predictor acusa só 1 vazamento de um commit fora da branch da missão (IS-F005); a árvore do final_commit com o .gitleaks.toml do repo está limpa (reprodução local do passo pulado)"
+   },
+   "CAPITAL_FORBIDDEN": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json",
+     "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
+    ],
+    "note": "nenhum caminho concede capital; receipts e resultados com capital_permission=false"
+   },
+   "ENVELOPE_V2_CONFORMANCE": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/contract-revalidation/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F11/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F13/SUMMARY.json",
+     "qualification/integration-stocks/ENVELOPE_V2_CONFORMANCE_REPORT.md"
+    ],
+    "note": "release congelada 2.0.0rc2; adapter só pela adapter_api; payload byte-idêntico"
+   },
+   "CAIN_INGESTION": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F11/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F12/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/failure-matrix/F13/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
+    ],
+    "note": "só V2 conhecido, task existente do mesmo domínio, correlação e provenance válidas"
+   },
+   "CAIN_CONTAINMENT": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/env/runtime_env.log",
+     "qualification/integration-stocks/CAIN_ROUNDTRIP_REPORT.md"
+    ],
+    "note": "modo operacional do CAIN fora do runtime; venv do CAIN sem domínio; o loop só propõe pela DecisionPolicy"
+   },
+   "DECISION_POLICY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json",
+     "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
+    ],
+    "note": "determinística, versionada (código + configuração do stocks), receipt sem LLM; política v2 (R01–R17, policy.py com os bytes congelados) e configuração do stocks do ciclo 4 (17 famílias congeladas pela D-26; 8 hipóteses só para o LLM); IS-F002 e IS-F003 corrigidos no cain#62 (17-collection ALLOW no N+1)"
+   },
+   "N_PLUS_1_DETERMINISTIC": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/integrated/SUMMARY.json"
+    ],
+    "note": "candidatas congeladas × 3 processos novos, receipts byte a byte iguais, estado inalterado; variante integrada com resultado real no spool"
+   },
+   "NEGATIVE_RESULT_NEUTRALITY": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/cain.junit.xml",
+     "qualification/integration-stocks/DECISION_POLICY_REPORT.md"
+    ],
+    "note": "budget, prioridade e escopo são constantes da configuração do stocks; teste de neutralidade contra a wheel publicada"
+   },
+   "CROSS_DOMAIN_ISOLATION": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/isolation/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
+    ],
+    "note": "cripto integrado no mesmo estado do CAIN e fixtures V2 congeladas do brasileirao recusadas nos dois sentidos"
+   },
+   "DOMAIN_QUALIFIED_IDS": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/isolation/SUMMARY.json"
+    ],
+    "note": "mesmo H<n> em domínios diferentes, IDs distintos; ID sem domínio recusado"
+   },
+   "CONTRADICTION_PRESERVATION": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/isolation/contradiction/SUMMARY.json"
+    ],
+    "note": "SUPPORTED × REFUTED → REQUIRE_HUMAN; os dois fatos preservados; sem maioria"
+   },
+   "DOMAIN_CONTRACTS_PRESERVED": {
+    "status": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/contract-revalidation-rc13/static_checks.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/conformance.junit.xml",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/contract-revalidation/SUMMARY.json",
+     "qualification/integration-stocks/RAW_LOGS/hosted-ci/final-rc13/stocks_dispatch_acceptance.json",
+     "qualification/integration-stocks/CONTRACT_REVALIDATION_REPORT.md"
+    ],
+    "note": "C24.3 (a)–(f) verdes; (f) pelo run workflow_dispatch aceito pelo dono (IS-F004/IS-F005 b)"
+   }
+  },
+  "environments": [
+   {
+    "os": "linux",
+    "python": "3.13.14",
+    "role": "primary",
+    "where": "github_actions",
+    "result": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/run.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/ci_runtime.log",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/env/runtime_env.log",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/e2e/SUMMARY.json"
+    ]
+   },
+   {
+    "os": "windows",
+    "python": "3.13.14",
+    "role": "secondary",
+    "where": "github_actions",
+    "result": "PASS",
+    "evidence": [
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/run.json",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/ci_runtime.log",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/env/runtime_env.log",
+     "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273-windows/e2e/SUMMARY.json"
+    ]
+   }
+  ],
+  "final_commits": [
+   {
+    "repo": "stocks-predictor",
+    "commit_sha": "6f857b232eaa63f3fccda6a16f92dbfc8983ab3b"
+   },
+   {
+    "repo": "cain",
+    "commit_sha": "960fb25614709bd95ce607c8dfb80892d901d883"
+   },
+   {
+    "repo": "ecosystem-predictor",
+    "commit_sha": "bac1f7b7b3ae687e4c75ff3849ccb1f458dca097"
+   },
+   {
+    "repo": "cripto-predictor",
+    "commit_sha": "ee3d3d17de0b76cf731808243ffa838a0f5ee8cc"
+   },
+   {
+    "repo": "core-predictor",
+    "commit_sha": "5a0841509f091ea0aa95bde0d3d65e2a1a9e984d"
+   },
+   {
+    "repo": "predictor-ops",
+    "commit_sha": "9831b0d5e727972b1d85ff48be14ffa58677898b"
+   }
+  ],
+  "final_wheels": [
+   {
+    "name": "stocks-predictor",
+    "version": "0.3.0rc3",
+    "url": "https://github.com/leonardosovienski/stocks-predictor/releases/download/v0.3.0rc3/stocks_predictor-0.3.0rc3-py3-none-any.whl",
+    "sha256": "902f0d34efe7aef02c084e7886ef997c9b3f9bfe28e0e923c9c178361131ea00"
+   },
+   {
+    "name": "cain-research",
+    "version": "0.4.13rc13",
+    "url": "https://github.com/leonardosovienski/cain/releases/download/v0.4.13rc13/cain_research-0.4.13rc13-py3-none-any.whl",
+    "sha256": "a1d94fd52762d6f8a9587f88064f53996aa46fcddad6be893272cb8079676854"
+   },
+   {
+    "name": "predictor-research-transport",
+    "version": "0.1.0rc6",
+    "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-transport-v0.1.0rc6/predictor_research_transport-0.1.0rc6-py3-none-any.whl",
+    "sha256": "6c7e83c4d93d4802b7cdfbc569b0828cde34ccd2241b5a274003ff21c9daec33"
+   },
+   {
+    "name": "predictor-research-protocol",
+    "version": "2.0.0rc2",
+    "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-protocol-v2.0.0rc2/predictor_research_protocol-2.0.0rc2-py3-none-any.whl",
+    "sha256": "34a1e4121e4085b901e3bd96552e2f5b4067c5e6af5e99dc1c26d6276fc7c820"
+   },
+   {
+    "name": "predictor-research-snapshot",
+    "version": "1.0.2rc1",
+    "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-snapshot-v1.0.2rc1/predictor_research_snapshot-1.0.2rc1-py3-none-any.whl",
+    "sha256": "3bd4c0414ac2d457923601e3f919f6353b5cb9370a0f420a7a3ffc013a0aafad"
+   },
+   {
+    "name": "predictor-research-bundle",
+    "version": "1.0.1rc1",
+    "url": "https://github.com/leonardosovienski/ecosystem-predictor/releases/download/predictor-research-bundle-v1.0.1rc1/predictor_research_bundle-1.0.1rc1-py3-none-any.whl",
+    "sha256": "65cf40c59c4f65d013a1134051fb94aa7c75b44f4ea6c71a54e25519143d0ea9"
+   },
+   {
+    "name": "cripto-predictor",
+    "version": "1.2.0rc3",
+    "url": "https://github.com/leonardosovienski/cripto-predictor/releases/download/v1.2.0rc3/cripto_predictor-1.2.0rc3-py3-none-any.whl",
+    "sha256": "02b5e5dbbc60cfb5ed6bb6458331047d7d6de9d55914fb9b1644d78fd0d2b82d"
+   },
+   {
+    "name": "predictor-core",
+    "version": "3.2.1",
+    "url": "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl",
+    "sha256": "10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3"
+   },
+   {
+    "name": "predictor-ops",
+    "version": "4.2.2rc1",
+    "url": "https://github.com/leonardosovienski/predictor-ops/releases/download/v4.2.2rc1/predictor_ops-4.2.2rc1-py3-none-any.whl",
+    "sha256": "0be70bfbb2437dfb080baceb9af41043a09d03b15a358903b8bd7007f5f169b3"
+   }
+  ],
+  "domain_revalidation": {
+   "status": "PASS",
+   "evidence": [
+    "qualification/integration-stocks/RAW_LOGS/contract-revalidation-rc13/static_checks.json",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/cleanroom-final/conformance.junit.xml",
+    "qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/contract-revalidation/SUMMARY.json"
+   ]
+  },
+  "final_result": "QUALIFIED",
+  "shared_dependency_verdicts": [],
+  "supersedes_sha256": "9979d19be7fc22f4731878d77496b91489b60fdf0bf350ff3336e81986791eae",
+  "cycle": {
+   "number": 4,
+   "why": "decisões do dono (2026-09-28, \"arruma os não resolvidos\"): D-26 (\"Somar as famílias do main\"), \"Só o transporte\" (transporte 0.1.0rc6) e a calibração do embedding (fica só revisão); pela C14, as fases a partir de publish-candidates são refeitas; nenhum gate do ciclo 3 chegou a rodar",
+   "supersedes_on_attestation": "supersedes_sha256 = a attestation atual (ciclo 2), preservada como _superseded_ na reemissão",
+   "cycle3": {
+    "number": 3,
+    "why": "decisão do dono (2026-09-28, \"cain rc13 + ciclo 3 (Recomendado)\"): correções da rodada de utilidade no cain 0.4.13rc13 e 8 hipóteses só para o LLM; pela C14, as fases a partir de publish-candidates são refeitas; ciclo 2 preservado nos parciais, na attestation atual e nos arquivos *_cycle2_*",
+    "supersedes_on_attestation": "supersedes_sha256 = a attestation atual (ciclo 2), preservada como _superseded_ na reemissão"
+   }
+  }
+ }
 }
