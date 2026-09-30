@@ -1,0 +1,717 @@
+
+### src/cain/research/service.py
+3: from contextlib import contextmanager
+4: from datetime import datetime, timezone
+5: import json
+6: from pathlib import Path
+7: import sqlite3
+8: from uuid import uuid4
+10: from research_snapshot import MAX_BYTES, canonical, confined, digest, keys, loads, validate
+13: def now():
+14:     return datetime.now(timezone.utc).isoformat()
+17: class ContentConflict(ValueError):
+18:     def __init__(self, record_id):
+19:         super().__init__("CONFLICT: identical source occurrence/revision has divergent payload")
+20:         self.record_id = record_id
+23: class ResearchService:
+24:     def __init__(self, path, policy_path):
+25:         self.path = Path(path)
+26:         self.policy_path = Path(policy_path) if policy_path else None
+27:         if self.policy_path is None:
+28:             raise ValueError("Research disabled: configure a trusted receiver policy")
+29:         self.policy()  # fail before creating storage
+30:         self.path.parent.mkdir(parents=True, exist_ok=True)
+31:         with self.connection() as db:
+32:             db.executescript("""
+33:                 CREATE TABLE IF NOT EXISTS publications(
+34:                   scope TEXT NOT NULL, id TEXT NOT NULL, origin TEXT NOT NULL,
+35:                   restrictions TEXT NOT NULL, raw BLOB NOT NULL, received_at TEXT NOT NULL,
+36:                   PRIMARY KEY(scope,id));
+37:                 CREATE TABLE IF NOT EXISTS records(
+38:                   scope TEXT NOT NULL, id TEXT NOT NULL, domain TEXT NOT NULL,
+39:                   source_id TEXT NOT NULL, kind TEXT NOT NULL, status TEXT NOT NULL,
+40:                   revision TEXT NOT NULL, payload TEXT NOT NULL, signature TEXT NOT NULL,
+41:                   PRIMARY KEY(scope,id));
+42:                 CREATE INDEX IF NOT EXISTS research_filter ON records(scope,domain,source_id,status);
+43:                 CREATE TABLE IF NOT EXISTS membership(
+44:                   scope TEXT NOT NULL, publication TEXT NOT NULL, record TEXT NOT NULL,
+45:                   PRIMARY KEY(scope,publication,record),
+46:                   FOREIGN KEY(scope,publication) REFERENCES publications(scope,id),
+47:                   FOREIGN KEY(scope,record) REFERENCES records(scope,id));
+48:                 CREATE TABLE IF NOT EXISTS receipts(
+49:                   id TEXT PRIMARY KEY, scope TEXT NOT NULL, at TEXT NOT NULL,
+50:                   publication TEXT, status TEXT NOT NULL, error TEXT);
+51:                 CREATE TABLE IF NOT EXISTS queries(
+52:                   id TEXT PRIMARY KEY, scope TEXT NOT NULL, at TEXT NOT NULL,
+53:                   request TEXT NOT NULL, result TEXT NOT NULL);
+54:                 CREATE TABLE IF NOT EXISTS conflicts(
+55:                   scope TEXT NOT NULL, receipt TEXT PRIMARY KEY, record TEXT NOT NULL,
+56:                   incoming_publication TEXT NOT NULL);
+57:             """)
+59:     @contextmanager
+60:     def connection(self):
+61:         db = sqlite3.connect(self.path, timeout=15)
+62:         db.row_factory = sqlite3.Row
+63:         db.execute("PRAGMA foreign_keys=ON")
+64:         try:
+65:             with db:
+66:                 yield db
+67:         finally:
+68:             db.close()
+70:     def policy(self):
+71:         policy = loads(self.policy_path.read_bytes())
+72:         if type(policy) is not dict:
+73:             raise ValueError("Invalid receiver policy")
+74:         version = policy.get("version")
+75:         keys(policy, "version import_root grants" if version == 1 else
+76:              "version imports grants bundle_grants" if version == 3 else "version imports grants")
+77:         if type(version) is not int or version not in (1, 2, 3) or type(policy["grants"]) is not list:
+78:             raise ValueError("Invalid receiver policy")
+79:         if version == 3:
+80:             from cain.research.bundles import validate_grants
+81:             validate_grants(policy["bundle_grants"])
+82:         if version == 1:
+83:             roots = [policy["import_root"]]
+84:         else:
+85:             if type(policy["imports"]) is not list:
+86:                 raise ValueError("Invalid import bindings")
+87:             scopes, roots = set(), []
+88:             for binding in policy["imports"]:
+89:                 keys(binding, "user project collection root")
+90:                 scope = self.scope(binding["user"], binding["project"], binding["collection"])
+91:                 if scope in scopes:
+92:                     raise ValueError("Ambiguous import binding")
+93:                 scopes.add(scope)
+94:                 roots.append(binding["root"])
+95:         if any(type(root) is not str or not Path(root).is_absolute() for root in roots):
+96:             raise ValueError("Receiver import root must be absolute")
+97:         for grant in policy["grants"]:
+98:             keys(
+99:                 grant,
+100:                 "user project collection domain repository publisher stream sources policies generate",
+101:             )
+102:             if type(grant["generate"]) is not bool:
+103:                 raise ValueError("Invalid generation permission")
+104:             for key in (
+105:                 "user",
+106:                 "project",
+107:                 "collection",
+108:                 "domain",
+109:                 "repository",
+110:                 "publisher",
+111:                 "stream",
+112:             ):
+113:                 if type(grant[key]) is not str or len(grant[key]) > 500:
+114:                     raise ValueError("Invalid grant identity")
+115:             for key in ("sources", "policies"):
+116:                 if type(grant[key]) is not list or not all(type(v) is str for v in grant[key]):
+117:                     raise ValueError("Invalid grant list")
+118:         return policy
+120:     def import_root(self, scope):
+121:         policy = self.policy()
+122:         if policy["version"] == 1:
+123:             return policy["import_root"]
+124:         for binding in policy["imports"]:
+125:             if self.scope(binding["user"], binding["project"], binding["collection"]) == scope:
+126:                 return binding["root"]
+127:         raise ValueError("No import root admitted for this scope")
+129:     @staticmethod
+130:     def scope(user="leo", project=None, collection="crypto"):
+131:         if any(type(v) is not str or not v.strip() or len(v) > 200 for v in (user, collection)):
+132:             raise ValueError("Invalid research scope")
+133:         if project is not None and (type(project) is not str or len(project) > 200):
+134:             raise ValueError("Invalid project scope")
+135:         return canonical([user, project or "", collection]).decode()
+137:     def authorized(self, scope, origin, restrictions, generate=False):
+138:         user, project, collection = json.loads(scope)
+139:         if restrictions.get("read") is not True or (
+140:             generate and restrictions.get("generate") is not True
+141:         ):
+142:             return False
+143:         for grant in self.policy()["grants"]:
+144:             if (
+145:                 [grant[k] for k in ("user", "project", "collection")] == [user, project, collection]
+146:                 and all(
+147:                     grant[k] == origin.get(k)
+148:                     for k in ("domain", "repository", "publisher", "stream")
+149:                 )
+150:                 and set(origin.get("inputs", {})) <= set(grant["sources"])
+151:                 and restrictions.get("policy") in grant["policies"]
+152:                 and (not generate or grant["generate"])
+153:             ):
+154:                 return True
+155:         return False
+157:     def _archive(self, db, scope, generate=False):
+158:         allowed = {}
+159:         admitted_bytes = 0
+161:         if (
+162:             db.execute("SELECT count(*) FROM publications WHERE scope=?", (scope,)).fetchone()[0]
+163:             > 500
+164:         ):
+165:             raise ValueError("L0 scope exceeds 500 publications; split collections")
+166:         for row in db.execute(
+167:             "SELECT id,origin,restrictions,length(raw) AS size FROM publications WHERE scope=?",
+168:             (scope,),
+169:         ):
+170:             if self.authorized(
+171:                 scope, json.loads(row["origin"]), json.loads(row["restrictions"]), generate
+172:             ):
+173:                 admitted_bytes += row["size"]
+174:                 if admitted_bytes > 20_000_000:
+175:                     raise ValueError(
+176:                         "L0 admitted archive exceeds 20000000 bytes; split collections"
+177:                     )
+178:                 raw = db.execute(
+179:                     "SELECT raw FROM publications WHERE scope=? AND id=?", (scope, row["id"])
+180:                 ).fetchone()[0]
+181:                 package = validate(loads(raw))
+182:                 if (
+183:                     canonical(package["origin"]).decode() != row["origin"]
+184:                     or canonical(package["restrictions"]).decode() != row["restrictions"]
+185:                     or package["publication_id"] != row["id"]
+186:                 ):
+187:                     raise ValueError("Archive authorization metadata corrupt")
+188:                 allowed[row["id"]] = package
+189:         return allowed
+191:     @staticmethod
+192:     def projection(package, record):
+193:         origin = package["origin"]
+194:         namespace = [origin[k] for k in ("domain", "repository", "publisher", "stream")]
+195:         rid = digest(canonical(namespace + [record["source_id"], record["revision"]]))
+196:         evidence = {e["id"]: e for e in package["evidence"]}
+197:         signature = digest(canonical([record, [evidence[e] for e in record["evidence_ids"]]]))
+198:         return rid, signature
+200:     def _project(self, db, scope, package):
+201:         for record in package["records"]:
+202:             rid, signature = self.projection(package, record)
+203:             old = db.execute(
+204:                 "SELECT signature FROM records WHERE scope=? AND id=?", (scope, rid)
+205:             ).fetchone()
+206:             if old and old[0] != signature:
+207:                 raise ContentConflict(rid)
+208:             db.execute(
+209:                 "INSERT OR IGNORE INTO records VALUES(?,?,?,?,?,?,?,?,?)",
+210:                 (
+211:                     scope,
+212:                     rid,
+213:                     package["origin"]["domain"],
+214:                     record["source_id"],
+215:                     record["kind"],
+216:                     record["source_status"],
+217:                     record["revision"],
+218:                     canonical(record).decode(),
+219:                     signature,
+220:                 ),
+221:             )
+222:             db.execute(
+223:                 "INSERT OR IGNORE INTO membership VALUES(?,?,?)",
+224:                 (scope, package["publication_id"], rid),
+225:             )
+227:     def _verify_projection(self, db, scope, archives):
+229:         for pubid, package in archives.items():
+230:             expected_members = set()
+231:             for record in package["records"]:
+232:                 rid, signature = self.projection(package, record)
+233:                 expected_members.add(rid)
+234:                 row = db.execute(
+235:                     "SELECT domain,source_id,kind,status,revision,payload,signature "
+236:                     "FROM records WHERE scope=? AND id=?",
+237:                     (scope, rid),
+238:                 ).fetchone()
+239:                 expected = (
+240:                     package["origin"]["domain"],
+241:                     record["source_id"],
+242:                     record["kind"],
+243:                     record["source_status"],
+244:                     record["revision"],
+245:                     canonical(record).decode(),
+246:                     signature,
+247:                 )
+248:                 if row is None or tuple(row) != expected:
+249:                     raise ValueError("Projection corrupt; research projection requires rebuild")
+250:             actual_members = {
+251:                 r[0]
+252:                 for r in db.execute(
+253:                     "SELECT record FROM membership WHERE scope=? AND publication=?", (scope, pubid)
+254:                 )
+255:             }
+256:             if actual_members != expected_members:
+257:                 raise ValueError("Research membership corrupt; verify and rebuild")
+259:     def ingest(self, relative, scope):
+260:         receipt, publication = uuid4().hex, None
+261:         try:
+262:             user, project, collection = json.loads(scope)
+263:             if not any([grant[k] for k in ("user", "project", "collection")]
+264:                        == [user, project, collection] for grant in self.policy()["grants"]):
+265:                 raise ValueError("UNAUTHORIZED scope before file access")
+266:             path = confined(self.import_root(scope), relative)
+267:             with path.open("rb") as handle:
+268:                 raw = handle.read(MAX_BYTES + 1)
+269:             package = loads(raw)
+271:             if not self.authorized(
+272:                 scope, package.get("origin", {}), package.get("restrictions", {})
+273:             ):
+274:                 raise ValueError("UNAUTHORIZED")
+275:             validate(package)
+276:             publication = package["publication_id"]
+277:             with self.connection() as db:
+278:                 db.execute("BEGIN IMMEDIATE")
+279:                 existed = db.execute(
+280:                     "SELECT 1 FROM publications WHERE scope=? AND id=?", (scope, publication)
+281:                 ).fetchone()
+282:                 db.execute(
+283:                     "INSERT OR IGNORE INTO publications VALUES(?,?,?,?,?,?)",
+284:                     (
+285:                         scope,
+286:                         publication,
+287:                         canonical(package["origin"]).decode(),
+288:                         canonical(package["restrictions"]).decode(),
+289:                         raw,
+290:                         now(),
+291:                     ),
+292:                 )
+293:                 self._project(db, scope, package)
+294:                 status = "duplicate" if existed else "admitted"
+295:                 db.execute(
+296:                     "INSERT INTO receipts VALUES(?,?,?,?,?,?)",
+297:                     (receipt, scope, now(), publication, status, None),
+298:                 )
+299:             return {
+300:                 "receipt_id": receipt,
+301:                 "publication_id": publication,
+302:                 "status": status,
+303:                 "records": len(package["records"]),
+304:             }
+305:         except (ValueError, OSError, sqlite3.Error, TypeError, KeyError, AttributeError) as exc:
+306:             status = (
+307:                 "rejected"
+308:                 if isinstance(exc, (ValueError, TypeError, KeyError, AttributeError))
+309:                 else "process_failed"
+310:             )
+311:             code = "CONFLICT" if str(exc).startswith("CONFLICT:") else type(exc).__name__
+312:             try:
+313:                 with self.connection() as db:
+314:                     db.execute(
+315:                         "INSERT INTO receipts VALUES(?,?,?,?,?,?)",
+316:                         (receipt, scope, now(), publication, status, code),
+317:                     )
+318:                     if isinstance(exc, ContentConflict):
+319:                         db.execute(
+320:                             "INSERT INTO conflicts VALUES(?,?,?,?)",
+321:                             (scope, receipt, exc.record_id, publication),
+322:                         )
+323:             except (OSError, sqlite3.Error) as audit:
+324:                 raise RuntimeError(
+325:                     "Import failed; NO DURABLE FAILURE RECEIPT: " + type(audit).__name__
+326:                 ) from None
+327:             raise ValueError(f"Import {status}; receipt={receipt}; code={code}") from None
+329:     def query(
+330:         self,
+331:         scope,
+332:         *,
+333:         domain=None,
+334:         source_id=None,
+335:         kind=None,
+336:         status=None,
+337:         revision=None,
+338:         reason=None,
+339:         text=None,
+340:         completeness=None,
+341:         limit=20,
+342:         offset=0,
+343:         generate=False,
+344:         session_id=None,
+345:     ):
+346:         if (
+347:             type(limit) is not int
+348:             or not 1 <= limit <= 50
+349:             or type(offset) is not int
+350:             or not 0 <= offset <= 100_000
+351:         ):
+352:             raise ValueError("Invalid pagination")
+353:         if session_id is not None and (
+354:             type(session_id) is not str or not session_id or len(session_id) > 200
+355:         ):
+356:             raise ValueError("Invalid session identity")
+357:         filters = dict(
+358:             domain=domain,
+359:             source_id=source_id,
+360:             kind=kind,
+361:             status=status,
+362:             revision=revision,
+363:             reason=reason,
+364:             text=text,
+365:             completeness=completeness,
+366:             limit=limit,
+367:             offset=offset,
+368:         )
+369:         for val in (domain, source_id, kind, status, revision, reason, text, completeness):
+370:             if val is not None and (type(val) is not str or len(val) > 500):
+371:                 raise ValueError("Invalid filter")
+372:         with self.connection() as db:
+373:             db.execute("BEGIN")
+374:             archives = self._archive(db, scope, generate)
+375:             self._verify_projection(db, scope, archives)
+376:             if completeness:
+377:                 archives = {
+378:                     k: p
+379:                     for k, p in archives.items()
+380:                     if p["coverage"]["completeness"] == completeness
+381:                 }
+382:             where, params = ["r.scope=?"], [scope]
+383:             for column, val in (
+384:                 ("domain", domain),
+385:                 ("source_id", source_id),
+386:                 ("kind", kind),
+387:                 ("status", status),
+388:                 ("revision", revision),
+389:             ):
+390:                 if val is not None:
+391:                     where.append(f"r.{column}=?")
+392:                     params.append(val)
+394:             placeholders = ",".join("?" for _ in archives) or "NULL"
+395:             where.append(
+396:                 f"r.id IN (SELECT record FROM membership WHERE scope=? AND publication IN ({placeholders}))"
+397:             )
+398:             params.extend([scope, *archives])
+399:             rows = db.execute(
+400:                 "SELECT r.* FROM records r WHERE "
+401:                 + " AND ".join(where)
+402:                 + " ORDER BY r.domain,r.source_id,r.revision",
+403:                 params,
+404:             )
+405:             found = []
+406:             for row in rows:
+407:                 members = [
+408:                     v[0]
+409:                     for v in db.execute(
+410:                         "SELECT publication FROM membership WHERE scope=? AND record=? ORDER BY publication",
+411:                         (scope, row["id"]),
+412:                     )
+413:                     if v[0] in archives
+414:                 ]
+415:                 if not members:
+416:                     continue
+417:                 record = json.loads(row["payload"])
+418:                 package = archives[members[0]]
+420:                 expected = next(
+421:                     (r for r in package["records"] if self.projection(package, r)[0] == row["id"]),
+422:                     None,
+423:                 )
+424:                 if expected != record or self.projection(package, record)[1] != row["signature"]:
+425:                     raise ValueError("Research projection corrupt; verify and rebuild")
+426:                 ev = [
+427:                     {**e, "reference_id": members[0] + ":" + e["id"]}
+428:                     for e in package["evidence"]
+429:                     if e["id"] in record["evidence_ids"]
+430:                 ]
+431:                 if reason and reason.casefold() not in (record["reason"] or "").casefold():
+432:                     continue
+433:                 if (
+434:                     text
+435:                     and text.casefold()
+436:                     not in (
+437:                         canonical(record).decode() + " ".join(e["text"] or "" for e in ev)
+438:                     ).casefold()
+439:                 ):
+440:                     continue
+441:                 found.append(
+442:                     {
+443:                         "id": row["id"],
+444:                         "domain": row["domain"],
+445:                         **record,
+446:                         "publications": members,
+447:                         "origin": package["origin"],
+448:                     }
+449:                 )
+450:             page = found[offset : offset + limit]
+451:             for record in page:
+452:                 pubid = record["publications"][0]
+453:                 record["evidence"] = [
+454:                     {**e, "reference_id": pubid + ":" + e["id"]}
+455:                     for e in archives[pubid]["evidence"]
+456:                     if e["id"] in record["evidence_ids"]
+457:                 ]
+458:             response = {
+459:                 "mode": "deterministic",
+460:                 "records": page,
+461:                 "total_record_revisions": len(found),
+462:                 "limit": limit,
+463:                 "offset": offset,
+464:                 "has_more": offset + limit < len(found),
+465:                 "coverage": [{"publication_id": k, **p["coverage"]} for k, p in archives.items()],
+466:                 "limitations": [
+467:                     "Not found in the admitted scope does not mean never occurred",
+468:                     "Counts are record revisions, not independent experiments",
+469:                     "Unordered revisions coexist; receipt time does not select truth",
+470:                     "Integrity is not semantic support or scientific validity",
+471:                 ],
+472:                 "conflicts": [
+473:                     dict(r)
+474:                     for r in db.execute(
+475:                         f"SELECT receipt,record,incoming_publication FROM conflicts WHERE scope=? AND record IN (SELECT record FROM membership WHERE scope=? AND publication IN ({placeholders}))",
+476:                         [scope, scope, *archives],
+477:                     )
+478:                 ],
+479:                 "generation_scope": generate,
+480:             }
+481:             qid = uuid4().hex
+482:             db.execute(
+483:                 "INSERT INTO queries VALUES(?,?,?,?,?)",
+484:                 (
+485:                     qid,
+486:                     scope,
+487:                     now(),
+488:                     canonical({**filters, "session_id": session_id,
+489:                                "publication_ids": list(archives)}).decode(),
+490:                     canonical(
+491:                         {"record_ids": [r["id"] for r in page], "total": len(found)}
+492:                     ).decode(),
+493:                 ),
+494:             )
+495:             response["query_id"] = qid
+496:             identities = {}
+497:             for record in found:
+498:                 identity = canonical(
+499:                     [record["origin"][k] for k in ("domain", "repository", "publisher", "stream")]
+500:                     + [record["source_id"]]
+501:                 ).decode()
+502:                 identities.setdefault(identity, []).append(record["revision"])
+503:             response["multiple_revisions"] = [
+504:                 {
+505:                     "namespace_and_source": json.loads(k),
+506:                     "revisions": v,
+507:                     "resolution": "no implicit latest version",
+508:                 }
+509:                 for k, v in identities.items()
+510:                 if len(v) > 1
+511:             ]
+512:             response["distinct_source_occurrences"] = len(identities)
+513:             response["ambiguous_observations"] = sum(
+514:                 r["identity_basis"] == "ambiguous_observation" for r in found
+515:             )
+516:             if len(canonical(response)) > 1_000_000:
+517:                 raise ValueError("Response exceeds 1000000 UTF-8 bytes; reduce page size")
+518:             return response
+520:     def log_explanation(self, scope, question, response, session_id=None):
+521:         response_id = uuid4().hex
+522:         with self.connection() as db:
+523:             db.execute(
+524:                 "INSERT INTO queries VALUES(?,?,?,?,?)",
+525:                 (
+526:                     response_id,
+527:                     scope,
+528:                     now(),
+529:                     canonical(
+530:                         {
+531:                             "mode": "explanation",
+532:                             "question": question,
+533:                             "session_id": session_id,
+534:                             "publication_ids": [
+535:                                 p["publication_id"] for p in response["facts"]["coverage"]
+536:                             ],
+537:                         }
+538:                     ).decode(),
+539:                     canonical(response).decode(),
+540:                 ),
+541:             )
+542:         return response_id
+544:     def history(self, scope, session_id=None, limit=20, offset=0):
+545:         if type(limit) is not int or not 1 <= limit <= 50 or type(offset) is not int or offset < 0:
+546:             raise ValueError("Invalid history pagination")
+547:         with self.connection() as db:
+548:             allowed_publications = set(self._archive(db, scope))
+549:             rows = db.execute(
+550:                 "SELECT id,at,request FROM queries WHERE scope=? "
+551:                 "AND json_extract(request,'$.session_id') IS ? ORDER BY at DESC LIMIT ? OFFSET ?",
+552:                 (scope, session_id, limit, offset),
+553:             ).fetchall()
+554:             return [
+555:                 {
+556:                     "id": r["id"],
+557:                     "at": r["at"],
+558:                     "request": ({
+559:                         k: v for k, v in json.loads(r["request"]).items() if k != "publication_ids"
+560:                     } if "publication_ids" in json.loads(r["request"])
+561:                     and set(json.loads(r["request"])["publication_ids"]) <= allowed_publications
+562:                     else {"redacted_by_current_policy": True}),
+563:                 }
+564:                 for r in rows
+565:             ]
+567:     def recall(self, scope, entry_id, session_id=None):
+569:         with self.connection() as db:
+570:             db.execute("BEGIN")
+571:             row = db.execute(
+572:                 "SELECT request FROM queries WHERE scope=? AND id=?", (scope, entry_id)
+573:             ).fetchone()
+574:             if row is None:
+575:                 raise ValueError("History entry unavailable")
+576:             request = json.loads(row["request"])
+577:             if request.get("session_id") != session_id:
+578:                 raise ValueError("History entry unavailable in session")
+579:             if request.get("mode") == "explanation":
+580:                 archives = self._archive(db, scope)
+581:                 if "publication_ids" not in request or not set(request["publication_ids"]) <= set(
+582:                     archives
+583:                 ):
+584:                     return {"status": "history_redacted_by_current_policy", "entry_id": entry_id}
+585:                 self._verify_projection(db, scope, archives)
+586:                 allowed = {
+587:                     self.projection(p, r)[0] for p in archives.values() for r in p["records"]
+588:                 }
+589:                 result = json.loads(
+590:                     db.execute(
+591:                         "SELECT result FROM queries WHERE scope=? AND id=?", (scope, entry_id)
+592:                     ).fetchone()[0]
+593:                 )
+594:                 if not {r["id"] for r in result["facts"]["records"]} <= allowed or not {
+595:                     p["publication_id"] for p in result["facts"]["coverage"]
+596:                 } <= set(archives):
+597:                     return {"status": "history_redacted_by_current_policy", "entry_id": entry_id}
+598:                 result["history"] = {
+599:                     "entry_id": entry_id,
+600:                     "historical_answer": True,
+601:                     "current_permissions_verified": True,
+602:                 }
+603:                 return result
+604:         request.pop("publication_ids", None)
+605:         result = self.query(scope, **request)
+606:         result["history"] = {
+607:             "entry_id": entry_id,
+608:             "historical_answer": False,
+609:             "query_reexecuted_under_current_policy": True,
+610:             "filters": request,
+611:         }
+612:         return result
+614:     def evidence(self, scope, reference):
+615:         with self.connection() as db:
+616:             archives = self._archive(db, scope)
+617:             pubid, _, eid = reference.partition(":")
+618:             package = archives.get(pubid)
+619:             if package:
+620:                 for item in package["evidence"]:
+621:                     if item["id"] == eid:
+622:                         return {
+623:                             **item,
+624:                             "publication_id": pubid,
+625:                             "coverage": package["coverage"],
+626:                             "origin": package["origin"],
+627:                         }
+628:         raise ValueError("Evidence unavailable in authorized scope")
+630:     def receipts(self, scope):
+631:         with self.connection() as db:
+632:             return [
+633:                 dict(r)
+634:                 for r in db.execute(
+635:                     "SELECT id,at,status,error FROM receipts WHERE scope=? ORDER BY at DESC LIMIT 100",
+636:                     (scope,),
+637:                 )
+638:             ]
+640:     def verify(self, scope, rebuild=False):
+641:         with self.connection() as db:
+642:             db.execute("BEGIN IMMEDIATE" if rebuild else "BEGIN")
+643:             if (
+644:                 db.execute("PRAGMA integrity_check").fetchone()[0] != "ok"
+645:                 or db.execute("PRAGMA foreign_key_check").fetchone()
+646:             ):
+647:                 raise ValueError("SQLite integrity check failed")
+648:             archives = self._archive(db, scope)
+649:             if not rebuild:
+650:                 self._verify_projection(db, scope, archives)
+651:             all_count = db.execute(
+652:                 "SELECT count(*) FROM publications WHERE scope=?", (scope,)
+653:             ).fetchone()[0]
+654:             if len(archives) != all_count:
+655:                 raise ValueError(
+656:                     "Some archived publications are not currently authorized; rebuild refused"
+657:                 )
+658:             expected = {
+659:                 self.projection(p, r)[0]: self.projection(p, r)[1]
+660:                 for p in archives.values()
+661:                 for r in p["records"]
+662:             }
+663:             actual = {
+664:                 r[0]: r[1]
+665:                 for r in db.execute("SELECT id,signature FROM records WHERE scope=?", (scope,))
+666:             }
+667:             expected_members = {
+668:                 (p["publication_id"], self.projection(p, r)[0])
+669:                 for p in archives.values()
+670:                 for r in p["records"]
+671:             }
+672:             actual_members = {
+673:                 tuple(r)
+674:                 for r in db.execute(
+675:                     "SELECT publication,record FROM membership WHERE scope=?", (scope,)
+676:                 )
+677:             }
+678:             expected_payloads = {
+679:                 self.projection(p, r)[0]: canonical(r).decode()
+680:                 for p in archives.values()
+681:                 for r in p["records"]
+682:             }
+683:             actual_payloads = {
+684:                 r[0]: r[1]
+685:                 for r in db.execute("SELECT id,payload FROM records WHERE scope=?", (scope,))
+686:             }
+687:             if rebuild:
+688:                 db.execute("DELETE FROM membership WHERE scope=?", (scope,))
+689:                 db.execute("DELETE FROM records WHERE scope=?", (scope,))
+690:                 for package in archives.values():
+691:                     self._project(db, scope, package)
+692:             elif (
+693:                 actual != expected
+694:                 or actual_members != expected_members
+695:                 or actual_payloads != expected_payloads
+696:             ):
+697:                 raise ValueError("Projection differs from archive; rebuild required")
+698:             return {
+699:                 "integrity": "verified",
+700:                 "publications": len(archives),
+701:                 "records": len(expected),
+702:                 "rebuilt": rebuild,
+703:             }
+705:     def backup(self, destination):
+706:         from cain.research.bundle_backup import reachables
+707:         if reachables(self.path):
+708:             raise ValueError("Received objects require complete cain archive backup")
+709:         destination = Path(destination)
+710:         destination.parent.mkdir(parents=True, exist_ok=True)
+711:         with destination.open("xb"):
+712:             pass
+713:         try:
+714:             with self.connection() as source:
+715:                 target = sqlite3.connect(destination)
+716:                 try:
+717:                     source.backup(target)
+718:                     if reachables(destination):
+719:                         raise ValueError("Incomplete metadata-only backup; use cain archive backup")
+720:                     if target.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+721:                         raise ValueError("Backup integrity failure")
+722:                 finally:
+723:                     target.close()
+724:         except Exception:
+726:             raise
+727:         return {
+728:             "backup": str(destination),
+729:             "integrity": "verified",
+730:             "method": "sqlite-online-backup",
+731:         }
+733:     @staticmethod
+734:     def restore(source, destination):
+735:         from cain.research.bundle_backup import reachables
+736:         if reachables(source):
+737:             raise ValueError("Received objects require complete cain archive restore")
+738:         destination = Path(destination)
+739:         with destination.open("xb"):
+740:             pass
+741:         original = sqlite3.connect(Path(source).resolve().as_uri() + "?mode=ro", uri=True)
+742:         target = sqlite3.connect(destination)
+743:         try:
+744:             if original.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+745:                 raise ValueError("Restore source corrupt")
+746:             original.backup(target)
+747:         finally:
+748:             target.close()
+749:             original.close()
+750:         return {"restored": str(destination), "method": "sqlite-online-backup"}

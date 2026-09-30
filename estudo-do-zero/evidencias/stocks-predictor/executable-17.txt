@@ -1,0 +1,525 @@
+
+### stocks_predictor/ingest_rj_universe.py
+26: import hashlib
+27: import json
+28: import logging
+29: import urllib.request
+30: from html.parser import HTMLParser
+32: logger = logging.getLogger(__name__)
+36: B3_RJ_LIST_URL = (
+37:     "https://www.b3.com.br/pt_br/produtos-e-servicos/negociacao/renda-variavel/"
+38:     "empresas-listadas.htm"
+39: )
+45: def fetch_url(url: str, timeout: int = 60) -> bytes:
+48:     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+49:     with urllib.request.urlopen(req, timeout=timeout) as resp:
+50:         return resp.read()
+53: class _TableTextParser(HTMLParser):
+56:     def __init__(self):
+57:         super().__init__()
+58:         self._in_cell = False
+59:         self._cell = ""
+60:         self.rows: list[list[str]] = []
+61:         self._row: list[str] = []
+63:     def handle_starttag(self, tag, attrs):
+64:         if tag == "tr":
+65:             self._row = []
+66:         elif tag in ("td", "th"):
+67:             self._in_cell, self._cell = True, ""
+69:     def handle_data(self, data):
+70:         if self._in_cell:
+71:             self._cell += data
+73:     def handle_endtag(self, tag):
+74:         if tag in ("td", "th") and self._in_cell:
+75:             self._in_cell = False
+76:             self._row.append(" ".join(self._cell.split()))
+77:         elif tag == "tr" and self._row:
+78:             self.rows.append(self._row)
+81: def parse_b3_rj_list_html(html: bytes | str) -> list[dict]:
+88:     import re
+89:     text = html.decode("utf-8", errors="replace") if isinstance(html, bytes) else html
+90:     parser = _TableTextParser()
+91:     parser.feed(text)
+92:     ticker_re = re.compile(r"^[A-Z]{4}[0-9]{1,2}$")
+93:     out = []
+94:     for row in parser.rows:
+95:         tickers = [c for c in row if ticker_re.match(c.strip())]
+96:         names = [c for c in row if not ticker_re.match(c.strip()) and len(c) > 3]
+97:         for tk in tickers:
+98:             out.append({"ticker": tk.strip(),
+99:                         "company_name": names[0].strip() if names else ""})
+101:     seen, dedup = set(), []
+102:     for r in out:
+103:         if r["ticker"] not in seen:
+104:             seen.add(r["ticker"])
+105:             dedup.append(r)
+106:     return dedup
+109: def snapshot_hash(rows: list[dict]) -> str:
+110:     payload = json.dumps(rows, sort_keys=True, ensure_ascii=False)
+111:     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+114: def save_snapshot(conn, rows: list[dict], snapshot_date: str,
+115:                   source: str = "b3_live") -> int:
+118:     h = snapshot_hash(rows)
+119:     for r in rows:
+120:         conn.execute(
+121:             "INSERT OR IGNORE INTO rj_universe_snapshots"
+122:             "(snapshot_date, source, ticker, company_name, payload_hash,"
+123:             " raw_payload) VALUES(?,?,?,?,?,?)",
+124:             (snapshot_date, source, r["ticker"], r["company_name"], h,
+125:              json.dumps(r, ensure_ascii=False)))
+126:     conn.commit()
+127:     return len(rows)
+130: def diff_snapshots(conn, source: str = "b3_live") -> dict:
+135:     snaps = conn.execute(
+136:         "SELECT DISTINCT snapshot_date FROM rj_universe_snapshots "
+137:         "WHERE source=? ORDER BY snapshot_date", (source,)).fetchall()
+138:     changes = {"entries": [], "exits": []}
+139:     prev: set[str] = set()
+140:     for (d,) in snaps:
+141:         cur = {r[0] for r in conn.execute(
+142:             "SELECT ticker FROM rj_universe_snapshots "
+143:             "WHERE snapshot_date=? AND source=?", (d, source))}
+144:         if prev:
+145:             changes["entries"] += [{"date": d, "ticker": t}
+146:                                    for t in sorted(cur - prev)]
+147:             changes["exits"] += [{"date": d, "ticker": t}
+148:                                  for t in sorted(prev - cur)]
+149:         prev = cur
+150:     return changes
+153: def propose_universe_rows(conn) -> list[dict]:
+159:     rows = conn.execute(
+160:         "SELECT ticker, MIN(snapshot_date) AS first_seen, MAX(company_name)"
+161:         " FROM rj_universe_snapshots GROUP BY ticker ORDER BY first_seen"
+162:     ).fetchall()
+163:     existing = {r[0] for r in conn.execute("SELECT ticker FROM rj_universe")}
+164:     return [{"ticker": t, "company_name": n,
+165:              "rj_request_date_candidate": d,
+166:              "status": "ja_no_universo" if t in existing else "pendente_revisao"}
+167:             for t, d, n in rows]
+170: def ingest_b3_snapshot(conn, snapshot_date: str, url: str = B3_RJ_LIST_URL) -> int:
+174:     html = fetch_url(url)
+175:     rows = parse_b3_rj_list_html(html)
+176:     if not rows:
+177:         raise ValueError(
+178:             f"parse da lista B3 em {snapshot_date} retornou 0 tickers — "
+179:             "layout da página mudou ou URL errada; NADA foi gravado")
+180:     return save_snapshot(conn, rows, snapshot_date, source="b3_live")
+
+### stocks_predictor/monthly_etf.py
+8: from dataclasses import dataclass
+9: from datetime import date
+10: from decimal import Decimal, ROUND_HALF_UP
+11: from typing import Any
+14: def money(value: Any) -> Decimal:
+15:     result = Decimal(str(value))
+16:     if not result.is_finite():
+17:         raise ValueError("Money must be finite")
+18:     return result.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+21: @dataclass(frozen=True)
+22: class Costs:
+23:     variable: Decimal
+24:     fixed: Decimal
+25:     monthly: Decimal
+26:     price_mode: str = "open"
+28:     def __post_init__(self):
+29:         if any(not x.is_finite() or x < 0 for x in (self.variable, self.fixed, self.monthly)):
+30:             raise ValueError("Invalid cost")
+31:         if self.variable >= 1 or self.price_mode not in {"open", "worst_open_close"}:
+32:             raise ValueError("Invalid cost/price mode")
+33:         if self.fixed != money(self.fixed) or self.monthly != money(self.monthly):
+34:             raise ValueError("Fixed expenses must be cents")
+37: class MonthlyTax:
+40:     def __init__(self):
+41:         self.loss = Decimal(0)
+42:         self.committed = Decimal(0)
+43:         self.gain = Decimal(0)
+44:         self.ledger: list[dict[str, Any]] = []
+46:     @property
+47:     def provisional(self) -> Decimal:
+48:         return money(max(Decimal(0), self.gain - self.loss) * Decimal("0.15"))
+50:     @property
+51:     def liability(self) -> Decimal:
+52:         return self.committed + self.provisional
+54:     def finish(self, month: str):
+55:         tax = self.provisional
+56:         self.ledger.append({"month": month, "realized_gain": float(self.gain),
+57:                             "loss_before": float(self.loss), "tax_committed": float(tax)})
+58:         self.committed += tax
+59:         self.loss = max(Decimal(0), self.loss - self.gain)
+60:         self.gain = Decimal(0)
+63: def validate_prices(records: list[dict[str, Any]], calendar: list[str]):
+64:     if not records or calendar != sorted(set(calendar)):
+65:         raise ValueError("Empty prices or nonunique/unsorted calendar")
+66:     for day in calendar:
+67:         if date.fromisoformat(day).isoformat() != day:
+68:             raise ValueError("Noncanonical date")
+69:     dates = [r["date"] for r in records]
+70:     if dates != sorted(set(dates)):
+71:         raise ValueError("Nonunique/unsorted prices")
+72:     expected = [d for d in calendar if dates[0] <= d <= dates[-1]]
+73:     if dates != expected:
+74:         raise ValueError("Prices do not cover supplied sessions exactly")
+75:     for r in records:
+76:         if (r["ticker"], r["isin"], r["currency"], r["market_type"],
+77:                 r["quote_factor"]) != ("BOVA11", "BRBOVACTF003", "R$", "010", 1):
+78:             raise ValueError("Instrument identity mismatch")
+81:         if r["bdi_code"] not in {"02", "14"}:
+82:             raise ValueError("Unexpected BDI")
+83:         o, h, lo, c = (money(r[k]) for k in ("open", "high", "low", "close"))
+84:         if not (0 < lo <= min(o, c) <= max(o, c) <= h) or r["qty"] <= 0:
+85:             raise ValueError("Invalid price/volume")
+88: def monthly_signals(records: list[dict[str, Any]], calendar: list[str]) -> list[dict[str, Any]]:
+89:     validate_prices(records, calendar)
+90:     by_day = {r["date"]: r for r in records}
+91:     last: dict[str, str] = {}
+92:     for day in calendar:
+93:         last[day[:7]] = day
+94:     closes: list[tuple[str, Decimal]] = []
+95:     signals = []
+96:     positions = {d: i for i, d in enumerate(calendar)}
+97:     for day in last.values():
+98:         if day not in by_day:
+99:             continue
+100:         closes.append((day, money(by_day[day]["close"])))
+101:         if len(closes) < 10:
+102:             continue
+103:         window = closes[-10:]
+104:         months = [date.fromisoformat(d).year * 12 + date.fromisoformat(d).month for d, _ in window]
+105:         if months[-1] - months[0] != 9:
+106:             raise ValueError("Missing complete warmup month")
+107:         i = positions[day]
+108:         if i + 1 >= len(calendar):
+109:             continue
+110:         total = sum((c for _, c in window), Decimal(0))
+111:         signals.append({"signal_date": day, "execution_date": calendar[i + 1],
+112:                         "long": window[-1][1] * 10 > total,
+113:                         "close": float(window[-1][1]), "sma10": float(total / 10),
+114:                         "input_dates": [d for d, _ in window]})
+115:     return signals
+118: def simulate(records: list[dict[str, Any]], calendar: list[str], *, start: str, end: str,
+119:              capital: Any, costs: Costs, arm: str) -> dict[str, Any]:
+120:     signals = monthly_signals(records, calendar)
+121:     if arm not in {"trend", "hold"} or start > end:
+122:         raise ValueError("Invalid arm/window")
+123:     initial = money(capital)
+124:     if initial <= 0:
+125:         raise ValueError("Capital must be positive")
+126:     rows = [r for r in records if start <= r["date"] <= end]
+127:     if not rows:
+128:         raise ValueError("Empty window")
+129:     prior = [s for s in signals if s["execution_date"] <= rows[0]["date"]]
+130:     if not prior:
+131:         raise ValueError("Ten completed months required before entry")
+132:     latest = prior[-1]
+133:     by_execution = {s["execution_date"]: s for s in signals}
+134:     months = sorted({r["date"][:7] for r in rows})
+135:     reserved = money(costs.monthly * len(months))
+136:     if reserved > initial:
+137:         return {"status": "INFEASIBLE_EXPENSE_RESERVE", "capital": float(initial),
+138:                 "required_expense_reserve": float(reserved), "months": len(months)}
+139:     cash = initial - reserved
+140:     pending: list[tuple[str, Decimal]] = []
+141:     position = 0
+142:     basis = Decimal(0)
+143:     tax = MonthlyTax()
+144:     ledger: list[dict[str, Any]] = []
+145:     curve: list[dict[str, Any]] = []
+146:     indices = {d: i for i, d in enumerate(calendar)}
+147:     peak = initial
+148:     max_dd = Decimal(0)
+149:     min_wealth = initial
+150:     previous_month = ""
+151:     previous_target = False
+152:     expenses = Decimal(0)
+153:     fees = Decimal(0)
+154:     for r in rows:
+155:         day = r["date"]
+156:         month = day[:7]
+157:         for due, amount in pending:
+158:             if due <= day:
+159:                 cash += amount
+160:         pending = [(due, amount) for due, amount in pending if due > day]
+161:         if month != previous_month:
+162:             if previous_month:
+163:                 tax.finish(previous_month)
+164:             reserved -= costs.monthly
+165:             expenses += costs.monthly
+166:             ledger.append({"date": day, "kind": "EXPENSE", "amount": float(costs.monthly)})
+167:             previous_month = month
+168:         if day in by_execution:
+169:             latest = by_execution[day]
+170:         target = arm == "hold" or latest["long"]
+172:         if day == rows[-1]["date"]:
+173:             target = False
+174:         if target != previous_target:
+175:             if target:
+176:                 price = money(r["open"])
+177:                 if costs.price_mode == "worst_open_close":
+178:                     price = max(price, money(r["close"]))
+179:                 available = max(Decimal(0), cash - tax.liability)
+180:                 qty = max(0, int((available - costs.fixed + Decimal("0.005"))
+181:                                 // (price * 10 * (1 + costs.variable)))) * 10
+182:                 fee = money(price * qty * costs.variable) + costs.fixed
+183:                 while qty and price * qty + fee > available:
+184:                     qty -= 10
+185:                     fee = money(price * qty * costs.variable) + costs.fixed
+186:                 if not qty:
+187:                     ledger.append({"date": day, "kind": "REJECTED_BUY", "reason": "NO_AFFORDABLE_LOT",
+188:                                    "available": float(available), "signal_date": latest["signal_date"]})
+189:                 else:
+190:                     position = qty
+191:                     basis = price * qty + fee
+192:                     cash -= basis
+193:                     fees += fee
+194:                     ledger.append({"date": day, "kind": "BUY", "qty": qty, "price": float(price),
+195:                                    "fee": float(fee), "basis": float(basis),
+196:                                    "available_before": float(available), "signal_date": latest["signal_date"]})
+197:             elif position:
+198:                 price = money(r["open"])
+199:                 if costs.price_mode == "worst_open_close":
+200:                     price = min(price, money(r["close"]))
+201:                 fee = money(price * position * costs.variable) + costs.fixed
+202:                 proceeds = price * position - fee
+203:                 if proceeds < 0:
+204:                     raise ValueError("Sale costs exceed proceeds")
+205:                 gain = proceeds - basis
+206:                 tax.gain += gain
+207:                 lag = 3 if day < "2019-05-27" else 2
+208:                 if indices[day] + lag >= len(calendar):
+209:                     raise ValueError("Missing settlement sessions")
+210:                 due = calendar[indices[day] + lag]
+211:                 pending.append((due, proceeds))
+212:                 fees += fee
+213:                 ledger.append({"date": day, "kind": "SELL", "qty": position, "price": float(price),
+214:                                "fee": float(fee), "basis": float(basis), "proceeds": float(proceeds),
+215:                                "realized_gain": float(gain), "settlement_date": due,
+216:                                "signal_date": latest["signal_date"], "terminal": day == rows[-1]["date"]})
+217:                 position = 0
+218:                 basis = Decimal(0)
+219:         previous_target = target
+220:         receivable = sum((amount for _, amount in pending), Decimal(0))
+221:         wealth = cash + reserved + receivable + position * money(r["close"]) - tax.liability
+222:         if cash < 0 or reserved < 0 or wealth < 0:
+223:             raise ValueError("Unfunded obligation")
+224:         peak = max(peak, wealth)
+225:         max_dd = max(max_dd, 1 - wealth / peak)
+226:         min_wealth = min(min_wealth, wealth)
+227:         curve.append({"date": day, "wealth": float(wealth), "cash_gross": float(cash),
+228:                       "receivable": float(receivable), "expense_reserve": float(reserved),
+229:                       "tax_committed_and_provisional": float(tax.liability), "qty": position,
+230:                       "investable_cash": float(max(Decimal(0), cash - tax.liability))})
+231:     tax.finish(previous_month)
+232:     final = money(curve[-1]["wealth"])
+233:     years: dict[str, Decimal] = {}
+234:     prev = initial
+235:     for point in curve:
+236:         y = point["date"][:4]
+237:         current = money(point["wealth"])
+238:         years[y] = years.get(y, Decimal(0)) + current - prev
+239:         prev = current
+240:     return {"status": "CONDITIONAL_SIMULATION", "arm": arm, "capital": float(initial),
+241:             "start": rows[0]["date"], "end": rows[-1]["date"], "sessions": len(rows),
+242:             "final_wealth": float(final), "profit": float(final - initial),
+243:             "max_drawdown": float(max_dd), "minimum_wealth": float(min_wealth),
+244:             "fees": float(fees), "expenses": float(expenses), "tax": float(tax.committed),
+245:             "loss_carry": float(tax.loss), "order_count": sum(x["kind"] in {"BUY", "SELL"} for x in ledger),
+246:             "exposure_fraction": sum(x["qty"] > 0 for x in curve) / len(curve),
+247:             "year_profit": {y: float(v) for y, v in years.items()},
+248:             "ledger": ledger, "tax_ledger": tax.ledger, "curve": curve,
+249:             "source_gates": "Events/cost completeness are external; not certified by this simulator"}
+
+### stocks_predictor/operational_store.py
+7: from contextlib import closing, contextmanager
+8: from datetime import datetime, timezone
+9: import hashlib
+10: import json
+11: import math
+12: import os
+13: from pathlib import Path
+14: import sqlite3
+15: import time
+16: from typing import Iterator
+17: from urllib.parse import urlsplit
+19: from . import source_catalog
+21: APPLICATION_ID = 0x53544B50
+22: SCHEMA_VERSION = 1
+23: PRICE_COLUMNS = ('date,ticker,bdi_code,market_type,open,high,low,close,'
+24:                  'volume_fin,qty,quote_factor,source_file')
+25: SCHEMA = (
+26:     source_catalog.SCHEMA.replace(' IF NOT EXISTS', ''),
+27:     '''CREATE TABLE prices_raw (
+28:         date TEXT NOT NULL, ticker TEXT NOT NULL, bdi_code TEXT NOT NULL,
+29:         market_type TEXT NOT NULL, open REAL NOT NULL, high REAL NOT NULL,
+30:         low REAL NOT NULL, close REAL NOT NULL, volume_fin REAL NOT NULL,
+31:         qty INTEGER NOT NULL, quote_factor INTEGER NOT NULL CHECK(quote_factor>0),
+32:         source_file TEXT NOT NULL REFERENCES source_versions(source_id),
+33:         UNIQUE(date,ticker,source_file))''',
+34:     'CREATE INDEX idx_prices_source ON prices_raw(source_file,date,ticker)',
+35:     *(f"CREATE TRIGGER {table}_no_{action.lower()} BEFORE {action} ON {table} "
+36:       "BEGIN SELECT RAISE(ABORT,'append-only research store'); END"
+37:       for table in ('prices_raw', 'source_versions') for action in ('UPDATE', 'DELETE')),
+38: )
+41: def file_sha256(path: Path) -> str:
+42:     with path.open('rb') as stream:
+43:         return hashlib.file_digest(stream, 'sha256').hexdigest()
+46: def _timeout(seconds: float) -> float:
+47:     if isinstance(seconds, bool) or not math.isfinite(seconds) or not 0 < seconds <= 3600:
+48:         raise ValueError('timeout must be finite, positive and at most 3600 seconds')
+49:     return seconds
+52: def _validate_schema(conn: sqlite3.Connection) -> None:
+53:     if (conn.execute('PRAGMA application_id').fetchone()[0] != APPLICATION_ID
+54:             or conn.execute('PRAGMA user_version').fetchone()[0] != SCHEMA_VERSION):
+55:         raise ValueError('not a supported managed research store')
+56:     actual = {''.join(row[0].split()) for row in conn.execute(
+57:         "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'")}
+58:     expected = {''.join(statement.split()) for statement in SCHEMA}
+59:     if actual != expected:
+60:         raise ValueError('managed store schema differs from its version')
+63: def _open(path: Path, *, writable: bool = False, timeout: float = 5) -> sqlite3.Connection:
+64:     _timeout(timeout)
+65:     if (path.parent / 'INCOMPLETE.json').exists():
+66:         raise ValueError('store directory is incomplete')
+67:     if not path.is_file():
+68:         raise FileNotFoundError(path)
+69:     mode = 'rw' if writable else 'ro'
+70:     conn = sqlite3.connect(path.resolve().as_uri() + '?mode=' + mode, uri=True, timeout=timeout)
+71:     try:
+72:         _validate_schema(conn)
+73:         conn.execute('PRAGMA foreign_keys=ON')
+74:         if writable:
+75:             if conn.execute('PRAGMA journal_mode').fetchone()[0] != 'wal':
+76:                 raise ValueError('writable managed stores require WAL mode')
+77:             conn.execute('PRAGMA synchronous=FULL')
+78:         else:
+79:             conn.execute('PRAGMA query_only=ON')
+80:         return conn
+81:     except BaseException:
+82:         conn.close()
+83:         raise
+86: @contextmanager
+87: def writer(path: Path, *, timeout: float = 5) -> Iterator[sqlite3.Connection]:
+89:     with closing(_open(path, writable=True, timeout=timeout)) as conn:
+90:         conn.execute('BEGIN IMMEDIATE')
+91:         try:
+92:             yield conn
+93:             conn.commit()
+94:         except BaseException:
+95:             conn.rollback()
+96:             raise
+99: def initialize(path: Path) -> dict:
+101:     with path.open('xb'):
+102:         pass
+103:     with closing(sqlite3.connect(path)) as conn:
+104:         conn.execute('PRAGMA journal_mode=WAL')
+105:         conn.execute('PRAGMA synchronous=FULL')
+106:         with conn:
+107:             conn.execute('BEGIN IMMEDIATE')
+108:             conn.execute(f'PRAGMA application_id={APPLICATION_ID}')
+109:             conn.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
+110:             for statement in SCHEMA:
+111:                 conn.execute(statement)
+112:     return inspect(path)
+115: def ingest(path: Path, archive: Path, *, publisher: str, dataset: str, version: str,
+116:            source_url: str, observed_at: str, expected_sha256: str, scratch_dir: Path,
+117:            all_markets: bool = False, timeout: float = 5) -> dict:
+118:     if type(all_markets) is not bool:
+119:         raise ValueError('all_markets must be boolean')
+120:     parsed = urlsplit(source_url)
+121:     if parsed.scheme not in ('https', 'http') or not parsed.hostname or parsed.username or parsed.password:
+122:         raise ValueError('source_url requires an HTTP(S) URL without credentials')
+125:     if not expected_sha256:
+126:         raise ValueError('expected_sha256 is required')
+127:     with writer(path, timeout=timeout) as conn:
+128:         result = source_catalog.ingest_version(
+129:             conn, archive, publisher=publisher, dataset=dataset, version=version,
+130:             source_url=source_url, observed_at=observed_at, scratch_dir=scratch_dir,
+131:             avista_only=not all_markets, expected_sha256=expected_sha256)
+132:     return {'status': 'PASS', **result, 'capital_enabled': False}
+135: def _inspect(conn: sqlite3.Connection) -> dict:
+136:     _validate_schema(conn)
+137:     if conn.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
+138:         raise ValueError('SQLite integrity check failed')
+139:     if conn.execute('PRAGMA foreign_key_check').fetchall():
+140:         raise ValueError('source references are invalid')
+141:     sources = []
+142:     columns = [row[1] for row in conn.execute('PRAGMA table_info(source_versions)')]
+143:     for version in conn.execute('SELECT * FROM source_versions ORDER BY source_id'):
+144:         source = dict(zip(columns, version))
+145:         count, tickers, first, last = conn.execute(
+146:             'SELECT COUNT(*),COUNT(DISTINCT ticker),MIN(date),MAX(date) FROM prices_raw WHERE source_file=?',
+147:             (source['source_id'],)).fetchone()
+148:         digest = hashlib.sha256()
+149:         for row in conn.execute(f'SELECT {PRICE_COLUMNS} FROM prices_raw WHERE source_file=? ORDER BY date,ticker',
+150:                                 (source['source_id'],)):
+151:             digest.update(json.dumps(row, separators=(',', ':'), allow_nan=False).encode('utf-8'))
+152:         sources.append({**source, 'rows': count, 'tickers': tickers, 'date_min': first,
+153:                         'date_max': last, 'rows_sha256': digest.hexdigest()})
+154:     return {'status': 'PASS', 'schema_version': SCHEMA_VERSION, 'sources': sources,
+155:             'stored_rows': sum(row['rows'] for row in sources),
+156:             'scope': 'Physical source versions; never an automatically merged price series.',
+157:             'historical_publication_certified': False, 'capital_enabled': False}
+160: def inspect(path: Path) -> dict:
+161:     with closing(_open(path)) as conn:
+163:         conn.execute('BEGIN')
+164:         return _inspect(conn)
+167: def _reserve_directory(destination: Path) -> None:
+168:     destination.mkdir(exist_ok=False)
+169:     _write_json(destination / 'INCOMPLETE.json', {'status': 'INCOMPLETE'})
+172: def _write_json(path: Path, value: dict) -> None:
+173:     with path.open('x', encoding='utf-8', newline='\n') as stream:
+174:         json.dump(value, stream, indent=2, allow_nan=False)
+175:         stream.write('\n')
+176:         stream.flush()
+177:         os.fsync(stream.fileno())
+180: def snapshot(path: Path, destination: Path, *, timeout: float = 60) -> dict:
+182:     _timeout(timeout)
+183:     with closing(_open(path)) as source:
+184:         _reserve_directory(destination)
+185:         partial = destination / 'snapshot.sqlite.partial'
+186:         started = time.monotonic()
+188:         def progress(status: int, remaining: int, total: int) -> None:
+189:             if time.monotonic() - started > timeout:
+190:                 raise TimeoutError('online backup exceeded deadline')
+192:         with closing(sqlite3.connect(partial)) as target:
+193:             source.backup(target, pages=256, progress=progress, sleep=0.01)
+194:             target.execute('PRAGMA journal_mode=DELETE')
+195:             report = _inspect(target)
+196:         with partial.open('r+b') as stream:
+197:             os.fsync(stream.fileno())
+198:         complete = destination / 'snapshot.sqlite'
+199:         partial.rename(complete)
+200:         manifest = {'format': 'stocks-snapshot-v1', 'sha256': file_sha256(complete),
+201:                     'created_at': datetime.now(timezone.utc).isoformat(), 'inspection': report}
+202:         _write_json(destination / 'manifest.json', manifest)
+203:         (destination / 'INCOMPLETE.json').unlink()
+204:     return {'status': 'PASS', **manifest}
+207: def restore(snapshot_dir: Path, destination: Path) -> dict:
+209:     if (snapshot_dir / 'INCOMPLETE.json').exists():
+210:         raise ValueError('snapshot is incomplete')
+211:     manifest = json.loads((snapshot_dir / 'manifest.json').read_text(encoding='utf-8'))
+212:     if manifest.get('format') != 'stocks-snapshot-v1':
+213:         raise ValueError('unsupported snapshot format')
+214:     _reserve_directory(destination)
+215:     partial = destination / 'research.sqlite.partial'
+216:     digest = hashlib.sha256()
+217:     with (snapshot_dir / 'snapshot.sqlite').open('rb') as source, partial.open('xb') as target:
+218:         while chunk := source.read(1024 * 1024):
+219:             digest.update(chunk)
+220:             target.write(chunk)
+221:         target.flush()
+222:         os.fsync(target.fileno())
+223:     if digest.hexdigest() != manifest['sha256']:
+224:         raise ValueError('snapshot SHA-256 mismatch')
+225:     with closing(sqlite3.connect(partial.resolve().as_uri() + '?mode=ro', uri=True)) as conn:
+226:         report = _inspect(conn)
+227:     if report != manifest['inspection']:
+228:         raise ValueError('restored content differs from snapshot manifest')
+229:     with closing(sqlite3.connect(partial)) as conn:
+230:         conn.execute('PRAGMA journal_mode=WAL')
+231:         conn.execute('PRAGMA synchronous=FULL')
+232:     complete = destination / 'research.sqlite'
+233:     partial.rename(complete)
+234:     receipt = {'status': 'PASS', 'source_snapshot_sha256': digest.hexdigest(), 'inspection': report}
+235:     _write_json(destination / 'receipt.json', receipt)
+236:     (destination / 'INCOMPLETE.json').unlink()
+237:     return receipt

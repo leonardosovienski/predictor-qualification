@@ -1,0 +1,632 @@
+
+### src/cain/evaluation/v2.py
+7: from __future__ import annotations
+9: import argparse
+10: import base64
+11: from collections import Counter
+12: from datetime import datetime, timezone
+13: import hashlib
+14: from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+15: import json
+16: from pathlib import Path
+17: import re
+18: import threading
+19: import time
+20: from urllib.error import HTTPError
+21: from urllib.request import Request, urlopen
+22: from urllib.parse import urlsplit
+23: import uuid
+25: from cain.evaluation.quality import _strict_json
+26: from cain.evaluation.resources import installed_identity
+28: PROTOCOL = "cain-product-evaluation/2.0"
+29: FAMILIES = [f"{level}{i:02}" for level in "BMA" for i in range(1, 13)]
+30: INSTRUMENT = "v2-runner/4"
+33: def local_url(value):
+34:     p = urlsplit(value)
+35:     if (
+36:         p.scheme != "http"
+37:         or p.hostname not in {"127.0.0.1", "localhost", "::1"}
+38:         or p.username
+39:         or p.password
+40:         or p.query
+41:         or p.fragment
+42:         or p.path not in {"", "/"}
+43:     ):
+44:         raise ValueError("Evaluation endpoints must be loopback HTTP origins")
+45:     return value.rstrip("/")
+48: def attest(root, api):
+49:     api = local_url(api)
+50:     status, observed = request(api + "/evaluation/attestation", timeout=10)
+51:     expected = read(Path(root) / "server-attestation.json")
+52:     if status != 200 or observed != expected or observed["root"] != str(Path(root).resolve()):
+53:         raise ValueError("API does not attest the declared QA storage")
+54:     return observed
+57: def write(path, value):
+58:     Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+61: def append(path, value):
+62:     with Path(path).open("a", encoding="utf-8") as f:
+63:         f.write(json.dumps(value, ensure_ascii=False) + "\n")
+66: def read(path):
+67:     return json.loads(Path(path).read_text(encoding="utf-8"))
+70: def digest(path):
+71:     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+74: def records(path):
+75:     return (
+76:         [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines()]
+77:         if Path(path).exists()
+78:         else []
+79:     )
+82: def request(url, data=None, method=None, timeout=250):
+83:     req = Request(
+84:         url,
+85:         data=None if data is None else json.dumps(data).encode(),
+86:         headers={"Content-Type": "application/json"},
+87:         method=method,
+88:     )
+89:     try:
+90:         with urlopen(req, timeout=timeout) as response:
+91:             return response.status, json.loads(response.read())
+92:     except HTTPError as e:
+93:         raw = e.read().decode("utf-8")
+94:         try:
+95:             raw = json.loads(raw)
+96:         except ValueError:
+97:             pass
+98:         return e.code, raw
+101: def validate_design(catalog, rubrics):
+102:     assert catalog["protocol"] == PROTOCOL
+103:     assert sorted(catalog["families"]) == sorted(FAMILIES)
+104:     seen = set()
+105:     required = {
+106:         "case_id",
+107:         "case_version",
+108:         "family_id",
+109:         "level",
+110:         "capability",
+111:         "severity",
+112:         "origin",
+113:         "split",
+114:         "preconditions",
+115:         "state",
+116:         "messages",
+117:         "fixtures",
+118:         "paths",
+119:         "evidence",
+120:         "inference_policy",
+121:         "budget",
+122:         "integrity",
+123:         "evaluator",
+124:     }
+125:     for c in catalog["cases"]:
+126:         if not required.issubset(c) or c["case_id"] in seen or c["family_id"] not in FAMILIES:
+127:             raise ValueError("Incomplete or duplicate case contract")
+128:         if not c["messages"] or not all(type(x) is str and x for x in c["messages"]):
+129:             raise ValueError("Exact messages required")
+130:         if c["case_id"] not in rubrics or set(c["paths"]) - {"A", "B", "C", "D"}:
+131:             raise ValueError("Missing rubric or invalid path")
+132:         if c["split"] not in {"development", "regression", "confirmation"}:
+133:             raise ValueError("Invalid split")
+134:         if "expected" in c or "rubric" in c:
+135:             raise ValueError("Answer keys belong in evaluator file")
+136:         seen.add(c["case_id"])
+137:     return catalog
+140: def evaluate(response, rubric):
+142:     checks = []
+144:     normalized = (
+145:         response[:-2]
+146:         if response.endswith("\r\n")
+147:         else response[:-1]
+148:         if response.endswith("\n")
+149:         else response
+150:     )
+151:     if "exact" in rubric:
+152:         checks.append({"name": "literal", "passed": normalized == rubric["exact"]})
+153:     if "json" in rubric:
+154:         try:
+155:             value = _strict_json(response)
+156:             expected = rubric["json"]
+157:             ok = (
+158:                 type(value) is dict
+159:                 and value.keys() == expected.keys()
+160:                 and all(type(value[k]) is type(v) and value[k] == v for k, v in expected.items())
+161:             )
+162:         except (ValueError, TypeError):
+163:             ok = False
+164:         checks.append({"name": "json_keys_types_values", "passed": ok})
+165:     if "forbidden_word" in rubric:
+166:         checks.append(
+167:             {
+168:                 "name": "forbidden_whole_word",
+169:                 "passed": not bool(
+170:                     re.search(r"\b" + re.escape(rubric["forbidden_word"]) + r"\b", response, re.I)
+171:                 ),
+172:             }
+173:         )
+174:     if "max_words" in rubric:
+175:         checks.append(
+176:             {"name": "word_limit", "passed": len(response.split()) <= rubric["max_words"]}
+177:         )
+178:     quality = (
+179:         "fail"
+180:         if any(not x["passed"] for x in checks)
+181:         else ("review_required" if rubric.get("semantic_required", True) else "pass")
+182:     )
+183:     return {
+184:         "quality": quality,
+185:         "checks": checks,
+186:         "evaluator": "v2-deterministic/1",
+187:         "semantic_review": "pending" if rubric.get("semantic_required", True) else "not_required",
+188:     }
+191: def isolation(root, config):
+193:     from cain.settings import load_settings
+195:     s = load_settings(config)
+196:     runtime = Path(root).resolve() / "runtime"
+197:     if s.db_path.resolve() != runtime / "workspace.db" or s.source_paths or s.allow_public_urls:
+198:         raise ValueError("QA storage/document/network preconditions failed")
+199:     if runtime.is_symlink() or getattr(runtime, "is_junction", lambda: False)():
+200:         raise ValueError("QA runtime cannot redirect storage")
+201:     return {
+202:         "db": str(s.db_path.resolve()),
+203:         "research_db": str(runtime / "research.db"),
+204:         "documents": str(runtime / "knowledge"),
+205:         "embedding_cache": str(runtime / "workspace.embeddings.sqlite3"),
+206:         "source_paths": [],
+207:         "public_urls": False,
+208:         "settings": {k: str(v) if isinstance(v, Path) else v for k, v in vars(s).items()},
+209:     }
+212: def prepare(root, config, catalog, rubrics):
+213:     import tomllib
+215:     root = Path(root).resolve()
+216:     root.mkdir(parents=True, exist_ok=True)
+217:     runtime = root / "runtime"
+218:     runtime.mkdir(exist_ok=False)
+219:     data = tomllib.loads(Path(config).read_text(encoding="utf-8"))
+220:     data["llm"]["base_url"] = "http://127.0.0.1:11436"
+221:     data["storage"] = {"path": (runtime / "workspace.db").as_posix()}
+222:     data["search"]["paths"] = []
+223:     data["search"]["allow_public_urls"] = False
+224:     lines = []
+225:     for group, values in data.items():
+226:         lines.append("[" + group + "]")
+227:         for k, v in values.items():
+228:             lines.append(k + " = " + json.dumps(v, ensure_ascii=False))
+229:     (root / "qa.toml").write_text("\n".join(lines), encoding="utf-8")
+230:     design = validate_design(read(catalog), read(rubrics))
+231:     write(root / "catalog.json", design)
+232:     write(root / "rubrics.json", read(rubrics))
+233:     write(root / "isolation.json", isolation(root, root / "qa.toml"))
+234:     write(
+235:         root / "plan.json",
+236:         {
+237:             "protocol": PROTOCOL,
+238:             "catalog_hash": digest(root / "catalog.json"),
+239:             "rubrics_hash": digest(root / "rubrics.json"),
+240:             "frozen_at": datetime.now(timezone.utc).isoformat(),
+241:             "generation_cap": 100,
+242:             "series_only": True,
+243:             "hidden_retries": False,
+244:             "source": str(Path(__file__).resolve()),
+245:             "instrument_hash": digest(__file__),
+246:             "confirmation": "none reserved; creator and reviewer are implementer",
+247:             "first_subset": [
+248:                 "B01",
+249:                 "B03",
+250:                 "B04",
+251:                 "B06",
+252:                 "B10",
+253:                 "B12",
+254:                 "M01",
+255:                 "M02",
+256:                 "M04",
+257:                 "M10",
+258:                 "M11",
+259:                 "A05",
+260:                 "A06",
+261:             ],
+262:         },
+263:     )
+266: def serve(root, port, backend):
+268:     import uvicorn
+269:     from cain.api import create_app
+271:     root = Path(root).resolve()
+272:     backend = local_url(backend)
+273:     proof = isolation(root, root / "qa.toml")
+274:     write(
+275:         root / "executed-package.json",
+276:         {
+277:             "identity": installed_identity(),
+278:             "isolation": proof,
+279:             "instrument_file": str(Path(__file__).resolve()),
+280:             "instrument_hash": digest(__file__),
+281:         },
+282:     )
+283:     cap = read(root / "plan.json")["generation_cap"]
+285:     class Proxy(BaseHTTPRequestHandler):
+286:         def log_message(self, *args):
+287:             pass
+289:         def do_GET(self):
+290:             self.forward()
+292:         def do_POST(self):
+293:             self.forward()
+295:         def forward(self):
+296:             body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+297:             entry = {
+298:                 "at": datetime.now(timezone.utc).isoformat(),
+299:                 "path": self.path,
+300:                 "request_id": uuid.uuid4().hex,
+301:                 "method": self.command,
+302:                 "request_base64": base64.b64encode(body).decode(),
+303:                 "request_sha256": hashlib.sha256(body).hexdigest(),
+304:                 "case": read(root / "active.json") if (root / "active.json").exists() else None,
+305:             }
+306:             start = time.perf_counter()
+307:             append(root / "dispatch.jsonl", entry)
+308:             status, raw = 502, b'{"error":"observer transport failure"}'
+309:             try:
+310:                 if self.path not in {
+311:                     "/api/generate",
+312:                     "/api/tags",
+313:                     "/api/version",
+314:                     "/api/embed",
+315:                     "/api/embeddings",
+316:                 }:
+317:                     raise ValueError("Endpoint outside QA observation contract")
+318:                 if (
+319:                     self.path == "/api/generate"
+320:                     and sum(x["path"] == "/api/generate" for x in records(root / "transport.jsonl"))
+321:                     >= cap
+322:                 ):
+323:                     raise ValueError("Frozen generation cap reached")
+324:                 req = Request(
+325:                     backend + self.path,
+326:                     data=body if self.command == "POST" else None,
+327:                     headers={"Content-Type": "application/json"},
+328:                     method=self.command,
+329:                 )
+330:                 try:
+331:                     with urlopen(req, timeout=245) as response:
+332:                         status, raw = response.status, response.read()
+333:                 except HTTPError as e:
+334:                     status, raw = e.code, e.read()
+335:                 entry["forwarded"] = True
+336:             except Exception as e:
+337:                 entry["error"] = f"{type(e).__name__}: {e}"
+338:             entry.update(
+339:                 seconds=time.perf_counter() - start,
+340:                 status=status,
+341:                 response_base64=base64.b64encode(raw).decode(),
+342:             )
+343:             append(root / "transport.jsonl", entry)
+344:             self.send_response(status)
+345:             self.send_header("Content-Type", "application/json")
+346:             self.send_header("Content-Length", str(len(raw)))
+347:             self.end_headers()
+348:             self.wfile.write(raw)
+350:     proxy = ThreadingHTTPServer(("127.0.0.1", 11436), Proxy)
+351:     threading.Thread(target=proxy.serve_forever, daemon=True).start()
+353:     app = create_app(
+354:         db_path=Path(proof["db"]),
+355:         config_path=root / "qa.toml",
+356:         research_policy=root / "runtime/research-policy.json",
+357:         research_db=Path(proof["research_db"]),
+358:     )
+359:     attestation = {
+360:         "root": str(root),
+361:         "storage": proof,
+362:         "instance": uuid.uuid4().hex,
+363:         "package": installed_identity()["source_tree_sha256"],
+364:         "instrument": INSTRUMENT,
+365:         "config_hash": digest(root / "qa.toml"),
+366:     }
+367:     write(root / "server-attestation.json", attestation)
+369:     @app.get("/evaluation/attestation")
+370:     def qa_attestation():
+371:         return attestation
+373:     write(root / "openapi.json", app.openapi())
+374:     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+377: def observed_generation_count(calls, dispatch):
+379:     if len(calls) != len(dispatch) or any(x.get("forwarded") is not True for x in calls):
+380:         return None
+381:     return len(calls)
+384: def origin(result, calls):
+385:     if not isinstance(result, dict):
+386:         return "unknown"
+387:     text = result.get("response", "")
+388:     for c in reversed(calls):
+389:         try:
+390:             raw = json.loads(base64.b64decode(c["response_base64"]))
+391:             request_body = json.loads(base64.b64decode(c["request_base64"]))
+392:             if raw.get("response") == text:
+393:                 return "llm_structured" if "format" in request_body else "llm_text"
+394:         except (ValueError, KeyError):
+395:             pass
+396:     if result.get("selected_agent") == "busca":
+397:         return "retrieval_only"
+398:     if (
+399:         result.get("route_reason") in {"social_greeting", "conversation_rule:arithmetic"}
+400:         and not calls
+401:     ):
+402:         return "deterministic"
+403:     return "unknown"
+406: def run(root, run_id, selected, paths, api, catalog_path=None, rubrics_path=None):
+407:     root = Path(root).resolve()
+408:     if set(paths) - {"A", "C"} or not paths:
+409:         raise ValueError("This adapter executes A/C only; use replay for B and real browser for D")
+410:     design, rubrics = (
+411:         read(catalog_path or root / "catalog.json"),
+412:         read(rubrics_path or root / "rubrics.json"),
+413:     )
+414:     validate_design(design, rubrics)
+415:     plan = read(root / "plan.json")
+416:     if (
+417:         digest(root / "catalog.json") != plan["catalog_hash"]
+418:         or digest(root / "rubrics.json") != plan["rubrics_hash"]
+419:     ):
+420:         raise ValueError("Frozen inputs changed; prepare another root")
+421:     isolation(root, root / "qa.toml")
+422:     api = local_url(api)
+423:     attestation = attest(root, api)
+424:     target = root / "runs" / run_id
+425:     if not re.fullmatch(r"[a-zA-Z0-9_-]{1,90}", run_id):
+426:         raise ValueError("Invalid run id")
+427:     target.mkdir(parents=True, exist_ok=False)
+428:     cases = [c for c in design["cases"] if c["family_id"] in selected or c["case_id"] in selected]
+429:     if not cases or any(
+430:         x not in {c["family_id"] for c in cases} | {c["case_id"] for c in cases} for x in selected
+431:     ):
+432:         raise ValueError("Unknown or empty case selection")
+433:     write(
+434:         target / "manifest.json",
+435:         {
+436:             "protocol": PROTOCOL,
+437:             "run_id": run_id,
+438:             "cases": cases,
+439:             "paths": paths,
+440:             "api": api,
+441:             "instrument_hash": digest(__file__),
+442:             "instrument": INSTRUMENT,
+443:             "plan": plan,
+444:             "attestation": attestation,
+445:             "rubrics": rubrics,
+446:             "catalog_hash": digest(catalog_path or root / "catalog.json"),
+447:             "rubrics_hash": digest(rubrics_path or root / "rubrics.json"),
+448:             "package": read(root / "executed-package.json"),
+449:         },
+450:     )
+451:     for case in cases:
+452:         for path in paths:
+453:             if path not in case["paths"] or path not in {"A", "C"}:
+454:                 continue
+455:             for attempt in range(1, case["budget"].get("repetitions", 1) + 1):
+456:                 key = f"{run_id}-{case['case_id']}-{path}-{attempt}"
+457:                 user, session = "qa-" + key, "episode"
+458:                 write(
+459:                     root / "active.json",
+460:                     {
+461:                         "run_id": run_id,
+462:                         "case_id": case["case_id"],
+463:                         "path": path,
+464:                         "attempt": attempt,
+465:                     },
+466:                 )
+467:                 entry = {
+468:                     "run_id": run_id,
+469:                     "case_id": case["case_id"],
+470:                     "family_id": case["family_id"],
+471:                     "split": case["split"],
+472:                     "attempt": attempt,
+473:                     "path": path,
+474:                     "user_id": user,
+475:                     "execution": "completed",
+476:                     "quality": "not_evaluable",
+477:                     "validity": "valid",
+478:                     "diagnostic_override": False,
+479:                     "turns": [],
+480:                     "state_initial": "fresh unique identity and project",
+481:                     "inference_policy": case["inference_policy"][path],
+482:                     "fault_injected": False,
+483:                 }
+484:                 start = time.perf_counter()
+485:                 project = None
+486:                 try:
+487:                     if path == "C":
+488:                         _, profile = request(api + "/profile/" + user)
+489:                         entry["profile_before"] = profile
+490:                         if case["fixtures"]:
+491:                             status, p = request(api + "/projects/" + user, {"name": key})
+492:                             if status != 200:
+493:                                 raise ValueError(str(p))
+494:                             project = p["id"]
+495:                             entry["documents"] = []
+496:                             for fixture in case["fixtures"]:
+497:                                 status, doc = request(
+498:                                     api + f"/projects/{user}/{project}/documents", fixture
+499:                                 )
+500:                                 if status != 200:
+501:                                     raise ValueError(str(doc))
+502:                                 entry["documents"].append(doc)
+503:                     for turn, message in enumerate(case["messages"]):
+504:                         label = {
+505:                             "run_id": run_id,
+506:                             "case_id": case["case_id"],
+507:                             "path": path,
+508:                             "attempt": attempt,
+509:                             "turn": turn,
+510:                         }
+511:                         write(root / "active.json", label)
+512:                         before = len(records(root / "transport.jsonl"))
+513:                         if path == "C":
+514:                             sent = {
+515:                                 "user_id": user,
+516:                                 "session_id": session,
+517:                                 "payload": message,
+518:                                 "project_id": project,
+519:                                 "run_id": str(uuid.uuid4()),
+520:                             }
+521:                             status, response = request(api + "/run", sent, timeout=520)
+522:                             text = (
+523:                                 response.get("response", "") if isinstance(response, dict) else ""
+524:                             )
+525:                         else:
+526:                             s = read(root / "isolation.json")["settings"]
+527:                             sent = {
+528:                                 "model": s["model"],
+529:                                 "prompt": message,
+530:                                 "system": "Responda ao pedido do usuário.",
+531:                                 "stream": False,
+532:                                 "think": s["think"],
+533:                                 "options": {
+534:                                     k: s[k]
+535:                                     for k in ("temperature", "seed", "num_ctx", "num_predict")
+536:                                 },
+537:                             }
+538:                             status, response = request("http://127.0.0.1:11436/api/generate", sent)
+539:                             text = response.get("response", "")
+540:                         calls = [
+541:                             x
+542:                             for x in records(root / "transport.jsonl")[before:]
+543:                             if x["path"] == "/api/generate" and x.get("case") == label
+544:                         ]
+545:                         dispatch = [
+546:                             x
+547:                             for x in records(root / "dispatch.jsonl")
+548:                             if x["path"] == "/api/generate" and x.get("case") == label
+549:                         ]
+550:                         observed_calls = observed_generation_count(calls, dispatch)
+551:                         backend_responses = []
+552:                         for call in calls:
+553:                             try:
+554:                                 backend_responses.append(
+555:                                     json.loads(base64.b64decode(call["response_base64"]))
+556:                                 )
+557:                             except ValueError:
+558:                                 pass
+559:                         truncated = any(
+560:                             x.get("done_reason") in {"length", "max_tokens"}
+561:                             for x in backend_responses
+562:                         )
+563:                         if truncated:
+564:                             entry["truncated"] = True
+565:                         answer_origin = (
+566:                             origin(response, calls)
+567:                             if path == "C"
+568:                             else "llm_text"
+569:                             if status == 200
+570:                             else "unknown"
+571:                         )
+572:                         entry["turns"].append(
+573:                             {
+574:                                 "input": sent,
+575:                                 "status": status,
+576:                                 "response": response,
+577:                                 "text": text,
+578:                                 "calls": calls,
+579:                                 "dispatch": dispatch,
+580:                                 "llm_call_count": observed_calls,
+581:                                 "incomplete_observation": observed_calls is None,
+582:                                 "truncated": truncated,
+583:                                 "answer_origin": answer_origin,
+584:                             }
+585:                         )
+586:                         if status != 200:
+587:                             entry["execution"] = "operational_error"
+588:                             break
+589:                         if response.get("done_reason") in {"length", "max_tokens"}:
+590:                             entry["execution"] = "operational_error"
+591:                             entry["truncated"] = True
+592:                             break
+593:                     if entry["execution"] == "completed":
+594:                         entry.update(evaluate(entry["turns"][-1]["text"], rubrics[case["case_id"]]))
+595:                 except Exception as e:
+596:                     entry.update(execution="operational_error", error=f"{type(e).__name__}: {e}")
+597:                 entry["seconds"] = time.perf_counter() - start
+598:                 append(target / "attempts.jsonl", entry)
+599:                 report(root, target)
+600:                 print(
+601:                     case["case_id"], path, attempt, entry["execution"], entry["quality"], flush=True
+602:                 )
+603:     report(root, target)
+606: def report(root, target):
+607:     design = read(Path(root) / "catalog.json")
+608:     manifest = read(Path(target) / "manifest.json")
+611:     run_cases = manifest.get("cases", [])
+612:     active_families = {x["family_id"] for x in run_cases}
+613:     design["cases"] = [
+614:         x for x in design["cases"] if x["family_id"] not in active_families
+615:     ] + run_cases
+616:     attempts = records(Path(target) / "attempts.jsonl")
+617:     matrix = []
+618:     for f in FAMILIES:
+619:         cases = [x for x in design["cases"] if x["family_id"] == f]
+620:         rows = [x for x in attempts if x["family_id"] == f]
+621:         matrix.append(
+622:             {
+623:                 "family": f,
+624:                 "implemented_cases": [x["case_id"] for x in cases],
+625:                 "attempts": len(rows),
+626:                 "execution": dict(Counter(x["execution"] for x in rows)),
+627:                 "quality": dict(Counter(x["quality"] for x in rows)),
+628:                 "state": "attempted" if rows else "not_executed",
+629:                 "reason": None
+630:                 if rows
+631:                 else "not in this declared round"
+632:                 if cases
+633:                 else "not in this runtime catalogue; consult separate control adapters",
+634:             }
+635:         )
+636:     metrics = {
+637:         "families_planned": 36,
+638:         "families_attempted": sum(x["attempts"] > 0 for x in matrix),
+639:         "attempts": len(attempts),
+640:         "execution": dict(Counter(x["execution"] for x in attempts)),
+641:         "quality": dict(Counter(x["quality"] for x in attempts)),
+642:         "llm_calls_observed": sum(t["llm_call_count"] or 0 for x in attempts for t in x["turns"]),
+643:         "turns_with_unknown_call_count": sum(
+644:             t["llm_call_count"] is None for x in attempts for t in x["turns"]
+645:         ),
+646:         "semantic_review": "separate manual artifact required; no automatic semantic certification",
+647:     }
+648:     write(Path(target) / "coverage.json", matrix)
+649:     write(Path(target) / "metrics.json", metrics)
+650:     lines = [
+651:         "# CAIN evaluation v2",
+652:         "",
+653:         "Technical execution and semantic quality are separate.",
+654:         "",
+655:         "|Family|Cases implemented|Attempts|Execution|Quality|",
+656:         "|---|---|---:|---|---|",
+657:     ]
+658:     lines += [
+659:         f"|{x['family']}|{len(x['implemented_cases'])}|{x['attempts']}|{x['execution'] or x['state']}|{x['quality']}|"
+660:         for x in matrix
+661:     ]
+662:     (Path(target) / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+665: def main(argv=None):
+666:     p = argparse.ArgumentParser(description=__doc__)
+667:     sub = p.add_subparsers(dest="command", required=True)
+668:     prep = sub.add_parser("prepare")
+669:     prep.add_argument("--root", type=Path, required=True)
+670:     prep.add_argument("--config", type=Path, required=True)
+671:     prep.add_argument("--catalog", type=Path, required=True)
+672:     prep.add_argument("--rubrics", type=Path, required=True)
+673:     srv = sub.add_parser("serve")
+674:     srv.add_argument("--root", type=Path, required=True)
+675:     srv.add_argument("--port", type=int, default=8896)
+676:     srv.add_argument("--backend", default="http://127.0.0.1:11435")
+677:     runp = sub.add_parser("run")
+678:     runp.add_argument("--root", type=Path, required=True)
+679:     runp.add_argument("--run-id", required=True)
+680:     runp.add_argument("--cases", required=True)
+681:     runp.add_argument("--paths", default="C")
+682:     runp.add_argument("--api", default="http://127.0.0.1:8896")
+683:     runp.add_argument("--catalog", type=Path)
+684:     runp.add_argument("--rubrics", type=Path)
+685:     a = p.parse_args(argv)
+686:     if a.command == "prepare":
+687:         prepare(a.root, a.config, a.catalog, a.rubrics)
+688:     elif a.command == "serve":
+689:         serve(a.root, a.port, a.backend)
+690:     else:
+691:         run(a.root, a.run_id, a.cases.split(","), a.paths.split(","), a.api, a.catalog, a.rubrics)
+694: if __name__ == "__main__":
+695:     main()

@@ -1,0 +1,2503 @@
+[
+  {
+    "path": "tests/test_attestation_dirty_tree.py",
+    "name": "test_arvore_suja_recusa_e_nao_grava_nada",
+    "line": 59,
+    "assertions": [
+      "assert not destino.exists(), 'atestado recusado não pode deixar arquivo para trás'"
+    ],
+    "raises": [
+      "pytest.raises(DirtyWorkingTreeError, match='árvore de trabalho suja')"
+    ]
+  },
+  {
+    "path": "tests/test_attestation_dirty_tree.py",
+    "name": "test_arvore_limpa_emite_e_grava_code_version",
+    "line": 70,
+    "assertions": [
+      "assert destino.exists()",
+      "assert rec['code_version'].startswith('package:')",
+      "assert ';git:' in rec['code_version']",
+      "assert not rec['code_version'].endswith(';dirty')"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_attestation_dirty_tree.py",
+    "name": "test_allow_dirty_e_o_unico_escape_e_e_explicito",
+    "line": 81,
+    "assertions": [
+      "assert destino.exists()",
+      "assert rec['code_version'].endswith(';dirty'), 'quem usa o escape precisa conseguir provar depois que a trial nasceu suja'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_attestation_dirty_tree.py",
+    "name": "test_arquivo_novo_nao_rastreado_tambem_suja",
+    "line": 94,
+    "assertions": [
+      "assert not destino.exists()"
+    ],
+    "raises": [
+      "pytest.raises(DirtyWorkingTreeError)"
+    ]
+  },
+  {
+    "path": "tests/test_attestation_dirty_tree.py",
+    "name": "test_fora_de_repositorio_nao_e_tratado_como_sujo",
+    "line": 105,
+    "assertions": [
+      "assert destino.exists()",
+      "assert rec['code_version'].startswith('package:')",
+      "assert ';git:' not in rec['code_version']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_iid_brackets_mean",
+    "line": 17,
+    "assertions": [
+      "assert lo < sum(data) / len(data) < hi and len(dist) > 0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_moving_brackets_mean_autocorrelated",
+    "line": 23,
+    "assertions": [
+      "assert math.isfinite(lo) and math.isfinite(hi) and (lo <= hi) and dist"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_stationary_runs_and_brackets",
+    "line": 31,
+    "assertions": [
+      "assert lo <= _mean(series) <= hi"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_unknown_scheme_raises",
+    "line": 42,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_block_requires_min_length",
+    "line": 47,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_cluster_requires_key",
+    "line": 52,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_nonfinite_resamples_dropped",
+    "line": 57,
+    "assertions": [
+      "assert (lo, hi, dist) == (None, None, [])"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_cluster_widens_ci_under_intra_cluster_correlation",
+    "line": 72,
+    "assertions": [
+      "assert hi_c - lo_c > hi_i - lo_i"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_cluster_singleton_brackets_mean",
+    "line": 88,
+    "assertions": [
+      "assert lo < sum(data) / len(data) < hi"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "name": "test_bootstrap_ci_serie_vazia_e_valueerror_explicito",
+    "line": 103,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='vazia')"
+    ]
+  },
+  {
+    "path": "tests/test_contracts_facade.py",
+    "name": "test_points_facade_is_same_object",
+    "line": 12,
+    "assertions": [
+      "assert MarketDataPoint is PhysicalMDP",
+      "assert PredictionPoint is PhysicalPP"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_contracts_facade.py",
+    "name": "test_registry_facade_is_same_object",
+    "line": 17,
+    "assertions": [
+      "assert TrialRegistry is PhysicalTR",
+      "assert MetricMismatchError is PhysicalMME"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_contracts_facade.py",
+    "name": "test_package_facade_exports",
+    "line": 22,
+    "assertions": [
+      "assert contracts.PredictionPoint is PhysicalPP",
+      "assert contracts.TrialRegistry is PhysicalTR"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_aggregation.py",
+    "name": "test_consensus_median_fuses_per_timestamp",
+    "line": 28,
+    "assertions": [
+      "assert [p.close for p in fused] == [102.0, 112.0]",
+      "assert all((p.source == 'consensus_median' for p in fused))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_aggregation.py",
+    "name": "test_consensus_published_at_is_max",
+    "line": 37,
+    "assertions": [
+      "assert fused[0].published_at == late"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_aggregation.py",
+    "name": "test_twap_uniform_grid_equals_mean_close",
+    "line": 46,
+    "assertions": [
+      "assert twap(pts) == pytest.approx(101.5, abs=0.5)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_aggregation.py",
+    "name": "test_twap_empty_raises",
+    "line": 51,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_inicia_fechado_e_saudavel",
+    "line": 10,
+    "assertions": [
+      "assert cb.state == CircuitBreaker.CLOSED",
+      "assert cb.data_quality_score == 1.0",
+      "assert cb.can_attempt() is True and cb.allow() is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_falhas_abaixo_do_limiar_seguem_fechado",
+    "line": 17,
+    "assertions": [
+      "assert cb.state == CircuitBreaker.CLOSED and cb.can_attempt() is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_atinge_limiar_abre",
+    "line": 24,
+    "assertions": [
+      "assert cb.state == CircuitBreaker.OPEN",
+      "assert cb.data_quality_score == 0.0",
+      "assert cb.can_attempt() is False"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_apos_timeout_vai_para_half_open",
+    "line": 33,
+    "assertions": [
+      "assert cb.state == CircuitBreaker.OPEN",
+      "assert cb.can_attempt() is True",
+      "assert cb.state == CircuitBreaker.HALF_OPEN",
+      "assert cb.data_quality_score == 0.5"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_sucesso_em_half_open_fecha_e_zera",
+    "line": 42,
+    "assertions": [
+      "assert cb.state == CircuitBreaker.CLOSED and cb.data_quality_score == 1.0",
+      "assert cb2.state == CircuitBreaker.CLOSED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_falha_em_half_open_reabre",
+    "line": 55,
+    "assertions": [
+      "assert cb.state == CircuitBreaker.OPEN and cb.data_quality_score == 0.0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_relogio_injetavel_controla_timeout",
+    "line": 63,
+    "assertions": [
+      "assert cb.allow() is False",
+      "assert cb.allow() is True",
+      "assert cb.state == CircuitBreaker.HALF_OPEN"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "name": "test_half_open_libera_uma_sonda_por_vez",
+    "line": 73,
+    "assertions": [
+      "assert cb.can_attempt() is True",
+      "assert cb.can_attempt() is False",
+      "assert cb.can_attempt() is False",
+      "assert cb.state == CircuitBreaker.OPEN",
+      "assert cb.can_attempt() is True",
+      "assert cb.can_attempt() is False",
+      "assert cb.state == CircuitBreaker.CLOSED",
+      "assert cb.can_attempt() is True and cb.can_attempt() is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_collection.py",
+    "name": "test_complete_flow_and_append_only_history",
+    "line": 41,
+    "assertions": [
+      "assert [item.lifecycle_state for item in history] == [LifecycleState.DISCOVERED, LifecycleState.VALIDATED, LifecycleState.SNAPSHOT_RECORDED, LifecycleState.EVENT_STARTED, LifecycleState.OFFICIAL_RESULT_FOUND, LifecycleState.COMPLETE]",
+      "assert all((item.created_at == T0 for item in history))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_collection.py",
+    "name": "test_duplicate_is_idempotent_but_changed_same_state_is_rejected",
+    "line": 73,
+    "assertions": [
+      "assert archive.append(first) == first"
+    ],
+    "raises": [
+      "pytest.raises(CollectionTransitionError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_collection.py",
+    "name": "test_retry_missing_result_stale_ambiguous_and_invalid_transition",
+    "line": 81,
+    "assertions": [
+      "assert first.transition(LifecycleState.DISCOVERED) is first"
+    ],
+    "raises": [
+      "pytest.raises(ValueError, match='exige official_result')",
+      "pytest.raises(CollectionTransitionError)",
+      "pytest.raises(ValueError, match='rejection_reason')",
+      "pytest.raises(CollectionTransitionError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_collection.py",
+    "name": "test_collection_cannot_be_scientific_or_reclassified_as_new",
+    "line": 101,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='científico')",
+      "pytest.raises(ValueError, match='não pode ser trial_id')",
+      "pytest.raises(ScientificPromotionError)",
+      "pytest.raises(CollectionTransitionError, match='reclassificada')"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_collection.py",
+    "name": "test_funnel_filters_project_run_and_window",
+    "line": 116,
+    "assertions": [
+      "assert report['events'] == 1 and report['complete'] == 1 and (report['collection_only'] is True)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "name": "test_market_data_point_valid",
+    "line": 29,
+    "assertions": [
+      "assert p.symbol == 'bitcoin' and p.close == 1.5"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "name": "test_market_data_point_high_below_low_raises",
+    "line": 34,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "name": "test_market_data_point_published_before_timestamp_raises",
+    "line": 39,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "name": "test_market_data_point_rejects_naive_timestamp",
+    "line": 44,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='timezone')"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "name": "test_market_data_point_frozen",
+    "line": 49,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(Exception)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "name": "test_signal_point_valid_with_vintage",
+    "line": 55,
+    "assertions": [
+      "assert s.value == 55.0 and s.reference_date is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "name": "test_signal_point_published_before_timestamp_raises",
+    "line": 67,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_ciclo_basico",
+    "line": 12,
+    "assertions": [
+      "assert not pp.is_mature(_T0 + timedelta(days=6))",
+      "assert pp.is_mature(_T0 + timedelta(days=7))",
+      "assert pp.metadata['asset'] == 'BTCUSDT'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_maturacao_antes_da_emissao_e_lookahead",
+    "line": 24,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='lookahead')"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_imutavel",
+    "line": 29,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(AttributeError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_maturacao_instantanea_permitida",
+    "line": 35,
+    "assertions": [
+      "assert pp.is_mature(_T0)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_metadata_mutada_apos_construcao_nao_vaza_para_o_objeto",
+    "line": 41,
+    "assertions": [
+      "assert pp.metadata['asset'] == 'BTCUSDT'",
+      "assert 'future_price' not in pp.metadata"
+    ],
+    "raises": [
+      "pytest.raises(TypeError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_value_lista_mutada_apos_construcao_nao_vaza_para_o_objeto",
+    "line": 56,
+    "assertions": [
+      "assert pp.value == (1, 2, 3)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_value_escalar_nao_e_afetado_pela_copia_defensiva",
+    "line": 63,
+    "assertions": [
+      "assert pp.value == 0.73"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_predicted_at_string_e_rejeitado_com_typeerror_claro",
+    "line": 68,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(TypeError, match='predicted_at deve ser datetime')"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_matures_at_string_e_rejeitado_com_typeerror_claro",
+    "line": 75,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(TypeError, match='matures_at deve ser datetime')"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_naive_e_rejeitado_com_valueerror_claro",
+    "line": 80,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='timezone')",
+      "pytest.raises(ValueError, match='timezone')"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_dois_naive_sao_rejeitados_na_fronteira_utc",
+    "line": 88,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='timezone')"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_hash_sempre_funciona_independente_de_metadata_ou_value_serem_dict",
+    "line": 95,
+    "assertions": [
+      "assert {com_dict_metadata, com_dict_value}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "name": "test_hash_consistente_com_eq_para_objetos_iguais",
+    "line": 108,
+    "assertions": [
+      "assert a == b",
+      "assert hash(a) == hash(b)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_detect_jumps_flags_only_large_moves",
+    "line": 13,
+    "assertions": [
+      "assert [d for d, _ in jumps] == ['d2']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_infer_split_factor_split_and_grouping",
+    "line": 20,
+    "assertions": [
+      "assert infer_split_factor(100.0, 50.0) == pytest.approx(0.5)",
+      "assert infer_split_factor(50.0, 100.0) == pytest.approx(2.0)",
+      "assert infer_split_factor(100.0, 33.0) == pytest.approx(1 / 3, abs=0.0001)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_infer_split_factor_none_when_not_round",
+    "line": 26,
+    "assertions": [
+      "assert infer_split_factor(100.0, 73.0) is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_adjusted_closes_makes_series_continuous",
+    "line": 30,
+    "assertions": [
+      "assert adj == [50.0, 50.0, 55.0]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_adjusted_closes_rejects_nonpositive_factor",
+    "line": 37,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_overnight_returns_skips_nonpositive_prev",
+    "line": 42,
+    "assertions": [
+      "assert [d for d, _ in out] == ['c']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_overnight_returns_com_close_anterior_nan_produz_ret_nan_em_vez_de_omitir",
+    "line": 47,
+    "assertions": [
+      "assert len(rets) == 2",
+      "assert rets[0][0] == 'd1' and math.isnan(rets[0][1])"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_detect_jumps_sempre_reporta_nan_independente_do_threshold",
+    "line": 60,
+    "assertions": [
+      "assert any((d == 'd1' and math.isnan(r) for d, r in jumps))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "name": "test_detect_jumps_serie_normal_sem_nan_nao_regride",
+    "line": 69,
+    "assertions": [
+      "assert detect_jumps(dates, closes, threshold=0.3) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_router.py",
+    "name": "test_fallback_uses_second_when_first_fails",
+    "line": 47,
+    "assertions": [
+      "assert out[0].source == 'b' and p1.calls == 1 and (p2.calls == 1)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_router.py",
+    "name": "test_fallback_raises_when_all_fail",
+    "line": 54,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(DataUnavailableError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_router.py",
+    "name": "test_fallback_skips_open_breaker_without_calling",
+    "line": 60,
+    "assertions": [
+      "assert out[0].source == 'b' and p1.calls == 0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_router.py",
+    "name": "test_aggregation_consenso_funde_sobreviventes",
+    "line": 69,
+    "assertions": [
+      "assert out[0].close == 102.0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_data/test_router.py",
+    "name": "test_aggregation_raises_when_all_fail",
+    "line": 76,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(DataUnavailableError)"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_router.py",
+    "name": "test_router_rejects_empty_providers",
+    "line": 82,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_sem_sharpe_nenhum_a_degeneracao_e_declarada",
+    "line": 33,
+    "assertions": [
+      "assert r['n_trials'] == 29, 'o N continua sendo reportado'",
+      "assert r['n_sharpes'] == 0",
+      "assert r['sr0'] == 0.0",
+      "assert r['sr0_estimable'] is False",
+      "assert r['deflation_applied'] is False, 'sr0 == 0 significa PSR puro; quem lê precisa conseguir ver isso'",
+      "assert r['sharpe_coverage'] == 0.0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_uma_so_tentativa_com_sharpe_ainda_nao_estima_variancia",
+    "line": 47,
+    "assertions": [
+      "assert r['n_sharpes'] == 1",
+      "assert r['sr0_estimable'] is False",
+      "assert r['deflation_applied'] is False"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_com_variancia_estimavel_o_desconto_acontece_e_e_declarado",
+    "line": 55,
+    "assertions": [
+      "assert r['n_sharpes'] == 4",
+      "assert r['sr0_estimable'] is True",
+      "assert r['deflation_applied'] is True",
+      "assert r['sr0'] > 0.0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_cobertura_expoe_a_fracao_do_registro_que_sustenta_o_desconto",
+    "line": 63,
+    "assertions": [
+      "assert r['n_trials'] == 29",
+      "assert r['n_sharpes'] == 3",
+      "assert r['sharpe_coverage'] == pytest.approx(3 / 29)",
+      "assert r['deflation_applied'] is True, 'descontou, mas com V[SR] de 10% do registro'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_strict_recusa_devolver_numero_que_parece_descontado",
+    "line": 72,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(DeflationNotEstimableError, match='não estimável')"
+    ]
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_strict_nao_atrapalha_quando_o_desconto_e_estimavel",
+    "line": 78,
+    "assertions": [
+      "assert r['sr0_estimable'] is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_registro_vazio_nao_divide_por_zero",
+    "line": 83,
+    "assertions": [
+      "assert r['n_trials'] == 0",
+      "assert r['sharpe_coverage'] == 0.0",
+      "assert r['deflation_applied'] is False"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_os_numeros_publicados_nao_mudaram",
+    "line": 90,
+    "assertions": [
+      "assert r['sr0'] == sr0_antigo",
+      "assert r['dsr'] == probabilistic_sharpe_ratio(_RETORNOS, benchmark_sharpe=sr0_antigo)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "name": "test_a_sensibilidade_do_desconto_a_diversidade_das_tentativas",
+    "line": 111,
+    "assertions": [
+      "assert homogeneas['n_trials'] == diversas['n_trials'] == 29",
+      "assert homogeneas['sr0'] < diversas['sr0']",
+      "assert homogeneas['dsr'] > diversas['dsr'], 'o mesmo N produz vereditos opostos conforme V[SR]; por isso n_sharpes e sharpe_coverage precisam ser visíveis'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_finite_scientific_contracts.py",
+    "name": "test_nonfinite_scientific_scalar_is_rejected",
+    "line": 9,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_infra.py",
+    "name": "test_connect_enables_wal_and_row_factory",
+    "line": 6,
+    "assertions": [
+      "assert conn.execute('PRAGMA journal_mode').fetchone()[0].lower() == 'wal'",
+      "assert row['a'] == 1"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_infra.py",
+    "name": "test_run_migrations_is_idempotent",
+    "line": 16,
+    "assertions": [
+      "assert n == 1"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_infra.py",
+    "name": "test_config_hash_deterministic_and_order_independent",
+    "line": 26,
+    "assertions": [
+      "assert a == b",
+      "assert infra.config_hash({'x': 1, 'y': 3}) != a"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonable.py",
+    "name": "test_round_trip_desfaz_o_freeze_recursivamente",
+    "line": 12,
+    "assertions": [
+      "assert to_jsonable(_freeze(original)) == original"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonable.py",
+    "name": "test_o_resultado_e_serializavel_sem_default",
+    "line": 23,
+    "assertions": [
+      "assert json.loads(json.dumps(to_jsonable(congelado))) == {'v': {'x': [1, 2]}, 's': ['a', 'b']}"
+    ],
+    "raises": [
+      "pytest.raises(TypeError)"
+    ]
+  },
+  {
+    "path": "tests/test_jsonable.py",
+    "name": "test_conjunto_heterogeneo_tem_ordem_estavel",
+    "line": 31,
+    "assertions": [
+      "assert stable_sorted(frozenset({1, 'a', 'b', 2})) == ['a', 'b', 1, 2]",
+      "assert to_jsonable(frozenset({3, 1, 2})) == [1, 2, 3]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonable.py",
+    "name": "test_valores_desconhecidos_passam_intactos",
+    "line": 37,
+    "assertions": [
+      "assert to_jsonable(sentinela) is sentinela",
+      "assert to_jsonable({'o': sentinela})['o'] is sentinela"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_append_and_iterate",
+    "line": 8,
+    "assertions": [
+      "assert list(store) == [{'kind': 'bet', 'stake': 10}, {'kind': 'settle', 'pnl': -10}]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_missing_file_iterates_empty",
+    "line": 15,
+    "assertions": [
+      "assert list(JsonlStore(tmp_path / 'nope.jsonl')) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_count_and_tail",
+    "line": 19,
+    "assertions": [
+      "assert store.count() == 5",
+      "assert store.tail(2) == [{'i': 3}, {'i': 4}]",
+      "assert store.tail(0) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_corrupted_line_raises_with_line_number",
+    "line": 28,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match=':2:')"
+    ]
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_unserializable_record_fails_before_write",
+    "line": 35,
+    "assertions": [
+      "assert not store.path.exists()"
+    ],
+    "raises": [
+      "pytest.raises(TypeError)"
+    ]
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_append_rejeita_nan_antes_de_abrir_o_arquivo",
+    "line": 42,
+    "assertions": [
+      "assert not (tmp_path / 's.jsonl').exists()"
+    ],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_append_serializa_containers_congelados_do_core",
+    "line": 49,
+    "assertions": [
+      "assert list(store) == [{'value': {'probability_a': 0.4856, 'favorite': 'Gen.G', 'tags': ['a', 'b'], 'aninhado': {'k': [1, 2]}}, 'conjunto': ['a', 'b']}]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_append_ainda_rejeita_objeto_realmente_nao_serializavel",
+    "line": 81,
+    "assertions": [
+      "assert not store.path.exists()"
+    ],
+    "raises": [
+      "pytest.raises(TypeError)"
+    ]
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "name": "test_append_de_frozenset_heterogeneo_e_deterministico",
+    "line": 90,
+    "assertions": [
+      "assert list(store) == [{'misto': ['a', 'b', 1, 2]}]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_lazy_facade.py",
+    "name": "test_root_import_does_not_load_optional_infrastructure",
+    "line": 5,
+    "assertions": [],
+    "raises": []
+  },
+  {
+    "path": "tests/test_lazy_facade.py",
+    "name": "test_all_legacy_exports_still_resolve",
+    "line": 19,
+    "assertions": [
+      "assert getattr(predictor_core, name) is not None",
+      "assert getattr(contracts, name) is not None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_meta.py",
+    "name": "test_fingerprint_deterministic",
+    "line": 10,
+    "assertions": [
+      "assert a == b",
+      "assert a['schema_version'] == 1 and a['features'] == ['x', 'y']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_meta.py",
+    "name": "test_fingerprint_feature_order_matters",
+    "line": 17,
+    "assertions": [
+      "assert fingerprint(1, ('x', 'y'), {}) != fingerprint(1, ('y', 'x'), {})"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_meta.py",
+    "name": "test_fingerprint_params_change_detected",
+    "line": 22,
+    "assertions": [
+      "assert fingerprint(1, ('x',), {'a': 1}) != fingerprint(1, ('x',), {'a': 2})"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_meta.py",
+    "name": "test_validate_ok_when_equal",
+    "line": 26,
+    "assertions": [
+      "assert validate(fp, fp) is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_meta.py",
+    "name": "test_validate_raises_on_mismatch",
+    "line": 31,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(StaleModelError)"
+    ]
+  },
+  {
+    "path": "tests/test_meta.py",
+    "name": "test_validate_warns_on_legacy_none",
+    "line": 38,
+    "assertions": [
+      "assert any((issubclass(x.category, RuntimeWarning) for x in w))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metric_lock.py",
+    "name": "test_matching_metric_passes",
+    "line": 31,
+    "assertions": [
+      "assert out[0]['metric'] == 'brier'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metric_lock.py",
+    "name": "test_mismatched_metric_is_punished",
+    "line": 44,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(MetricMismatchError)"
+    ]
+  },
+  {
+    "path": "tests/test_metric_lock.py",
+    "name": "test_metric_omitted_is_rejected_for_new_trial",
+    "line": 57,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(MetricMismatchError)"
+    ]
+  },
+  {
+    "path": "tests/test_metric_lock.py",
+    "name": "test_attestation_requires_metric",
+    "line": 66,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='metric')"
+    ]
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_brier_perfect_is_zero",
+    "line": 19,
+    "assertions": [
+      "assert brier(probs, [0, 2]) == pytest.approx(0.0)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_brier_uniform_three_classes",
+    "line": 24,
+    "assertions": [
+      "assert brier(probs, [0]) == pytest.approx(0.6667, abs=0.001)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_log_loss_perfect_near_zero",
+    "line": 33,
+    "assertions": [
+      "assert log_loss([[1.0, 0.0]], [0]) == pytest.approx(0.0, abs=1e-09)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_log_loss_penalizes_confident_wrong",
+    "line": 37,
+    "assertions": [
+      "assert confident_wrong > unsure"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_rps_perfect_is_zero",
+    "line": 46,
+    "assertions": [
+      "assert rps([[1.0, 0.0, 0.0]], [0]) == pytest.approx(0.0)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_rps_penalizes_distance_in_order",
+    "line": 50,
+    "assertions": [
+      "assert far > near"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_rps_requires_two_classes",
+    "line": 58,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_calibration_well_calibrated",
+    "line": 66,
+    "assertions": [
+      "assert abs(row['mean_pred'] - row['obs_freq']) < 0.05"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_dm_t_pvalue_matches_reference",
+    "line": 78,
+    "assertions": [
+      "assert _t_two_sided_p(2.0, 10) == pytest.approx(0.0734, abs=0.001)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_dm_detects_better_forecaster",
+    "line": 83,
+    "assertions": [
+      "assert dm < 0 and 0.0 <= p <= 1.0 and (p < 0.01)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "name": "test_dm_nan_on_zero_variance",
+    "line": 92,
+    "assertions": [
+      "assert math.isnan(dm) and math.isnan(p)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_net.py",
+    "name": "test_transient_status_codes",
+    "line": 13,
+    "assertions": [
+      "assert net.is_transient(_HttpError(status_code=503))",
+      "assert net.is_transient(_HttpError(status_code=429))",
+      "assert not net.is_transient(_HttpError(status_code=404))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_net.py",
+    "name": "test_daily_quota_is_not_transient",
+    "line": 19,
+    "assertions": [
+      "assert not net.is_transient(_HttpError('Quota exceeded: requests per day'))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_net.py",
+    "name": "test_message_markers_transient",
+    "line": 24,
+    "assertions": [
+      "assert net.is_transient(Exception('Service temporarily unavailable'))",
+      "assert net.is_transient(Exception('RESOURCE_EXHAUSTED: overloaded'))",
+      "assert not net.is_transient(Exception('invalid api key'))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_net.py",
+    "name": "test_status_of_extracts_code",
+    "line": 30,
+    "assertions": [
+      "assert net._status_of(_HttpError(status_code=500)) == 500",
+      "assert net._status_of(Exception('sem código')) is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_writes_full_envelope",
+    "line": 8,
+    "assertions": [
+      "assert tuple(rec.keys()) == obs.ENVELOPE_KEYS",
+      "assert rec['run_id'] is None and rec['code_version'] is None",
+      "assert len(back) == 1 and back[0]['event'] == 'wfa_result'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_rejects_non_numeric_metrics",
+    "line": 24,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(TypeError)"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_requires_domain_and_event",
+    "line": 29,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)",
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_read_events_missing_file_is_empty",
+    "line": 36,
+    "assertions": [
+      "assert obs.read_events(tmp_path / 'nao_existe.jsonl') == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_rejeita_metric_nao_finita",
+    "line": 40,
+    "assertions": [
+      "assert not (tmp_path / 'e.jsonl').exists()"
+    ],
+    "raises": [
+      "pytest.raises(ValueError, match='não-finito')",
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_rejeita_nan_escondido_no_metadata",
+    "line": 50,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_read_events_reports_line_context_on_truncated_jsonl",
+    "line": 55,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='events\\\\.jsonl:3')"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_rejeita_timestamp_garbage",
+    "line": 66,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_rejeita_timestamp_naive",
+    "line": 71,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "name": "test_emit_event_aceita_timestamp_com_offset_nao_utc",
+    "line": 79,
+    "assertions": [
+      "assert rec['timestamp'] == '2026-06-29T00:00:00-03:00'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_public_api.py",
+    "name": "test_public_facade_exact_snapshot",
+    "line": 27,
+    "assertions": [
+      "assert frozenset(predictor_core.__all__) == EXPECTED_PUBLIC_API",
+      "assert all((hasattr(predictor_core, name) for name in EXPECTED_PUBLIC_API))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_public_api.py",
+    "name": "test_temporary_flat_package_shims_import",
+    "line": 32,
+    "assertions": [
+      "assert module.__name__ == f'predictor_core.{name}'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_pastview_blocks_future_index",
+    "line": 8,
+    "assertions": [
+      "assert out == [1, 2, 3]"
+    ],
+    "raises": [
+      "pytest.raises(replay.LookaheadError)"
+    ]
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_pastview_nao_carrega_futuro_nem_no_atributo_privado",
+    "line": 21,
+    "assertions": [
+      "assert seen == [(10,), (10, 20), (10, 20, 30)]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_pastview_slice_clamps_to_past",
+    "line": 32,
+    "assertions": [
+      "assert seen[0] == [1] and seen[1] == [1, 2] and (seen[2] == [1, 2, 3])",
+      "assert ledger == [1, 2, 3]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_replay_drops_none_decisions",
+    "line": 44,
+    "assertions": [
+      "assert ledger == [2, 4]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_replay_key_rejects_out_of_order",
+    "line": 49,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_replay_key_accepts_monotonic",
+    "line": 55,
+    "assertions": [
+      "assert ledger == [1, 2, 3]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_replay_rejects_data_available_after_cutoff_before_handler_runs",
+    "line": 61,
+    "assertions": [
+      "assert not called"
+    ],
+    "raises": [
+      "pytest.raises(replay.LookaheadError, match='depois do cutoff')"
+    ]
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_replay_availability_check_requires_explicit_cutoff_key",
+    "line": 79,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='available_at exige key')"
+    ]
+  },
+  {
+    "path": "tests/test_replay.py",
+    "name": "test_pastview_negativo_alem_do_inicio_e_indexerror_nao_lookahead",
+    "line": 84,
+    "assertions": [
+      "assert capturado.get('ok')"
+    ],
+    "raises": [
+      "pytest.raises(IndexError)",
+      "pytest.raises(replay.LookaheadError)"
+    ]
+  },
+  {
+    "path": "tests/test_scientific_golden.py",
+    "name": "test_metrics_and_bootstrap_golden",
+    "line": 17,
+    "assertions": [
+      "assert brier(probs, [0, 1]) == pytest.approx(0.13, rel=REL, abs=ABS)",
+      "assert log_loss(probs, [0, 1]) == pytest.approx(0.2899092476264711, rel=REL, abs=ABS)",
+      "assert rps([[0.7, 0.2, 0.1], [0.1, 0.3, 0.6]], [0, 2]) == pytest.approx(0.0675, rel=REL, abs=ABS)",
+      "assert (lo, hi) == pytest.approx((2.0, 4.2), rel=REL, abs=ABS)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_scientific_golden.py",
+    "name": "test_anti_lookahead_and_experiment_registry_golden",
+    "line": 34,
+    "assertions": [
+      "assert validate_trials(records) == []",
+      "assert records == [{'name': 'golden-v1', 'registered_at': '2026-08-01T00:00:00Z', 'params': {'window': 7}, 'sharpe': 0.25, 'notes': ''}]"
+    ],
+    "raises": [
+      "pytest.raises(LookaheadError)",
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_scientific_governance.py",
+    "name": "test_charter_requires_auditable_scope",
+    "line": 19,
+    "assertions": [
+      "assert charter.to_dict()['created_at'].endswith('Z')"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_scientific_governance.py",
+    "name": "test_freeze_is_deterministic_and_tamper_evident",
+    "line": 42,
+    "assertions": [
+      "assert freeze.verify()",
+      "assert freeze.seal() == freeze",
+      "assert not freeze.verify()"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_scientific_governance.py",
+    "name": "test_charter_rejects_missing_governance_fields",
+    "line": 69,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(TypeError)",
+      "pytest.raises(ValueError, match='COLLECTION_ONLY')"
+    ]
+  },
+  {
+    "path": "tests/test_scientific_governance.py",
+    "name": "test_scientific_transitions_cannot_skip_preregistration_or_freeze",
+    "line": 102,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ScientificTransitionError)",
+      "pytest.raises(ScientificTransitionError)"
+    ]
+  },
+  {
+    "path": "tests/test_settings.py",
+    "name": "test_is_fake_secret_catches_bad_values",
+    "line": 9,
+    "assertions": [
+      "assert settings.is_fake_secret('')",
+      "assert settings.is_fake_secret(None)",
+      "assert settings.is_fake_secret('changeme')",
+      "assert settings.is_fake_secret('short')",
+      "assert not settings.is_fake_secret('uma-chave-real-de-producao-1234')"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_settings.py",
+    "name": "test_require_secrets_returns_valid_dict",
+    "line": 17,
+    "assertions": [
+      "assert got == env"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_settings.py",
+    "name": "test_require_secrets_raises_listing_all_bad",
+    "line": 26,
+    "assertions": [
+      "assert 'EMPTY' in msg and 'PLACEHOLDER' in msg and ('GOOD_KEY' not in msg)"
+    ],
+    "raises": [
+      "pytest.raises(settings.MissingCredentialsError)"
+    ]
+  },
+  {
+    "path": "tests/test_source_quality.py",
+    "name": "test_healthy_source_scorecard",
+    "line": 34,
+    "assertions": [
+      "assert result.state is SourceQualityState.HEALTHY",
+      "assert result.coverage == 1 and result.gap_count == 0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_source_quality.py",
+    "name": "test_gaps_and_latency_degrade_but_bad_provenance_quarantines",
+    "line": 49,
+    "assertions": [
+      "assert degraded.state is SourceQualityState.DEGRADED",
+      "assert quarantined.state is SourceQualityState.QUARANTINED",
+      "assert {'causality', 'integrity'} <= set(quarantined.violations)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_source_quality.py",
+    "name": "test_revisions_and_reference_divergence_are_measured",
+    "line": 82,
+    "assertions": [
+      "assert result.revision_count == 1",
+      "assert result.mean_divergence == 0.001",
+      "assert result.state is SourceQualityState.DEGRADED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_spearman_perfect_monotonic",
+    "line": 12,
+    "assertions": [
+      "assert stats.spearman([1, 2, 3, 4], [10, 20, 30, 40]) == pytest.approx(1.0)",
+      "assert stats.spearman([1, 2, 3, 4], [40, 30, 20, 10]) == pytest.approx(-1.0)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_spearman_none_when_undefined",
+    "line": 17,
+    "assertions": [
+      "assert stats.spearman([1, 2], [1, 2]) is None",
+      "assert stats.spearman([1, 1, 1, 1], [1, 2, 3, 4]) is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_ci_mean_brackets_the_mean",
+    "line": 25,
+    "assertions": [
+      "assert lo < sum(data) / len(data) < hi"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_block_bootstrap_brackets_mean_and_is_finite",
+    "line": 35,
+    "assertions": [
+      "assert math.isfinite(lo) and math.isfinite(hi) and (lo <= hi)",
+      "assert len(dist) > 0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_block_bootstrap_drops_nonfinite_resamples",
+    "line": 45,
+    "assertions": [
+      "assert (lo, hi, dist) == (None, None, [])"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_block_bootstrap_requires_min_length",
+    "line": 55,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_spearman_block_ci_returns_triple",
+    "line": 60,
+    "assertions": [
+      "assert rho is not None and lo <= hi and (rho > 0)",
+      "assert stats.spearman_block_ci([(1, 1), (2, 2)]) == (None, None, None)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_sharpe_constant_series_signals_direction",
+    "line": 70,
+    "assertions": [
+      "assert stats.sharpe([0.01, 0.01, 0.01]) == float('inf')",
+      "assert stats.sharpe([-0.01, -0.01, -0.01]) == float('-inf')",
+      "assert math.isnan(stats.sharpe([0.0, 0.0, 0.0]))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_max_drawdown_on_equity_curve",
+    "line": 79,
+    "assertions": [
+      "assert stats.max_drawdown([100, 110, 88, 95, 100]) == pytest.approx(0.2)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_max_drawdown_raises_on_nonpositive_equity",
+    "line": 84,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_psr_in_unit_interval_and_monotonic",
+    "line": 94,
+    "assertions": [
+      "assert 0.0 <= p_fraca <= 1.0 and 0.0 <= p_forte <= 1.0",
+      "assert p_forte > p_fraca"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_stats.py",
+    "name": "test_psr_nan_for_tiny_sample",
+    "line": 103,
+    "assertions": [
+      "assert math.isnan(stats.probabilistic_sharpe_ratio([0.01, 0.02]))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_sync_core.py",
+    "name": "test_audit_is_read_only",
+    "line": 14,
+    "assertions": [
+      "assert sync_core.audit(tmp_path) == 0",
+      "assert (vendor / '__init__.py').read_bytes() == before"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_sync_core.py",
+    "name": "test_audit_reports_drift_without_writing",
+    "line": 22,
+    "assertions": [
+      "assert sync_core.audit(tmp_path) == 1",
+      "assert 'DRIFT' in capsys.readouterr().out",
+      "assert (vendor / '__init__.py').read_text(encoding='utf-8') == 'OLD = True\\n'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_sync_core.py",
+    "name": "test_write_is_permanently_rejected",
+    "line": 29,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(SystemExit)"
+    ]
+  },
+  {
+    "path": "tests/test_sync_core.py",
+    "name": "test_no_legacy_vendor_is_success",
+    "line": 34,
+    "assertions": [
+      "assert sync_core.audit(tmp_path) == 0",
+      "assert 'No legacy' in capsys.readouterr().out"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_harness.py",
+    "name": "test_harness_positive",
+    "line": 31,
+    "assertions": [
+      "assert assert_pipeline_has_power(_good_pipeline, _edge_gen, _noise_gen) is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_harness.py",
+    "name": "test_harness_catches_blind_pipeline",
+    "line": 36,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(PipelineHasNoPowerError)"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_harness.py",
+    "name": "test_harness_catches_credulous_pipeline",
+    "line": 43,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(PipelineHasNoPowerError)"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_prequential.py",
+    "name": "test_run_pairs_prediction_with_actual",
+    "line": 31,
+    "assertions": [
+      "assert [r['index'] for r in results] == [2, 3, 4]",
+      "assert results[0]['actual'] == 2.0",
+      "assert results[0]['prediction'] == pytest.approx(0.5)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_prequential.py",
+    "name": "test_train_never_sees_future",
+    "line": 39,
+    "assertions": [
+      "assert max((h['t'] for h in hist)) < 3 + i"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_prequential.py",
+    "name": "test_predict_never_sees_target",
+    "line": 46,
+    "assertions": [
+      "assert all(('y' not in f for f in ev.seen_features))",
+      "assert all(('t' in f for f in ev.seen_features))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_prequential.py",
+    "name": "test_retrain_every_amortizes_training",
+    "line": 53,
+    "assertions": [
+      "assert len(ev.seen_histories) == 2",
+      "assert len(ev.seen_features) == 8"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_prequential.py",
+    "name": "test_missing_target_raises",
+    "line": 60,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(KeyError)"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_prequential.py",
+    "name": "test_invalid_config_raises",
+    "line": 68,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)",
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_secrets.py",
+    "name": "test_catches_known_prefixes",
+    "line": 8,
+    "assertions": [
+      "assert find_secrets('token=<REDACTED_OPENAI_TOKEN>')",
+      "assert find_secrets('key AIza' + 'B' * 35)",
+      "assert find_secrets('Authorization: Bearer abcdef0123456789abcdef')"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_secrets.py",
+    "name": "test_clean_text_has_no_hits",
+    "line": 14,
+    "assertions": [
+      "assert find_secrets('{\"score\": 0.9, \"asset\": \"bitcoin\", \"id\": \"a1b2-c3d4\"}') == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_secrets.py",
+    "name": "test_known_value_match_verbatim",
+    "line": 18,
+    "assertions": [
+      "assert find_secrets('prefix realsecretvalue999 suffix', known_values=['realsecretvalue999'])",
+      "assert find_secrets('nada aqui', known_values=['realsecretvalue999']) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_secrets.py",
+    "name": "test_short_known_value_is_ignored",
+    "line": 23,
+    "assertions": [
+      "assert find_secrets('the cat sat', known_values=['cat']) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_secrets.py",
+    "name": "test_absent_file_is_noop",
+    "line": 28,
+    "assertions": [],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_secrets.py",
+    "name": "test_raises_on_leaked_secret",
+    "line": 32,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(AssertionError)"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_synth.py",
+    "name": "test_ar1_deterministic_by_seed",
+    "line": 6,
+    "assertions": [
+      "assert a == b",
+      "assert a != c",
+      "assert len(a) == 50"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_synth.py",
+    "name": "test_ar1_iid_when_phi_zero",
+    "line": 15,
+    "assertions": [
+      "assert abs(sum(s) / len(s) - 0.5) < 0.1"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_synth.py",
+    "name": "test_edge_injected_shifts_mean_by_known_amount",
+    "line": 21,
+    "assertions": [
+      "assert abs(diff - 0.3) < 1e-09",
+      "assert base is not bumped"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_synth.py",
+    "name": "test_edge_injected_specific_positions",
+    "line": 29,
+    "assertions": [
+      "assert out[0] == 1.0 and out[5] == 1.0 and (out[9] == 1.0)",
+      "assert out[1] == 0.0 and sum(out) == 3.0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_synth.py",
+    "name": "test_probabilistic_predictor_skill_extremes",
+    "line": 36,
+    "assertions": [
+      "assert all((abs(p[j] - 1 / 3) < 1e-09 for p in probs0 for j in range(3)))",
+      "assert all((probs1[i][out1[i]] == 1.0 for i in range(50)))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_testing/test_synth.py",
+    "name": "test_probabilistic_predictor_deterministic",
+    "line": 45,
+    "assertions": [
+      "assert a == b"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_timeindex.py",
+    "name": "test_utcnow_is_aware_utc",
+    "line": 10,
+    "assertions": [
+      "assert now.tzinfo is not None and now.utcoffset() == timedelta(0)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_timeindex.py",
+    "name": "test_to_utc_converts_offset",
+    "line": 15,
+    "assertions": [
+      "assert to_utc(br).hour == 12"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_timeindex.py",
+    "name": "test_to_utc_rejects_naive",
+    "line": 20,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(NaiveDatetimeError)"
+    ]
+  },
+  {
+    "path": "tests/test_timeindex.py",
+    "name": "test_iso_z_format_matches_trials_schema",
+    "line": 25,
+    "assertions": [
+      "assert s == '2026-07-11T12:30:45Z'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_timeindex.py",
+    "name": "test_parse_iso_roundtrip",
+    "line": 32,
+    "assertions": [
+      "assert parse_iso(iso_z(dt)) == dt"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_timeindex.py",
+    "name": "test_parse_iso_rejects_naive_string",
+    "line": 37,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(NaiveDatetimeError)"
+    ]
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_complete_prospective_trial_validates",
+    "line": 62,
+    "assertions": [
+      "assert validate_trial_v2(complete_trial()) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_prospective_writer_rejects_silently_incomplete_trial",
+    "line": 67,
+    "assertions": [
+      "assert not (tmp_path / 'trials-v2.json').exists()"
+    ],
+    "raises": [
+      "pytest.raises(TrialSchemaError, match='missing required fields')"
+    ]
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_unknown_is_legacy_only_and_not_applicable_is_explicit",
+    "line": 75,
+    "assertions": [
+      "assert any(('UNKNOWN is reserved' in error for error in validate_trial_v2(complete_trial(seed=UNKNOWN))))",
+      "assert validate_trial_v2(complete_trial(seed=NOT_APPLICABLE)) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_not_applicable_cannot_hide_universal_prospective_provenance",
+    "line": 90,
+    "assertions": [
+      "assert validate_trial_v2(complete_trial(**{field: value}))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_selection_path_and_relevant_selection_space_are_required",
+    "line": 94,
+    "assertions": [
+      "assert any(('selection_path' in error for error in errors))",
+      "assert any(('n_trials_family' in error for error in errors))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_registry_rejects_duplicate_trial_identity",
+    "line": 101,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(TrialSchemaError, match='already registered')"
+    ]
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_legacy_trial_migration_preserves_facts_and_marks_unknown",
+    "line": 108,
+    "assertions": [
+      "assert migrated['trial_id'] == 'H4_DIXON'",
+      "assert migrated['params'] == {'rho': -0.1}",
+      "assert migrated['result'] == {'sharpe': 0.2}",
+      "assert migrated['dataset_hash'] == UNKNOWN",
+      "assert migrated['code_version'] == UNKNOWN",
+      "assert validate_trial_v2(migrated, legacy_mode=True) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_legacy_missing_fields_remain_unknown",
+    "line": 126,
+    "assertions": [
+      "assert migrated['registered_at'] == UNKNOWN",
+      "assert migrated['params'] == UNKNOWN",
+      "assert migrated['notes'] == UNKNOWN"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_invalid_legacy_value_is_not_silently_repaired",
+    "line": 133,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(TrialSchemaError, match='registered_at')"
+    ]
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_registry_migration_is_non_destructive_and_idempotent",
+    "line": 138,
+    "assertions": [
+      "assert first == second",
+      "assert destination.read_bytes() == before",
+      "assert source.read_text(encoding='utf-8') == original",
+      "assert json.loads(destination.read_text(encoding='utf-8'))[0]['dataset_hash'] == UNKNOWN"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_migration_refuses_to_overwrite_original",
+    "line": 152,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='destination must differ')"
+    ]
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_dataset_fingerprint_contract_covers_rows_fields_and_order",
+    "line": 159,
+    "assertions": [
+      "assert digest == dataset_fingerprint(rows, fields=['id', 'value'])",
+      "assert digest != dataset_fingerprint(list(reversed(rows)), fields=['id', 'value'])",
+      "assert digest == dataset_fingerprint(list(reversed(rows)), fields=['id', 'value'], order_matters=False)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_code_version_reports_package_and_real_git_sha",
+    "line": 169,
+    "assertions": [
+      "assert value.startswith(f\"package:{project['project']['version']};git:\")",
+      "assert 'git:' + '0' * 40 not in value"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "name": "test_require_trial_rejects_non_json_result",
+    "line": 176,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(TrialSchemaError, match='result')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_register_and_load",
+    "line": 29,
+    "assertions": [
+      "assert [t['name'] for t in trials] == ['v1', 'v2']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_reregister_same_name_updates_not_appends",
+    "line": 39,
+    "assertions": [
+      "assert len(trials) == 1",
+      "assert trials[0]['sharpe'] == 0.9",
+      "assert trials[0]['registered_at'] == '2026-01-01T00:00:00Z'",
+      "assert [h['sharpe'] for h in trials[0]['superseded']] == [0.1]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_mudar_params_de_trial_existente_e_erro",
+    "line": 58,
+    "assertions": [
+      "assert load_trials(p)[0]['params'] == {'h': 7}"
+    ],
+    "raises": [
+      "pytest.raises(ValueError, match='tentativa nova')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_registro_invalido_nao_e_gravado",
+    "line": 66,
+    "assertions": [
+      "assert load_trials(p) == []"
+    ],
+    "raises": [
+      "pytest.raises(ValueError, match='schema')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_campos_opcionais_do_schema",
+    "line": 73,
+    "assertions": [
+      "assert t['features_used'] == ['rsi']",
+      "assert validate_trials(load_trials(p)) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_periodo_com_um_lado_none_e_aceito",
+    "line": 96,
+    "assertions": [
+      "assert t[key] == periodo",
+      "assert validate_trials(load_trials(p)) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_periodo_com_os_dois_lados_none_e_rejeitado",
+    "line": 108,
+    "assertions": [
+      "assert any((f'{key} inválido' in e for e in validate_trials([trial])))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_periodo_fechado_exige_iso8601_utc",
+    "line": 121,
+    "assertions": [
+      "assert any(('ISO-8601 UTC' in error for error in validate_trials([trial])))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_extra_desconhecido_e_rejeitado_antes_de_persistir",
+    "line": 133,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='campos extras')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_validate_trials_rejeita_campos_desconhecidos_em_arquivo_legado",
+    "line": 140,
+    "assertions": [
+      "assert any(('campos desconhecidos' in error for error in validate_trials([trial])))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_schema_rejeita_campo_invalido",
+    "line": 162,
+    "assertions": [
+      "assert any((erro in e for e in validate_trials([trial])))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_trial_nova_sem_atestado_e_barrada",
+    "line": 182,
+    "assertions": [
+      "assert load_trials(p) == []"
+    ],
+    "raises": [
+      "pytest.raises(PowerAttestationMissingError, match='controle positivo')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_atestado_do_harness_destrava_o_registro",
+    "line": 189,
+    "assertions": [
+      "assert rec['passed_at']",
+      "assert load_trials(p)[0]['name'] == 't-a'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_harness_reprovado_nao_emite_atestado",
+    "line": 211,
+    "assertions": [
+      "assert not ap.exists()"
+    ],
+    "raises": [
+      "pytest.raises(PipelineHasNoPowerError)"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_atestado_corrompido_nao_destrava",
+    "line": 229,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(PowerAttestationMissingError)"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_expected_max_sharpe_grows_with_n",
+    "line": 239,
+    "assertions": [
+      "assert expected_max_sharpe(1, 0.04) == 0.0",
+      "assert e50 > e5 > 0.0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_dsr_decreases_with_more_trials",
+    "line": 246,
+    "assertions": [
+      "assert dsr_many['sr0'] > dsr_few['sr0']",
+      "assert dsr_many['dsr'] < dsr_few['dsr']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_registry_facade_deflates_by_registered_trials",
+    "line": 253,
+    "assertions": [
+      "assert out['n_trials'] == 5 and 0.0 <= out['dsr'] <= 1.0",
+      "assert reg.validate() == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_update_nao_pode_trocar_metric",
+    "line": 271,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='outra régua')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_update_sem_metric_preserva_a_registrada",
+    "line": 280,
+    "assertions": [
+      "assert out[0]['metric'] == 'brier'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_update_pode_enriquecer_trial_sem_metric",
+    "line": 288,
+    "assertions": [
+      "assert out[0]['metric'] == 'brier'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_validate_trials_rejeita_sharpe_bool_e_metric_invalida",
+    "line": 295,
+    "assertions": [
+      "assert any(('sharpe' in e for e in validate_trials([{**base, 'sharpe': True}])))",
+      "assert any(('metric' in e for e in validate_trials([{**base, 'sharpe': None, 'metric': ''}])))",
+      "assert validate_trials([{**base, 'sharpe': None, 'metric': 'rps'}]) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_load_trials_json_corrompido_da_erro_com_caminho",
+    "line": 305,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match=str(p).replace('\\\\', '\\\\\\\\'))"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_load_trials_null_da_erro_claro_em_vez_de_typeerror_downstream",
+    "line": 312,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='lista de tentativas')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_register_trial_nao_perde_tentativa_sob_leitura_obsoleta_concorrente",
+    "line": 319,
+    "assertions": [
+      "assert names == {'trial-x', 'trial-y'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_register_trial_lock_e_liberado_mesmo_apos_falha_de_validacao",
+    "line": 335,
+    "assertions": [
+      "assert not lock_path.exists()",
+      "assert {t['name'] for t in load_trials(p)} == {'m1', 'm2'}"
+    ],
+    "raises": [
+      "pytest.raises(ValueError, match='DIFERENTES')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_params_com_nan_e_rejeitado",
+    "line": 353,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='NaN/Infinity')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_params_com_infinity_aninhado_e_rejeitado",
+    "line": 359,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='NaN/Infinity')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_params_com_valor_nao_serializavel_da_erro_com_contexto",
+    "line": 365,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='t-bad.*não serializável')"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_entrada_legada_malformada_nao_bloqueia_silenciosamente_trial_nova_valida",
+    "line": 373,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match=\"a trial que você está registrando .'t-nova'. está OK\")"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_lock_reclama_imediatamente_quando_pid_dono_esta_morto",
+    "line": 386,
+    "assertions": [
+      "assert acquired == lock"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_lock_owner_pid_dead_e_false_quando_pid_esta_vivo",
+    "line": 400,
+    "assertions": [
+      "assert trials_mod._lock_owner_pid_dead(lock) is False"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_lock_vivo_nao_e_roubado_por_idade",
+    "line": 411,
+    "assertions": [
+      "assert lock.exists()"
+    ],
+    "raises": [
+      "pytest.raises(TimeoutError)"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_lock_owner_pid_dead_e_false_quando_conteudo_ilegivel",
+    "line": 426,
+    "assertions": [
+      "assert trials_mod._lock_owner_pid_dead(lock) is False"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_trials.py",
+    "name": "test_lock_grava_pid_do_processo_atual",
+    "line": 434,
+    "assertions": [
+      "assert content['pid'] == _os.getpid()"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_verdict_change_requires_attestation.py",
+    "name": "test_flip_de_veredito_sem_atestado_e_bloqueado",
+    "line": 67,
+    "assertions": [
+      "assert load_trials(registro)[0]['status'] == 'refutada', 'o veredito não pode ter mudado'"
+    ],
+    "raises": [
+      "pytest.raises(PowerAttestationMissingError, match='mudança de veredito')"
+    ]
+  },
+  {
+    "path": "tests/test_verdict_change_requires_attestation.py",
+    "name": "test_sharpe_inflado_sem_atestado_e_bloqueado",
+    "line": 82,
+    "assertions": [
+      "assert load_trials(registro)[0]['sharpe'] == 0.07"
+    ],
+    "raises": [
+      "pytest.raises(PowerAttestationMissingError)"
+    ]
+  },
+  {
+    "path": "tests/test_verdict_change_requires_attestation.py",
+    "name": "test_editar_apenas_notes_continua_livre",
+    "line": 96,
+    "assertions": [
+      "assert t['notes'] == 'mesma conclusão, redação corrigida'",
+      "assert t['status'] == 'refutada'",
+      "assert 'superseded' not in t, 'sem mudança de veredito, não há histórico a criar'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_verdict_change_requires_attestation.py",
+    "name": "test_com_atestado_valido_o_flip_passa_e_preserva_o_anterior",
+    "line": 113,
+    "assertions": [
+      "assert t['status'] == 'comprovada'",
+      "assert t['sharpe'] == 0.31",
+      "assert len(t['superseded']) == 1",
+      "assert anterior['status'] == 'refutada'",
+      "assert anterior['sharpe'] == 0.07",
+      "assert anterior['superseded_at'].endswith('Z')",
+      "assert validate_trials(load_trials(registro)) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_verdict_change_requires_attestation.py",
+    "name": "test_o_historico_e_append_only",
+    "line": 137,
+    "assertions": [
+      "assert t['status'] == 'inconclusiva'",
+      "assert [h['status'] for h in t['superseded']] == ['refutada', 'comprovada']",
+      "assert validate_trials(load_trials(registro)) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_verdict_change_requires_attestation.py",
+    "name": "test_atestado_expirado_nao_autoriza_flip",
+    "line": 155,
+    "assertions": [
+      "assert load_trials(registro)[0]['status'] == 'refutada'"
+    ],
+    "raises": [
+      "pytest.raises(PowerAttestationMissingError, match='expirado')"
+    ]
+  },
+  {
+    "path": "tests/test_version.py",
+    "name": "test_version_has_provenance_stamp",
+    "line": 9,
+    "assertions": [
+      "assert v, '__version__ vazio'",
+      "assert re.match('^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$', v), f'version must be SemVer: {v!r}'"
+    ],
+    "raises": []
+  }
+]

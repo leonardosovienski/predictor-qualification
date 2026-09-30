@@ -1,0 +1,411 @@
+
+### stocks_predictor/continuous_cash.py
+8: from collections import defaultdict
+9: from copy import deepcopy
+10: from dataclasses import asdict
+11: from datetime import date, timedelta
+12: from decimal import Decimal, ROUND_DOWN, ROUND_FLOOR
+13: import hashlib
+14: import json
+16: from stocks_predictor.retail_cash import Holding, RetailBook, integer_targets, iso, number, ordinary_month_tax
+19: def cents(value):
+20:     return number(value).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+23: class OrdinaryTaxLedger:
+32:     def __init__(self, calendar):
+33:         self.calendar = calendar
+34:         self.month = None
+35:         self.loss = Decimal(0)
+36:         self.credit = Decimal(0)
+37:         self.small_darf = Decimal(0)
+38:         self.assessments = []
+39:         self.external_credits = []
+40:         self.withheld = defaultdict(Decimal)
+41:         self.withheld_disposals = set()
+42:         self.last = None
+44:     def enter(self, book, month):
+45:         if month == self.month:
+46:             return
+47:         if self.month:
+48:             if self.last is None:
+49:                 raise ValueError('previous tax month was not assessed')
+50:             self.assessments.append(self.last)
+51:             self.loss = self.last['loss_carry']
+52:             self.credit = self.last['credit_carry']
+53:             self.small_darf = self.last['darf_carry']
+54:             if month[:4] != self.month[:4]:
+55:                 self.external_credits.append({'year': self.month[:4], 'credit': self.credit})
+56:                 self.credit = Decimal(0)
+57:         self.month = month
+58:         self.refresh(book)
+60:     def refresh(self, book):
+61:         if self.month is None:
+62:             raise ValueError('enter a tax month before assessment')
+63:         spec = self.calendar[self.month]
+64:         if spec.get('source_review') is not True or not spec.get('sources'):
+65:             raise ValueError('unreviewed monthly tax calendar')
+66:         due = iso(spec['due_date'])
+67:         if due[:7] <= self.month:
+68:             raise ValueError('tax payment must follow assessment month')
+69:         rows = [r for r in book.trades if r['date'][:7] == self.month and r['date'] <= book.day]
+70:         disposals = [r for r in book.corporate_disposals
+71:                      if r['date'][:7] == self.month and r['date'] <= book.day]
+72:         calc = ordinary_month_tax(rows, self.loss, corporate_disposals=disposals)
+73:         sales = [r for r in rows if r['quantity'] < 0]
+74:         raw_irrf = sum((r['gross'] for r in sales), Decimal(0)) * number(spec['irrf_rate'])
+75:         irrf = cents(raw_irrf) if raw_irrf > number(spec['irrf_waiver']) else Decimal(0)
+76:         increment = irrf - self.withheld[self.month]
+77:         if increment < 0:
+78:             raise ValueError('cumulative sale withholding cannot decrease')
+79:         if increment:
+82:             when = max(r['settlement_date'] for r in sales)
+83:             book.pending.append({'date': when, 'amount': -increment, 'kind': 'IRRF'})
+84:             self.withheld[self.month] = irrf
+87:         auction_irrf = sum((r['irrf'] for r in disposals), Decimal(0))
+88:         for row in disposals:
+89:             if row['event_id'] not in self.withheld_disposals:
+90:                 if row['irrf']:
+91:                     book.pending.append({'date': row['settlement_date'], 'amount': -row['irrf'],
+92:                                          'kind': 'CORPORATE_IRRF', 'event_id': row['event_id']})
+93:                 self.withheld_disposals.add(row['event_id'])
+94:         usable = self.credit + irrf + auction_irrf
+95:         gross_tax = cents(calc['tax'])
+96:         net_tax = max(Decimal(0), gross_tax - usable)
+97:         credit_carry = max(Decimal(0), usable - gross_tax)
+98:         total = self.small_darf + net_tax
+99:         payable = total if total >= number(spec['minimum_darf']) else Decimal(0)
+100:         tag = 'DARF:' + self.month
+101:         book.pending[:] = [r for r in book.pending if r.get('tag') != tag]
+102:         if payable:
+103:             book.pending.append({'date': due, 'amount': -payable, 'tag': tag, 'kind': 'DARF'})
+104:         self.last = {'month': self.month, **calc, 'tax': gross_tax, 'irrf': irrf,
+105:                      'darf': payable, 'darf_due': due, 'credit_carry': credit_carry,
+106:                      'darf_carry': total - payable}
+107:         if disposals:
+108:             self.last.update(corporate_irrf=auction_irrf,
+109:                              corporate_disposal_ids=[r['event_id'] for r in disposals])
+110:         book.cash_buffer = self.last['darf_carry']
+112:     @property
+113:     def unscheduled_liability(self):
+114:         return self.last['darf_carry'] if self.last else Decimal(0)
+117: def mark(book, day, quotes, tax):
+119:     securities = Decimal(0)
+120:     for ticker, holding in book.positions.items():
+121:         q = quotes[(day, ticker)]
+122:         if q['isin'] != holding.isin or q['date'] != day:
+123:             raise ValueError('mark identity or date mismatch')
+124:         price = number(q['close'])
+125:         if price <= 0:
+126:             raise ValueError('nonpositive mark')
+127:         securities += holding.quantity * price
+128:     obligations = sum((r['amount'] for r in book.pending), Decimal(0))
+129:     known_rights = [r for r in book.rights.values() if r.get('known_on', day) <= day]
+130:     receivables = sum((r['net'] for r in known_rights), Decimal(0))
+131:     unknown_claims = len(book.rights) - len(known_rights)
+132:     liquid_equity = book.cash + obligations + securities - tax.unscheduled_liability
+133:     return {'date': day, 'settled_cash': book.cash, 'trade_and_tax_pending': obligations,
+134:             'securities': securities, 'unpaid_receivables': receivables,
+135:             'unscheduled_tax_liability': tax.unscheduled_liability,
+136:             'unvalued_claims': unknown_claims,
+137:             'liquid_equity': liquid_equity,
+138:             'equity_including_receivables': None if unknown_claims else liquid_equity + receivables}
+141: def apply_action(book, action):
+149:     staged = deepcopy(book)
+150:     if action['ex_date'] != book.day or action.get('source_review') is not True:
+151:         raise ValueError('unreviewed or mistimed action')
+152:     if not action.get('sources') or not action.get('tax_source'):
+153:         raise ValueError('corporate source and fiscal treatment required')
+154:     if iso(action.get('terms_known_on')) > book.day:
+155:         raise ValueError('future corporate quantity terms require a dated revision event')
+156:     original = staged.positions.get(action['ticker'])
+157:     if not original:
+158:         return []
+159:     if original.isin != action['isin']:
+160:         raise ValueError('corporate identity mismatch')
+161:     if action['basis_mode'] not in {'carry', 'bonus', 'explicit_disposal'}:
+162:         raise ValueError('unsupported corporate basis mode')
+163:     quantity = original.quantity
+164:     original_basis = original.basis
+165:     legs = action['stocks']
+166:     if action['basis_mode'] == 'carry':
+167:         if (not action['removes_original'] or sum(number(s['basis_fraction']) for s in legs) != 1
+168:                 or any(number(s['basis_fraction']) < 0 for s in legs)):
+169:             raise ValueError('carry conversion requires full basis allocation')
+170:     elif action['basis_mode'] == 'bonus' and action['removes_original']:
+171:         raise ValueError('bonus must retain the original holding')
+172:     elif action['basis_mode'] == 'explicit_disposal':
+173:         if 'disposal_tax' not in action or not action['removes_original']:
+174:             raise ValueError('explicit disposal tax schedule required')
+175:     if action['removes_original']:
+176:         del staged.positions[action['ticker']]
+177:     log = []
+178:     for n, leg in enumerate(legs):
+179:         ratio = number(leg['ratio'])
+180:         if ratio <= 0:
+181:             raise ValueError('positive delivery ratio required')
+182:         exact = quantity * ratio
+185:         rounding_lot = leg.get('rounding_lot', 1)
+186:         if type(rounding_lot) is not int or rounding_lot <= 0:
+187:             raise ValueError('positive integer corporate rounding lot required')
+188:         whole = int((exact / rounding_lot).to_integral_value(rounding=ROUND_FLOOR)) * rounding_lot
+189:         fraction = exact - whole
+190:         credit = iso(leg['credit_date'])
+191:         tradable = iso(leg['tradable_on']) if leg.get('tradable_on') else None
+192:         if tradable and not book.day <= tradable <= credit:
+193:             raise ValueError('invalid documented pre-credit trading date')
+194:         if credit < book.day or leg['tax_class'] not in {'equity', 'bdr'}:
+195:             raise ValueError('invalid corporate credit date or tax class')
+196:         if action['basis_mode'] == 'carry':
+197:             full_basis = original_basis * number(leg['basis_fraction'])
+198:         else:
+199:             full_basis = exact * number(leg['basis_per_share'])
+200:         if full_basis < 0:
+201:             raise ValueError('negative fiscal basis')
+202:         whole_basis = full_basis * whole / exact
+203:         if fraction:
+204:             terms = leg['fraction_settlement']
+205:             if terms.get('source_review') is not True or not terms.get('sources'):
+206:                 raise ValueError('fraction settlement not reviewed')
+207:             event_id = f"{action['event_id']}:fraction:{n}"
+208:             removed_basis = full_basis - whole_basis
+209:             if terms.get('tax_treatment') == 'ordinary_exchange':
+210:                 disposal = _auction_disposal(book, action, leg, terms, event_id, fraction, removed_basis)
+211:                 staged.corporate_disposals.append(disposal)
+212:                 amount = disposal['gross'] - disposal['costs']
+213:                 _corporate_cash(staged, event_id, amount, terms)
+214:                 log.append({'fraction': fraction, 'removed_basis': removed_basis,
+215:                             'cash_before_personal_tax': amount, 'disposal_date': disposal['date'],
+216:                             'known_on': terms['known_on']})
+217:             elif terms.get('tax_treatment') == 'reviewed_portfolio_net':
+218:                 _require_portfolio_context(book, terms)
+219:                 amount = fraction * number(terms['net_cash_per_fraction'])
+220:                 _corporate_cash(staged, event_id, amount, terms)
+221:                 log.append({'fraction': fraction, 'removed_basis': removed_basis, 'net_cash': amount})
+222:             else:
+223:                 raise ValueError('explicit fraction tax treatment required; fee-net is not personal-tax-net')
+224:         if whole:
+225:             existing = staged.positions.get(leg['ticker'])
+226:             if existing:
+227:                 if existing.isin != leg['isin'] or existing.tax_class != leg['tax_class']:
+228:                     raise ValueError('merged delivery identity mismatch')
+229:                 existing.normalize_deliveries(book.day)
+230:                 if credit > book.day:
+231:                     existing.locked_deliveries.append({'quantity': whole, 'credit_date': credit,
+232:                                                        'tradable_on': tradable})
+233:                 existing.quantity += whole
+234:                 existing.basis += whole_basis
+235:             else:
+236:                 staged.positions[leg['ticker']] = Holding(leg['isin'], whole, whole_basis,
+237:                                                           leg['tax_class'], credit, tradable_on=tradable)
+238:     for n, cash in enumerate(action.get('cash', [])):
+239:         _corporate_cash(staged, f"{action['event_id']}:cash:{n}", quantity*number(cash['net_per_original']), cash)
+240:     for tax in action.get('disposal_tax', []):
+241:         if tax.get('source_review') is not True or not tax.get('sources'):
+242:             raise ValueError('disposal tax not reviewed')
+243:         _require_portfolio_context(book, tax)
+244:         if iso(tax.get('known_on')) > book.day:
+245:             raise ValueError('future disposal tax amount requires a dated recognition event')
+246:         amount = quantity * number(tax['tax_per_original'])
+247:         if amount < 0 or iso(tax['payment_date']) <= book.day:
+248:             raise ValueError('invalid disposal tax flow')
+249:         staged.pending.append({'date': tax['payment_date'], 'amount': -amount, 'kind': 'CORPORATE_TAX'})
+250:     book.__dict__.update(staged.__dict__)
+251:     return log
+254: def portfolio_fingerprint(book):
+261:     state = {**book.__dict__, 'positions': {k: asdict(v) for k, v in book.positions.items()},
+262:              'seen_right_ids': sorted(book.seen_right_ids)}
+263:     return hashlib.sha256(json.dumps(state, sort_keys=True, default=str).encode('utf-8')).hexdigest()
+266: def _require_portfolio_context(book, terms):
+267:     if terms.get('portfolio_state_sha256') != portfolio_fingerprint(book):
+268:         raise ValueError('reviewed net corporate tax must match the portfolio state')
+271: def _auction_disposal(book, action, leg, terms, event_id, quantity, basis):
+278:     if not terms.get('tax_source'):
+279:         raise ValueError('auction tax classification source required')
+280:     when, known = iso(terms['disposal_date']), iso(terms['known_on'])
+281:     available = iso(terms['available_on'])
+282:     if not book.day <= when <= iso(terms['payment_date']) < available or known > when:
+283:         raise ValueError('auction needs causal disposal, knowledge and cash dates')
+284:     gross = quantity * number(terms['gross_cash_per_fraction'])
+285:     costs = quantity * number(terms['fees_per_fraction'])
+286:     irrf = quantity * number(terms['irrf_per_fraction'])
+287:     if gross <= 0 or costs < 0 or irrf < 0 or costs + irrf > gross:
+288:         raise ValueError('invalid auction gross, expenses or withholding')
+289:     if any(r['event_id'] == event_id for r in book.corporate_disposals):
+290:         raise ValueError('duplicate corporate disposal')
+291:     return {'event_id': event_id, 'ticker': leg['ticker'], 'isin': leg['isin'],
+292:             'date': when, 'settlement_date': available, 'quantity': quantity,
+293:             'gross': gross, 'costs': costs, 'basis': basis, 'gain': gross-costs-basis,
+294:             'irrf': irrf, 'tax_class': leg['tax_class'], 'source_review': True,
+295:             'sources': terms['sources'], 'tax_source': terms['tax_source'],
+296:             'originating_action': action['event_id']}
+299: def _corporate_cash(book, event_id, amount, terms):
+300:     if amount < 0 or not book.day <= iso(terms['payment_date']) < iso(terms['available_on']):
+301:         raise ValueError('invalid corporate cash chronology')
+302:     if event_id in book.seen_right_ids:
+303:         raise ValueError('duplicate corporate cash')
+304:     book.seen_right_ids.add(event_id)
+305:     known_on = iso(terms['known_on'])
+306:     if known_on > terms['payment_date']:
+307:         raise ValueError('cash amount cannot become known after payment')
+308:     if amount:
+309:         book.rights[event_id] = {'net': amount, 'payment_date': terms['payment_date'],
+310:                                  'available_on': terms['available_on'], 'ticker': 'corporate',
+311:                                  'known_on': known_on}
+314: def run_continuous(capital, cost_rate, plans, quotes, sessions, settlements,
+315:                    cash_events, actions, tax_calendar, coverage_ready, coverage_issues=(), *,
+316:                    selection_policy=None):
+323:     if coverage_ready is not True or coverage_issues:
+324:         raise ValueError('complete reviewed strategy AND comparison evidence required')
+325:     if number(capital) <= 0 or not 0 <= number(cost_rate) < 1:
+326:         raise ValueError('positive capital and valid cost required')
+327:     if len(plans) < 2 or plans[-1]['members'] or any(not p['members'] for p in plans[:-1]):
+328:         raise ValueError('nonempty rebalance plans and an explicit final liquidation required')
+329:     if [p['entry'] for p in plans] != sorted({p['entry'] for p in plans}):
+330:         raise ValueError('unique chronological plans required')
+331:     session_set = set(sessions)
+332:     if sessions != sorted(session_set) or any(iso(d) != d for d in sessions):
+333:         raise ValueError('unique chronological sessions required')
+334:     for p in plans:
+335:         if iso(p['asof']) >= iso(p['entry']) or p['entry'] not in session_set or p['asof'] not in session_set:
+336:             raise ValueError('plan must use an earlier session signal')
+337:         if len({m['ticker'] for m in p['members']}) != len(p['members']):
+338:             raise ValueError('duplicate plan member')
+339:         if sessions.index(p['entry']) != sessions.index(p['asof']) + 1:
+340:             raise ValueError('execution must follow the signal in the next session')
+341:         settlement = iso(settlements[p['entry']])
+342:         if settlement not in session_set or settlement <= p['entry']:
+343:             raise ValueError('settlement must be a later exchange session')
+344:     by_day = {p['entry']: p for p in plans}
+345:     by_signal = {p['asof']: p for p in plans}
+346:     if len(by_signal) != len(plans):
+347:         raise ValueError('unique signal dates required')
+348:     cash_by_day = defaultdict(list)
+349:     action_by_day = defaultdict(list)
+350:     ids = set()
+351:     for event, dest in [(e, cash_by_day) for e in cash_events] + [(e, action_by_day) for e in actions]:
+352:         if not event.get('event_id') or event['event_id'] in ids or event.get('source_review') is not True:
+353:             raise ValueError('unique reviewed events required')
+354:         if not event.get('sources') or not event.get('tax_source'):
+355:             raise ValueError('event source and fiscal treatment required')
+356:         ids.add(event['event_id'])
+357:         dest[iso(event['ex_date'])].append(event)
+358:     book = RetailBook(capital, plans[0]['asof'])
+359:     tax = OrdinaryTaxLedger(tax_calendar)
+360:     tax.enter(book, book.day[:7])
+361:     targets = {}
+362:     selected_plans = {}
+363:     signal_decisions = []
+364:     snapshots = []
+365:     action_log = []
+366:     seen_actions = set()
+367:     end = plans[-1]['entry']
+368:     today = date.fromisoformat(book.day)
+369:     while today.isoformat() <= end:
+370:         day = today.isoformat()
+371:         book.advance(day)
+372:         tax.enter(book, day[:7])
+373:         for event in cash_by_day[day]:
+374:             known_on = iso(event['known_on'])
+375:             if known_on > event['payment_date']:
+376:                 raise ValueError('cash amount cannot become known after payment')
+377:             book.entitlement(event['event_id'], event['ticker'], event['isin'], day,
+378:                              event['payment_date'], event['available_on'], event['net_per_share'])
+379:             if event['event_id'] in book.rights:
+380:                 book.rights[event['event_id']]['known_on'] = known_on
+381:         for event in action_by_day[day]:
+382:             if event['event_id'] in seen_actions:
+383:                 raise ValueError('duplicate action')
+384:             seen_actions.add(event['event_id'])
+385:             action_log.append({'event': event['event_id'], 'date': day, 'details': apply_action(book, event)})
+388:         if any(r['date'] == day for r in book.corporate_disposals):
+389:             tax.refresh(book)
+390:         if day in by_day:
+391:             plan = by_day[day]
+392:             if selection_policy is not None:
+393:                 plan = selected_plans[plan['asof']]
+394:             target = targets[plan['asof']]
+400:             if any(plan['asof'] < e['ex_date'] <= day and e['ticker'] in target
+401:                    and (e['removes_original'] or any(s['ticker'] == e['ticker'] for s in e['stocks']))
+402:                    for e in actions):
+403:                 raise ValueError('corporate action between signal and execution requires reviewed order transformation')
+404:             identities = {m['ticker']: m for m in plan['members']}
+405:             if any(t in identities and (identities[t]['isin'] != h.isin
+406:                    or identities[t]['tax_class'] != h.tax_class) for t, h in book.positions.items()):
+407:                 raise ValueError('target and retained holding identity mismatch')
+408:             identities.update({t: {'isin': h.isin, 'tax_class': h.tax_class,
+409:                                   'lot': quotes[(day, t)]['lot']} for t, h in book.positions.items()})
+410:             deltas = {t: target.get(t, 0) - (book.positions[t].quantity if t in book.positions else 0)
+411:                       for t in set(target) | set(book.positions)}
+412:             for buying in (False, True):
+413:                 for ticker in sorted(deltas):
+414:                     delta = deltas[ticker]
+415:                     if not delta or (delta > 0) != buying:
+416:                         continue
+417:                     identity = identities[ticker]
+418:                     q = quotes[(day, ticker)]
+419:                     while delta:
+420:                         r = book.order(ticker, identity['isin'], delta, q, plan['asof'], settlements[day],
+421:                                        cost_rate, identity['lot'], identity['tax_class'])
+422:                         if r:
+423:                             break
+424:                         delta -= 1
+425:                     if not buying:
+426:                         tax.refresh(book)
+427:                 if not buying:
+428:                     tax.refresh(book)
+429:         if day in session_set:
+430:             valuation = mark(book, day, quotes, tax)
+431:             snapshots.append(valuation)
+432:             if day in by_signal:
+433:                 plan = by_signal[day]
+434:                 if selection_policy is not None:
+435:                     available = {m['ticker']: m for m in plan['members']}
+436:                     symbols = set(available) | set(book.positions)
+437:                     signal_quotes = {t: deepcopy(quotes[(day, t)]) for t in symbols}
+438:                     decision = selection_policy(deepcopy(plan), deepcopy(book),
+439:                         max(0, valuation['liquid_equity']), signal_quotes, settlements[plan['entry']])
+440:                     members, quantities = decision['members'], decision['targets']
+441:                     if (len({m['ticker'] for m in members}) != len(members)
+442:                             or set(quantities) != {m['ticker'] for m in members}
+443:                             or any(type(q) is not int or q < 0 for q in quantities.values())
+444:                             or any(m != available.get(m['ticker']) for m in members)
+445:                             or (plan['members'] and not members)
+446:                             or (not plan['members'] and quantities)):
+447:                         raise ValueError('signal policy changed the allowed identities or order contract')
+448:                     selected_plans[day] = {**plan, 'members': deepcopy(members)}
+449:                     targets[day] = dict(quantities)
+450:                     signal_decisions.append({'asof': day, 'entry': plan['entry'], **deepcopy(decision)})
+451:                     today += timedelta(days=1)
+452:                     continue
+453:                 prices = {}
+454:                 for m in plan['members']:
+455:                     q = quotes[(day, m['ticker'])]
+456:                     if q['date'] != day or q['isin'] != m['isin']:
+457:                         raise ValueError('signal quote identity mismatch')
+458:                     prices[m['ticker']] = q['close']
+459:                 targets[day] = integer_targets(max(0, valuation['liquid_equity']), prices) if prices else {}
+460:         today += timedelta(days=1)
+461:     if book.positions:
+462:         raise ValueError('final liquidation left positions')
+463:     if any(r['date'] > end for r in book.corporate_disposals):
+464:         raise ValueError('post-end corporate auction requires an extended reviewed tax horizon')
+465:     tax.refresh(book)
+467:     terminal = mark(book, end, quotes, tax)
+470:     clearing = deepcopy(book)
+471:     clearing_day = max([end, *(r['date'] for r in clearing.pending)])
+472:     clearing.advance(clearing_day)
+473:     result = {'full_history_executed': True, 'capital': number(capital), 'cost_rate': number(cost_rate),
+474:             'first_entry': plans[0]['entry'], 'final_exit': end, 'snapshots': snapshots,
+475:             'trades': book.trades, 'corporate_disposals': book.corporate_disposals,
+476:             'tax_assessments': [*tax.assessments, tax.last],
+477:             'unused_irrf_for_personal_return': tax.external_credits,
+478:             'corporate_log': action_log, 'remaining_cash_flows': book.pending,
+479:             'last_obligation_date': clearing_day, 'cleared_cash_on_last_obligation_date': clearing.cash,
+480:             'unpaid_receivables': book.rights, 'terminal': terminal,
+481:             'profit_excluding_unpaid_receivables': terminal['liquid_equity']-number(capital),
+482:             'profit_including_unpaid_receivables_at_face': (None if terminal['unvalued_claims']
+483:                 else terminal['equity_including_receivables']-number(capital))}
+484:     if selection_policy is not None:
+485:         result.update(signal_decisions=signal_decisions,
+486:             traded_notional_brl=sum((r['gross'] for r in book.trades), Decimal(0)),
+487:             modeled_trading_cost_brl=sum((r['costs'] for r in book.trades), Decimal(0)))
+488:     return result

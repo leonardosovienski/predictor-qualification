@@ -1,0 +1,453 @@
+
+### stocks_predictor/simulation.py
+8: from bisect import bisect_right
+9: import math
+12: ENGINE_VERSION = "stocks-causal-execution-v3"
+15: def load_bars(conn, ticker, end=None):
+16:     args = [ticker]
+17:     cutoff = ""
+18:     if end:
+19:         cutoff = " AND date<=?"
+20:         args.append(end)
+21:     rows = conn.execute(
+22:         "SELECT date,open,close,quote_factor FROM prices_raw"
+23:         " WHERE market_type='010' AND ticker=?" + cutoff + " ORDER BY date",
+24:         args,
+25:     )
+26:     bars = {}
+27:     for day, opening, closing, quote_factor in rows:
+28:         if quote_factor is None or not math.isfinite(quote_factor) or quote_factor <= 0:
+29:             raise ValueError(f"invalid quote factor: {ticker}/{day}")
+30:         values = opening / quote_factor, closing / quote_factor
+31:         if any(not math.isfinite(p) or p <= 0 for p in values):
+32:             raise ValueError(f"invalid OHLC: {ticker}/{day}")
+33:         if day in bars and bars[day] != values:
+34:             raise ValueError(f"ambiguous normalized prices: {ticker}/{day}")
+35:         bars[day] = values
+36:     return bars
+39: def split_events(conn, ticker, end):
+40:     result = {}
+41:     for ex, factor in conn.execute(
+42:         "SELECT ex_date,factor FROM adjustments WHERE ticker=?"
+43:         " AND type IN ('split','grupamento') AND approved_by IS NOT NULL"
+44:         " AND ex_date<=? ORDER BY ex_date",
+45:         (ticker, end),
+46:     ):
+47:         if not math.isfinite(factor) or factor <= 0:
+48:             raise ValueError("invalid approved split")
+49:         result[ex] = result.get(ex, 1.0) * factor
+50:     return result
+53: def point_in_time_series(conn, ticker, asof):
+54:     bars = load_bars(conn, ticker, end=asof)
+55:     dates = sorted(bars)
+56:     splits = price_adjustment_events(conn, ticker, asof)
+57:     closes = []
+58:     for day in dates:
+59:         close = bars[day][1]
+60:         for ex, factor in splits.items():
+61:             if day < ex <= asof:
+62:                 close *= factor
+63:         closes.append(close)
+64:     return dates, closes
+67: def price_adjustment_events(conn, ticker, end):
+69:     if __package__:
+70:         from .stock_events import bonus_events
+71:     else:
+72:         from stock_events import bonus_events
+73:     events = split_events(conn, ticker, end)
+74:     for ex, _, ratio in bonus_events(conn, ticker, end):
+75:         events[ex] = events.get(ex, 1.0) / (1 + ratio)
+76:     return events
+79: def simulate_portfolio(
+80:     dates,
+81:     bars,
+82:     targets,
+83:     *,
+84:     cost_per_side=0.0018,
+85:     price_mode="next_open",
+86:     splits=None,
+87:     cash_events=None,
+88:     stock_events=None,
+89:     initial_cash=1.0,
+90:     quantity_step=0.0,
+91:     require_final_quotes=True,
+92: ):
+102:     if price_mode not in {"next_open", "next_close", "worst"}:
+103:         raise ValueError("unsupported execution price")
+104:     if not math.isfinite(cost_per_side) or not 0 <= cost_per_side < 0.1:
+105:         raise ValueError("invalid transaction cost")
+106:     if initial_cash <= 0 or not math.isfinite(initial_cash):
+107:         raise ValueError("invalid initial cash")
+108:     if not math.isfinite(quantity_step) or quantity_step < 0:
+109:         raise ValueError("invalid quantity step")
+110:     if dates != sorted(set(dates)):
+111:         raise ValueError("session dates must be unique and sorted")
+112:     for weights in targets.values():
+113:         if any(not math.isfinite(w) or w < 0 for w in weights.values()) or sum(weights.values()) > 1 + 1e-10:
+114:             raise ValueError("weights must be long-only, sum <= 1")
+115:     cash = previous_nav = initial_cash
+116:     holdings, marks, last_quote = {}, {}, {}
+117:     pending, active_signal, target_values = {}, None, {}
+118:     signal_dates = sorted(targets)
+119:     signal_index = 0
+120:     returns, navs, executions, stale_marks, receivables = [], [], [], [], []
+121:     stock_receivables, stock_entitlements, stock_deliveries = [], [], []
+122:     splits = splits or {}
+123:     cash_events = cash_events or {}
+124:     stock_events = stock_events or {}
+125:     for events in stock_events.values():
+126:         for ex, credit, ratio in events:
+127:             if credit < ex or not math.isfinite(ratio) or ratio <= 0:
+128:                 raise ValueError("invalid stock bonus dates/ratio")
+129:     last_day = dates[0] if dates else None
+130:     for day in dates:
+132:         assets = set(holdings) | {t for t, _, _ in stock_receivables}
+133:         action_days = sorted({
+134:             d for ticker in assets
+135:             for d in (
+136:                 list(splits.get(ticker, {}))
+137:                 + [ex for ex, _, _ in cash_events.get(ticker, [])]
+138:                 + [ex for ex, _, _ in stock_events.get(ticker, [])]
+139:                 + [credit for _, credit, _ in stock_events.get(ticker, [])]
+140:             ) if last_day < d <= day
+141:         })
+142:         for action_day in action_days:
+143:             for ticker in assets:
+144:                 multiplier = splits.get(ticker, {}).get(action_day)
+145:                 if multiplier is not None:
+146:                     if multiplier <= 0 or not math.isfinite(multiplier):
+147:                         raise ValueError("invalid split factor")
+148:                     if ticker in holdings:
+149:                         holdings[ticker] /= multiplier
+150:                     stock_receivables = [
+151:                         (t, credit, q / multiplier if t == ticker else q)
+152:                         for t, credit, q in stock_receivables
+153:                     ]
+154:                     if ticker in marks:
+155:                         marks[ticker] *= multiplier
+156:                 for ex, credit, ratio in stock_events.get(ticker, []):
+157:                     if ex == action_day:
+158:                         if any(t == ticker for t, _, _ in stock_receivables):
+159:                             raise ValueError("overlapping stock bonuses require instrument-specific terms")
+160:                         quantity = holdings.get(ticker, 0) * ratio
+161:                         if quantity:
+162:                             stock_receivables.append((ticker, credit, quantity))
+163:                             stock_entitlements.append((ex, ticker, credit, quantity))
+164:                             if ticker in marks:
+165:                                 marks[ticker] /= 1 + ratio
+166:                 for ex, pay, amount in cash_events.get(ticker, []):
+167:                     if ex == action_day:
+168:                         if any(t == ticker and credit > ex for t, credit, _ in stock_receivables):
+169:                             raise ValueError("cash rights on undelivered bonus shares require explicit terms")
+170:                         entitled = holdings.get(ticker, 0) + sum(
+171:                             q for t, credit, q in stock_receivables if t == ticker and credit <= ex
+172:                         )
+173:                         receivables.append((pay, entitled * amount))
+174:             for ticker, credit, quantity in stock_receivables:
+175:                 if credit <= action_day:
+176:                     holdings[ticker] = holdings.get(ticker, 0) + quantity
+177:                     stock_deliveries.append((credit, ticker, quantity))
+178:             stock_receivables = [(t, credit, q) for t, credit, q in stock_receivables if credit > action_day]
+179:         cash += sum(amount for pay, amount in receivables if pay <= day)
+180:         receivables = [(pay, amount) for pay, amount in receivables if pay > day]
+181:         receivable_value = sum(amount for _, amount in receivables)
+183:         new_signal = None
+184:         while signal_index < len(signal_dates) and signal_dates[signal_index] < day:
+185:             new_signal = signal_dates[signal_index]
+186:             signal_index += 1
+188:         def mark(ticker):
+189:             quote = bars.get(ticker, {}).get(day)
+190:             if quote:
+191:                 return quote[1] if price_mode == "next_close" else quote[0]
+192:             return marks.get(ticker, 0.0)
+194:         if new_signal is not None:
+195:             active_signal = new_signal
+196:             weights = targets[new_signal]
+198:             investable = cash + sum(q * mark(t) for t, q in holdings.items())
+201:             post_cost = investable
+202:             names = set(weights) | set(holdings)
+203:             for _ in range(100):
+204:                 turnover = sum(
+205:                     abs(weights.get(t, 0) * post_cost - holdings.get(t, 0) * mark(t)) for t in names
+206:                 )
+207:                 next_value = investable - cost_per_side * turnover
+208:                 if abs(next_value - post_cost) < 1e-13 * initial_cash:
+209:                     post_cost = next_value
+210:                     break
+211:                 post_cost = next_value
+212:             if post_cost < 0:
+213:                 raise ValueError("transaction costs exhaust capital")
+214:             target_values = {t: weights.get(t, 0) * post_cost for t in names}
+215:             pending = dict(target_values)
+217:         for buying in (False, True):
+218:             for ticker in sorted(list(pending)):
+219:                 quote = bars.get(ticker, {}).get(day)
+220:                 if not quote:
+221:                     continue
+222:                 opening, closing = quote
+223:                 mid = closing if price_mode == "next_close" else opening
+224:                 current = holdings.get(ticker, 0.0)
+225:                 desired_value = pending[ticker]
+226:                 is_buy = desired_value > current * mid + initial_cash * 1e-12
+227:                 if is_buy != buying:
+228:                     continue
+229:                 price = (max(quote) if buying else min(quote)) if price_mode == "worst" else mid
+234:                 desired = (
+235:                     current + (desired_value - current * mid) / price if buying else desired_value / mid
+236:                 )
+237:                 if quantity_step:
+238:                     desired = math.floor(desired / quantity_step + 1e-10) * quantity_step
+239:                 delta = desired - current
+240:                 if quantity_step and abs(delta / quantity_step - round(delta / quantity_step)) > 1e-8:
+241:                     raise ValueError("corporate-action odd lots require a separate execution market")
+242:                 if abs(delta * price) < initial_cash * 1e-12:
+243:                     pending.pop(ticker)
+244:                     continue
+245:                 if delta > 0:
+246:                     delta = min(delta, max(0.0, cash) / (price * (1 + cost_per_side)))
+247:                     if quantity_step:
+248:                         delta = math.floor(delta / quantity_step + 1e-10) * quantity_step
+249:                 if abs(delta * price) < initial_cash * 1e-12:
+250:                     continue
+251:                 cost = abs(delta) * price * cost_per_side
+252:                 cash -= delta * price + cost
+253:                 if cash < -initial_cash * 1e-10:
+254:                     raise AssertionError("self-financing invariant violated")
+255:                 cash = max(cash, 0.0)
+256:                 holdings[ticker] = current + delta
+257:                 if holdings[ticker] < initial_cash * 1e-12:
+258:                     holdings.pop(ticker)
+259:                 executions.append(
+260:                     {
+261:                         "signal_date": active_signal,
+262:                         "exec_date": day,
+263:                         "ticker": ticker,
+264:                         "quantity": delta,
+265:                         "price": price,
+266:                         "cost": cost,
+267:                         "cash_after": cash,
+268:                     }
+269:                 )
+270:                 if abs((desired - (current + delta)) * price) <= initial_cash * 1e-10:
+271:                     pending.pop(ticker)
+272:         valued_assets = set(holdings) | {t for t, _, _ in stock_receivables}
+273:         for ticker in valued_assets:
+274:             quote = bars.get(ticker, {}).get(day)
+275:             if quote:
+276:                 marks[ticker] = quote[1]
+277:                 last_quote[ticker] = day
+278:             elif ticker not in marks:
+279:                 raise ValueError("holding has no valuation price")
+280:             else:
+281:                 stale_marks.append((day, ticker, last_quote.get(ticker)))
+282:         stock_receivable_value = sum(q * marks[t] for t, _, q in stock_receivables)
+283:         nav = cash + receivable_value + stock_receivable_value + sum(q * marks[t] for t, q in holdings.items())
+284:         if not math.isfinite(nav) or nav <= 0:
+285:             raise ValueError("nonpositive portfolio NAV")
+286:         returns.append(nav / previous_nav - 1.0)
+287:         navs.append(nav)
+288:         previous_nav, last_day = nav, day
+289:     if dates and require_final_quotes:
+290:         stale = [t for t in set(holdings) | {r[0] for r in stock_receivables} if last_quote.get(t) != dates[-1]]
+291:         if stale:
+292:             raise ValueError(f"incomplete final valuation; stale holdings: {stale}")
+293:     return {
+294:         "returns": returns,
+295:         "nav": navs,
+296:         "executions": executions,
+297:         "pending_orders": pending,
+298:         "holdings": holdings,
+299:         "cash": cash,
+300:         "receivables": receivables,
+301:         "stock_receivables": stock_receivables,
+302:         "stock_entitlements": stock_entitlements,
+303:         "stock_deliveries": stock_deliveries,
+304:         "stale_marks": stale_marks,
+305:         "engine_version": ENGINE_VERSION,
+306:     }
+309: def walk_forward(conn, cfg, signal_fn=None, take="top", portfolio_fn=None, series_fn=None):
+310:     if __package__:
+311:         from . import adjust, factor, portfolio, universe
+312:         from .stock_events import bonus_events
+313:         from .returns import month_end_dates
+314:         from .cash_events import require_coverage
+315:     else:
+316:         import adjust
+317:         import factor
+318:         import portfolio
+319:         import universe
+320:         from stock_events import bonus_events
+321:         from returns import month_end_dates
+322:         from cash_events import require_coverage
+324:     adjust.require_scanned(conn)
+325:     bt, execution, u = cfg["backtest"], cfg["execution"], cfg["universe"]
+328:     months = bt.get("purge_embargo_months", 0)
+329:     test_start = bt.get("test_start", "0001-01-01")
+330:     if months:
+331:         from datetime import date
+333:         if "train_end" not in bt:
+334:             raise ValueError("purge_embargo_months requires explicit train_end; inert settings are forbidden")
+335:         train_end = date.fromisoformat(bt["train_end"])
+337:         month_index = train_end.year * 12 + train_end.month + months
+338:         cutoff = date(month_index // 12, month_index % 12 + 1, 1).isoformat()
+339:         test_start = max(test_start, cutoff)
+340:     all_dates = [
+341:         r[0]
+342:         for r in conn.execute("SELECT DISTINCT date FROM prices_raw WHERE market_type='010' ORDER BY date")
+343:     ]
+344:     end = bt.get("test_end") or (all_dates[-1] if all_dates else test_start)
+345:     dates = [d for d in all_dates if test_start <= d <= end]
+346:     rebalances = [d for d in month_end_dates(all_dates) if test_start <= d < end]
+347:     targets, bench_targets, bars, splits, events, bonuses = {}, {}, {}, {}, {}, {}
+348:     mode = execution.get("return_mode", "price")
+349:     if mode not in {"price", "total"}:
+350:         raise ValueError("unknown return mode")
+351:     if series_fn and mode != "total":
+352:         raise ValueError("custom total-return signal source requires total execution return_mode")
+353:     if signal_fn is None:
+354:         f = cfg.get("factor", {})
+355:         signal_fn = lambda sub, asof: factor.signals(
+356:             sub, asof, f.get("lookback_days", 252), f.get("skip_days", 21)
+357:         )
+358:     for asof in rebalances:
+359:         tickers = universe.select_universe(
+360:             conn,
+361:             asof,
+362:             u.get("top_n", 60),
+363:             u.get("lookback_trading_days", 126),
+364:             u.get("min_history_days", 252),
+365:         )
+366:         sub = {}
+367:         for ticker in tickers:
+368:             if ticker not in bars:
+369:                 bars[ticker] = load_bars(conn, ticker, end=end)
+370:                 splits[ticker] = split_events(conn, ticker, end)
+371:                 bonuses[ticker] = bonus_events(conn, ticker, end)
+372:                 if mode == "total":
+373:                     require_coverage(conn, ticker, dates[0], end)
+374:                     events[ticker] = conn.execute(
+375:                         "SELECT ex_date,payment_date,value_per_share FROM cash_events"
+376:                         " WHERE ticker=? ORDER BY ex_date",
+377:                         (ticker,),
+378:                     ).fetchall()
+379:             if series_fn:
+380:                 ds, ps = series_fn(conn, ticker, asof=asof)
+381:             elif mode == "total":
+382:                 ds, ps = adjust.total_return_series(conn, ticker, asof=asof)
+383:             else:
+384:                 ds, ps = point_in_time_series(conn, ticker, asof)
+385:             cutoff = bisect_right(ds, asof)
+386:             sub[ticker] = (ds[:cutoff], ps[:cutoff])
+387:         if portfolio_fn:
+388:             weights = portfolio_fn(sub, asof)
+389:         else:
+390:             chosen = list(portfolio.select_portfolio(signal_fn(sub, asof), 0.2, take=take))
+391:             weights = {t: 1 / len(chosen) for t in chosen}
+392:         if not set(weights).issubset(tickers):
+393:             raise ValueError("portfolio contains an out-of-universe security")
+394:         targets[asof] = weights
+395:         bench_targets[asof] = {t: 1 / len(tickers) for t in tickers}
+396:     settings = {
+397:         "cost_per_side": execution.get("b3_fee_pct", 0.0003) + execution.get("spread_slippage_pct", 0.0015),
+398:         "price_mode": execution.get("price", "next_open"),
+399:         "splits": splits,
+400:         "cash_events": events,
+401:         "stock_events": bonuses,
+402:     }
+403:     strategy = simulate_portfolio(dates, bars, targets, **settings)
+404:     benchmark = simulate_portfolio(dates, bars, bench_targets, **settings)
+405:     return strategy["returns"], benchmark["returns"]
+
+### stocks_predictor/source_catalog.py
+6: from collections.abc import Iterable
+7: from datetime import datetime, timezone
+8: import hashlib
+9: import json
+10: from pathlib import Path
+11: import re
+12: import sqlite3
+13: import tempfile
+14: import zipfile
+16: from . import cotahist
+18: SCHEMA = """CREATE TABLE IF NOT EXISTS source_versions (
+19:     source_id TEXT PRIMARY KEY,
+20:     publisher TEXT NOT NULL,
+21:     dataset TEXT NOT NULL,
+22:     version TEXT NOT NULL,
+23:     policy TEXT NOT NULL,
+24:     sha256 TEXT NOT NULL,
+25:     source_url TEXT NOT NULL,
+26:     original_name TEXT NOT NULL,
+27:     observed_at TEXT NOT NULL,
+28:     UNIQUE(publisher, dataset, version, policy)
+29: )"""
+32: def utc_timestamp(value: str) -> str:
+33:     stamp = datetime.fromisoformat(value.replace('Z', '+00:00'))
+34:     if stamp.tzinfo is None or stamp.utcoffset() is None:
+35:         raise ValueError('timestamp requires an explicit UTC offset')
+36:     return stamp.astimezone(timezone.utc).isoformat()
+39: def strict_lines(lines: Iterable[bytes]) -> Iterable[str]:
+41:     for raw in lines:
+42:         line = raw.decode('latin-1')
+43:         if line.startswith('01'):
+44:             cotahist.parse_line(line)  # raises before the loader can skip it
+45:         yield line
+48: def ingest_version(
+49:     conn: sqlite3.Connection, archive: Path, *, publisher: str, dataset: str,
+50:     version: str, source_url: str, observed_at: str, scratch_dir: Path,
+51:     avista_only: bool = True, expected_sha256: str | None = None,
+52: ) -> dict:
+59:     values = (publisher, dataset, version, source_url)
+60:     if any(not isinstance(x, str) or not x.strip() or x != x.strip() for x in values):
+61:         raise ValueError('explicit nonempty publisher, dataset, version and URL required')
+62:     observed_at = utc_timestamp(observed_at)
+63:     if type(avista_only) is not bool:
+64:         raise ValueError('avista_only must be boolean')
+65:     if expected_sha256 is not None and not re.fullmatch('[0-9a-f]{64}', expected_sha256):
+66:         raise ValueError('expected_sha256 must be a lowercase SHA-256')
+67:     policy = 'cotahist-strict-v1/' + ('spot-02-010' if avista_only else 'all-markets')
+69:     with tempfile.TemporaryFile(dir=scratch_dir) as snapshot:
+70:         digest = hashlib.sha256()
+71:         with archive.open('rb') as source:
+72:             while chunk := source.read(1024 * 1024):
+73:                 digest.update(chunk)
+74:                 snapshot.write(chunk)
+75:         content_sha = digest.hexdigest()
+76:         if expected_sha256 is not None and content_sha != expected_sha256:
+77:             raise ValueError('source snapshot differs from expected SHA-256')
+78:         identity = json.dumps([publisher, dataset, version, policy, content_sha], separators=(',', ':'))
+79:         source_id = 'sha256:' + hashlib.sha256(identity.encode('utf-8')).hexdigest()
+80:         snapshot.seek(0)
+81:         with zipfile.ZipFile(snapshot) as zipped:
+82:             candidates = [n for n in zipped.namelist() if n.upper().endswith('.TXT')]
+83:             preferred = [n for n in candidates if 'COTAHIST' in n.upper()]
+84:             chosen = preferred or candidates
+85:             if len(chosen) != 1:
+86:                 raise ValueError('source must contain one unambiguous COTAHIST text member')
+87:             own_transaction = not conn.in_transaction
+88:             conn.execute('SAVEPOINT stocks_source_version')
+89:             try:
+90:                 conn.execute(SCHEMA)
+91:                 prior = conn.execute(
+92:                     'SELECT sha256 FROM source_versions WHERE publisher=? AND dataset=? AND version=? AND policy=?',
+93:                     (publisher, dataset, version, policy),
+94:                 ).fetchone()
+95:                 if prior is not None and prior[0] != content_sha:
+96:                     raise ValueError('declared source version has conflicting content')
+97:                 conn.execute(
+98:                     'INSERT INTO source_versions VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id) DO NOTHING',
+99:                     (source_id, publisher, dataset, version, policy, content_sha,
+100:                      source_url, archive.name, observed_at),
+101:                 )
+102:                 with zipped.open(chosen[0]) as stream:
+103:                     inserted = cotahist.load_prices(conn, strict_lines(stream), source_id, avista_only)
+104:                 conn.execute('RELEASE stocks_source_version')
+105:             except BaseException:
+106:                 if own_transaction:
+107:                     conn.rollback()
+108:                 elif conn.in_transaction:
+109:                     conn.execute('ROLLBACK TO stocks_source_version')
+110:                     conn.execute('RELEASE stocks_source_version')
+111:                 raise
+112:     return {'source_id': source_id, 'sha256': content_sha, 'inserted': inserted,
+113:             'policy': policy, 'historical_publication_certified': False}

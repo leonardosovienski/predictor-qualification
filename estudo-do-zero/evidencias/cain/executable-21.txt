@@ -1,0 +1,518 @@
+
+### src/cain/search/__init__.py
+3: from dataclasses import dataclass, field, replace
+4: from hashlib import sha256
+5: from html.parser import HTMLParser
+6: import http.client
+7: import ipaddress
+8: import json
+9: from pathlib import Path
+10: import re
+11: import socket
+12: import ssl
+13: from time import monotonic
+14: from typing import Iterable, Protocol, runtime_checkable
+15: from urllib.parse import quote, urljoin, urlsplit, urlunsplit
+17: from cain.common.text import tokens, RETRIEVAL_STOP_WORDS
+20: class SearchError(RuntimeError):
+21:     pass
+24: @dataclass(frozen=True)
+25: class SearchResult:
+26:     source: str
+27:     title: str
+28:     text: str
+29:     score: float = 0.0
+30:     chunk_id: str = ""
+31:     document_hash: str = ""
+32:     start_offset: int | None = None
+33:     end_offset: int | None = None
+34:     metadata: dict = field(default_factory=dict)
+37: @runtime_checkable
+38: class SearchProvider(Protocol):
+39:     def search(self, query: str, k: int = 3) -> list[SearchResult]: ...
+42: STOP_WORDS = RETRIEVAL_STOP_WORDS
+45: class LocalDocumentRetriever:
+48:     EXTENSIONS = {".md", ".txt", ".rst"}
+50:     def __init__(
+51:         self, corpus: dict[str, str] | None = None, paths: Iterable[str | Path] = (),
+52:         max_file_bytes: int = 262144, max_files: int = 200,
+53:     ):
+54:         if max_file_bytes < 1 or max_files < 1:
+55:             raise ValueError("Retrieval limits must be positive")
+56:         self.documents = dict(corpus or {})
+57:         self.document_hashes: dict[str, str] = {}
+58:         files: set[Path] = set()
+59:         for supplied in paths:
+60:             root = Path(supplied).resolve(strict=True)
+61:             candidates = root.rglob("*") if root.is_dir() else (root,)
+62:             for candidate in candidates:
+63:                 if candidate.is_file() and candidate.suffix.lower() in self.EXTENSIONS:
+65:                     resolved = candidate.resolve(strict=True)
+66:                     if root.is_dir() and not resolved.is_relative_to(root):
+67:                         raise SearchError(f"Fonte fora do diretório configurado: {candidate}")
+68:                     files.add(resolved)
+69:                     if len(files) > max_files:
+70:                         raise SearchError(f"Fontes excedem o limite configurado de {max_files} arquivos")
+71:             if root.is_file() and root.suffix.lower() not in self.EXTENSIONS:
+72:                 raise SearchError(f"Formato local não suportado: {root.suffix}; use md, txt ou rst")
+73:         for path in sorted(files):
+74:             if path.stat().st_size > max_file_bytes:
+75:                 raise SearchError(f"Fonte excede {max_file_bytes} bytes: {path}")
+76:             try:
+77:                 with path.open("rb") as handle:
+78:                     raw = handle.read(max_file_bytes + 1)
+79:                 if len(raw) > max_file_bytes:
+80:                     raise SearchError(f"Fonte excede {max_file_bytes} bytes: {path}")
+81:                 self.documents[str(path)] = raw.decode("utf-8-sig")
+82:                 self.document_hashes[str(path)] = sha256(raw).hexdigest()
+83:             except (OSError, UnicodeError) as exc:
+84:                 raise SearchError(f"Não foi possível ler a fonte UTF-8: {path}: {exc}") from exc
+85:         self._passages: list[SearchResult] = []
+86:         file_sources = set(map(str, files))
+87:         for source, text in sorted(self.documents.items()):
+88:             if not isinstance(source, str) or not isinstance(text, str):
+89:                 raise ValueError("Corpus must map source strings to text strings")
+90:             if not text.strip():
+91:                 continue
+92:             document_hash = self.document_hashes.get(source, sha256(text.encode("utf-8")).hexdigest())
+93:             self.document_hashes[source] = document_hash
+94:             for start in range(0, len(text), 1200):
+95:                 passage = text[start:start + 1500]
+96:                 end = start + len(passage)
+97:                 chunk_id = sha256(f"{source}\0{document_hash}\0{start}\0{end}".encode("utf-8")).hexdigest()
+98:                 self._passages.append(SearchResult(
+99:                     source, Path(source).name, passage, chunk_id=chunk_id,
+100:                     document_hash=document_hash, start_offset=start, end_offset=end,
+101:                     metadata={"offset_unit": "unicode_codepoints", "text_encoding": "utf-8-sig",
+102:                               "document_hash_basis": "raw_file_bytes" if source in file_sources else "utf8_text",
+103:                               "retrieval_mode": "lexical"},
+104:                 ))
+106:     def search(self, query: str, k: int = 3) -> list[SearchResult]:
+107:         if k < 1:
+108:             return []
+109:         terms = tokens(query) - STOP_WORDS
+110:         if not terms:
+111:             return []
+112:         scored = []
+113:         for passage in self._passages:
+114:             overlap = len(terms & tokens(passage.text + " " + passage.title))
+115:             if overlap:
+116:                 score = overlap / len(terms)
+117:                 scored.append(replace(passage, score=score))
+118:         return sorted(scored, key=lambda item: (-item.score, item.source, item.text))[:k]
+121: def explicit_urls(query: str) -> list[str]:
+123:     found = re.findall(r"https?://[^\s<>\"`]+", query, flags=re.IGNORECASE)
+124:     return list(dict.fromkeys(value.rstrip(".,;!?)']}") for value in found))
+127: class _ReadableHTML(HTMLParser):
+128:     def __init__(self):
+129:         super().__init__(convert_charrefs=True)
+130:         self.parts: list[str] = []
+131:         self.title_parts: list[str] = []
+132:         self.hidden = 0
+133:         self.in_title = False
+135:     def handle_starttag(self, tag, attrs):
+136:         if tag in {"script", "style", "noscript", "svg"}:
+137:             self.hidden += 1
+138:         if tag == "title":
+139:             self.in_title = True
+140:         if tag in {"p", "div", "li", "br", "h1", "h2", "h3"} and not self.hidden:
+141:             self.parts.append("\n")
+143:     def handle_endtag(self, tag):
+144:         if tag in {"script", "style", "noscript", "svg"}:
+145:             self.hidden = max(0, self.hidden - 1)
+146:         if tag == "title":
+147:             self.in_title = False
+149:     def handle_data(self, data):
+150:         if not self.hidden:
+151:             self.parts.append(data)
+152:             if self.in_title:
+153:                 self.title_parts.append(data)
+156: class PublicURLRetriever:
+163:     def __init__(
+164:         self, timeout: float = 15.0, max_bytes: int = 262144, max_redirects: int = 2,
+165:         *, allow_private_for_testing: bool = False,
+166:     ):
+167:         if timeout <= 0 or max_bytes < 1 or max_redirects < 0:
+168:             raise ValueError("HTTP retrieval limits must be positive")
+169:         self.timeout = timeout
+170:         self.max_bytes = max_bytes
+171:         self.max_redirects = max_redirects
+172:         self.allow_private_for_testing = allow_private_for_testing
+174:     def _destination(self, url: str) -> tuple[str, str, int, str, str]:
+175:         try:
+176:             parsed = urlsplit(url)
+177:             if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+178:                 raise ValueError("use URL HTTP(S) pública")
+179:             if parsed.username is not None or parsed.password is not None:
+180:                 raise ValueError("URLs com credenciais não são permitidas")
+181:             if any(ord(char) < 32 for char in url):
+182:                 raise ValueError("URL contém caracteres de controle")
+183:             host = parsed.hostname.encode("idna").decode("ascii")
+184:             port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+185:             if not self.allow_private_for_testing and port not in {80, 443}:
+186:                 raise ValueError("somente portas públicas padrão 80/443")
+187:             addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+188:             ips = list(dict.fromkeys(item[4][0] for item in addresses))
+189:             if not ips:
+190:                 raise ValueError("DNS não retornou endereço")
+191:             if not self.allow_private_for_testing:
+192:                 for address in ips:
+193:                     parsed_ip = ipaddress.ip_address(address)
+194:                     if not parsed_ip.is_global:
+195:                         raise ValueError("destinos locais, privados e reservados são bloqueados")
+196:             path = quote(parsed.path or "/", safe="/%:@!$&'()*+,;=-._~")
+197:             path += ("?" + quote(parsed.query, safe="%=&?/:@!$'()*+,;~-._")) if parsed.query else ""
+198:             clean_url = urlunsplit((parsed.scheme.lower(), parsed.netloc, parsed.path, parsed.query, ""))
+199:             return clean_url, host, port, path, ips[0]
+200:         except (ValueError, OSError, UnicodeError) as exc:
+201:             raise SearchError(f"URL não permitida ou DNS indisponível: {exc}") from exc
+203:     def _fetch(self, url: str) -> SearchResult:
+204:         deadline = monotonic() + self.timeout
+205:         for redirect_count in range(self.max_redirects + 1):
+206:             clean_url, host, port, path, pinned_ip = self._destination(url)
+207:             remaining = deadline - monotonic()
+208:             if remaining <= 0:
+209:                 raise SearchError("Tempo total de leitura da URL excedido")
+210:             connection_type = (
+211:                 http.client.HTTPSConnection if clean_url.startswith("https:")
+212:                 else http.client.HTTPConnection
+213:             )
+214:             kwargs = {"timeout": remaining}
+215:             if connection_type is http.client.HTTPSConnection:
+216:                 kwargs["context"] = ssl.create_default_context()
+217:             connection = connection_type(host, port, **kwargs)
+219:             connection._create_connection = lambda address, timeout, source_address=None: (
+220:                 socket.create_connection((pinned_ip, port), timeout, source_address)
+221:             )
+222:             try:
+223:                 connection.request("GET", path, headers={
+224:                     "User-Agent": "CainResearch/0.2 (+explicit-public-url-reader)",
+225:                     "Accept": "text/html, text/plain, text/markdown, application/json",
+226:                     "Accept-Encoding": "identity", "Connection": "close",
+227:                 })
+228:                 active_socket = connection.sock
+229:                 response = connection.getresponse()
+230:                 if response.status in {301, 302, 303, 307, 308}:
+231:                     target = response.getheader("Location")
+232:                     if not target or redirect_count == self.max_redirects:
+233:                         raise SearchError("Redirecionamento ausente ou limite excedido")
+234:                     url = urljoin(clean_url, target)
+235:                     continue
+236:                 if response.status != 200:
+237:                     raise SearchError(f"Fonte retornou HTTP {response.status}: {clean_url}")
+238:                 content_type = response.getheader("Content-Type", "").split(";", 1)[0].lower()
+239:                 if not (content_type.startswith("text/") or content_type in {
+240:                     "application/json", "application/xhtml+xml",
+241:                 }):
+242:                     raise SearchError(f"Conteúdo não textual não suportado: {content_type or 'ausente'}")
+243:                 if response.getheader("Content-Encoding", "identity").lower() != "identity":
+244:                     raise SearchError("Fonte retornou codificação comprimida não suportada")
+245:                 length = response.getheader("Content-Length")
+246:                 if length is not None and int(length) > self.max_bytes:
+247:                     raise SearchError(f"Fonte excede o limite de {self.max_bytes} bytes")
+248:                 body = bytearray()
+249:                 while True:
+250:                     if response.isclosed():
+251:                         break
+252:                     remaining = deadline - monotonic()
+253:                     if remaining <= 0:
+254:                         raise SearchError("Tempo total de leitura da URL excedido")
+255:                     if active_socket is not None:
+256:                         active_socket.settimeout(remaining)
+257:                     chunk = response.read1(min(8192, self.max_bytes + 1 - len(body)))
+258:                     if not chunk:
+259:                         break
+260:                     body.extend(chunk)
+261:                     if len(body) > self.max_bytes:
+262:                         raise SearchError(f"Fonte excede o limite de {self.max_bytes} bytes")
+263:                 charset = response.headers.get_content_charset() or "utf-8"
+264:                 text = body.decode(charset, errors="replace")
+265:                 title = host
+266:                 if content_type in {"text/html", "application/xhtml+xml"}:
+267:                     parser = _ReadableHTML()
+268:                     parser.feed(text)
+269:                     text = re.sub(r"[ \t]+", " ", "".join(parser.parts)).strip()
+270:                     title = " ".join(parser.title_parts).strip() or host
+271:                 elif content_type == "application/json":
+273:                     json.loads(text)
+274:                 if not text.strip():
+275:                     raise SearchError("Fonte não apresentou texto legível")
+276:                 document_hash = sha256(text.encode("utf-8")).hexdigest()
+277:                 chunk_id = sha256(f"{clean_url}\0{document_hash}\0{0}\0{len(text)}".encode("utf-8")).hexdigest()
+278:                 return SearchResult(
+279:                     clean_url, title[:300], text, 1.0, chunk_id, document_hash, 0, len(text),
+280:                     {"document_hash_basis": "extracted_utf8_text", "offset_unit": "unicode_codepoints",
+281:                      "retrieval_mode": "explicit_url"},
+282:                 )
+283:             except SearchError:
+284:                 raise
+285:             except (OSError, ValueError, LookupError, http.client.HTTPException) as exc:
+286:                 raise SearchError(f"Falha ao ler URL, sem retry: {exc}") from exc
+287:             finally:
+288:                 connection.close()
+289:         raise SearchError("Limite de redirecionamentos excedido")
+291:     def search(self, query: str, k: int = 3) -> list[SearchResult]:
+292:         urls = explicit_urls(query)
+293:         if not urls:
+294:             raise SearchError("Leitura web requer uma URL pública explícita no pedido")
+295:         if len(urls) > k:
+296:             raise SearchError(f"Forneça no máximo {k} URLs por pedido")
+297:         return [self._fetch(url) for url in urls]
+300: class AutoRetriever:
+303:     def __init__(self, local: SearchProvider, web: SearchProvider | None = None):
+304:         self.local = local
+305:         self.web = web
+307:     def search(self, query: str, k: int = 3) -> list[SearchResult]:
+308:         if explicit_urls(query):
+309:             if self.web is None:
+310:                 raise SearchError("Leitura de URLs está desativada nesta configuração")
+311:             return self.web.search(query, k)
+312:         return self.local.search(query, k)
+315: from cain.search.embeddings import (  # noqa: E402
+316:     EmbeddingProvider as EmbeddingProvider, OllamaEmbedding as OllamaEmbedding,
+317:     SQLiteEmbeddingCache as SQLiteEmbeddingCache,
+318: )
+319: from cain.search.hybrid import HybridDocumentRetriever as HybridDocumentRetriever  # noqa: E402
+
+### src/cain/search/embeddings.py
+7: from contextlib import closing
+8: from hashlib import sha256
+9: import json
+10: import math
+11: from pathlib import Path
+12: import sqlite3
+13: from typing import Protocol, Sequence
+14: from urllib.error import HTTPError, URLError
+15: from urllib.parse import urlsplit
+16: from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+18: from cain.search import SearchError
+21: class EmbeddingProvider(Protocol):
+22:     model: str
+23:     model_digest: str
+25:     def embed(self, texts: Sequence[str]) -> list[list[float]]: ...
+28: def normalize_vectors(vectors, expected_count: int, expected_dim: int | None = None) -> list[list[float]]:
+29:     if not isinstance(vectors, (list, tuple)) or len(vectors) != expected_count:
+30:         raise SearchError("Embedding retornou quantidade de vetores diferente das entradas")
+31:     normalized = []
+32:     dimension = expected_dim
+33:     for vector in vectors:
+34:         if not isinstance(vector, (list, tuple)) or not vector:
+35:             raise SearchError("Embedding retornou vetor vazio ou inválido")
+36:         if dimension is None:
+37:             dimension = len(vector)
+38:         if len(vector) != dimension:
+39:             raise SearchError("Dimensão de embedding inconsistente")
+40:         if any(isinstance(value, bool) or not isinstance(value, (int, float))
+41:                or not math.isfinite(value) for value in vector):
+42:             raise SearchError("Embedding contém valor não numérico ou não finito")
+43:         norm = math.hypot(*vector)
+44:         if not math.isfinite(norm) or norm <= 0:
+45:             raise SearchError("Embedding possui norma nula ou não finita")
+46:         normalized.append([float(value) / norm for value in vector])
+47:     return normalized
+50: class _NoRedirect(HTTPRedirectHandler):
+51:     def redirect_request(self, req, fp, code, msg, headers, newurl):
+52:         raise SearchError("Servidor de embeddings tentou redirecionar a entrada")
+55: class OllamaEmbedding:
+56:     def __init__(
+57:         self, model: str = "qwen3-embedding:0.6b", *, model_digest: str,
+58:         base_url: str = "http://127.0.0.1:11434", timeout: float = 30.0,
+59:         max_input_chars: int = 8192, max_batch_size: int = 32,
+60:         dimensions: int | None = None,
+61:     ):
+62:         if not isinstance(model, str) or not model.strip() or not isinstance(model_digest, str) or not model_digest.strip():
+63:             raise ValueError("Embedding requer modelo e digest explícitos")
+64:         if timeout <= 0 or max_input_chars < 1 or max_batch_size < 1:
+65:             raise ValueError("Limites de embedding devem ser positivos")
+66:         if dimensions is not None and (isinstance(dimensions, bool) or not isinstance(dimensions, int) or dimensions < 1):
+67:             raise ValueError("Dimensão de embedding deve ser inteira positiva")
+68:         parsed = urlsplit(base_url)
+69:         if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
+70:             raise ValueError("Servidor de embedding deve ser HTTP(S) sem credenciais na URL")
+71:         self.model, self.model_digest = model, model_digest
+72:         self.base_url, self.timeout = base_url.rstrip("/"), timeout
+73:         self.max_input_chars, self.max_batch_size = max_input_chars, max_batch_size
+74:         self.dimensions = dimensions
+75:         self._observed_dimension = dimensions
+76:         self._opener = build_opener(_NoRedirect(), ProxyHandler({})
+77:                                    if parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+78:                                    else ProxyHandler())
+80:     def validate_inputs(self, texts: Sequence[str]) -> list[str]:
+81:         if isinstance(texts, (str, bytes)) or not isinstance(texts, (list, tuple)):
+82:             raise ValueError("Embedding requer uma sequência de textos")
+83:         result = list(texts)
+84:         if any(not isinstance(text, str) or not text.strip() for text in result):
+85:             raise SearchError("Entrada de embedding vazia ou não textual")
+86:         if any(len(text) > self.max_input_chars for text in result):
+87:             raise SearchError(f"Entrada de embedding excede {self.max_input_chars} caracteres; sem truncamento")
+88:         return result
+90:     def embed(self, texts: Sequence[str]) -> list[list[float]]:
+91:         texts = self.validate_inputs(texts)
+92:         vectors = []
+93:         for start in range(0, len(texts), self.max_batch_size):
+94:             batch = texts[start:start + self.max_batch_size]
+95:             body = {"model": self.model, "input": batch, "truncate": False}
+96:             if self.dimensions is not None:
+97:                 body["dimensions"] = self.dimensions
+98:             request = Request(self.base_url + "/api/embed", data=json.dumps(body).encode("utf-8"),
+99:                               headers={"Content-Type": "application/json"}, method="POST")
+100:             try:
+101:                 with self._opener.open(request, timeout=self.timeout) as response:
+102:                     raw = response.read(4 * 1024 * 1024 + 1)
+103:                 if len(raw) > 4 * 1024 * 1024:
+104:                     raise SearchError("Resposta de embedding excedeu 4 MiB")
+105:                 result = json.loads(raw.decode("utf-8"))
+106:             except (HTTPError, URLError, OSError, ValueError) as exc:
+107:                 raise SearchError(f"Falha no serviço de embedding, sem retry ou fallback: {exc}") from exc
+108:             if not isinstance(result, dict) or result.get("error"):
+109:                 raise SearchError("Serviço de embedding retornou erro ou objeto inválido")
+110:             if result.get("model") != self.model:
+111:                 raise SearchError("Serviço de embedding respondeu com modelo diferente do configurado")
+112:             batch_vectors = normalize_vectors(result.get("embeddings"), len(batch), self._observed_dimension)
+113:             if batch_vectors:
+114:                 self._observed_dimension = len(batch_vectors[0])
+115:             vectors.extend(batch_vectors)
+116:         return vectors
+119: class SQLiteEmbeddingCache:
+126:     def __init__(self, provider: EmbeddingProvider, cache_path: str | Path):
+127:         if not getattr(provider, "model", "") or not getattr(provider, "model_digest", ""):
+128:             raise ValueError("Cache requer identidade e digest do modelo")
+129:         self.provider = provider
+130:         self.model, self.model_digest = provider.model, provider.model_digest
+131:         self.dimensions = getattr(provider, "dimensions", None)
+132:         self.namespace = json.dumps([self.model, self.model_digest, self.dimensions], separators=(",", ":"))
+133:         self.cache_path = Path(cache_path)
+134:         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+135:         self._observed_dimension = self.dimensions
+136:         try:
+137:             with closing(sqlite3.connect(self.cache_path)) as connection, connection:
+138:                 connection.execute("""CREATE TABLE IF NOT EXISTS embedding_cache (
+139:                     namespace TEXT NOT NULL, text_hash TEXT NOT NULL, dimension INTEGER NOT NULL,
+140:                     vector_json TEXT NOT NULL, PRIMARY KEY(namespace, text_hash))""")
+141:         except sqlite3.Error as exc:
+142:             raise SearchError(f"Cache de embeddings indisponível: {exc}") from exc
+144:     def embed(self, texts: Sequence[str]) -> list[list[float]]:
+145:         if (self.provider.model != self.model or self.provider.model_digest != self.model_digest
+146:                 or getattr(self.provider, "dimensions", None) != self.dimensions):
+147:             raise SearchError("Modelo do cache foi alterado; construa um cache com a nova identidade")
+148:         if isinstance(texts, (str, bytes)):
+149:             raise ValueError("Embedding requer uma sequência de textos")
+150:         texts = list(texts)
+151:         if hasattr(self.provider, "validate_inputs"):
+152:             self.provider.validate_inputs(texts)
+153:         if any(not isinstance(text, str) or not text.strip() for text in texts):
+154:             raise SearchError("Entrada de embedding vazia ou não textual")
+155:         hashes = [sha256(text.encode("utf-8")).hexdigest() for text in texts]
+156:         resolved = {}
+157:         missing = dict(zip(hashes, texts))
+158:         try:
+159:             with closing(sqlite3.connect(self.cache_path)) as connection, connection:
+160:                 for text_hash in list(missing):
+161:                     row = connection.execute(
+162:                         "SELECT dimension, vector_json FROM embedding_cache WHERE namespace=? AND text_hash=?",
+163:                         (self.namespace, text_hash),
+164:                     ).fetchone()
+165:                     if row is not None:
+166:                         parsed = normalize_vectors([json.loads(row[1])], 1, row[0])[0]
+167:                         resolved[text_hash] = parsed
+168:                         missing.pop(text_hash)
+169:                 if missing:
+170:                     generated = normalize_vectors(self.provider.embed(list(missing.values())), len(missing),
+171:                                                   self._observed_dimension)
+172:                     for text_hash, vector in zip(missing, generated):
+173:                         resolved[text_hash] = vector
+174:                 vectors = normalize_vectors([resolved[text_hash] for text_hash in hashes], len(texts),
+175:                                             self._observed_dimension)
+176:                 if vectors:
+177:                     self._observed_dimension = len(vectors[0])
+178:                 for text_hash in missing:
+179:                     vector = resolved[text_hash]
+180:                     connection.execute("INSERT OR REPLACE INTO embedding_cache VALUES (?, ?, ?, ?)",
+181:                                        (self.namespace, text_hash, len(vector), json.dumps(vector)))
+182:                 return vectors
+183:         except (sqlite3.Error, json.JSONDecodeError) as exc:
+184:             raise SearchError(f"Cache de embeddings inválido ou indisponível: {exc}") from exc
+
+### src/cain/search/hybrid.py
+3: from dataclasses import replace
+4: import math
+5: from pathlib import Path
+6: import re
+7: from typing import Iterable
+9: from cain.common.text import tokens
+10: from cain.search import LocalDocumentRetriever, SearchError, SearchResult, STOP_WORDS
+11: from cain.search.embeddings import EmbeddingProvider, SQLiteEmbeddingCache, normalize_vectors
+14: class HybridDocumentRetriever:
+22:     def __init__(
+23:         self, corpus: dict[str, str] | None = None, paths: Iterable[str | Path] = (), *,
+24:         embedding: EmbeddingProvider, cache_path: str | Path | None = None,
+25:         lexical_weight: float = 0.45, semantic_weight: float = 0.55,
+26:         max_file_bytes: int = 262144, max_files: int = 200, max_chunks: int = 1000,
+27:         min_semantic_score: float = 0.35, max_query_chars: int = 4096,
+28:         query_instruction: str = "Retrieve relevant passages from the configured documents that answer the question.",
+29:     ):
+30:         weights = (lexical_weight, semantic_weight)
+31:         if any(not math.isfinite(value) or value <= 0 for value in weights):
+32:             raise ValueError("Busca híbrida requer pesos positivos e finitos para ambos os sinais")
+33:         if not -1 <= min_semantic_score <= 1 or max_chunks < 1 or max_query_chars < 1:
+34:             raise ValueError("Limites de busca híbrida inválidos")
+35:         if not getattr(embedding, "model", "") or not getattr(embedding, "model_digest", ""):
+36:             raise ValueError("Busca híbrida requer modelo e digest do embedding")
+37:         self.corpus, self.paths = dict(corpus or {}), tuple(paths)
+38:         self.embedding = SQLiteEmbeddingCache(embedding, cache_path) if cache_path is not None else embedding
+39:         self.lexical_weight = lexical_weight / sum(weights)
+40:         self.semantic_weight = semantic_weight / sum(weights)
+41:         self.max_file_bytes, self.max_files, self.max_chunks = max_file_bytes, max_files, max_chunks
+42:         self.min_semantic_score, self.max_query_chars = min_semantic_score, max_query_chars
+43:         self.query_instruction = query_instruction
+44:         self.local = self._snapshot()
+46:     def _snapshot(self) -> LocalDocumentRetriever:
+47:         try:
+48:             local = LocalDocumentRetriever(self.corpus, self.paths, self.max_file_bytes, self.max_files)
+49:         except (OSError, UnicodeError) as exc:
+50:             raise SearchError(f"Não foi possível carregar as fontes configuradas: {exc}") from exc
+51:         if len(local._passages) > self.max_chunks:
+52:             raise SearchError(f"Fontes excedem o limite de {self.max_chunks} trechos; sem truncamento")
+53:         return local
+55:     @staticmethod
+56:     def _identifiers(query: str) -> set[str]:
+57:         candidates = [value.rstrip(".,:;-") for value in re.findall(r"[A-Za-z0-9][A-Za-z0-9_.:-]*", query)]
+58:         return {value.casefold() for value in candidates if "_" in value
+59:                 or (any(char.isdigit() for char in value) and len(value) >= 3)}
+61:     def search(self, query: str, k: int = 3) -> list[SearchResult]:
+62:         if k < 1:
+63:             return []
+64:         if not isinstance(query, str) or not query.strip():
+65:             return []
+66:         if len(query) > self.max_query_chars:
+67:             raise SearchError(f"Consulta excede {self.max_query_chars} caracteres; sem truncamento")
+68:         self.local = self._snapshot()
+69:         passages = self.local._passages
+70:         if not passages:
+71:             return []
+72:         query_text = f"Instruct: {self.query_instruction}\nQuery: {query}" if self.query_instruction else query
+73:         try:
+74:             vectors = normalize_vectors(self.embedding.embed([query_text] + [p.text for p in passages]),
+75:                                         len(passages) + 1)
+76:         except SearchError:
+77:             raise
+78:         except Exception as exc:
+79:             raise SearchError(f"Embedding falhou; busca híbrida não usou fallback lexical: {exc}") from exc
+80:         query_vector, document_vectors = vectors[0], vectors[1:]
+81:         terms, identifiers = tokens(query) - STOP_WORDS, self._identifiers(query)
+82:         results = []
+83:         for passage, vector in zip(passages, document_vectors):
+84:             cosine = max(-1.0, min(1.0, math.fsum(a * b for a, b in zip(query_vector, vector))))
+85:             lexical = len(terms & tokens(passage.text + " " + passage.title)) / len(terms) if terms else 0.0
+86:             exact = sum(bool(re.search(r"(?<![\w.-])" + re.escape(value) + r"(?![\w.-])",
+87:                                        passage.text.casefold())) for value in identifiers)
+88:             if not lexical and not exact and cosine < self.min_semantic_score:
+89:                 continue
+90:             score = self.lexical_weight * lexical + self.semantic_weight * max(0.0, cosine)
+91:             metadata = {**passage.metadata, "retrieval_mode": "hybrid", "lexical_score": lexical,
+92:                         "semantic_score": cosine, "exact_identifier_matches": exact,
+93:                         "embedding_model": self.embedding.model,
+94:                         "embedding_model_digest": self.embedding.model_digest}
+95:             results.append(replace(passage, score=score, metadata=metadata))
+96:         return sorted(results, key=lambda item: (-item.metadata["exact_identifier_matches"], -item.score,
+97:                                                 item.source, item.start_offset, item.chunk_id))[:k]

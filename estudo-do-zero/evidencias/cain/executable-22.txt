@@ -1,0 +1,365 @@
+
+### src/cain/settings.py
+3: import os
+4: import math
+5: import tomllib
+6: from dataclasses import dataclass, field
+7: from pathlib import Path
+8: from urllib.parse import urlsplit
+11: LLM_FIELDS = {"provider", "model", "base_url", "temperature", "seed", "timeout",
+12:               "num_ctx", "num_predict", "max_input_bytes", "think"}
+15: def validate_llm_options(options):
+16:     for key in ("model", "base_url"):
+17:         if type(options[key]) is not str or not options[key].strip():
+18:             raise ValueError(f"llm.{key} deve ser texto não vazio")
+19:     for key in ("num_ctx", "num_predict", "max_input_bytes"):
+20:         if type(options[key]) is not int or options[key] < 1:
+21:             raise ValueError(f"llm.{key} deve ser inteiro positivo")
+22:     if options["num_ctx"] <= options["num_predict"] + 256:
+23:         raise ValueError("llm.num_ctx deve reservar espaço para entrada e geração")
+24:     if type(options["seed"]) is not int:
+25:         raise ValueError("llm.seed deve ser inteiro")
+26:     for key in ("timeout", "temperature"):
+27:         value = options[key]
+28:         if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+29:             raise ValueError(f"llm.{key} deve ser número finito não negativo")
+30:     if options["timeout"] == 0:
+31:         raise ValueError("llm.timeout deve ser positivo")
+32:     if options["think"] is not None and type(options["think"]) is not bool:
+33:         raise ValueError("llm.think deve ser booleano")
+34:     url = options["base_url"]
+35:     parts = urlsplit(url)
+36:     if (parts.scheme not in {"http", "https"} or not parts.hostname
+37:         or parts.username is not None or parts.password is not None or parts.query or parts.fragment
+38:         or any(c.isspace() or ord(c) < 32 for c in url)):
+39:         raise ValueError("llm.base_url deve ser HTTP(S), sem credenciais, query ou fragmento")
+40:     _ = parts.port  # Validate malformed/out-of-range ports now, not during a request.
+43: @dataclass
+44: class Settings:
+45:     provider: str = "ollama"
+46:     model: str = "qwen2.5:3b"
+47:     base_url: str = "http://127.0.0.1:11434"
+48:     temperature: float = 0.0
+49:     seed: int = 42
+50:     timeout: float = 120.0
+51:     num_ctx: int = 8192
+52:     num_predict: int = 768
+53:     max_input_bytes: int = 6500
+54:     think: bool | None = None
+55:     db_path: Path = Path("data/cain.db")
+56:     source_paths: list[Path] = field(default_factory=list)
+57:     allow_public_urls: bool = True
+58:     llm_routing: bool = True
+59:     search_mode: str = "lexical"
+60:     embedding_model: str = "qwen3-embedding:0.6b"
+61:     embedding_digest: str = ""
+63:     def validate(self):
+64:         validate_llm_options(vars(self))
+65:         if type(self.provider) is not str or self.provider not in {"fake", "ollama"}:
+66:             raise ValueError("Provedor inválido. Escolha fake ou ollama.")
+67:         return self
+70: def load_settings(config_path: Path | None = None) -> Settings:
+71:     if config_path is not None and not Path(config_path).is_file():
+72:         raise ValueError("Arquivo de configuração explícito não encontrado")
+73:     if config_path is None:
+74:         local = Path.cwd() / "cain.toml"
+75:         bundled = Path(__file__).resolve().parents[2] / "cain.toml"
+76:         config_path = local if local.is_file() else bundled
+77:     config_path = Path(config_path)
+78:     if config_path.is_file():
+79:         with config_path.open("rb") as handle:
+80:             data = tomllib.load(handle)
+81:         base = config_path.resolve().parent
+82:     else:
+83:         data, base = {}, Path.cwd()
+84:     sections = {"llm": LLM_FIELDS, "storage": {"path"},
+85:                 "search": {"paths", "allow_public_urls", "mode", "embedding_model", "embedding_digest"},
+86:                 "orchestration": {"llm_routing"}}
+87:     if set(data) - set(sections):
+88:         raise ValueError("Seção desconhecida na configuração")
+89:     for name, fields in sections.items():
+90:         section = data.get(name, {})
+91:         if type(section) is not dict or set(section) - fields:
+92:             raise ValueError(f"Campos inválidos na configuração {name}")
+93:     try:
+94:         settings = Settings(**data.get("llm", {}))
+95:     except TypeError as exc:
+96:         raise ValueError("Campos inválidos na configuração llm") from exc
+97:     db_value = os.getenv("CAIN_DB", data.get("storage", {}).get("path", "data/cain.db"))
+98:     if type(db_value) is not str or not db_value.strip():
+99:         raise ValueError("storage.path deve ser texto não vazio")
+100:     db = Path(db_value)
+101:     settings.db_path = db if db.is_absolute() else base / db
+102:     search = data.get("search", {})
+103:     paths = search.get("paths", [])
+104:     if type(paths) is not list or not all(type(p) is str and p.strip() for p in paths):
+105:         raise ValueError("search.paths deve ser uma lista de caminhos textuais")
+106:     settings.source_paths = [p if p.is_absolute() else base / p
+107:                              for p in map(Path, search.get("paths", []))]
+108:     settings.allow_public_urls = search.get("allow_public_urls", True)
+109:     if type(settings.allow_public_urls) is not bool:
+110:         raise ValueError("search.allow_public_urls deve ser booleano")
+111:     settings.search_mode = search.get("mode", "lexical")
+112:     if type(settings.search_mode) is not str or settings.search_mode not in {"lexical", "hybrid"}:
+113:         raise ValueError("search.mode deve ser lexical ou hybrid")
+114:     settings.embedding_model = search.get("embedding_model", "qwen3-embedding:0.6b")
+115:     settings.embedding_digest = search.get("embedding_digest", "")
+116:     if (type(settings.embedding_model) is not str or not settings.embedding_model.strip()
+117:         or type(settings.embedding_digest) is not str):
+118:         raise ValueError("Modelo e digest de embedding devem ser textuais")
+119:     settings.llm_routing = data.get("orchestration", {}).get("llm_routing", True)
+120:     if type(settings.llm_routing) is not bool:
+121:         raise ValueError("orchestration.llm_routing deve ser booleano")
+122:     settings.provider = os.getenv("CAIN_PROVIDER", settings.provider)
+123:     settings.model = os.getenv("CAIN_MODEL", settings.model)
+124:     settings.base_url = os.getenv("CAIN_OLLAMA_URL", settings.base_url)
+125:     return settings.validate()
+
+### src/cain/workspace.py
+3: from contextlib import contextmanager
+4: from hashlib import sha256
+5: import json
+6: from pathlib import Path
+7: import sqlite3
+8: from uuid import uuid4
+10: from cain.common import utc_now
+13: class WorkspaceStore:
+14:     def __init__(self, path: str | Path):
+15:         self.path = Path(path).resolve()
+16:         self.path.parent.mkdir(parents=True, exist_ok=True)
+17:         self.documents_root = self.path.parent / "knowledge"
+18:         with self.connection() as db:
+19:             db.executescript("""
+20:                 CREATE TABLE IF NOT EXISTS projects (
+21:                     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
+22:                     created_at TEXT NOT NULL
+23:                 );
+24:                 CREATE INDEX IF NOT EXISTS projects_user ON projects(user_id);
+25:                 CREATE TABLE IF NOT EXISTS project_documents (
+26:                     id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
+27:                     title TEXT NOT NULL, content_hash TEXT NOT NULL, path TEXT NOT NULL,
+28:                     created_at TEXT NOT NULL, UNIQUE(project_id,content_hash)
+29:                 );
+30:                 CREATE TABLE IF NOT EXISTS ui_sessions (
+31:                     id TEXT NOT NULL, user_id TEXT NOT NULL, project_id TEXT,
+32:                     created_at TEXT NOT NULL, title TEXT NOT NULL DEFAULT 'Nova conversa',
+33:                     PRIMARY KEY(user_id,id)
+34:                 );
+35:                 CREATE INDEX IF NOT EXISTS sessions_project ON ui_sessions(user_id,project_id);
+36:                 CREATE TABLE IF NOT EXISTS ui_turns (
+37:                     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, session_id TEXT NOT NULL,
+38:                     payload TEXT NOT NULL, result_json TEXT NOT NULL, created_at TEXT NOT NULL,
+39:                     FOREIGN KEY(user_id,session_id) REFERENCES ui_sessions(user_id,id)
+40:                 );
+41:                 CREATE INDEX IF NOT EXISTS turns_session ON ui_turns(user_id,session_id,created_at);
+42:                 CREATE TABLE IF NOT EXISTS run_receipts (
+43:                     user_id TEXT NOT NULL, run_id TEXT NOT NULL, request_json TEXT NOT NULL,
+44:                     session_id TEXT NOT NULL, project_id TEXT,
+45:                     status TEXT NOT NULL CHECK(status IN ('processing','ready','failed')),
+46:                     result_json TEXT, created_at TEXT NOT NULL,
+47:                     PRIMARY KEY(user_id,run_id)
+48:                 );
+49:                 CREATE INDEX IF NOT EXISTS receipts_session ON run_receipts(user_id,session_id,status);
+50:                 CREATE TABLE IF NOT EXISTS response_feedback (
+51:                     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, turn_id TEXT NOT NULL REFERENCES ui_turns(id),
+52:                     reason TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL
+53:                 );
+54:             """)
+56:     @contextmanager
+57:     def connection(self):
+58:         db = sqlite3.connect(self.path, timeout=10)
+59:         db.row_factory = sqlite3.Row
+60:         db.execute("PRAGMA foreign_keys=ON")
+61:         try:
+62:             with db:
+63:                 yield db
+64:         finally:
+65:             db.close()
+67:     def require_project(self, user_id, project_id):
+68:         if project_id is None:
+69:             return
+70:         with self.connection() as db:
+71:             if not db.execute("SELECT 1 FROM projects WHERE id=? AND user_id=?",
+72:                               (project_id, user_id)).fetchone():
+73:                 raise ValueError("Projeto não encontrado para este usuário")
+75:     def projects(self, user_id):
+76:         with self.connection() as db:
+77:             return [dict(row) for row in db.execute(
+78:                 "SELECT id,name,created_at FROM projects WHERE user_id=? ORDER BY created_at", (user_id,))]
+80:     def create_project(self, user_id, name):
+81:         if not name.strip() or len(name) > 100:
+82:             raise ValueError("Nome do projeto deve ter entre 1 e 100 caracteres")
+83:         record = {"id": str(uuid4()), "name": name.strip(), "created_at": utc_now()}
+84:         with self.connection() as db:
+85:             db.execute("INSERT INTO projects VALUES (?,?,?,?)",
+86:                        (record["id"], user_id, record["name"], record["created_at"]))
+87:         return record
+89:     def documents(self, user_id, project_id):
+90:         self.require_project(user_id, project_id)
+91:         with self.connection() as db:
+92:             rows = [dict(row) for row in db.execute(
+93:                 "SELECT id,title,content_hash,path,created_at FROM project_documents "
+94:                 "WHERE project_id=? ORDER BY created_at", (project_id,))]
+95:         return [self._document_snapshot(row, project_id)[0] for row in rows]
+97:     def _document_snapshot(self, row, project_id):
+100:         from uuid import UUID
+101:         try:
+102:             if str(UUID(project_id)) != project_id or str(UUID(row["id"])) != row["id"]:
+103:                 raise ValueError("Invalid document identity")
+104:             path = self.documents_root / project_id / (row["id"] + ".md")
+105:             if path.resolve(strict=True) != path:
+106:                 raise ValueError("Document path redirects outside its stored location")
+107:             with path.open("rb") as handle:
+108:                 raw = handle.read(262145)
+109:         except (OSError, ValueError) as exc:
+110:             raise ValueError("Documento indisponível ou com falha de integridade") from exc
+111:         if len(raw) > 262144 or sha256(raw).hexdigest() != row["content_hash"]:
+112:             raise ValueError("Documento com falha de integridade; bytes diferem da versão recebida")
+113:         return {**dict(row), "path": str(path)}, raw.decode("utf-8")
+115:     def document_corpus(self, user_id, project_id):
+116:         self.require_project(user_id, project_id)
+117:         with self.connection() as db:
+118:             rows = db.execute("SELECT * FROM project_documents WHERE project_id=? ORDER BY created_at",
+119:                               (project_id,)).fetchall()
+120:         snapshots = [self._document_snapshot(row, project_id) for row in rows]
+121:         return {record["path"]: text for record, text in snapshots}
+123:     def add_document(self, user_id, project_id, title, content):
+124:         self.require_project(user_id, project_id)
+125:         if project_id is None:
+126:             raise ValueError("Escolha um projeto para adicionar documentos")
+127:         if Path(title).suffix.lower() not in {".txt", ".md", ".rst"}:
+128:             raise ValueError("Use um arquivo .txt, .md ou .rst")
+129:         encoded = content.encode("utf-8")
+130:         if not content.strip() or len(encoded) > 262144:
+131:             raise ValueError("Documento vazio ou maior que 256 KiB")
+132:         digest = sha256(encoded).hexdigest()
+133:         record_id = str(uuid4())
+135:         directory = self.documents_root / project_id
+136:         directory.mkdir(parents=True, exist_ok=True)
+137:         path = directory / (record_id + ".md")
+138:         with self.connection() as db:
+139:             db.execute("BEGIN IMMEDIATE")
+140:             existing = db.execute("SELECT * FROM project_documents WHERE project_id=? AND content_hash=?",
+141:                                   (project_id, digest)).fetchone()
+142:             if existing:
+143:                 record, _ = self._document_snapshot(existing, project_id)
+144:                 return {**record, "duplicate": True}
+145:             if db.execute("SELECT count(*) FROM project_documents WHERE project_id=?",
+146:                           (project_id,)).fetchone()[0] >= 200:
+147:                 raise ValueError("Projeto atingiu o limite de 200 documentos")
+148:             with path.open("xb") as handle:
+149:                 handle.write(encoded)
+150:             db.execute("INSERT INTO project_documents VALUES (?,?,?,?,?,?)",
+151:                        (record_id, project_id, title[:200], digest, str(path), utc_now()))
+152:         return next(row for row in self.documents(user_id, project_id) if row["id"] == record_id)
+154:     def ensure_session(self, user_id, session_id, project_id=None):
+155:         self.require_project(user_id, project_id)
+156:         with self.connection() as db:
+157:             db.execute("BEGIN IMMEDIATE")
+158:             row = db.execute("SELECT * FROM ui_sessions WHERE user_id=? AND id=?",
+159:                              (user_id, session_id)).fetchone()
+160:             if row is not None:
+161:                 if row["project_id"] != project_id:
+162:                     raise ValueError("Esta conversa pertence a outro projeto")
+163:                 return dict(row)
+164:             db.execute("INSERT INTO ui_sessions(id,user_id,project_id,created_at) VALUES(?,?,?,?)",
+165:                        (session_id, user_id, project_id, utc_now()))
+166:         return {"id": session_id, "project_id": project_id, "title": "Nova conversa"}
+168:     def require_session(self, user_id, session_id, project_id=None):
+170:         self.require_project(user_id, project_id)
+171:         with self.connection() as db:
+172:             row = db.execute("SELECT * FROM ui_sessions WHERE user_id=? AND id=?",
+173:                              (user_id, session_id)).fetchone()
+174:             if row is None or row["project_id"] != project_id:
+175:                 raise ValueError("Conversa não encontrada neste projeto")
+176:             return dict(row)
+178:     def sessions(self, user_id, project_id=None):
+179:         self.require_project(user_id, project_id)
+180:         with self.connection() as db:
+181:             return [dict(row) for row in db.execute(
+182:                 "SELECT id,title,created_at,project_id FROM ui_sessions WHERE user_id=? "
+183:                 "AND project_id IS ? ORDER BY created_at DESC LIMIT 100", (user_id, project_id))]
+185:     def claim_run(self, request):
+186:         serialized = json.dumps(request, sort_keys=True, ensure_ascii=False, allow_nan=False)
+187:         with self.connection() as db:
+188:             db.execute("BEGIN IMMEDIATE")
+189:             row = db.execute("SELECT * FROM run_receipts WHERE user_id=? AND run_id=?",
+190:                              (request["user_id"], request["run_id"])).fetchone()
+191:             if row is not None:
+192:                 if row["request_json"] != serialized:
+193:                     raise ValueError("run_id já usado para outro pedido ou contexto")
+194:                 return dict(row)
+195:             db.execute("INSERT INTO run_receipts VALUES(?,?,?,?,?,'processing',NULL,?)",
+196:                        (request["user_id"], request["run_id"], serialized,
+197:                         request["session_id"], request["project_id"], utc_now()))
+198:         return None
+200:     def run_receipt(self, user_id, run_id):
+201:         with self.connection() as db:
+202:             row = db.execute("SELECT * FROM run_receipts WHERE user_id=? AND run_id=?",
+203:                              (user_id, run_id)).fetchone()
+204:         if row is None:
+205:             raise ValueError("Pedido não encontrado para este usuário")
+206:         self.require_session(user_id, row["session_id"], row["project_id"])
+207:         return dict(row)
+209:     def fail_run(self, user_id, run_id):
+210:         with self.connection() as db:
+211:             db.execute("UPDATE run_receipts SET status='failed' "
+212:                        "WHERE user_id=? AND run_id=? AND status='processing'", (user_id, run_id))
+214:     def restore_run(self, receipt):
+215:         if receipt["status"] != "ready":
+216:             raise RuntimeError("Pedido sem resultado recuperável; não será executado novamente")
+217:         request = json.loads(receipt["request_json"])
+218:         output = json.loads(receipt["result_json"])
+219:         self.record_turn(receipt["user_id"], receipt["session_id"], request["payload"], output,
+220:                          created_at=receipt["created_at"])
+221:         return output
+223:     def restore_session(self, user_id, session_id, project_id):
+224:         self.require_session(user_id, session_id, project_id)
+225:         with self.connection() as db:
+226:             rows = db.execute("SELECT r.* FROM run_receipts r WHERE user_id=? AND session_id=? "
+227:                               "AND status='ready' AND NOT EXISTS (SELECT 1 FROM ui_turns t "
+228:                               "WHERE t.id=json_extract(r.result_json,'$.decision_id')) "
+229:                               "ORDER BY created_at LIMIT 100", (user_id, session_id)).fetchall()
+230:         for row in rows:
+231:             self.restore_run(dict(row))
+233:     def record_turn(self, user_id, session_id, payload, result, *, created_at=None):
+236:         turn_id = result.get("decision_id")
+237:         if not isinstance(turn_id, str) or not turn_id.strip():
+238:             raise ValueError("Resposta precisa de decision_id para identificar o turno")
+239:         if result.get("turn_id", turn_id) != turn_id:
+240:             raise ValueError("turn_id precisa corresponder a decision_id")
+241:         result = {**result, "turn_id": turn_id}
+242:         with self.connection() as db:
+243:             db.execute("BEGIN IMMEDIATE")
+244:             existing = db.execute("SELECT * FROM ui_turns WHERE id=?", (turn_id,)).fetchone()
+245:             if existing is not None:
+246:                 if (existing["user_id"] != user_id or existing["session_id"] != session_id
+247:                     or existing["payload"] != payload or json.loads(existing["result_json"]) != result):
+248:                     raise ValueError("Conflito no histórico do turno")
+249:                 return turn_id
+250:             db.execute("INSERT INTO ui_turns VALUES(?,?,?,?,?,?)",
+251:                        (turn_id, user_id, session_id, payload,
+252:                         json.dumps(result, ensure_ascii=False), created_at or utc_now()))
+253:             db.execute("UPDATE ui_sessions SET title=? WHERE user_id=? AND id=? AND title='Nova conversa'",
+254:                        (payload[:70], user_id, session_id))
+255:         return turn_id
+257:     def turns(self, user_id, session_id, project_id=None):
+259:         self.require_session(user_id, session_id, project_id)
+260:         with self.connection() as db:
+261:             rows = db.execute("SELECT * FROM (SELECT * FROM ui_turns WHERE user_id=? AND session_id=? "
+262:                               "ORDER BY created_at DESC LIMIT 100) ORDER BY created_at",
+263:                               (user_id, session_id)).fetchall()
+264:         return [{"id": row["id"], "payload": row["payload"], "result": json.loads(row["result_json"]),
+265:                  "created_at": row["created_at"]} for row in rows]
+267:     def feedback(self, user_id, turn_id, reason, note):
+268:         if reason not in {"useful", "incorrect", "format", "source", "memory", "long"}:
+269:             raise ValueError("Motivo de avaliação inválido")
+270:         if len(note) > 2000:
+271:             raise ValueError("Comentário muito longo")
+272:         record_id = str(uuid4())
+273:         with self.connection() as db:
+274:             if not db.execute("SELECT 1 FROM ui_turns WHERE id=? AND user_id=?", (turn_id, user_id)).fetchone():
+275:                 raise ValueError("Resposta não encontrada para este usuário")
+276:             db.execute("INSERT INTO response_feedback VALUES(?,?,?,?,?,?)",
+277:                        (record_id, user_id, turn_id, reason, note, utc_now()))
+278:         return {"id": record_id, "saved": True}

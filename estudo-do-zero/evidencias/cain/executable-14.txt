@@ -1,0 +1,700 @@
+
+### src/cain/research/bundles.py
+3: import io
+4: import json
+5: import os
+6: from pathlib import Path
+7: import shutil
+8: from uuid import uuid4
+10: from research_bundle import (
+11:     MAX_BYTES,
+12:     MAX_OBJECT,
+13:     MAX_RECEIVED,
+14:     canonical,
+15:     digest,
+16:     entity_key,
+17:     keys,
+18:     loads,
+19:     namespace,
+20:     signature,
+21:     validate,
+22: )
+23: from research_bundle.files import safe_open, transfer
+25: from cain.research.objects import Objects
+26: from cain.research.service import now
+29: def validate_grants(grants):
+30:     if type(grants) is not list or len(grants) > 200:
+31:         raise ValueError("Invalid bundle grants")
+32:     for grant in grants:
+33:         keys(
+34:             grant,
+35:             "user project collection domain repository publisher stream sources policies generate roles reference_only max_manifest_bytes max_object_bytes max_received_bytes",
+36:         )
+37:         for key in ("user", "project", "collection", "domain", "repository", "publisher", "stream"):
+38:             if type(grant[key]) is not str or len(grant[key]) > 500:
+39:                 raise ValueError("Invalid bundle grant identity")
+40:         for key in ("sources", "policies", "roles"):
+41:             if (
+42:                 type(grant[key]) is not list
+43:                 or len(grant[key]) > 200
+44:                 or any(type(v) is not str for v in grant[key])
+45:             ):
+46:                 raise ValueError("Invalid bundle grant list")
+47:         for key in ("generate", "reference_only"):
+48:             if type(grant[key]) is not bool:
+49:                 raise ValueError("Invalid bundle permission")
+50:         for key, cap in (
+51:             ("max_manifest_bytes", MAX_BYTES),
+52:             ("max_object_bytes", MAX_OBJECT),
+53:             ("max_received_bytes", MAX_RECEIVED),
+54:         ):
+55:             if type(grant[key]) is not int or not 0 <= grant[key] <= cap:
+56:                 raise ValueError("Invalid bundle cap")
+59: class BundleService:
+60:     def __init__(self, service, objects=None):
+61:         self.service = service
+62:         self.objects = Objects(
+63:             objects
+64:             or os.getenv("CAIN_RESEARCH_OBJECTS")
+65:             or service.path.parent / "research-objects"
+66:         )
+67:         with service.connection() as db:
+68:             db.executescript("""
+69:                 CREATE TABLE IF NOT EXISTS research_bundles(
+70:                   scope TEXT NOT NULL, id TEXT NOT NULL, origin TEXT NOT NULL,
+71:                   restrictions TEXT NOT NULL, raw BLOB NOT NULL, raw_sha TEXT NOT NULL,
+72:                   received_at TEXT NOT NULL, PRIMARY KEY(scope,id));
+73:                 CREATE TABLE IF NOT EXISTS research_entities(
+74:                   scope TEXT NOT NULL, id TEXT NOT NULL, domain TEXT NOT NULL,
+75:                   entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, revision TEXT NOT NULL,
+76:                   status TEXT NOT NULL, signature TEXT NOT NULL, payload TEXT NOT NULL,
+77:                   PRIMARY KEY(scope,id));
+78:                 CREATE INDEX IF NOT EXISTS bundle_entity_filter ON research_entities(scope,domain,entity_type,entity_id,status);
+79:                 CREATE TABLE IF NOT EXISTS research_bundle_entities(
+80:                   scope TEXT NOT NULL, bundle TEXT NOT NULL, entity TEXT NOT NULL,
+81:                   PRIMARY KEY(scope,bundle,entity),
+82:                   FOREIGN KEY(scope,bundle) REFERENCES research_bundles(scope,id),
+83:                   FOREIGN KEY(scope,entity) REFERENCES research_entities(scope,id));
+84:                 CREATE TABLE IF NOT EXISTS research_artifacts(
+85:                   scope TEXT NOT NULL, bundle TEXT NOT NULL, id TEXT NOT NULL,
+86:                   sha256 TEXT, payload TEXT NOT NULL, PRIMARY KEY(scope,bundle,id),
+87:                   FOREIGN KEY(scope,bundle) REFERENCES research_bundles(scope,id));
+88:                 CREATE INDEX IF NOT EXISTS bundle_hash ON research_artifacts(scope,sha256);
+89:                 CREATE TABLE IF NOT EXISTS research_relations(
+90:                   scope TEXT NOT NULL, bundle TEXT NOT NULL, id TEXT NOT NULL,
+91:                   source TEXT NOT NULL, target TEXT NOT NULL, payload TEXT NOT NULL,
+92:                   PRIMARY KEY(scope,bundle,id),
+93:                   FOREIGN KEY(scope,bundle) REFERENCES research_bundles(scope,id));
+94:                 CREATE INDEX IF NOT EXISTS bundle_relation_source ON research_relations(scope,source);
+95:                 CREATE INDEX IF NOT EXISTS bundle_relation_target ON research_relations(scope,target);
+96:                 CREATE TABLE IF NOT EXISTS research_bundle_receipts(
+97:                   id TEXT PRIMARY KEY, scope TEXT NOT NULL, at TEXT NOT NULL, payload TEXT NOT NULL);
+98:                 CREATE TABLE IF NOT EXISTS research_entity_reservations(
+99:                   id TEXT PRIMARY KEY, signature TEXT NOT NULL);
+100:                 CREATE TABLE IF NOT EXISTS research_bundle_approvals(
+101:                   scope TEXT NOT NULL, id TEXT NOT NULL, approved_at TEXT NOT NULL,
+102:                   raw BLOB NOT NULL,
+103:                   PRIMARY KEY(scope,id));
+104:                 CREATE TABLE IF NOT EXISTS research_bundle_raw_variants(
+105:                   scope TEXT NOT NULL, bundle TEXT NOT NULL, raw_sha TEXT NOT NULL,
+106:                   raw BLOB NOT NULL, received_at TEXT NOT NULL,
+107:                   PRIMARY KEY(scope,bundle,raw_sha),
+108:                   FOREIGN KEY(scope,bundle) REFERENCES research_bundles(scope,id));
+109:             """)
+111:     def grants(self, scope, origin, restrictions, generate=False):
+112:         if not restrictions["read"] or (generate and not restrictions["generate"]):
+113:             return []
+114:         policy = self.service.policy()
+115:         if policy["version"] != 3:
+116:             return []
+117:         identity = json.loads(scope)
+118:         return [
+119:             g
+120:             for g in policy["bundle_grants"]
+121:             if [g[k] for k in ("user", "project", "collection")] == identity
+122:             and all(g[k] == origin[k] for k in ("domain", "repository", "publisher", "stream"))
+123:             and set(origin["inputs"]) <= set(g["sources"])
+124:             and restrictions["policy"] in g["policies"]
+125:             and (not generate or g["generate"])
+126:         ]
+128:     @staticmethod
+129:     def resource_allowed(artifact, grants):
+130:         return any(
+131:             artifact["role"] in g["roles"]
+132:             and (artifact["availability"] == "received" or g["reference_only"])
+133:             for g in grants
+134:         )
+136:     def _admit(self, scope, package, size):
+137:         grants = self.grants(scope, package["origin"], package["restrictions"])
+138:         total = sum(a["size"] for a in package["artifacts"] if a["availability"] == "received")
+140:         for grant in grants:
+141:             if (
+142:                 size <= grant["max_manifest_bytes"]
+143:                 and total <= grant["max_received_bytes"]
+144:                 and all(
+145:                     self.resource_allowed(a, [grant])
+146:                     and (a["availability"] != "received" or a["size"] <= grant["max_object_bytes"])
+147:                     for a in package["artifacts"]
+148:                 )
+149:             ):
+150:                 return
+151:         raise PermissionError("NOT_AUTHORIZED")
+153:     def _project(self, db, scope, package):
+154:         bid = package["bundle_id"]
+155:         for entity in package["entities"]:
+156:             eid, sig = entity_key(package["origin"], entity), signature(package, entity)
+157:             if db.execute(
+158:                 "SELECT 1 FROM research_entities WHERE id=? AND signature<>?", (eid, sig)
+159:             ).fetchone():
+160:                 raise ValueError("CONFLICT")
+161:             db.execute(
+162:                 "INSERT OR IGNORE INTO research_entities VALUES(?,?,?,?,?,?,?,?,?)",
+163:                 (
+164:                     scope,
+165:                     eid,
+166:                     package["origin"]["domain"],
+167:                     entity["entity_type"],
+168:                     entity["entity_id"],
+169:                     entity["revision"],
+170:                     entity["status"],
+171:                     sig,
+172:                     canonical(entity).decode(),
+173:                 ),
+174:             )
+175:             db.execute(
+176:                 "INSERT OR IGNORE INTO research_bundle_entities VALUES(?,?,?)", (scope, bid, eid)
+177:             )
+178:         for a in package["artifacts"]:
+179:             db.execute(
+180:                 "INSERT INTO research_artifacts VALUES(?,?,?,?,?)",
+181:                 (scope, bid, a["artifact_id"], a["sha256"], canonical(a).decode()),
+182:             )
+183:         for r in package["relations"]:
+184:             db.execute(
+185:                 "INSERT INTO research_relations VALUES(?,?,?,?,?,?)",
+186:                 (
+187:                     scope,
+188:                     bid,
+189:                     r["relation_id"],
+190:                     canonical(r["source"]).decode(),
+191:                     canonical(r["target"]).decode(),
+192:                     canonical(r).decode(),
+193:                 ),
+194:             )
+196:     def _receipt(self, scope, status, package=None, error=None, raw_sha=None):
+197:         result = dict(
+198:             attempt_id=str(uuid4()),
+199:             contract="ResearchBundleV1",
+200:             status=status,
+201:             bundle_id=package["bundle_id"] if package else None,
+202:             error=error,
+203:             raw_manifest_sha256=raw_sha,
+204:         )
+205:         if package:
+206:             result["raw_preserved"] = True
+207:             received = [a for a in package["artifacts"] if a["availability"] == "received"]
+208:             result.update(
+209:                 entities=len(package["entities"]),
+210:                 resources=len(package["artifacts"]),
+211:                 received_objects=len(received),
+212:                 received_bytes=sum(a["size"] for a in received),
+213:                 references=len(package["artifacts"]) - len(received),
+214:             )
+215:         with self.service.connection() as db:
+216:             db.execute(
+217:                 "INSERT INTO research_bundle_receipts VALUES(?,?,?,?)",
+218:                 (result["attempt_id"], scope, now(), canonical(result).decode()),
+219:             )
+220:         return result
+222:     def approve(self, relative, scope):
+228:         root = Path(self.service.import_root(scope))
+229:         with safe_open(root, relative) as source:
+230:             buffer = io.BytesIO()
+231:             transfer(source, buffer, limit=MAX_BYTES)
+232:         raw = buffer.getvalue()
+233:         package = validate(loads(raw))
+234:         self._admit(scope, package, len(raw))
+235:         with self.service.connection() as db:
+236:             db.execute("BEGIN IMMEDIATE")
+237:             count, used = db.execute(
+238:                 "SELECT count(*),coalesce(sum(length(raw)),0) FROM research_bundle_approvals WHERE scope=?",
+239:                 (scope,),
+240:             ).fetchone()
+241:             existing = db.execute(
+242:                 "SELECT 1 FROM research_bundle_approvals WHERE scope=? AND id=?",
+243:                 (scope, package["bundle_id"]),
+244:             ).fetchone()
+245:             if not existing and (count >= 100 or used + len(canonical(package)) > 20_000_000):
+246:                 raise ValueError("APPROVAL_LIMIT")
+247:             for entity in package["entities"]:
+248:                 eid, sig = entity_key(package["origin"], entity), signature(package, entity)
+249:                 for table in ("research_entity_reservations", "research_entities"):
+250:                     if db.execute(
+251:                         "SELECT 1 FROM " + table + " WHERE id=? AND signature<>?", (eid, sig)
+252:                     ).fetchone():
+253:                         raise ValueError("CONFLICT")
+254:                 db.execute(
+255:                     "INSERT OR IGNORE INTO research_entity_reservations VALUES(?,?)", (eid, sig)
+256:                 )
+257:             db.execute(
+258:                 "INSERT OR IGNORE INTO research_bundle_approvals VALUES(?,?,?,?)",
+259:                 (scope, package["bundle_id"], now(), canonical(package)),
+260:             )
+261:         return dict(status="approved", bundle_id=package["bundle_id"], objects_received=False)
+263:     def ingest(self, relative, scope):
+264:         package = None
+265:         raw_sha = None
+266:         try:
+267:             root = Path(self.service.import_root(scope))
+268:             with safe_open(root, relative) as source:
+269:                 buffer = io.BytesIO()
+270:                 transfer(source, buffer, limit=MAX_BYTES)
+271:                 raw = buffer.getvalue()
+272:             package = validate(loads(raw))
+273:             self._admit(scope, package, len(raw))
+275:             with self.service.connection() as db:
+276:                 if not db.execute(
+277:                     "SELECT 1 FROM research_bundle_approvals WHERE scope=? AND id=?",
+278:                     (scope, package["bundle_id"]),
+279:                 ).fetchone():
+280:                     raise PermissionError("NOT_AUTHORIZED")
+281:             raw_sha = digest(raw)
+282:             bundle_root = root / Path(relative).parent
+283:             total = sum(a["size"] for a in package["artifacts"] if a["availability"] == "received")
+284:             self.objects.root.parent.mkdir(parents=True, exist_ok=True)
+285:             if shutil.disk_usage(self.objects.root.parent).free < total + MAX_BYTES:
+286:                 raise ValueError("INSUFFICIENT_SPACE")
+287:             with self.service.connection() as db:
+288:                 db.execute("BEGIN IMMEDIATE")
+289:                 count, stored = db.execute(
+290:                     "SELECT count(*),coalesce(sum(length(raw)),0) FROM research_bundles WHERE scope=?",
+291:                     (scope,),
+292:                 ).fetchone()
+293:                 variant_bytes = db.execute(
+294:                     "SELECT coalesce(sum(length(raw)),0) FROM research_bundle_raw_variants WHERE scope=?",
+295:                     (scope,),
+296:                 ).fetchone()[0]
+297:                 old = db.execute(
+298:                     "SELECT raw,raw_sha FROM research_bundles WHERE scope=? AND id=?",
+299:                     (scope, package["bundle_id"]),
+300:                 ).fetchone()
+301:                 if old:
+302:                     if (
+303:                         digest(old["raw"]) != old["raw_sha"]
+304:                         or validate(loads(old["raw"])) != package
+305:                     ):
+306:                         raise ValueError("CORRUPTION: duplicate archive")
+307:                     self._check_raw_variants(db, scope, package)
+308:                     self._check_projection(db, scope, package)
+309:                     self._verify_objects(package)
+310:                     status = "duplicate"
+311:                 else:
+312:                     if count >= 100 or stored + variant_bytes + len(raw) > 20_000_000:
+313:                         raise ValueError("SCOPE_LIMIT")
+315:                     for a in package["artifacts"]:
+316:                         if a["availability"] == "received":
+317:                             self.objects.receive(
+318:                                 bundle_root, a["relative_path"], a["sha256"], a["size"]
+319:                             )
+320:                     db.execute(
+321:                         "INSERT INTO research_bundles VALUES(?,?,?,?,?,?,?)",
+322:                         (
+323:                             scope,
+324:                             package["bundle_id"],
+325:                             canonical(package["origin"]).decode(),
+326:                             canonical(package["restrictions"]).decode(),
+327:                             raw,
+328:                             raw_sha,
+329:                             now(),
+330:                         ),
+331:                     )
+332:                     self._project(db, scope, package)
+333:                     status = "admitted"
+334:                 if (
+335:                     old
+336:                     and raw_sha != old["raw_sha"]
+337:                     and not db.execute(
+338:                         "SELECT 1 FROM research_bundle_raw_variants WHERE scope=? AND bundle=? AND raw_sha=?",
+339:                         (scope, package["bundle_id"], raw_sha),
+340:                     ).fetchone()
+341:                 ):
+342:                     variants, variant_bytes = db.execute(
+343:                         "SELECT count(*),coalesce(sum(length(raw)),0) FROM research_bundle_raw_variants WHERE scope=?",
+344:                         (scope,),
+345:                     ).fetchone()
+346:                     per_bundle = db.execute(
+347:                         "SELECT count(*) FROM research_bundle_raw_variants WHERE scope=? AND bundle=?",
+348:                         (scope, package["bundle_id"]),
+349:                     ).fetchone()[0]
+350:                     if (
+351:                         per_bundle >= 7
+352:                         or variants >= 700
+353:                         or stored + variant_bytes + len(raw) > 20_000_000
+354:                     ):
+355:                         raise ValueError("RAW_VARIANT_LIMIT")
+356:                     db.execute(
+357:                         "INSERT INTO research_bundle_raw_variants VALUES(?,?,?,?,?)",
+358:                         (scope, package["bundle_id"], raw_sha, raw, now()),
+359:                     )
+360:             return self._receipt(scope, status, package, raw_sha=raw_sha)
+361:         except Exception as exc:
+363:             code = "NOT_AUTHORIZED" if isinstance(exc, PermissionError) else "IMPORT_REJECTED"
+364:             if str(exc) == "CONFLICT":
+365:                 code = "CONFLICT"
+366:             self._receipt(scope, "rejected", error=code)
+367:             raise
+369:     @staticmethod
+370:     def _check_raw_variants(db, scope, bundle):
+375:         if not db.execute(
+376:             "SELECT 1 FROM sqlite_master WHERE name='research_bundle_raw_variants'"
+377:         ).fetchone():
+378:             return
+379:         bid = bundle["bundle_id"]
+380:         hashes = {
+381:             db.execute(
+382:                 "SELECT raw_sha FROM research_bundles WHERE scope=? AND id=?", (scope, bid)
+383:             ).fetchone()[0]
+384:         }
+385:         for row in db.execute(
+386:             "SELECT raw_sha,raw FROM research_bundle_raw_variants WHERE scope=? AND bundle=?",
+387:             (scope, bid),
+388:         ):
+389:             if digest(row["raw"]) != row["raw_sha"] or validate(loads(row["raw"])) != bundle:
+390:                 raise ValueError("CORRUPTION: raw variant")
+391:             hashes.add(row["raw_sha"])
+392:         for row in db.execute(
+393:             "SELECT payload FROM research_bundle_receipts WHERE scope=?", (scope,)
+394:         ):
+395:             receipt = json.loads(row[0])
+396:             if (
+397:                 receipt.get("raw_preserved")
+398:                 and receipt["bundle_id"] == bid
+399:                 and receipt["raw_manifest_sha256"] not in hashes
+400:             ):
+401:                 raise ValueError("CORRUPTION: missing receipted raw variant")
+403:     def _archives(self, db, scope, generate=False):
+404:         result = []
+405:         used = 0
+406:         for row in db.execute(
+407:             "SELECT id,origin,restrictions,length(raw) AS size FROM research_bundles WHERE scope=? ORDER BY id",
+408:             (scope,),
+409:         ):
+410:             grants = self.grants(
+411:                 scope, json.loads(row["origin"]), json.loads(row["restrictions"]), generate
+412:             )
+413:             if not grants:
+414:                 continue
+415:             used += row["size"]
+416:             if used > 20_000_000 or len(result) >= 100:
+417:                 raise ValueError("SCOPE_LIMIT")
+418:             stored = db.execute(
+419:                 "SELECT raw,raw_sha FROM research_bundles WHERE scope=? AND id=?",
+420:                 (scope, row["id"]),
+421:             ).fetchone()
+422:             bundle = validate(loads(stored["raw"]))
+423:             if (
+424:                 digest(stored["raw"]) != stored["raw_sha"]
+425:                 or bundle["bundle_id"] != row["id"]
+426:                 or canonical(bundle["origin"]).decode() != row["origin"]
+427:                 or canonical(bundle["restrictions"]).decode() != row["restrictions"]
+428:             ):
+429:                 raise ValueError("CORRUPTION: raw authorization metadata")
+430:             self._check_raw_variants(db, scope, bundle)
+431:             result.append((bundle, grants))
+432:         return result
+434:     def _check_projection(self, db, scope, bundle):
+435:         bid = bundle["bundle_id"]
+436:         expected = set()
+437:         for e in bundle["entities"]:
+438:             eid = entity_key(bundle["origin"], e)
+439:             expected.add(eid)
+440:             row = db.execute(
+441:                 "SELECT * FROM research_entities WHERE scope=? AND id=?", (scope, eid)
+442:             ).fetchone()
+443:             values = (
+444:                 scope,
+445:                 eid,
+446:                 bundle["origin"]["domain"],
+447:                 e["entity_type"],
+448:                 e["entity_id"],
+449:                 e["revision"],
+450:                 e["status"],
+451:                 signature(bundle, e),
+452:                 canonical(e).decode(),
+453:             )
+454:             if row is None or tuple(row) != values:
+455:                 raise ValueError("CORRUPTION: entity projection")
+456:         actual = {
+457:             r[0]
+458:             for r in db.execute(
+459:                 "SELECT entity FROM research_bundle_entities WHERE scope=? AND bundle=?",
+460:                 (scope, bid),
+461:             )
+462:         }
+463:         if expected != actual:
+464:             raise ValueError("CORRUPTION: memberships")
+465:         for table, items, identity in (
+466:             ("research_artifacts", bundle["artifacts"], "artifact_id"),
+467:             ("research_relations", bundle["relations"], "relation_id"),
+468:         ):
+469:             rows = db.execute(
+470:                 "SELECT * FROM " + table + " WHERE scope=? AND bundle=?", (scope, bid)
+471:             ).fetchall()
+472:             if {r["id"]: r["payload"] for r in rows} != {
+473:                 i[identity]: canonical(i).decode() for i in items
+474:             }:
+475:                 raise ValueError("CORRUPTION: resource/relation projection")
+476:             for row in rows:
+477:                 item = json.loads(row["payload"])
+478:                 if table == "research_artifacts" and row["sha256"] != item["sha256"]:
+479:                     raise ValueError("CORRUPTION: resource index")
+480:                 if table == "research_relations" and (
+481:                     row["source"] != canonical(item["source"]).decode()
+482:                     or row["target"] != canonical(item["target"]).decode()
+483:                 ):
+484:                     raise ValueError("CORRUPTION: relation index")
+486:     def query(
+487:         self,
+488:         scope,
+489:         *,
+490:         entity_id=None,
+491:         entity_type=None,
+492:         revision=None,
+493:         bundle_id=None,
+494:         artifact_id=None,
+495:         evidence_id=None,
+496:         relation_type=None,
+497:         domain=None,
+498:         status=None,
+499:         limit=20,
+500:         offset=0,
+501:         generate=False,
+502:         _db=None,
+503:     ):
+504:         if (
+505:             type(limit) is not int
+506:             or not 1 <= limit <= 50
+507:             or type(offset) is not int
+508:             or not 0 <= offset <= 100000
+509:         ):
+510:             raise ValueError("Invalid pagination")
+511:         records, artifacts, relations, coverage = {}, [], [], []
+512:         evidence = []
+513:         from contextlib import nullcontext
+514:         with (nullcontext(_db) if _db is not None else self.service.connection()) as db:
+515:             archives = self._archives(db, scope, generate)
+516:             descriptors = {
+517:                 (tuple(namespace(b["origin"])), a["artifact_id"], digest(canonical(a)))
+518:                 for b, g in archives
+519:                 for a in b["artifacts"]
+520:                 if self.resource_allowed(a, g)
+521:             }
+522:             for bundle, grants in archives:
+523:                 self._check_projection(db, scope, bundle)
+524:                 bid = bundle["bundle_id"]
+525:                 if (bundle_id is not None and bid != bundle_id) or (
+526:                     domain is not None and bundle["origin"]["domain"] != domain
+527:                 ):
+528:                     continue
+529:                 selected = {
+530:                     (e["entity_id"], e["revision"])
+531:                     for e in bundle["entities"]
+532:                     if (entity_id is None or e["entity_id"] == entity_id)
+533:                     and (entity_type is None or e["entity_type"] == entity_type)
+534:                     and (revision is None or e["revision"] == revision)
+535:                     and (status is None or e["status"] == status)
+536:                 }
+537:                 entity_filter = any(
+538:                     v is not None for v in (entity_id, entity_type, revision, status)
+539:                 )
+540:                 if entity_filter and not selected:
+541:                     continue
+542:                 linked_evidence = {
+543:                     ref
+544:                     for e in bundle["entities"]
+545:                     if (e["entity_id"], e["revision"]) in selected
+546:                     for ref in e["evidence_ids"]
+547:                 }
+548:                 evidence.extend(
+549:                     dict(bundle_id=bid, **e)
+550:                     for e in bundle["evidence"]
+551:                     if (not entity_filter or e["id"] in linked_evidence)
+552:                     and (evidence_id is None or e["id"] == evidence_id)
+553:                 )
+554:                 coverage.append(dict(bundle_id=bid, **bundle["coverage"]))
+555:                 visible = {
+556:                     a["artifact_id"]
+557:                     for a in bundle["artifacts"]
+558:                     if self.resource_allowed(a, grants)
+559:                     and (artifact_id is None or a["artifact_id"] == artifact_id)
+560:                 }
+561:                 if entity_filter:
+562:                     linked = {
+563:                         ep["id"]
+564:                         for r in bundle["relations"]
+565:                         if any(
+566:                             ep["kind"] == "entity"
+567:                             and not ep["external"]
+568:                             and (ep["id"], ep["revision"]) in selected
+569:                             for ep in (r["source"], r["target"])
+570:                         )
+571:                         for ep in (r["source"], r["target"])
+572:                         if ep["kind"] == "artifact" and not ep["external"]
+573:                     }
+574:                     visible &= linked
+575:                 for a in bundle["artifacts"]:
+576:                     if a["artifact_id"] in visible:
+577:                         artifacts.append(dict(bundle_id=bid, **a))
+578:                 for r in bundle["relations"]:
+579:                     if relation_type is not None and r["type"] != relation_type:
+580:                         continue
+581:                     if entity_filter and not any(
+582:                         ep["kind"] == "entity"
+583:                         and not ep["external"]
+584:                         and (ep["id"], ep["revision"]) in selected
+585:                         for ep in (r["source"], r["target"])
+586:                     ):
+587:                         continue
+588:                     if artifact_id is not None and not any(
+589:                         ep["kind"] == "artifact" and not ep["external"] and ep["id"] in visible
+590:                         for ep in (r["source"], r["target"])
+591:                     ):
+592:                         continue
+594:                     def allowed(ep):
+595:                         if ep["kind"] != "artifact":
+596:                             return True
+597:                         if not ep["external"]:
+598:                             return ep["id"] in visible
+599:                         if bundle["profile"] == "local-research/1":
+601:                             return (
+602:                                 ep["namespace"] == namespace(bundle["origin"])
+603:                                 and ep["id"] in visible
+604:                             )
+605:                         return (tuple(ep["namespace"]), ep["id"], ep["revision"]) in descriptors
+607:                     if all(allowed(ep) for ep in (r["source"], r["target"])):
+608:                         relations.append(dict(bundle_id=bid, **r))
+609:                 for e in bundle["entities"]:
+610:                     if (
+611:                         (entity_id is None or e["entity_id"] == entity_id)
+612:                         and (revision is None or e["revision"] == revision)
+613:                         and (entity_type is None or e["entity_type"] == entity_type)
+614:                         and (status is None or e["status"] == status)
+615:                         and (domain is None or bundle["origin"]["domain"] == domain)
+616:                     ):
+617:                         eid = entity_key(bundle["origin"], e)
+618:                         row = records.setdefault(
+619:                             eid, dict(id=eid, **e, origin=bundle["origin"], bundles=[])
+620:                         )
+621:                         row["bundles"].append(bid)
+622:         rows = sorted(records.values(), key=lambda e: e["id"])
+624:         return dict(
+625:             classification="FACTUAL",
+626:             entities=rows[offset : offset + limit],
+627:             total=len(rows),
+628:             artifacts=artifacts[offset : offset + limit],
+629:             artifact_total=len(artifacts),
+630:             relations=relations[offset : offset + limit],
+631:             relation_total=len(relations),
+632:             evidence=evidence[offset : offset + limit],
+633:             evidence_total=len(evidence),
+634:             coverage=coverage,
+635:         )
+637:     def evidence(self, scope, bundle_id, evidence_id):
+638:         result = self.query(scope, bundle_id=bundle_id, evidence_id=evidence_id, limit=1)
+639:         if not result["evidence"]:
+640:             raise ValueError("NOT_FOUND")
+641:         return dict(classification="FACTUAL", evidence=result["evidence"][0])
+643:     def entity(self, scope, bundle_id, entity_id, revision):
+644:         result = self.query(
+645:             scope, bundle_id=bundle_id, entity_id=entity_id, revision=revision, limit=50
+646:         )
+647:         if not result["entities"]:
+648:             raise ValueError("NOT_FOUND")
+649:         return result
+651:     def artifact(self, scope, bundle_id, artifact_id):
+652:         result = self.query(scope, bundle_id=bundle_id, artifact_id=artifact_id, limit=50)
+653:         if not result["artifacts"]:
+654:             raise ValueError("NOT_FOUND")
+655:         return dict(
+656:             classification="FACTUAL",
+657:             artifact=result["artifacts"][0],
+658:             relations=result["relations"],
+659:             relation_total=result["relation_total"],
+660:         )
+662:     def materialize(self, scope, bundle_id, artifact_id, destination):
+663:         with self.service.connection() as db:
+664:             for bundle, grants in self._archives(db, scope):
+665:                 if bundle["bundle_id"] != bundle_id:
+666:                     continue
+667:                 self._check_projection(db, scope, bundle)
+668:                 for a in bundle["artifacts"]:
+669:                     if a["artifact_id"] == artifact_id and self.resource_allowed(a, grants):
+670:                         if a["availability"] != "received":
+671:                             raise ValueError("REFERENCE_ONLY")
+672:                         self.objects.materialize(a["sha256"], a["size"], destination)
+673:                         return dict(status="materialized", sha256=a["sha256"], bytes=a["size"])
+674:         raise ValueError("NOT_FOUND")
+676:     def _verify_objects(self, bundle):
+677:         for a in bundle["artifacts"]:
+678:             if a["availability"] == "received":
+679:                 try:
+680:                     self.objects.verify(a["sha256"], a["size"])
+681:                 except OSError as exc:
+682:                     raise ValueError("CORRUPTION: received object unavailable") from exc
+684:     def verify(self, scope, rebuild=False):
+685:         with self.service.connection() as db:
+686:             db.execute("BEGIN IMMEDIATE")
+687:             archives = self._archives(db, scope)
+688:             count = db.execute(
+689:                 "SELECT count(*) FROM research_bundles WHERE scope=?", (scope,)
+690:             ).fetchone()[0]
+691:             if count != len(archives) or any(
+692:                 not self.resource_allowed(a, grants)
+693:                 for bundle, grants in archives
+694:                 for a in bundle["artifacts"]
+695:             ):
+696:                 raise PermissionError("NOT_AUTHORIZED: complete scope required")
+697:             for bundle, _ in archives:
+698:                 self._verify_objects(bundle)
+699:             if rebuild:
+701:                 count = db.execute(
+702:                     "SELECT count(*) FROM research_bundles WHERE scope=?", (scope,)
+703:                 ).fetchone()[0]
+704:                 if count != len(archives):
+705:                     raise PermissionError("NOT_AUTHORIZED: complete scope required for rebuild")
+706:                 for table in (
+707:                     "research_relations",
+708:                     "research_artifacts",
+709:                     "research_bundle_entities",
+710:                     "research_entities",
+711:                 ):
+712:                     db.execute("DELETE FROM " + table + " WHERE scope=?", (scope,))
+713:                 for bundle, _ in archives:
+714:                     self._project(db, scope, bundle)
+715:             for bundle, _ in archives:
+716:                 self._check_projection(db, scope, bundle)
+717:         return dict(status="verified", bundles=len(archives), rebuilt=rebuild)
+719:     def orphan_report(self):
+721:         with self.service.connection() as db:
+722:             reachable = set()
+723:             for row in db.execute("SELECT raw FROM research_bundles"):
+724:                 package = validate(loads(row[0]))
+725:                 reachable.update(
+726:                     a["sha256"] for a in package["artifacts"] if a["availability"] == "received"
+727:                 )
+728:         blobs, temporary = self.objects.inventory()
+729:         return dict(orphans=sorted(set(blobs) - reachable), temporary=temporary, destructive=False)
+731:     def receipts(self, scope):
+732:         with self.service.connection() as db:
+733:             admitted = {}
+734:             for bundle, grants in self._archives(db, scope):
+735:                 if all(self.resource_allowed(a, grants) for a in bundle["artifacts"]):
+736:                     admitted[bundle["bundle_id"]] = True
+737:             rows = [
+738:                 json.loads(r[0])
+739:                 for r in db.execute(
+740:                     "SELECT payload FROM research_bundle_receipts WHERE scope=? ORDER BY at DESC LIMIT 50",
+741:                     (scope,),
+742:                 )
+743:             ]
+744:             return [r for r in rows if r["bundle_id"] is None or r["bundle_id"] in admitted]

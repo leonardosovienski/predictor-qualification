@@ -1,0 +1,239 @@
+
+### src/cain/research/inspection.py
+3: from collections import Counter, defaultdict
+4: from datetime import datetime
+5: from time import perf_counter
+7: from research_snapshot import canonical, digest
+9: NAMESPACE = ("domain", "repository", "publisher", "stream")
+10: FIELDS = ("source_status", "status_axis", "reason", "event_at", "recorded_at",
+11:           "available_at", "identity_basis", "supersedes", "evidence_ids")
+14: def inspect(service, scope, *, source_id=None, domain=None, before=None, after=None):
+16:     for value in (source_id, domain, before, after):
+17:         if value is not None and (type(value) is not str or not value or len(value) > 500):
+18:             raise ValueError("Invalid inspection filter")
+19:     if (before is None) != (after is None):
+20:         raise ValueError("Comparison requires both before and after revisions")
+21:     if before is not None and not source_id:
+22:         raise ValueError("Comparison requires an explicit source identity")
+23:     started = perf_counter()
+24:     policy_hash = digest(service.policy_path.read_bytes())
+25:     with service.connection() as db:
+26:         db.execute("BEGIN")
+27:         archives = service._archive(db, scope)
+28:         service._verify_projection(db, scope, archives)
+29:         received = {row["id"]: row["received_at"] for row in db.execute(
+30:             "SELECT id,received_at FROM publications WHERE scope=?", (scope,)
+31:         ) if row["id"] in archives}
+32:         result = _build(service, archives, received, source_id, domain, before, after)
+33:     result["diagnostics"] = {
+34:         "duration_seconds": perf_counter() - started,
+35:         "model_calls": 0, "network_calls": 0, "policy_sha256": policy_hash,
+36:         "snapshot_sha256": digest(canonical(sorted(archives))),
+37:         "content_persisted": False,
+38:     }
+39:     if digest(service.policy_path.read_bytes()) != policy_hash:
+40:         raise ValueError("Policy changed during inspection; retry under current permissions")
+41:     if len(canonical(result)) > 1_000_000:
+42:         raise ValueError("Inspection exceeds 1000000 bytes; filter source or domain")
+43:     return result
+46: def _build(service, archives, received, source_id, domain, before, after):
+47:     records, evidence, packages = {}, {}, {}
+48:     for pubid, package in sorted(archives.items()):
+49:         if domain is not None and package["origin"]["domain"] != domain:
+50:             continue
+51:         lookup = {item["id"]: item for item in package["evidence"]}
+52:         selected = [r for r in package["records"]
+53:                     if source_id is None or r["source_id"] == source_id]
+54:         if not selected:
+55:             continue
+56:         packages[pubid] = {
+57:             "id": pubid, "origin": package["origin"], "coverage": package["coverage"],
+58:             "exported_at": package["exported_at"], "received_at": received[pubid],
+59:         }
+60:         for record in selected:
+61:             rid, _ = service.projection(package, record)
+62:             if rid not in records:
+63:                 if len(records) >= 2000:
+64:                     raise ValueError("Inspection exceeds 2000 revisions; filter source or domain")
+65:                 records[rid] = {
+66:                     **record, "id": rid,
+67:                     "namespace": [package["origin"][k] for k in NAMESPACE],
+68:                     "publications": [], "references": [],
+69:                 }
+70:             records[rid]["publications"].append(pubid)
+71:             for eid in record["evidence_ids"]:
+72:                 ref = pubid + ":" + eid
+73:                 records[rid]["references"].append(ref)
+74:                 evidence[ref] = {**lookup[eid], "reference_id": ref}
+75:     ordered = sorted(records.values(), key=lambda r: (*r["namespace"], r["source_id"], r["revision"]))
+76:     identities = defaultdict(list)
+77:     for record in ordered:
+78:         identities[(*record["namespace"], record["source_id"])].append(record)
+80:     nodes = [{"id": "record:" + r["id"], "type": "record", "label": r["source_id"],
+81:               "revision": r["revision"]} for r in ordered]
+82:     nodes += [{"id": "publication:" + p, "type": "publication", "label": p} for p in packages]
+83:     nodes += [{"id": "evidence:" + e, "type": "evidence", "label": v["source"]}
+84:               for e, v in evidence.items()]
+85:     edges, findings, comparisons = [], [], []
+86:     for record in ordered:
+87:         for pubid in record["publications"]:
+88:             edges.append({"from": "record:" + record["id"],
+89:                           "to": "publication:" + pubid, "relation": "published_in"})
+90:         for ref in record["references"]:
+91:             edges.append({"from": "record:" + record["id"],
+92:                           "to": "evidence:" + ref, "relation": "cites"})
+93:         missing = [f for f in ("reason", "event_at", "recorded_at", "available_at")
+94:                    if record[f] is None]
+95:         if missing:
+96:             findings.append({"code": "unknown_fields", "record": record["id"], "fields": missing})
+97:         if record["identity_basis"] == "ambiguous_observation":
+98:             findings.append({"code": "ambiguous_identity", "record": record["id"]})
+99:         if not any(evidence[ref]["availability"] == "received" for ref in record["references"]):
+100:             findings.append({"code": "no_received_evidence", "record": record["id"]})
+101:     for identity, revisions in identities.items():
+102:         by_revision = {r["revision"]: r for r in revisions}
+103:         adjacency = {}
+104:         for record in revisions:
+105:             adjacency[record["revision"]] = []
+106:             for previous in record["supersedes"]:
+107:                 if previous not in by_revision:
+108:                     findings.append({"code": "superseded_revision_not_received",
+109:                                      "record": record["id"], "revision": previous})
+110:                 else:
+111:                     adjacency[record["revision"]].append(previous)
+112:                     edges.append({"from": "record:" + record["id"],
+113:                                   "to": "record:" + by_revision[previous]["id"],
+114:                                   "relation": "source_declared_supersedes"})
+116:         pending = {key: set(values) for key, values in adjacency.items()}
+117:         while pending:
+118:             leaves = {key for key, values in pending.items() if not values}
+119:             if not leaves:
+120:                 findings.append({"code": "supersession_cycle_or_dependency",
+121:                                  "namespace_and_source": list(identity),
+122:                                  "revisions": sorted(pending)})
+123:                 break
+124:             pending = {key: values - leaves for key, values in pending.items() if key not in leaves}
+125:         if len(revisions) > 1:
+126:             findings.append({"code": "coexisting_revisions", "namespace_and_source": list(identity),
+127:                              "revisions": sorted(by_revision), "resolution": "none_inferred"})
+128:         if len({(r["status_axis"], r["source_status"]) for r in revisions}) > 1:
+129:             findings.append({"code": "status_variation", "namespace_and_source": list(identity),
+130:                              "interpretation": "difference_not_proven_contradiction"})
+131:         if before is not None and before in by_revision and after in by_revision:
+132:             left, right = by_revision[before], by_revision[after]
+133:             changes = {f: {"before": left[f], "after": right[f]}
+134:                        for f in FIELDS if left[f] != right[f]}
+135:             left_support = sorted({canonical({k: evidence[ref][k] for k in
+136:                                   ("source", "sha256", "hash_basis", "availability", "start", "end")}).decode()
+137:                                    for ref in left["references"]})
+138:             right_support = sorted({canonical({k: evidence[ref][k] for k in
+139:                                    ("source", "sha256", "hash_basis", "availability", "start", "end")}).decode()
+140:                                     for ref in right["references"]})
+141:             if left_support != right_support:
+142:                 changes["evidence_support"] = {"before": left_support, "after": right_support}
+143:             comparisons.append({"namespace_and_source": list(identity),
+144:                                 "before": left["id"], "after": right["id"],
+145:                                 "changes": changes,
+146:                                 "references_before": left["references"],
+147:                                 "references_after": right["references"]})
+148:     if before is not None and len(comparisons) != 1:
+149:         raise ValueError("Comparison unavailable or ambiguous in authorized scope; refine domain")
+150:     timeline, undated = [], []
+151:     for record in ordered:
+152:         for field in ("event_at", "recorded_at", "available_at"):
+153:             item = {"record": record["id"], "field": field, "at": record[field]}
+154:             (timeline if record[field] else undated).append(item)
+155:     for pubid, package in packages.items():
+156:         for field in ("exported_at", "received_at"):
+157:             timeline.append({"publication": pubid, "field": field, "at": package[field]})
+158:     timeline.sort(key=lambda e: (datetime.fromisoformat(e["at"].replace("Z", "+00:00")),
+159:                                   canonical(e)))
+160:     statuses = Counter((r["namespace"][0], r["status_axis"], r["source_status"]) for r in ordered)
+161:     return {
+162:         "mode": "deterministic_inspection", "records": ordered,
+163:         "publications": list(packages.values()), "evidence": list(evidence.values()),
+164:         "graph": {"nodes": nodes, "edges": edges, "inferred_edges": 0},
+165:         "timeline": {"dated": timeline, "unknown": undated,
+166:                      "semantics": "source_times_and_receiver_times_are_distinct"},
+167:         "comparisons": comparisons, "findings": findings,
+168:         "metrics": {"record_revisions": len(records), "source_occurrences": len(identities),
+169:                     "publications": len(packages), "evidence_references": len(evidence),
+170:                     "received_content_hashes": len({e["sha256"] for e in evidence.values()
+171:                                                      if e["availability"] == "received"}),
+172:                     "statuses": [{"domain": d, "axis": a, "status": s, "count": n}
+173:                                  for (d, a, s), n in sorted(statuses.items())]},
+174:         "limitations": [
+175:             "Only currently authorized received publications; absence is not nonexistence",
+176:             "Dates and supersession are source declarations, not verified temporal truth",
+177:             "Differences are not established contradictions; no latest revision selected",
+178:             "Counts and identical hashes do not establish independent experiments",
+179:             "Local inspection is not predictive, economic or semantic validation",
+180:         ],
+181:     }
+
+### src/cain/research/objects.py
+3: import os
+4: from pathlib import Path
+5: import tempfile
+7: from research_bundle import MAX_OBJECT, sha
+8: from research_bundle.files import fsync_dir, no_links, safe_mkdirs, safe_open, transfer
+11: class Objects:
+12:     def __init__(self, root):
+13:         self.root = Path(root).absolute()
+15:     @staticmethod
+16:     def relative(digest):
+17:         sha(digest)
+18:         return "sha256/" + digest[:2] + "/" + digest
+20:     def verify(self, digest, size):
+21:         with safe_open(self.root, self.relative(digest)) as source:
+22:             transfer(source, limit=MAX_OBJECT, expected_sha=digest, expected_size=size)
+24:     def receive(self, root, relative, digest, size):
+25:         target = self.root / self.relative(digest)
+26:         safe_mkdirs(target.parent)
+27:         fd, name = tempfile.mkstemp(prefix=".staging-", dir=target.parent)
+28:         try:
+29:             with os.fdopen(fd, "wb") as out:
+30:                 with safe_open(root, relative) as source:
+31:                     transfer(source, out, limit=size, expected_sha=digest, expected_size=size)
+32:                 out.flush()
+33:                 os.fsync(out.fileno())
+34:             try:
+35:                 os.link(name, target)
+36:             except FileExistsError:
+37:                 self.verify(digest, size)
+39:             fsync_dir(target.parent)
+40:         finally:
+41:             Path(name).unlink(missing_ok=True)
+42:         return target
+44:     def materialize(self, digest, size, destination):
+45:         destination = Path(destination).absolute()
+46:         no_links(destination.parent)
+48:         self.verify(digest, size)
+49:         with safe_open(self.root, self.relative(digest)) as source:
+50:             with destination.open("xb") as out:
+51:                 try:
+52:                     transfer(source, out, limit=size, expected_sha=digest, expected_size=size)
+53:                     out.flush()
+54:                     os.fsync(out.fileno())
+55:                 except BaseException:
+56:                     out.close()
+57:                     destination.unlink(missing_ok=True)
+58:                     raise
+59:         fsync_dir(destination.parent)
+61:     def inventory(self):
+62:         if not self.root.exists():
+63:             return [], []
+64:         no_links(self.root)
+65:         blobs, leftovers = [], []
+66:         for directory, dirs, files in os.walk(self.root, followlinks=False):
+67:             for name in dirs + files:
+68:                 path = no_links(Path(directory) / name)
+69:                 if name in files:
+70:                     relative = path.relative_to(self.root).as_posix()
+71:                     if name.startswith(".staging-"):
+72:                         leftovers.append(relative)
+73:                     elif relative == self.relative(name):
+74:                         blobs.append(name)
+75:                     else:
+76:                         raise ValueError("CORRUPTION: unexpected CAS file")
+77:         return sorted(blobs), sorted(leftovers)

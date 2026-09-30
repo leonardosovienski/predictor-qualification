@@ -1,0 +1,1106 @@
+### main.py
+34: def _db_path(cfg):
+35:     """Path do banco: override de teste (db.DB_PATH_ENV) > config. A mesma env é
+36:     honrada dentro de db.get_connection para os entry points que não passam path."""
+37:     import db
+38:     override = os.getenv(db.DB_PATH_ENV)
+38:     override = os.getenv(db.DB_PATH_ENV)
+42: def _conn(*, read_only=False):
+43:     import config as cfg_mod
+44:     import db
+45:     cfg = cfg_mod.load_config()
+46:     connect = db.get_readonly_connection if read_only else db.get_connection
+50: def status() -> int:
+51:     from predictor_core import __version__ as core_version
+52:     import config as cfg_mod
+53:     import db
+54: 
+99:     print("economia         : lucro líquido não validado; NO_GO para operar (ver HANDOFF).")
+104: def cmd_ingest(args) -> int:
+105:     """M1 — parse posicional do COTAHIST (ZIP) -> prices_raw."""
+106:     import ingest_cotahist
+107:     if not args:
+108:         print("uso: python main.py ingest <caminho_para_COTAHIST_AXXXX.ZIP>")
+115: def cmd_adjust(args) -> int:
+116:     """M2 — detector de saltos -> quarentena (salto sem ajuste registrado)."""
+117:     import adjust
+118:     cfg, conn = _conn()
+119:     with closing(conn):
+126: def cmd_universe(args) -> int:
+127:     """M3 — materializa o universo point-in-time num asof."""
+128:     import universe
+129:     if not args:
+130:         print("uso: python main.py universe <asof YYYY-MM-DD>")
+144: def cmd_backtest(args) -> int:
+145:     """M5 — walk-forward + pedágio de 2 lentes -> veredito da H1 + relatório."""
+146:     import backtest
+147:     import db
+148:     cfg, conn = _conn()
+158: def cmd_attest_power(args) -> int:
+159:     """H2+ — controle positivo do pedágio (harness) + atestado + trials baseline.
+160: 
+161:     Prova que o judge REAL detecta edge plantado e rejeita ruído; grava o
+162:     atestado irmão do trials.json e registra as tentativas (H1 retroativa +
+176: def cmd_backtest_h2(args) -> int:
+177:     """H2 — walk-forward baixa-vol + pedágio + DSR -> veredito da H2 + relatório."""
+178:     import backtest
+179:     import db
+180:     import trials_gate
+190: def cmd_backtest_h4(args) -> int:
+191:     """H4 — sizing 1/vol + pedágio + DSR (N=3) + drawdown -> veredito da H4."""
+192:     import backtest
+193:     import db
+194:     import trials_gate
+208: def cmd_backtest_h5(args) -> int:
+209:     """H5 — reversão 21d + pedágio + DSR (N=4) -> veredito da H5."""
+210:     import backtest
+211:     import db
+212:     import trials_gate
+226: def cmd_backtest_hn(args) -> int:
+227:     """H6-H16+ — dispatcher genérico: `python main.py backtest-h <N>` chama
+228:     `backtest.run_hN(write_report=True)`. Achado de varredura de
+229:     infraestrutura (2026-09-04): H6-H16 só eram alcançáveis via
+230:     `python -c "import backtest; backtest.run_hN(...)"` (o CLI só tinha
+256: def cmd_paper(args) -> int:
+257:     """M6 legacy paper: locally guarded observation, not certified forward proof."""
+258:     import db
+259:     import paper
+260:     if not args:
+282: def _anchor(path_str: str) -> pathlib.Path:
+283:     """Path relativo é ancorado na raiz do repo (comandos rodam de qualquer cwd)."""
+284:     p = pathlib.Path(path_str)
+285:     return p if p.is_absolute() else ROOT / p
+286: 
+288: def cmd_splits_review(args) -> int:
+289:     """M2 — exporta candidatos a split/grupamento (quarentena c/ proporção redonda) p/ CSV."""
+290:     import adjust
+291:     cfg, conn = _conn(read_only=True)
+292:     with closing(conn):
+301: def cmd_splits_import(args) -> int:
+302:     """M2 — grava em `adjustments` só as linhas do CSV com source+approved_by preenchidos."""
+303:     import adjust
+304:     if not args:
+305:         print("uso: python main.py splits-import <caminho_do_csv_revisado>")
+314: def cmd_analyst(args) -> int:
+315:     """Analista somente-leitura (§9b) — briefing consultivo em reports/ai/."""
+316:     import analyst
+317:     cfg, conn = _conn(read_only=True)
+318:     with closing(conn):
+325: def cmd_doctor(args) -> int:
+326:     from stocks_predictor.diagnostics import main as diagnose
+327:     return diagnose(args)
+328: 
+329: 
+330: def cmd_ops(args) -> int:
+331:     from stocks_predictor.operations import main as operate
+332:     return operate(args)
+333: 
+334: 
+355: def main() -> int:
+356:     args = sys.argv[1:]
+357:     if not args:
+358:         return status()
+359:     handler = _COMMANDS.get(args[0])
+358:         return status()
+
+### stocks_predictor/db.py
+23:     ("0001_initial_schema", """
+25:         CREATE TABLE IF NOT EXISTS prices_raw (
+45:         CREATE TABLE IF NOT EXISTS adjustments (
+59:         CREATE TABLE IF NOT EXISTS quarantine (
+72:         CREATE TABLE IF NOT EXISTS universe_snapshots (
+82:         CREATE TABLE IF NOT EXISTS decisions (
+104:         CREATE TABLE IF NOT EXISTS runs (
+126:     ("0004_rj_domain_schema", """
+129:         CREATE TABLE IF NOT EXISTS rj_universe (
+146:         CREATE TABLE IF NOT EXISTS rj_episodes (
+164:         CREATE TABLE IF NOT EXISTS rj_events (
+179:         CREATE TABLE IF NOT EXISTS rj_family_scores (
+192:         CREATE TABLE IF NOT EXISTS rj_universe_snapshots (
+215:         CREATE TABLE IF NOT EXISTS fundamentals (
+236:         CREATE TABLE IF NOT EXISTS rj_company_observations (
+258:         CREATE TABLE IF NOT EXISTS dividends (
+295:         -- já existia (`ingest_cvm.parse_fre_capital_total_rows`, usado para
+326:         CREATE TABLE ingestion_issues (
+330:         CREATE TABLE fundamentals_pit (
+342:         CREATE TABLE shares_pit (
+353:         CREATE TABLE cash_events (
+359:         CREATE TABLE cash_event_coverage (
+367:         CREATE TABLE research_source_documents (
+375:         CREATE TABLE stock_bonus_events (
+386: def price_expr(col: str) -> str:
+387:     """Expressão SQL do preço POR AÇÃO: coluna ÷ quote_factor (FATCOT da B3).
+388: 
+389:     COTAHIST cota papéis em lote (fator 10/100/1000/1000000) — o preço cru fica
+390:     na escala do lote. A correção é na LEITURA (decisão do operador 2026-07-18):
+396: def get_connection(db_path: pathlib.Path | str | None = None,
+397:                    busy_timeout_ms: int = 5000) -> sqlite3.Connection:
+398:     path = pathlib.Path(db_path or os.getenv(DB_PATH_ENV) or DB_DEFAULT)
+399:     if path.is_file():
+400:         with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True)) as probe:
+398:     path = pathlib.Path(db_path or os.getenv(DB_PATH_ENV) or DB_DEFAULT)
+400:         with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True)) as probe:
+412: def get_readonly_connection(db_path: pathlib.Path | str | None = None) -> sqlite3.Connection:
+413:     """Open existing evidence without creation, WAL changes or migrations."""
+414:     path = pathlib.Path(db_path or os.getenv(DB_PATH_ENV) or DB_DEFAULT).resolve()
+415:     if not path.is_file():
+416:         raise FileNotFoundError(f"Banco de leitura ausente: {path}")
+414:     path = pathlib.Path(db_path or os.getenv(DB_PATH_ENV) or DB_DEFAULT).resolve()
+417:     conn = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)
+427: def _reject_managed_store(conn: sqlite3.Connection) -> None:
+428:     # Separate physical source versions must not enter legacy queries that blend
+429:     # all source_file values. Check before Core migrations or writer PRAGMAs.
+430:     if conn.execute('PRAGMA application_id').fetchone()[0] == 0x53544B50:
+431:         raise ValueError('managed research store requires python -m stocks_predictor; legacy access refused')
+434: def get_code_version() -> str:
+435:     """Hash curto do git HEAD; 'unknown' fora de um checkout (ex.: cópia em rede limpa)."""
+436:     try:
+437:         out = subprocess.run(
+438:             ["git", "rev-parse", "--short", "HEAD"],
+448: def new_run(conn: sqlite3.Connection, params: dict, notes: str | None = None,
+449:             params_frozen_until: str | None = None) -> str:
+450:     """Registra uma execução em `runs` e retorna o run_id.
+451: 
+452:     run_id = timestamp UTC + prefixo do config_hash — único, ordenável, rastreável.
+
+### stocks_predictor/backtest.py
+11:   (estratégia, benchmark) JUNTOS — preserva a cross-correlação. H1 COMPROVADA só se o
+47: def _daily_returns(dates, closes):
+48:     return {dates[i]: closes[i] / closes[i - 1] - 1.0
+49:             for i in range(1, len(closes)) if closes[i - 1] > 0}
+50: 
+51: 
+52: def legacy_walk_forward(conn, cfg, signal_fn=None, take="top", portfolio_fn=None, series_fn=None):
+53:     """Retorna (strat_diaria, bench_diaria) — listas pareadas de retornos diários.
+54: 
+55:     Custo de transação: proporcional ao turnover REAL entre rebalanceamentos
+56:     consecutivos — papel que permanece na carteira não opera, logo não paga.
+110:     def _load(tk):
+185: def judge(strat, bench, cfg):
+186:     """Pedágio de 2 lentes sobre as séries pareadas. Veredito da H1."""
+187:     b = cfg.get("bootstrap", {})
+188:     n_boot, block = b.get("n_boot", 10_000), b.get("block_length", 21)
+189:     conf, seed = b.get("confidence", 0.95), b.get("seed", 42)
+200:     def per_period(xs):
+206:     def diff_sharpe(window):
+216:             "veredito": "COMPROVADA" if comprovada else "não comprovada (IC cruza 0 / negativo)"}
+219: def run(cfg=None, conn=None, write_report=False, run_id=None):
+220:     cfg = cfg or load_config()
+221:     conn = conn or db.get_connection()
+222:     strat, bench = legacy_walk_forward(conn, cfg)
+223:     verdict = judge(strat, bench, cfg)
+233: def _conclude(verdict, strat, bench, cfg, hypothesis, write_report, run_id, extra=""):
+234:     """Fecho comum das hipóteses H2+: imprime a linha do veredito (com DSR) e,
+235:     se pedido, grava o relatório rotulado. Retorna o verdict inalterado."""
+236:     import economics
+237:     print(f"walk-forward {hypothesis}: {verdict['n']} pregões | PSR={verdict['psr']} | "
+254: def _max_dd(returns):
+255:     """Max drawdown da curva de capital (base 1.0) de uma série de retornos."""
+256:     eq, v = [], 1.0
+257:     for r in returns:
+258:         v *= 1.0 + r
+263: def _h4_extra_criteria(strat, bench, cfg):
+264:     """Critério (iii) da H4 ("julgado por Sharpe líquido E drawdown", design §10):
+265:     maxDD da estratégia <= maxDD do benchmark. Isolado do runner genérico porque só
+266:     a H4 tem um 3º critério além de IC+DSR."""
+267:     dd_s = dd_b = None
+276: def _run_hypothesis(hypothesis, trial_name, frozen_keys, criteria_section, notes,
+277:                     cfg, conn, write_report, run_id, trials_path,
+278:                     signal_fn=None, take="top", portfolio_fn=None,
+279:                     extra_criteria=None, series_fn=None):
+280:     """Runner comum das hipóteses H2+ (achado de revisão de código 2026-08-28: os
+295: def _finalize_hypothesis(hypothesis, trial_name, frozen_keys, criteria_section, notes,
+296:                          cfg, write_report, run_id, trials_path, strat, bench,
+297:                          extra_criteria=None):
+298:     """Fecho comum: pedágio (judge+DSR) + registro + relatório, dado
+299:     `strat`/`bench` JÁ calculados. Extraído de `_run_hypothesis` (H16,
+317: def run_h2(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+318:     """H2 — baixa volatilidade (pré-registro 2026-07-16). MESMA maquinaria da H1
+319:     (universo/custos/pareamento/pedágio); o que muda é o sinal (vol realizada,
+320:     quintil INFERIOR) e o critério extra da 2ª hipótese: DSR >= dsr_min,
+321:     descontado por todas as tentativas do trials.json (trials_gate)."""
+331: def run_h4(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+332:     """H4 — sizing por volatility targeting (pré-registro 2026-07-18): universo
+333:     INTEIRO com peso ∝ 1/vol realizada 252d vs. o MESMO universo equiponderado.
+334:     Critérios (todos, fixados a priori): (i) IC95% diff-Sharpe > 0;
+335:     (ii) DSR >= dsr_min (N=3 tentativas); (iii) maxDD da estratégia <= maxDD do
+350: def run_h5(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+351:     """H5 — reversão de curto prazo (pré-registro 2026-07-18): quintil INFERIOR
+352:     do retorno de 21 pregões (perdedores do mês), mesma maquinaria de
+353:     universo/custos/pedágio. Critérios: (i) IC95% diff-Sharpe > 0;
+354:     (ii) DSR >= dsr_min (N=4 tentativas). O sinal é momentum_12_1 com
+368: def run_h6(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+369:     """H6 — momentum 6-1 (pré-registro 2026-08-27): MESMA maquinaria da H1,
+370:     janela mais curta (126 pregões ~6 meses, skip 21) — hipótese de que a B3
+371:     (menos líquida/eficiente que mercados desenvolvidos) incorpora momentum
+372:     numa janela mais curta que o clássico 12-1 (que fracassou na H1)."""
+385: def run_h8(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+386:     """H8 — filtro duplo momentum ∩ baixa vol (pré-registro 2026-08-27): top
+387:     `h8_portfolio.momentum_quantile` do universo por momentum 12-1, depois a
+388:     fração `h8_portfolio.vol_quantile` de menor vol realizada DENTRO desse
+389:     subconjunto. H1 (momentum isolado) e H2 (baixa vol isolada) fracassaram —
+402:     def _pf(sub, asof):
+414: def run_h7(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+415:     """H7 — fator de qualidade, ROE isolado (pré-registro 2026-09-03): quintil
+416:     SUPERIOR de ROE (lucro líquido / patrimônio líquido, `fundamentals` da
+417:     CVM/DFP), embargo de divulgação sobre `ref_date` (`factor.roe_signals`),
+418:     mesma maquinaria de universo/custos/pareamento/pedágio das anteriores.
+435: def run_h9(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+436:     """H9 — fator de qualidade, alavancagem isolada (pré-registro 2026-09-04):
+437:     quintil INFERIOR de alavancagem (`fundamentals.leverage`, empresas menos
+438:     endividadas — mesmo racional de tilt de qualidade/baixo risco de H2/H4,
+439:     aplicado a dado contábil), mesma fonte DFP/embargo da H7. Critérios:
+456: def run_h10(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+457:     """H10 — filtro duplo ROE ∩ baixa alavancagem (pré-registro 2026-09-04):
+458:     top `h10_portfolio.roe_quantile` do universo por ROE, depois a fração
+459:     `h10_portfolio.leverage_quantile` de menor alavancagem DENTRO desse
+460:     subconjunto. H7 (ROE isolado) e H9 (alavancagem isolada) fracassaram —
+473:     def _pf(sub, asof):
+485: def run_h11(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+486:     """H11 — momentum 12-1 em RETORNO TOTAL (pré-registro 2026-09-04): mesmo
+487:     sinal da H1, mas sobre `adjust.total_return_series` (proventos
+488:     reinvestidos) em vez de só-preço, testando se o viés declarado no
+489:     pré-registro da H1 ("omitir proventos FAVORECE momentum") de fato
+516: def run_h12(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+517:     """H12 — fator de qualidade, margem líquida isolada (pré-registro
+518:     2026-09-04): quintil SUPERIOR de margem líquida (`fundamentals.net_margin`
+519:     = lucro_liquido/receita_liquida, DFP/CVM), mesma fonte/embargo de
+520:     H7/H9/H10 — sem ingestão nova (receita já vinha na DRE parseada desde a
+541: def run_h13(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+542:     """H13 — crescimento de receita YoY (pré-registro 2026-09-04): quintil
+543:     SUPERIOR de crescimento de receita líquida ano-contra-ano
+544:     (`factor.revenue_growth_signals`, DFP/CVM), mesma fonte/embargo de
+545:     H7/H9/H10/H12. Primeira hipótese de CRESCIMENTO testada neste domínio —
+565: def run_h14(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+566:     """H14 — proximidade da máxima de 52 semanas (pré-registro 2026-09-04):
+567:     quintil SUPERIOR de `close(asof)/max(close, 252 pregões)`
+568:     (`factor.near_52w_high_signals`). Fator de preço distinto de momentum
+569:     (George & Hwang 2004) — mesma maquinaria de universo/custos/pareamento/
+587: def run_h15(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+588:     """H15 — volume anormal (pré-registro 2026-09-04): quintil SUPERIOR de
+589:     `volume_médio_21d/volume_médio_252d − 1` (`factor.volume_surge_signals`)
+590:     — `volume_fin` já vive em `prices_raw` desde o M1 (usado só pra
+591:     ranquear liquidez do universo), nunca como sinal de seleção. Mesma
+613: def run_h17(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+614:     """Protected: corrected measurement needs a new preregistration before observation."""
+615:     raise ValueError("H17 PAUSED: CVM/execution methodology changed; validate the rebuilt "
+616:                      "dataset and preregister the corrected instrument before observing performance.")
+617: 
+619: def run_h18(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+620:     """Protected: corrected measurement needs a new preregistration before observation."""
+621:     raise ValueError("H18 PAUSED: CVM/execution methodology changed; validate the rebuilt "
+622:                      "dataset and preregister the corrected instrument before observing performance.")
+623: 
+625: def run_h19(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+626:     """Protected: corrected measurement needs a new preregistration before observation."""
+627:     raise ValueError("H19 PAUSED: CVM/execution methodology changed; validate the rebuilt "
+628:                      "dataset and preregister the corrected instrument before observing performance.")
+629: 
+631: def _turn_of_month_days(dates, last_days=1, first_days=3):
+632:     """{pregões dentro da janela virada-de-mês} — últimos `last_days`
+633:     pregões do mês corrente + primeiros `first_days` pregões do mês
+634:     seguinte (Lakonishok & Smidt 1988, "turn-of-the-month effect").
+635:     `dates` ordenado asc, agrupado por `YYYY-MM`."""
+648: def run_h16(cfg=None, conn=None, write_report=False, run_id=None, trials_path=None):
+649:     """H16 — efeito virada-de-mês (pré-registro 2026-09-04): retorno
+650:     anormal nos pregões ao redor da virada de mês (Lakonishok & Smidt
+651:     1988) — últimos `last_days_of_month` pregões do mês + primeiros
+652:     `first_days_of_month` do mês seguinte. PRIMEIRA hipótese de TIMING
+699:     def _load(tk):
+741: def walk_forward(conn, cfg, signal_fn=None, take="top", portfolio_fn=None, series_fn=None):
+742:     """Corrected instrument. Historical hypothesis runners explicitly use legacy_walk_forward."""
+743:     if __package__:
+744:         from .simulation import walk_forward as simulate
+745:     else:
+
+### stocks_predictor/factor.py
+22: def _idx_le(dates, asof):
+23:     """Índice do último pregão <= asof (dates asc), ou None."""
+24:     res = None
+25:     for i, d in enumerate(dates):
+26:         if d <= asof:
+33: def momentum_12_1(dates, closes, asof, lookback=252, skip=21):
+34:     """Retorno de [asof-lookback] a [asof-skip] na série ajustada. None se histórico
+35:     insuficiente. Point-in-time: nada após asof entra."""
+36:     i = _idx_le(dates, asof)
+37:     if i is None:
+48: def signals(series_by_ticker, asof, lookback=252, skip=21):
+49:     """{ticker: momentum} para os tickers com histórico suficiente em asof."""
+50:     out = {}
+51:     for t, (dates, closes) in series_by_ticker.items():
+52:         m = momentum_12_1(dates, closes, asof, lookback, skip)
+58: def realized_vol(dates, closes, asof, lookback=252):
+59:     """Desvio-padrão dos retornos diários da janela [asof-lookback, asof] na série
+60:     ajustada. None se histórico insuficiente ou preço <=0 na janela (sinal
+61:     indefinido > sinal distorcido). Point-in-time: nada após asof entra."""
+62:     i = _idx_le(dates, asof)
+72: def vol_signals(series_by_ticker, asof, lookback=252):
+73:     """{ticker: vol realizada} para os tickers com histórico suficiente em asof."""
+74:     out = {}
+75:     for t, (dates, closes) in series_by_ticker.items():
+76:         v = realized_vol(dates, closes, asof, lookback)
+82: def _fundamental_signals(conn, tickers, asof, disclosure_embargo_days, column,
+83:                          use_known_at=True):
+84:     """Motor comum de sinal contábil point-in-time (H7 ROE, H9 alavancagem):
+85:     {ticker: valor de `column` em `fundamentals`} usando a linha mais recente
+86:     cujo embargo de divulgação já venceu em `asof`.
+113: def roe_signals(conn, tickers, asof, disclosure_embargo_days=90):
+114:     """H7 (pré-registro 2026-09-03) — {ticker: roe} point-in-time."""
+115:     # JULGADA: embargo estimado, explicitamente. Ver `_fundamental_signals`.
+116:     return _fundamental_signals(conn, tickers, asof, disclosure_embargo_days,
+117:                                 "roe", use_known_at=False)
+120: def leverage_signals(conn, tickers, asof, disclosure_embargo_days=90):
+121:     """H9 (pré-registro 2026-09-04) — {ticker: leverage} point-in-time.
+122:     `leverage = (passivo_total - patrimonio_liquido) / ativo_total`
+123:     (ver `ingest_cvm.compute_fundamentals` — exclui o PL do passivo, senão
+124:     o índice daria sempre ~1.0 por identidade contábil)."""
+130: def net_margin_signals(conn, tickers, asof, disclosure_embargo_days=90):
+131:     """H12 (pré-registro 2026-09-04) — {ticker: net_margin} point-in-time.
+132:     `net_margin = lucro_liquido / receita_liquida` (ver
+133:     `ingest_cvm.compute_fundamentals`). Mesma fonte/embargo de H7/H9
+134:     (DFP/CVM), motor comum `_fundamental_signals`."""
+140: def revenue_growth_signals(conn, tickers, asof, disclosure_embargo_days=90):
+141:     """H13 (pré-registro 2026-09-04) — {ticker: crescimento YoY de receita
+142:     líquida} point-in-time. Primeira hipótese de CRESCIMENTO testada neste
+143:     domínio (H1-H12 são todas nível/valor).
+144: 
+179: def near_52w_high(dates, closes, asof, lookback=252):
+180:     """H14 (pré-registro 2026-09-04) — `close(asof) / max(close nos últimos
+181:     `lookback` pregões incluindo asof)`. Fator de preço distinto de
+182:     momentum (George & Hwang 2004, "52-week high" — proximidade da máxima
+183:     tem poder preditivo próprio, não é redutível ao retorno acumulado que
+197: def near_52w_high_signals(series_by_ticker, asof, lookback=252):
+198:     """{ticker: proximidade da máxima de 52 semanas} para tickers com
+199:     histórico suficiente em asof."""
+200:     out = {}
+201:     for t, (dates, closes) in series_by_ticker.items():
+208: def volume_surge_signals(conn, tickers, asof, short_lookback=21, long_lookback=252):
+209:     """H15 (pré-registro 2026-09-04) — {ticker: volume médio recente /
+210:     volume médio de longo prazo − 1} point-in-time. `volume_fin` já vive em
+211:     `prices_raw` desde o M1 (usado só pra ranquear liquidez do universo,
+212:     nunca como SINAL de seleção) — zero ingestão nova.
+239: def legacy_accruals_signals(conn, tickers, asof, disclosure_embargo_days=90):
+240:     """H17 (pré-registro 2026-09-04) — {ticker: accruals} point-in-time.
+241: 
+242:     `accruals = (lucro_liquido − fluxo_caixa_operacional) / ativo_total`
+243:     (Sloan 1996), gravado na ingestão (`ingest_cvm.compute_fundamentals`).
+264: def _price_at(conn, ticker, asof):
+265:     """Preço POR AÇÃO do último pregão <= `asof` (fechamento CRU, corrigido
+266:     só pelo fator de cotação da B3), ou None.
+267: 
+268:     Por que CRU e não a série ajustada: o múltiplo de valor é
+287: def legacy__value_signals(conn, tickers, asof, disclosure_embargo_days, column):
+288:     """Motor comum dos fatores de VALOR (H18 E/P, H19 B/M):
+289:     {ticker: fundamento / capitalização de mercado} point-in-time.
+290: 
+291:     `market_cap = preço_cru(asof) × shares_outstanding`, com CADA insumo
+334: def legacy__shares_with_ref_date(conn, tickers, asof, disclosure_embargo_days):
+335:     """{ticker: (shares_outstanding, ref_date)} point-in-time.
+336: 
+337:     Igual a `_fundamental_signals` para `shares_outstanding`, mas devolve
+338:     TAMBÉM a `ref_date` da linha escolhida — necessária para saber em que
+356: def legacy__shares_on_price_base(conn, ticker, shares, shares_ref_date, asof):
+357:     """Traz `shares` da base do FRE para a base de preço vigente em `asof`.
+358: 
+359:     O múltiplo é `fundamento / (preço_cru(asof) × ações)`. O preço vem de
+360:     `asof`; as ações vêm da `ref_date` do FRE. Se houve desdobramento ou
+393: def legacy_earnings_yield_signals(conn, tickers, asof, disclosure_embargo_days=90):
+394:     """H18 (pré-registro 2026-09-04) — {ticker: E/P} point-in-time.
+395:     `E/P = lucro_liquido / (preço × ações)` — o inverso do P/L.
+396: 
+397:     Usa-se E/P e não P/L de propósito: P/L explode quando o lucro tende a
+409: def legacy_book_to_market_signals(conn, tickers, asof, disclosure_embargo_days=90):
+410:     """H19 (pré-registro 2026-09-04) — {ticker: B/M} point-in-time.
+411:     `B/M = patrimonio_liquido / (preço × ações)` — o inverso do P/VPA.
+412: 
+413:     Fator de valor DISTINTO de E/P (H18), não uma variação da mesma coisa:
+428: def accruals_signals(conn, tickers, asof, disclosure_embargo_days=90):
+429:     return cvm_pit.fundamental_values(conn, tickers, asof, "accruals")
+430: 
+431: 
+432: def earnings_yield_signals(conn, tickers, asof, disclosure_embargo_days=90):
+432: def earnings_yield_signals(conn, tickers, asof, disclosure_embargo_days=90):
+433:     return cvm_pit.value_signals(conn, tickers, asof, "lucro_liquido")
+434: 
+435: 
+436: def book_to_market_signals(conn, tickers, asof, disclosure_embargo_days=90):
+436: def book_to_market_signals(conn, tickers, asof, disclosure_embargo_days=90):
+437:     return cvm_pit.value_signals(conn, tickers, asof, "patrimonio_liquido")
+438: 
+439: 
+440: def _shares_on_price_base(conn, ticker, shares, basis_date, asof):
+440: def _shares_on_price_base(conn, ticker, shares, basis_date, asof):
+441:     return cvm_pit.shares_on_price_base(conn, ticker, shares, basis_date, asof)
+
+### stocks_predictor/cvm_pit.py
+40: def iso_date(value):
+41:     value = value.strip()
+42:     parsed = date.fromisoformat(value)
+43:     if parsed.isoformat() != value:
+44:         raise ValueError(f"expected ISO calendar date: {value!r}")
+48: def receipt_dates(value):
+49:     # Keep the observed date AND the conservative daily availability cutoff.
+50:     received = iso_date(value.strip()[:10])
+51:     return received, (date.fromisoformat(received) + timedelta(days=1)).isoformat()
+52: 
+54: def monetary_reais(value, scale, currency):
+55:     if currency.strip().upper() != "REAL":
+56:         raise ValueError(f"unverified currency: {currency!r}")
+57:     multiplier = {"MIL": Decimal(1000), "UNIDADE": Decimal(1)}.get(scale.strip().upper())
+58:     if multiplier is None:
+70: def zip_rows(payload, basename, required):
+71:     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+72:         names = [n for n in archive.namelist() if PurePosixPath(n).name == basename]
+73:         if len(names) != 1:
+74:             raise ValueError(f"expected one ZIP member {basename}, got {len(names)}")
+87: def digits(value):
+88:     return "".join(c for c in value if c.isdigit())
+89: 
+90: 
+91: def dfp_key(row):
+91: def dfp_key(row):
+92:     cnpj = digits(row["CNPJ_CIA"])
+93:     if len(cnpj) != 14:
+94:         raise ValueError("invalid CNPJ")
+95:     version = int(row["VERSAO"])
+95:     version = int(row["VERSAO"])
+101: def dfp_received_dates(payload, year, *, ambiguous=None):
+102:     rows = zip_rows(payload, f"dfp_cia_aberta_{year}.csv", {"CNPJ_CIA", "DT_REFER", "VERSAO", "DT_RECEB"})
+103:     out = {}
+104:     for row in rows:
+105:         key, received = dfp_key(row), receipt_dates(row["DT_RECEB"])
+118: def statement_rows(rows, statement):
+119:     """Strict public statement parser; fields match the official DFP layout."""
+120:     iterator = iter(rows)
+121:     header = next(iterator, [])
+122:     required = {
+143:         cnpj, ref, version = dfp_key(row)
+163: def derive_dfp(payload, year, *, issues=None):
+164:     """All available statement versions, joined only to their own receipt date."""
+165:     ambiguous = set()
+166:     dates = dfp_received_dates(payload, year, ambiguous=ambiguous)
+167:     issues = issues if issues is not None else []
+199:         def pick(statement, code, required=(), any_words=()):
+210:         def ratio(numerator, denominator):
+243: def append_rows(conn, table, rows, identity):
+244:     """Atomic, immutable derivations; identical imports are idempotent, conflicts fail."""
+245:     if table not in {
+246:         "fundamentals_pit",
+247:         "shares_pit",
+280: def ingest_dfp(conn, year, companies=None, ticker_of=None, zbytes=None):
+281:     if zbytes is None:
+282:         zbytes = ingest_cvm.download_zip(ingest_cvm.DFP_URL.format(year=year))
+283:     records = []
+284:     issues = []
+313: def derive_fre_shares(payload, year, basis_by_document=None, *, issues=None):
+314:     """Preserve ID_DOC versions. Unknown share/price basis stays ineligible."""
+315:     main = zip_rows(payload, f"fre_cia_aberta_{year}.csv", {"ID_DOC", "DT_RECEB"})
+316:     received = {}
+317:     for row in main:
+324:         f"fre_cia_aberta_distribuicao_capital_{year}.csv",
+374: def ingest_fre_shares(conn, year, ticker_of=None, zbytes=None, *, basis_by_document=None):
+375:     if zbytes is None:
+376:         zbytes = ingest_cvm.download_zip(ingest_cvm.FRE_URL.format(year=year))
+377:     records = []
+378:     issues = []
+400: def fundamental_values(conn, tickers, asof, column):
+401:     if column not in FINANCIAL_FIELDS:
+402:         raise ValueError("unsupported financial field")
+403:     iso_date(asof)
+404:     result = {}
+425: def shares_on_price_base(conn, ticker, shares, basis_date, asof):
+426:     if not basis_date or shares is None or not math.isfinite(shares) or shares <= 0:
+427:         return None
+428:     iso_date(basis_date)
+429:     if basis_date > asof:
+443: def value_signals(conn, tickers, asof, column):
+444:     if __package__:
+445:         from . import factor
+446:     else:
+447:         import factor
+476: def summary(payload, year):
+477:     issues = []
+478:     rows = derive_dfp(payload, year, issues=issues)
+479:     return {
+480:         "year": year,
+488:         "proof_authorized": False,
+
+### stocks_predictor/external_intelligence.py
+25: from urllib.request import Request, urlopen
+117:         CREATE TABLE external_raw_objects (
+123:         CREATE TABLE external_source_versions (
+141:         CREATE TABLE external_security_links (
+154:         CREATE TABLE external_observations (
+177:         CREATE TABLE external_observation_securities (
+182:         CREATE TABLE external_receipts (
+189:         CREATE TRIGGER external_raw_no_update BEFORE UPDATE ON external_raw_objects BEGIN
+191:         CREATE TRIGGER external_raw_no_delete BEFORE DELETE ON external_raw_objects BEGIN
+193:         CREATE TRIGGER external_versions_no_update BEFORE UPDATE ON external_source_versions BEGIN
+195:         CREATE TRIGGER external_versions_no_delete BEFORE DELETE ON external_source_versions BEGIN
+197:         CREATE TRIGGER external_observations_no_update BEFORE UPDATE ON external_observations BEGIN
+199:         CREATE TRIGGER external_observations_no_delete BEFORE DELETE ON external_observations BEGIN
+201:         CREATE TRIGGER external_links_no_update BEFORE UPDATE ON external_security_links BEGIN
+203:         CREATE TRIGGER external_links_no_delete BEFORE DELETE ON external_security_links BEGIN
+207:         CREATE TABLE external_rejections (
+215:         CREATE TRIGGER external_rejections_no_update BEFORE UPDATE ON external_rejections BEGIN
+217:         CREATE TRIGGER external_rejections_no_delete BEFORE DELETE ON external_rejections BEGIN
+221:         CREATE TRIGGER IF NOT EXISTS external_receipts_no_update
+224:         CREATE TRIGGER IF NOT EXISTS external_receipts_no_delete
+235:         CREATE TABLE external_fund_holdings_documents (
+249:         CREATE TABLE external_fund_holdings_observations (
+291:         CREATE TABLE external_fund_document_deliveries (
+317:         CREATE TRIGGER external_holdings_documents_no_update
+320:         CREATE TRIGGER external_holdings_documents_no_delete
+323:         CREATE TRIGGER external_holdings_observations_no_update
+326:         CREATE TRIGGER external_holdings_observations_no_delete
+329:         CREATE TRIGGER external_deliveries_no_update
+332:         CREATE TRIGGER external_deliveries_no_delete
+339: class ExternalIntelligenceError(ValueError):
+340:     status = "INTEGRITY_ERROR"
+341: 
+342: 
+343: class SchemaDriftError(ExternalIntelligenceError):
+343: class SchemaDriftError(ExternalIntelligenceError):
+344:     status = "SCHEMA_DRIFT"
+345: 
+346: 
+347: class TemporalError(ExternalIntelligenceError):
+347: class TemporalError(ExternalIntelligenceError):
+348:     status = "TEMPORAL_ERROR"
+349: 
+350: 
+351: class IdentityError(ExternalIntelligenceError):
+351: class IdentityError(ExternalIntelligenceError):
+352:     status = "IDENTITY_ERROR"
+353: 
+354: 
+355: class SourceUnavailableError(ExternalIntelligenceError):
+355: class SourceUnavailableError(ExternalIntelligenceError):
+356:     status = "SOURCE_UNAVAILABLE"
+357: 
+358: 
+359: def canonical_json(value: Any) -> str:
+359: def canonical_json(value: Any) -> str:
+360:     return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False)
+361: 
+362: 
+363: def digest_identity(*parts: Any) -> str:
+363: def digest_identity(*parts: Any) -> str:
+364:     return "sha256:" + hashlib.sha256(canonical_json(list(parts)).encode("utf-8")).hexdigest()
+365: 
+366: 
+367: def utc_timestamp(value: str) -> str:
+367: def utc_timestamp(value: str) -> str:
+368:     try:
+369:         stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+370:     except ValueError as exc:
+371:         raise TemporalError(f"invalid timestamp: {value!r}") from exc
+377: def iso_date(value: str) -> str:
+378:     try:
+379:         parsed = date.fromisoformat(value)
+380:     except ValueError as exc:
+381:         raise TemporalError(f"invalid ISO date: {value!r}") from exc
+387: def digits(value: str) -> str:
+388:     result = "".join(char for char in value if char.isdigit())
+389:     if len(result) != 14:
+390:         raise IdentityError(f"invalid CNPJ: {value!r}")
+391:     return result
+394: def decimal_text(value: Any, *, optional: bool = False, integer: bool = False) -> str | None:
+395:     if value is None or str(value).strip() == "":
+396:         if optional:
+397:             return None
+398:         raise SchemaDriftError("required numeric value is empty")
+413: def validate_source_url(url: str) -> str:
+414:     parsed = urlsplit(url)
+415:     if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+416:         raise ExternalIntelligenceError("source URL must be credential-free HTTPS")
+417:     if re.search(r"(?:token|secret|password|api[_-]?key)=", parsed.query, re.I):
+417:     if re.search(r"(?:token|secret|password|api[_-]?key)=", parsed.query, re.I):
+422: def connect(path: Path) -> sqlite3.Connection:
+423:     from predictor_core.kernel import infra
+424: 
+425:     path.parent.mkdir(parents=True, exist_ok=True)
+426:     conn = infra.connect(path)
+436: def _atomic_bytes(path: Path, payload: bytes) -> None:
+437:     path.parent.mkdir(parents=True, exist_ok=True)
+438:     if path.exists():
+439:         if path.read_bytes() != payload:
+440:             raise ExternalIntelligenceError(f"content-addressed path conflict: {path}")
+454: def preserve_raw(raw_root: Path, payload: bytes, stored_at: str) -> dict[str, Any]:
+455:     if len(payload) > MAX_SOURCE_BYTES:
+456:         raise ExternalIntelligenceError("source exceeds the 64 MiB acquisition limit")
+457:     digest = hashlib.sha256(payload).hexdigest()
+458:     relative = Path("sha256") / digest[:2] / digest
+468: def _http_date(headers: Any) -> str | None:
+469:     raw = headers.get("Date")
+470:     if not raw:
+471:         return None
+472:     try:
+481: def _clock_timestamp(clock: Callable[[], datetime] | None = None) -> str:
+482:     observed = (clock or (lambda: datetime.now(UTC)))()
+483:     if observed.tzinfo is None or observed.utcoffset() is None:
+484:         raise TemporalError("collector clock must return an aware timestamp")
+485:     return utc_timestamp(observed.isoformat())
+488: def _first_seen_at(acquired: dict[str, Any]) -> str:
+489:     value = acquired.get("first_seen_at") or acquired.get("collector_received_at") or acquired.get("fetched_at")
+490:     if not isinstance(value, str):
+491:         raise TemporalError("source acquisition has no demonstrable first-seen timestamp")
+492:     return utc_timestamp(value)
+495: def fetch_bytes(
+496:     url: str,
+497:     *,
+498:     body: bytes | None = None,
+499:     timeout: float = 60,
+509:         with urlopen(request, timeout=timeout) as response:
+530: def source_file(path: Path, observed_at: str) -> dict[str, Any]:
+531:     payload = path.read_bytes()
+532:     if len(payload) > MAX_SOURCE_BYTES:
+533:         raise ExternalIntelligenceError("source exceeds the 64 MiB acquisition limit")
+534:     first_seen_at = utc_timestamp(observed_at)
+547: def trading_sessions(path: Path | None) -> list[str]:
+548:     if path is None:
+549:         return []
+550:     resolved = path.resolve()
+551:     if not resolved.is_file():
+553:     conn = sqlite3.connect(resolved.as_uri() + "?mode=ro", uri=True)
+561: def resolve_tradable_session(available_at: str, sessions: Iterable[str]) -> tuple[str | None, str]:
+562:     local_date = datetime.fromisoformat(utc_timestamp(available_at).replace("Z", "+00:00")).astimezone(
+563:         SAO_PAULO
+564:     ).date().isoformat()
+565:     candidates = sorted({iso_date(item) for item in sessions if item > local_date})
+571: def classify_pit(evidence_basis: str) -> tuple[str, str]:
+572:     classifications = {
+573:         "COLLECTOR_FIRST_SEEN": (
+574:             "PIT_STRICT", "EXACT_SOURCE_VERSION_OBSERVED_AFTER_COMPLETE_BYTE_RECEIPT",
+575:         ),
+589: def _rows_from_zip(payload: bytes, basename: str, expected: tuple[str, ...]) -> list[dict[str, str]]:
+590:     try:
+591:         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+592:             names = [name for name in archive.namelist() if PurePosixPath(name).name == basename]
+593:             if len(names) != 1:
+611: def _validate_archive_members(payload: bytes, expected_basenames: set[str]) -> None:
+612:     try:
+613:         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+614:             entries = [entry for entry in archive.infolist() if not entry.is_dir()]
+615:             if len(entries) > MAX_ARCHIVE_MEMBERS:
+636: def _iter_csv_member(
+637:     payload: bytes, basename: str, expected: tuple[str, ...]
+638: ) -> Iterable[tuple[int, dict[str, str]]]:
+639:     try:
+640:         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+660: def _month_token(value: str) -> str:
+661:     if not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", value):
+662:         raise TemporalError(f"invalid month: {value!r}")
+663:     return value.replace("-", "")
+664: 
+666: def _optional_date(value: str) -> str | None:
+667:     stripped = value.strip()
+668:     return iso_date(stripped) if stripped else None
+669: 
+670: 
+671: def _official_naive_datetime(value: str) -> str:
+672:     stripped = value.strip()
+673:     try:
+674:         parsed = datetime.strptime(stripped, "%Y-%m-%d %H:%M:%S.%f")
+675:     except ValueError as exc:
+682: def _fold(value: str) -> str:
+683:     decomposed = unicodedata.normalize("NFKD", value)
+684:     return "".join(char for char in decomposed if not unicodedata.combining(char)).casefold()
+685: 
+686: 
+687: def _is_equity_relevant(row: dict[str, str]) -> bool:
+688:     application = _fold(row.get("TP_APLIC", ""))
+689:     asset = _fold(row.get("TP_ATIVO", ""))
+690:     return "acoes" in application or asset.startswith("acao")
+691: 
+693: def _json_payload(payload: bytes) -> Any:
+694:     try:
+695:         return json.loads(payload.decode("utf-8"), parse_float=Decimal, parse_constant=lambda x: (_ for _ in ()).throw(
+696:             SchemaDriftError(f"non-finite JSON number: {x}")
+697:         ))
+702: def _source_version(
+703:     conn: sqlite3.Connection,
+704:     raw_root: Path,
+705:     acquired: dict[str, Any],
+706:     *,
+755: def _observation(
+756:     conn: sqlite3.Connection,
+757:     *,
+758:     source_version_id: str,
+759:     family: str,
+799: def _link_observation(
+800:     conn: sqlite3.Connection, observation_id: str, cnpj: str, security_date: str | None, known_date: str
+801: ) -> None:
+802:     if security_date is None:
+803:         return
+817: def _result(source_versions: list[str], read: int, persisted: int, rejected: int = 0) -> dict[str, Any]:
+818:     return {
+819:         "status": "SUCCESS",
+820:         "source_version_ids": source_versions,
+821:         "rows_read": read,
+830: def _reject(
+831:     conn: sqlite3.Connection,
+832:     *,
+833:     source_version_id: str,
+834:     family: str,
+847: def ingest_b3_lending(
+848:     conn: sqlite3.Connection,
+849:     raw_root: Path,
+850:     reference_date: str,
+851:     acquired_by_table: dict[str, dict[str, Any] | list[dict[str, Any]]],
+875:                 table_version = table.get("version")
+879:                     expected_table_version = table_version
+925: def ingest_vlmo(
+926:     conn: sqlite3.Connection, raw_root: Path, year: int, acquired: dict[str, Any], sessions: list[str]
+927: ) -> dict[str, Any]:
+928:     main = _rows_from_zip(acquired["payload"], f"vlmo_cia_aberta_{year}.csv", VLMO_MAIN)
+929:     details = _rows_from_zip(acquired["payload"], f"vlmo_cia_aberta_con_{year}.csv", VLMO_DETAIL)
+988: def ingest_buyback(
+989:     conn: sqlite3.Connection, raw_root: Path, acquired: dict[str, Any], sessions: list[str]
+990: ) -> dict[str, Any]:
+991:     main = _rows_from_zip(acquired["payload"], "cia_aberta_recompra_acoes.csv", BUYBACK_MAIN)
+992:     intermediaries = _rows_from_zip(
+1044:                 "authorized_ordinary_quantity": decimal_text(
+1047:                 "authorized_preferred_quantity": decimal_text(
+1073: def ingest_ipe(
+1074:     conn: sqlite3.Connection, raw_root: Path, year: int, acquired: dict[str, Any], sessions: list[str]
+1075: ) -> dict[str, Any]:
+1076:     rows = _rows_from_zip(acquired["payload"], f"ipe_cia_aberta_{year}.csv", IPE_COLUMNS)
+1077:     conn.execute("SAVEPOINT external_ipe")
+1100:             version = int(row["Versao"])
+1151: def ingest_fca_identity(
+1152:     conn: sqlite3.Connection, raw_root: Path, year: int, acquired: dict[str, Any]
+1153: ) -> dict[str, Any]:
+1154:     from .source_history import derive_fca_securities
+1155: 
+1196: def _holdings_document(
+1197:     conn: sqlite3.Connection,
+1198:     *,
+1199:     source_version_id: str,
+1200:     source_member: str,
+1225: def _cda_archive_contract(token: str) -> dict[str, tuple[tuple[str, ...], bool]]:
+1226:     if token < "202512":
+1227:         raise SchemaDriftError(
+1228:             "this parser implements only the post-2025-11 cda_fie schema; older eras require "
+1229:             "an explicit source-contract revision"
+1226:     if token < "202512":
+1228:             "this parser implements only the post-2025-11 cda_fie schema; older eras require "
+1232:         f"cda_fi_BLC_4_{token}.csv": (CDA_BLC4_COLUMNS, False),
+1233:         f"cda_fie_{token}.csv": (CDA_FIE_COLUMNS, False),
+1234:         f"cda_fi_CONFID_{token}.csv": (CDA_CONFID_COLUMNS, True),
+1235:         f"cda_fie_CONFID_{token}.csv": (CDA_FIE_CONFID_COLUMNS, True),
+1239: def _cda_all_members(token: str) -> set[str]:
+1240:     return {
+1241:         f"cda_fie_{token}.csv",
+1242:         f"cda_fie_CONFID_{token}.csv",
+1243:         *(f"cda_fi_BLC_{number}_{token}.csv" for number in range(1, 9)),
+1241:         f"cda_fie_{token}.csv",
+1242:         f"cda_fie_CONFID_{token}.csv",
+1243:         *(f"cda_fi_BLC_{number}_{token}.csv" for number in range(1, 9)),
+1244:         f"cda_fi_CONFID_{token}.csv",
+1245:         f"cda_fi_PL_{token}.csv",
+1249: def ingest_cvm_cda(
+1250:     conn: sqlite3.Connection,
+1251:     raw_root: Path,
+1252:     month: str,
+1253:     acquired: dict[str, Any],
+1255:     token = _month_token(month)
+1256:     contract = _cda_archive_contract(token)
+1258:     _validate_archive_members(payload, _cda_all_members(token))
+1267:             source_url=f"https://dados.cvm.gov.br/dados/FI/DOC/CDA/DADOS/cda_fi_{token}.zip",
+1359: def ingest_cvm_entrega(
+1360:     conn: sqlite3.Connection,
+1361:     raw_root: Path,
+1362:     month: str,
+1363:     acquired: dict[str, Any],
+1365:     token = _month_token(month)
+1367:         f"fi_entrega_documento_{token}.csv",
+1368:         f"fi_entrega_documento_diario_{token}.csv",
+1382:                 f"fi_entrega_documento_{token}.zip"
+1451: def verify(conn: sqlite3.Connection, raw_root: Path) -> dict[str, Any]:
+1452:     issues: list[str] = []
+1453:     versions = conn.execute(
+1454:         "SELECT source_version_id,publisher,dataset,logical_period,sha256,relative_path,"
+1455:         " external_raw_objects.byte_length,"
+1482:         if temporal_semantics_version == "collector-observation-v2":
+1564:         "schema_version": SCHEMA_VERSION,
+1581: def status(conn: sqlite3.Connection) -> dict[str, Any]:
+1582:     rows = conn.execute(
+1583:         "SELECT dataset,logical_period,fetched_at,source_version_id,sha256 FROM external_source_versions"
+1584:         " ORDER BY dataset,logical_period DESC,fetched_at DESC"
+1585:     ).fetchall()
+1634:     return {"status": "SUCCESS", "schema_version": SCHEMA_VERSION, "sources": result}
+1637: def _write_receipt(path: Path, receipt: dict[str, Any]) -> None:
+1638:     payload = (json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
+1639:     path.parent.mkdir(parents=True, exist_ok=True)
+1640:     fd, temporary = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+1641:     try:
+1652: def add_cli(root: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
+1653:     external = root.add_parser("external", help="Research-only CVM/B3 external intelligence")
+1654:     actions = external.add_subparsers(dest="external_action", required=True)
+1655:     collect = actions.add_parser("collect")
+1656:     collectors = collect.add_subparsers(dest="collector", required=True)
+1682: def _collect(args: argparse.Namespace, conn: sqlite3.Connection) -> dict[str, Any]:
+1683:     sessions = trading_sessions(args.trading_db)
+1684:     if args.collector == "b3-lending":
+1685:         if args.source_file:
+1686:             raise ValueError("b3-lending uses two official responses and does not accept one --source-file")
+1720:             token = _month_token(args.month)
+1721:             url = f"https://dados.cvm.gov.br/dados/FI/DOC/CDA/DADOS/cda_fi_{token}.zip"
+1723:             token = _month_token(args.month)
+1726:                 f"fi_entrega_documento_{token}.zip"
+1742: def run_cli(args: argparse.Namespace) -> int:
+1743:     started = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+1744:     receipt_path = getattr(args, "receipt", None)
+1745:     command = "external " + args.external_action
+1746:     if getattr(args, "collector", None):
+1771:         "receipt_schema_version": RECEIPT_VERSION,
+
+### stocks_predictor/source_catalog.py
+18: SCHEMA = """CREATE TABLE IF NOT EXISTS source_versions (
+32: def utc_timestamp(value: str) -> str:
+33:     stamp = datetime.fromisoformat(value.replace('Z', '+00:00'))
+34:     if stamp.tzinfo is None or stamp.utcoffset() is None:
+35:         raise ValueError('timestamp requires an explicit UTC offset')
+36:     return stamp.astimezone(timezone.utc).isoformat()
+39: def strict_lines(lines: Iterable[bytes]) -> Iterable[str]:
+40:     """Reject malformed quote records; never silently certify skipped content."""
+41:     for raw in lines:
+42:         line = raw.decode('latin-1')
+43:         if line.startswith('01'):
+48: def ingest_version(
+49:     conn: sqlite3.Connection, archive: Path, *, publisher: str, dataset: str,
+50:     version: str, source_url: str, observed_at: str, scratch_dir: Path,
+51:     avista_only: bool = True, expected_sha256: str | None = None,
+52: ) -> dict:
+
+### stocks_predictor/simulation.py
+15: def load_bars(conn, ticker, end=None):
+16:     args = [ticker]
+17:     cutoff = ""
+18:     if end:
+19:         cutoff = " AND date<=?"
+39: def split_events(conn, ticker, end):
+40:     result = {}
+41:     for ex, factor in conn.execute(
+42:         "SELECT ex_date,factor FROM adjustments WHERE ticker=?"
+43:         " AND type IN ('split','grupamento') AND approved_by IS NOT NULL"
+53: def point_in_time_series(conn, ticker, asof):
+54:     bars = load_bars(conn, ticker, end=asof)
+55:     dates = sorted(bars)
+56:     splits = price_adjustment_events(conn, ticker, asof)
+57:     closes = []
+67: def price_adjustment_events(conn, ticker, end):
+68:     """Price-base changes; bonus shares are valued from ex, delivered separately."""
+69:     if __package__:
+70:         from .stock_events import bonus_events
+71:     else:
+79: def simulate_portfolio(
+80:     dates,
+81:     bars,
+82:     targets,
+83:     *,
+188:         def mark(ticker):
+309: def walk_forward(conn, cfg, signal_fn=None, take="top", portfolio_fn=None, series_fn=None):
+310:     if __package__:
+311:         from . import adjust, factor, portfolio, universe
+312:         from .stock_events import bonus_events
+313:         from .returns import month_end_dates
+
+### stocks_predictor/profit_validation.py
+14: def entitlement_book(member, entry, exit_day, bars, factors, terms, mode="open"):
+15:     """Track one initial share through the dated action book, including chains."""
+16:     if mode not in {"open", "close", "worst"} or not entry < exit_day:
+17:         raise ValueError("invalid mark mode or interval")
+18:     ticker, isin = member["ticker"], member["isin"]
+66: def compound_path(returns, start, end):
+67:     """Synthetic reinvestment of marks, not cash flows; period endpoints only."""
+68:     wealth = peak = 1.0
+69:     worst = 0.0
+70:     for value in returns:
+84: def summarize_audit_periods(periods, horizon, bootstrap):
+85:     """All periods, identical paired block draws, descriptive intervals only."""
+86:     if any(a["exit"] != b["entry"] for a, b in zip(periods, periods[1:])):
+87:         raise ValueError("non-contiguous periods cannot be silently compounded")
+88:     start, end = periods[0]["entry"], periods[-1]["exit"]
+132: def audit_trials(observation, bars, factors, terms, bootstrap):
+133:     results, max_error, checked = [], 0.0, 0
+134:     for trial in observation["trials"]:
+135:         per_mode = {mode: [] for mode in ("open", "close", "worst")}
+136:         horizon = trial["holding_months"]
+
+### stocks_predictor/temporal_evidence.py
+1: """Dated evidence for offline decisions; no capital authorization or retroactive PIT claim."""
+11: class DatedOutcome:
+12:     observation_id: str
+13:     decision_at: str
+14:     matured_at: str
+15:     observed_at: str
+18:     def validate(self) -> None:
+29: def estimate_asof(
+30:     outcomes: list[DatedOutcome], asof: str, *, minimum_observations: int = 12,
+31:     z_score: float = 1.96,
+32: ) -> EdgeEstimate | None:
+33:     """Reject future/unmatured/duplicate evidence, rather than silently discarding it.
+
+### stocks_predictor/diagnostics.py
+16: def _dependency(name: str, minimum: tuple[int, int], maximum_major: int) -> dict:
+17:     try:
+18:         version = metadata.version(name)
+19:     except metadata.PackageNotFoundError:
+20:         return {"version": None, "metadata_compatible": False, "status": "missing"}
+18:         version = metadata.version(name)
+20:         return {"version": None, "metadata_compatible": False, "status": "missing"}
+27: def inspect_database(path: Path) -> dict:
+28:     path = path.resolve()
+29:     result = {"path": str(path), "status": "missing", "read_only": True}
+30:     if not path.is_file():
+31:         return result
+33:         with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1.0)) as conn:
+45: def diagnose(db_path: Path | None = None) -> dict:
+46:     dependencies = {"predictor-core": _dependency("predictor-core", (3, 2), 4),
+47:                     "PyYAML": _dependency("PyYAML", (6, 0), 7)}
+48:     supported = (3, 13) <= sys.version_info[:2] < (3, 15)
+49:     return {
+61: def main(argv: list[str] | None = None) -> int:
+62:     parser = argparse.ArgumentParser(description=__doc__)
+63:     parser.add_argument("--db", type=Path, help="Inspect this existing SQLite database in read-only mode")
+64:     parser.add_argument("--check", action="store_true", help="Exit 1 for incompatible metadata or a failed requested DB inspection")
+65:     args = parser.parse_args(argv)
+
+### .github/workflows/ci.yml
+38:         run: uv sync --locked --all-extras --python ${{ matrix.python }}
+42:         run: uv run --no-sync ruff check stocks_predictor tests main.py tools/data_bank.py tools/benchmark_ingestion.py tools/benchmark_real_ingestion.py tools/materialize_source_revision.py tools/reproducible_build.py tools/audit_registry.py tools/operational_validation.py tools/verify_operational_evidence.py tools/check_project_files.py research/session-20260910/final_review/verify.py research/session-20260909/data_completion research/session-20260910/integral research/session-20260910/profit_validation research/session-20260910/gap_resolution
+44:         run: uv run --no-sync pyright --pythonversion ${{ matrix.python }}
+54:         run: uv run --no-sync pytest -q --import-mode=importlib research/session-20260908/chat-review/test_h20_evidence_integrity.py research/session-20260908/h20-profit-test/test_h20_profit_comparison.py
+64:         run: uv run --no-sync coverage run -m pytest -q --durations=15 --junitxml=test-results.xml
+95:           uv venv /tmp/stocks-wheel --python ${{ matrix.python }}
+96:           uv pip install --python /tmp/stocks-wheel/bin/python --require-hashes --no-deps -r "$RUNNER_TEMP/stocks-runtime.txt"
+97:           uv pip install --python /tmp/stocks-wheel/bin/python --no-deps dist/*.whl
+98:           mkdir -p "$RUNNER_TEMP/stocks-wheel-smoke"
+99:           cp tools/operational_validation.py "$RUNNER_TEMP/stocks-wheel-smoke/operational_validation.py"
+100:           cd "$RUNNER_TEMP/stocks-wheel-smoke"
+101:           /tmp/stocks-wheel/bin/python -I -m stocks_predictor doctor --check
+102:           /tmp/stocks-wheel/bin/python -I operational_validation.py --installed --output "$RUNNER_TEMP/stocks-wheel-smoke/load" --rows 250000
+103:           /tmp/stocks-wheel/bin/python -I - <<'PY'
+125:           path: ${{ runner.temp }}/stocks-wheel-smoke/load/validation.json
+149:       - name: Prove an exempted file still detects a synthetic token
+157:               stream.write('\napi_key = "' + secrets.token_urlsafe(32) + '"\n')
+
+### tools/verify_operational_evidence.py
+25: def code_paths(root: Path) -> set[str]:
+26:     return EXTRA | {
+27:         path.relative_to(root).as_posix()
+28:         for folder in ("stocks_predictor", "tests", "tools")
+29:         for path in (root / folder).rglob("*.py")
+33: def canonical_sha(path: Path) -> str:
+34:     return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+35: 
+36: 
+37: def checked_path(root: Path, name: str) -> Path:
+37: def checked_path(root: Path, name: str) -> Path:
+38:     if not isinstance(name, str) or not name or "\\" in name or ":" in name or ".." in Path(name).parts:
+39:         raise ValueError("invalid evidence path")
+40:     path = (root / name).resolve()
+41:     if not path.is_relative_to(root.resolve()):
+46: def _hashes(record: dict) -> dict[str, str]:
+47:     rows = record["current_code_sha256_lf"]
+48:     result = {row["path"]: row["sha256"] for row in rows}
+49:     if len(result) != len(rows):
+50:         raise ValueError("duplicate code path in operational evidence")
+54: def _verify_current_code(root: Path, record: dict) -> dict[str, str]:
+55:     hashes = _hashes(record)
+56:     if set(hashes) != code_paths(root):
+57:         raise ValueError("current code population differs from operational evidence")
+58:     for name, expected in hashes.items():
+64: def _verify_historical_code(root: Path, record: dict) -> dict[str, str]:
+65:     """Return the preserved inventory without misattributing it to current HEAD.
+66: 
+67:     The historical registry accumulated post-run inventory revisions and does not
+68:     identify one commit containing every listed byte. Its package subset is still
+76: def _verify_runs(root: Path, record: dict, code_hashes: dict[str, str]) -> tuple[dict, dict]:
+77:     real = json.loads(checked_path(root, record["real_validation"]).read_text(encoding="utf-8"))
+78:     capacity = json.loads(checked_path(root, record["capacity_validation"]).read_text(encoding="utf-8"))
+79:     old = json.loads(
+80:         (root / "docs/audit/2026-09-10-r7/evidence/real-versioned-ingestion.json").read_text(
+126: def verify(root: Path = ROOT) -> dict:
+127:     current = json.loads((root / REGISTRY).read_text(encoding="utf-8"))
+128:     current_hashes = _verify_current_code(root, current)
+129:     if current["capital_enabled"] is not False or current["profit_certified"] is not False:
+130:         raise ValueError("current infrastructure evidence cannot enable capital or certify profit")
+129:     if current["capital_enabled"] is not False or current["profit_certified"] is not False:
+148:         "capital_enabled": False,
+
+### uv.lock
+1: version = 1
+7: version = "1.6.0"
+15: wheels = [
+21: version = "0.4.6"
+24: wheels = [
+30: version = "7.16.0"
+33: wheels = [
+84: version = "2.3.0"
+87: wheels = [
+93: version = "1.10.0"
+96: wheels = [
+102: version = "26.3"
+105: wheels = [
+111: version = "1.6.0"
+114: wheels = [
+119: name = "predictor-core"
+120: version = "3.2.1"
+122: wheels = [
+138:     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.403,<2" },
+139:     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3,<10" },
+140:     { name = "pytest", marker = "extra == 'test'", specifier = ">=9.0.3,<10" },
+141:     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.2,<8" },
+142:     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6.2,<8" },
+143:     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.7,<1" },
+149: version = "2.21.0"
+152: wheels = [
+158: version = "1.2.0"
+161: wheels = [
+166: name = "pyright"
+167: version = "1.1.411"
+173: sdist = { url = "https://files.pythonhosted.org/packages/7e/ab/265f7dc69d28113ebba19092e57b075f41543b2ed048429c5f56e2b88eac/pyright-1.1.411.tar.gz", hash = "sha256:d885a0551f2e763b089a02702174e7f4ba77548cddabc972ab86d1f7f1b0f998", size = 4112861, upload-time = "2026-06-25T02:14:06.37Z" }
+174: wheels = [
+175:     { url = "https://files.pythonhosted.org/packages/0a/49/385be530a6a5b78d1cbcd5c2e38debc8959a2fc6bdb716f4e581002979fc/pyright-1.1.411-py3-none-any.whl", hash = "sha256:dc7c72a8e2700c55baa127554040e067041ea53ccfd50bf96308cc4291c7d5d9", size = 6181526, upload-time = "2026-06-25T02:14:04.691Z" },
+179: name = "pytest"
+180: version = "9.1.1"
+189: sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
+190: wheels = [
+191:     { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
+196: version = "6.0.3"
+199: wheels = [
+231: name = "ruff"
+232: version = "0.16.5"
+234: sdist = { url = "https://files.pythonhosted.org/packages/f3/85/c8e12473c93018f92d19dd988a294202e1c27426c47ec4de53ffb847b8d8/ruff-0.16.5.tar.gz", hash = "sha256:1b88500f9ffbcab3dedb0082c9f9492e91ec3d618aac1236a3e0189938f7040b", size = 4912003, upload-time = "2026-08-27T16:34:18.258Z" }
+235: wheels = [
+236:     { url = "https://files.pythonhosted.org/packages/c6/b6/77c90a970fe2dae17a723acbd011043ea97c98d7deacccefdc4ba74ec512/ruff-0.16.5-py3-none-linux_armv6l.whl", hash = "sha256:12e5f673e774c35fbb62f288809c7653b73445f8ecec6b6063fd6ea3521aa14b", size = 10011941, upload-time = "2026-08-27T16:33:41.287Z" },
+237:     { url = "https://files.pythonhosted.org/packages/4b/46/6cf67cf6411885a1d6f7f6d801682f155536a85176d10b605e2ceffed8bd/ruff-0.16.5-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:eda58a5802de40e7ed5b32b64e0b32539338cc6fcd2c78f61e3ad6a0d79f51c3", size = 10204049, upload-time = "2026-08-27T16:33:44.056Z" },
+238:     { url = "https://files.pythonhosted.org/packages/46/fd/c8720ca7a090abf0c2fef4abe8a5ef6e5127ed15196d8886ff75a2b370e2/ruff-0.16.5-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c5ae9a7b9a8875131f40f8fe967cc86abf899779efd663cb7ce3d572d01da7eb", size = 9809037, upload-time = "2026-08-27T16:33:46.257Z" },
+239:     { url = "https://files.pythonhosted.org/packages/43/45/a684caacdedaca180f52bacccc40bf0789d2c5a7c75f25324853e9eaedb5/ruff-0.16.5-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7b719b0a1f4d59710d283ab2965f621684a108a9e41da622e3b23f0326cd0025", size = 9964129, upload-time = "2026-08-27T16:33:48.352Z" },
+240:     { url = "https://files.pythonhosted.org/packages/9e/f2/5d2bcdaca6b5b93d1b4dfc166cd2aebf7680143a1b38a28759df13a94d31/ruff-0.16.5-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:2298f2780ed1be0c5cb1361e32ab7b1467f3cce7dabe101d2210a314f2fe42e9", size = 9821518, upload-time = "2026-08-27T16:33:50.57Z" },
+241:     { url = "https://files.pythonhosted.org/packages/aa/ff/011cce29accf9257d5974145b733fc653a37985ed6825413a3987cefbfe0/ruff-0.16.5-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:258f29035a2dd021e7861e631b227a5b3f14e50c1184c9a6a122c5f4576154d7", size = 10534835, upload-time = "2026-08-27T16:33:52.522Z" },
+242:     { url = "https://files.pythonhosted.org/packages/d7/5a/f0cf109bada9bba0e96c90c21c9f9251803f57225c32d293327a03c710d6/ruff-0.16.5-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:b9a4f0432966834019c74d1b7e5c51224305d7713f3d7faf3e7451f1a3be3cde", size = 11252550, upload-time = "2026-08-27T16:33:54.521Z" },
+243:     { url = "https://files.pythonhosted.org/packages/63/4d/1d481aaea2046c6a7ed7c291f9004c669cce3c087b6b376ed5b08271e3fe/ruff-0.16.5-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:b5eb3a8c3d0ade9cea42b591fd530368e8798380e30e0a308b85a5cf718f09ea", size = 10777949, upload-time = "2026-08-27T16:33:56.88Z" },
+244:     { url = "https://files.pythonhosted.org/packages/ee/34/ee245ca55f64443233034b3d02b03236b19242004281247c079390b7facd/ruff-0.16.5-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ef0f69e191a13a3c9816f63163c88790cb12cd157bbbb384e9c44745702ab105", size = 10311656, upload-time = "2026-08-27T16:33:59.12Z" },
+245:     { url = "https://files.pythonhosted.org/packages/a7/4d/c33a333e341c0a2b96c715b52d89a606f5a34cd4ac493cd9b8d0187186b8/ruff-0.16.5-py3-none-manylinux_2_31_riscv64.whl", hash = "sha256:0eeab41fbea2c42f98dfb9822cdccda9d24ba38d49f6dc945b5c236d48f0ef29", size = 10532125, upload-time = "2026-08-27T16:34:01.166Z" },
+246:     { url = "https://files.pythonhosted.org/packages/30/e1/a64cef78b40192497bb98a27a8aa8f2c98ee9ee15bc97f7712d94ef32937/ruff-0.16.5-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:f0768e9df4300713fff30733c87575f68b6f1d8de41184e505b7fdd9c0c95eaf", size = 10097648, upload-time = "2026-08-27T16:34:03.16Z" },
+247:     { url = "https://files.pythonhosted.org/packages/cc/4e/4cdc9ed3c3e109d2f71e62572a37457298d7bc7501ec3138babb7ed32bbd/ruff-0.16.5-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:95cc70cdc7aa80c338de356279d2adbeb2de0f520b9ecd8aba75b94e95e02f91", size = 9829344, upload-time = "2026-08-27T16:34:05.134Z" },
+248:     { url = "https://files.pythonhosted.org/packages/39/4a/31ed35ce31729955fc583ee0d176d6e784c1290cb0b0a75cb2134c1ab72a/ruff-0.16.5-py3-none-musllinux_1_2_i686.whl", hash = "sha256:d185c8398ded1bfd91c0c2cb258346307571eccc473a8490af8c3977399c384a", size = 10277117, upload-time = "2026-08-27T16:34:07.425Z" },
+249:     { url = "https://files.pythonhosted.org/packages/a8/a0/60356d86687b4b666d593df213f4dc3041750d024cb7bf2cfa81cfd65c2e/ruff-0.16.5-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:fb8e3a3c4c6a784150a7ced53b015f4b253fc2bf97a610886419ead64b4756ef", size = 10711653, upload-time = "2026-08-27T16:34:09.712Z" },
+250:     { url = "https://files.pythonhosted.org/packages/ed/20/656d67f5b25ca9bda4e02b1de25867b2954e1d19e03648060f167ad0f4cc/ruff-0.16.5-py3-none-win32.whl", hash = "sha256:288b0a5f080492fe5635db849f9e2e84aa3cce7b7f0e955997d416c507c76a26", size = 10034250, upload-time = "2026-08-27T16:34:11.8Z" },
+251:     { url = "https://files.pythonhosted.org/packages/5b/42/ee8e68a207b9127fcde6c3d7e197def432f346cb1af159e1fa14ca0d1cdc/ruff-0.16.5-py3-none-win_amd64.whl", hash = "sha256:ddc6385fb2137f616357ca03d6c74f4be987f80fed4008566b754f6032b8546f", size = 10516714, upload-time = "2026-08-27T16:34:13.963Z" },
+252:     { url = "https://files.pythonhosted.org/packages/73/e3/7df5a396e445b9ba49ce9a9437439a4d80042c61c0ade199abf8d16de1ac/ruff-0.16.5-py3-none-win_arm64.whl", hash = "sha256:a64abe90968719b851bb7cedffaa8753fbdbdadab483089682db623f3edc587e", size = 10391564, upload-time = "2026-08-27T16:34:16.064Z" },
+257: version = "0.2.0"
+260:     { name = "predictor-core" },
+268:     { name = "pyright" },
+269:     { name = "pytest" },
+270:     { name = "ruff" },
+277:     { name = "predictor-core", url = "https://github.com/leonardosovienski/core-predictor/releases/download/v3.2.1/predictor_core-3.2.1-py3-none-any.whl" },
+278:     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.403,<2" },
+279:     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4,<10" },
+281:     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12,<1" },
+287: version = "4.16.0"
+290: wheels = [

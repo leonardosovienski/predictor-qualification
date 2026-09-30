@@ -1,0 +1,7 @@
+# Caracterização preliminar — stocks-predictor
+
+OD: pacote stocks-predictor 0.2.0, Python >=3.13,<3.15, Hatchling 1.32.0, PyYAML e predictor-core >=3.2,<4; tool.uv.sources fixa wheel core 3.2.1. Plugin predictor.plugins stocks tem health WAITING e capabilities pesquisa, sem previsão/settlement/coleta; capital FORBIDDEN, econômico NO_GO, científico DISCOVERY_INCONCLUSIVE. Arquitetura inclui CLI legado main.py e operacional `python -m stocks_predictor`, ingestão COTAHIST/CVM, hipóteses/backtests, RJ, paper, integração bundle e catálogo versionado.
+
+operational_store valida schema/application_id/user_version exatos, WAL local, BEGIN IMMEDIATE, triggers append-only, ingestão arquivo local com hash, backup consistente e restore em diretório novo. Não transforma observação de catálogo em disponibilidade histórica. economic_gate usa média menos z*erro-padrão e custo para HOLD/REBALANCE, capital_enabled=False; caller é responsável pela maturidade. trials_gate usa controles positivos/sintéticos sobre judge, registro de tentativas e DSR estrito, evitando deflation_applied=False virar COMPROVADA.
+
+235 arquivos executáveis/configuração/testes selecionados, 36.308 linhas mecanicamente lidas/indexadas; lógica central selecionada revisada semanticamente. Código vendorizado e scripts históricos research catalogados, não integralmente revisados. Não há ET-RUN, banco real, backtest recalculado nem instalação/serviço observado. Identidade e hashes em evidencias/stocks-predictor. Sem inferência de capacidade lucrativa.

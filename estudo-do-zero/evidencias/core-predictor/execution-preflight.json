@@ -1,0 +1,57 @@
+{
+  "hazards": [
+    {
+      "path": ".github/workflows/release.yml",
+      "mechanism": "os.environ"
+    },
+    {
+      "path": "pyproject.toml",
+      "mechanism": "httpx"
+    },
+    {
+      "path": "src/predictor_core/contracts/trial_v2.py",
+      "mechanism": "subprocess"
+    },
+    {
+      "path": "src/predictor_core/kernel/infra.py",
+      "mechanism": "sqlite3.connect"
+    },
+    {
+      "path": "src/predictor_core/kernel/net.py",
+      "mechanism": "urlopen"
+    },
+    {
+      "path": "src/predictor_core/kernel/net.py",
+      "mechanism": "httpx"
+    },
+    {
+      "path": "src/predictor_core/kernel/obs.py",
+      "mechanism": "getenv"
+    },
+    {
+      "path": "src/predictor_core/kernel/obs.py",
+      "mechanism": "PREDICTOR_EVENTS_PATH"
+    },
+    {
+      "path": "src/predictor_core/kernel/settings.py",
+      "mechanism": "os.environ"
+    },
+    {
+      "path": "tests/test_attestation_dirty_tree.py",
+      "mechanism": "subprocess"
+    },
+    {
+      "path": "tests/test_data/conftest.py",
+      "mechanism": "PREDICTOR_EVENTS_PATH"
+    },
+    {
+      "path": "tests/test_lazy_facade.py",
+      "mechanism": "subprocess"
+    },
+    {
+      "path": "tools/check_installed_wheel.py",
+      "mechanism": "subprocess"
+    }
+  ],
+  "policy": "Somente smoke próprio local; não chamar downloads, configuração HTTP, OTEL, schedulers ou dados de produção; sys.path apenas cópia; runtime roots dentro da cópia de estudo. Runtime 3.12.14 abaixo requisito >=3.13 para core/ops/ecosystem raiz; resultados exploratórios não qualificam ambiente suportado. Nenhum pytest disponível."
+}

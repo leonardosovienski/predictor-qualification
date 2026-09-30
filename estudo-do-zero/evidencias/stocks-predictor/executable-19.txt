@@ -1,0 +1,449 @@
+
+### stocks_predictor/prospective_big_winner.py
+2: from __future__ import annotations
+4: import datetime as dt
+5: import hashlib
+6: import json
+7: import sqlite3
+8: from pathlib import Path
+10: from .big_winner_v2 import MODEL_ID, canonical_hash
+12: SCHEMA = """
+13: PRAGMA foreign_keys=ON;
+14: CREATE TABLE IF NOT EXISTS ledger_events(
+15:   sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+16:   event_type TEXT NOT NULL CHECK(event_type IN ('DECISION','CORRECTION')),
+17:   logical_key TEXT NOT NULL,
+18:   decision_timestamp TEXT NOT NULL,
+19:   model_identity TEXT NOT NULL,
+20:   payload_json TEXT NOT NULL,
+21:   payload_hash TEXT NOT NULL,
+22:   previous_event_hash TEXT,
+23:   event_hash TEXT NOT NULL UNIQUE,
+24:   development_backfill INTEGER NOT NULL CHECK(development_backfill IN (0,1)),
+25:   prospective_evidence_eligible INTEGER NOT NULL CHECK(prospective_evidence_eligible IN (0,1)),
+26:   correction_of TEXT,
+27:   UNIQUE(event_type, logical_key, payload_hash)
+28: );
+29: CREATE TRIGGER IF NOT EXISTS ledger_no_update BEFORE UPDATE ON ledger_events
+30: BEGIN SELECT RAISE(ABORT, 'append-only ledger: UPDATE forbidden'); END;
+31: CREATE TRIGGER IF NOT EXISTS ledger_no_delete BEFORE DELETE ON ledger_events
+32: BEGIN SELECT RAISE(ABORT, 'append-only ledger: DELETE forbidden'); END;
+33: CREATE TABLE IF NOT EXISTS outcome_observations(
+34:   sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+35:   decision_logical_key TEXT NOT NULL,
+36:   observed_at TEXT NOT NULL,
+37:   horizon_months INTEGER NOT NULL CHECK(horizon_months IN (1,3,6,12)),
+38:   metrics_json TEXT NOT NULL,
+39:   metrics_hash TEXT NOT NULL,
+40:   primary_endpoint_mature INTEGER NOT NULL CHECK(primary_endpoint_mature IN (0,1)),
+41:   UNIQUE(decision_logical_key,horizon_months,metrics_hash)
+42: );
+43: CREATE TRIGGER IF NOT EXISTS outcomes_no_update BEFORE UPDATE ON outcome_observations
+44: BEGIN SELECT RAISE(ABORT, 'append-only outcomes: UPDATE forbidden'); END;
+45: CREATE TRIGGER IF NOT EXISTS outcomes_no_delete BEFORE DELETE ON outcome_observations
+46: BEGIN SELECT RAISE(ABORT, 'append-only outcomes: DELETE forbidden'); END;
+47: """
+50: def connect(path: str | Path) -> sqlite3.Connection:
+51:     conn = sqlite3.connect(path)
+52:     conn.executescript(SCHEMA)
+53:     return conn
+56: def _latest_hash(conn) -> str | None:
+57:     row = conn.execute("SELECT event_hash FROM ledger_events ORDER BY sequence DESC LIMIT 1").fetchone()
+58:     return row[0] if row else None
+61: def append_decision(conn, decision: dict, *, decision_timestamp: str,
+62:                     development_backfill: bool, final_freeze_timestamp: str,
+63:                     final_freeze_commit: str) -> dict:
+64:     if decision["model_identity"] != MODEL_ID:
+65:         raise ValueError("model identity mismatch")
+66:     dt.datetime.fromisoformat(decision_timestamp)
+67:     observation_after_freeze = decision["signal_asof"] > final_freeze_timestamp[:10]
+68:     eligible = bool(not development_backfill and observation_after_freeze and final_freeze_commit)
+69:     logical_key = canonical_hash({"signal_asof":decision["signal_asof"],
+70:         "model_identity":decision["model_identity"], "config_hash":decision["config_hash"],
+71:         "dataset_hash":decision["dataset_hash"]})
+72:     payload_json = json.dumps(decision, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+73:     payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+74:     existing = conn.execute("SELECT payload_hash,event_hash,prospective_evidence_eligible FROM ledger_events WHERE event_type='DECISION' AND logical_key=?", (logical_key,)).fetchone()
+75:     if existing:
+76:         if existing[0] != payload_hash:
+77:             raise ValueError("duplicate logical decision with different payload")
+78:         return {"status":"IDEMPOTENT_EXISTING", "logical_key":logical_key,
+79:                 "event_hash":existing[1], "prospective_evidence_eligible":bool(existing[2])}
+80:     previous = _latest_hash(conn)
+81:     event_hash = canonical_hash({"event_type":"DECISION","logical_key":logical_key,
+82:         "decision_timestamp":decision_timestamp,"payload_hash":payload_hash,
+83:         "previous_event_hash":previous,"development_backfill":development_backfill,
+84:         "prospective_evidence_eligible":eligible})
+85:     conn.execute("INSERT INTO ledger_events(event_type,logical_key,decision_timestamp,model_identity,payload_json,payload_hash,previous_event_hash,event_hash,development_backfill,prospective_evidence_eligible) VALUES('DECISION',?,?,?,?,?,?,?,?,?)",
+86:         (logical_key,decision_timestamp,MODEL_ID,payload_json,payload_hash,previous,event_hash,int(development_backfill),int(eligible)))
+87:     conn.commit()
+88:     return {"status":"APPENDED","logical_key":logical_key,"event_hash":event_hash,
+89:             "prospective_evidence_eligible":eligible}
+92: def append_correction(conn, logical_key: str, correction: dict, decision_timestamp: str) -> dict:
+93:     original = conn.execute("SELECT event_hash FROM ledger_events WHERE event_type='DECISION' AND logical_key=?", (logical_key,)).fetchone()
+94:     if not original:
+95:         raise ValueError("correction target not found")
+96:     previous = _latest_hash(conn); payload_json=json.dumps(correction,sort_keys=True,separators=(",", ":"))
+97:     payload_hash=hashlib.sha256(payload_json.encode()).hexdigest()
+98:     event_hash=canonical_hash({"event_type":"CORRECTION","logical_key":logical_key,
+99:         "decision_timestamp":decision_timestamp,"payload_hash":payload_hash,
+100:         "previous_event_hash":previous,"correction_of":original[0]})
+101:     conn.execute("INSERT INTO ledger_events(event_type,logical_key,decision_timestamp,model_identity,payload_json,payload_hash,previous_event_hash,event_hash,development_backfill,prospective_evidence_eligible,correction_of) VALUES('CORRECTION',?,?,?,?,?,?,?,?,?,?)",
+102:         (logical_key,decision_timestamp,MODEL_ID,payload_json,payload_hash,previous,event_hash,0,0,original[0]))
+103:     conn.commit(); return {"status":"CORRECTION_APPENDED","event_hash":event_hash}
+106: def verify_chain(conn) -> dict:
+107:     previous=None; count=eligible=backfills=0
+108:     for row in conn.execute("SELECT event_type,logical_key,decision_timestamp,payload_hash,previous_event_hash,event_hash,development_backfill,prospective_evidence_eligible,correction_of FROM ledger_events ORDER BY sequence"):
+109:         event_type,key,timestamp,payload_hash,recorded_previous,event_hash,backfill,is_eligible,correction_of=row
+110:         if recorded_previous != previous: raise ValueError("ledger chain discontinuity")
+111:         payload={"event_type":event_type,"logical_key":key,"decision_timestamp":timestamp,
+112:             "payload_hash":payload_hash,"previous_event_hash":previous}
+113:         if event_type=="DECISION": payload.update(development_backfill=bool(backfill),prospective_evidence_eligible=bool(is_eligible))
+114:         else: payload["correction_of"]=correction_of
+115:         if canonical_hash(payload)!=event_hash: raise ValueError("ledger event hash mismatch")
+116:         previous=event_hash; count+=1; eligible+=is_eligible; backfills+=backfill
+117:     return {"status":"VALID","events":count,"development_backfill_count":backfills,
+118:             "prospective_eligible_decision_count":eligible,"head_hash":previous}
+121: def append_outcome_observation(conn, decision_logical_key: str, observed_at: str,
+122:                                horizon_months: int, metrics: dict) -> dict:
+123:     decision=conn.execute("SELECT prospective_evidence_eligible FROM ledger_events WHERE event_type='DECISION' AND logical_key=?",(decision_logical_key,)).fetchone()
+124:     if not decision: raise ValueError("decision cohort not found")
+125:     if horizon_months not in {1,3,6,12}: raise ValueError("unsupported horizon")
+126:     required={"price_return","time_to_10","time_to_20","time_to_30","maximum_adverse_excursion","maximum_favorable_excursion","outcome_status"}
+127:     if set(metrics)!=required: raise ValueError("incomplete intermediate outcome contract")
+128:     payload=json.dumps(metrics,sort_keys=True,ensure_ascii=False,separators=(",", ":")); digest=hashlib.sha256(payload.encode()).hexdigest()
+129:     mature=int(horizon_months==12)
+130:     conn.execute("INSERT OR IGNORE INTO outcome_observations(decision_logical_key,observed_at,horizon_months,metrics_json,metrics_hash,primary_endpoint_mature) VALUES(?,?,?,?,?,?)",(decision_logical_key,observed_at,horizon_months,payload,digest,mature))
+131:     conn.commit(); return {"metrics_hash":digest,"primary_endpoint_mature":bool(mature),"prospective_evidence_eligible":bool(decision[0])}
+134: def write_artifact(path: str | Path, decision: dict, ledger_receipt: dict) -> Path:
+135:     path=Path(path); path.parent.mkdir(parents=True,exist_ok=True)
+136:     artifact={"decision":decision,"ledger_receipt":ledger_receipt}
+137:     artifact["artifact_hash"]=canonical_hash(artifact)
+138:     if path.exists():
+139:         existing=json.loads(path.read_text(encoding="utf-8"))
+140:         if existing!=artifact: raise FileExistsError("immutable decision artifact already differs")
+141:         return path
+142:     path.write_text(json.dumps(artifact,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+143:     return path
+146: def stable_decision_receipt(receipt: dict) -> dict:
+148:     return {key:receipt[key] for key in ("logical_key","event_hash","prospective_evidence_eligible")}
+
+### stocks_predictor/report.py
+13: import math
+14: import os
+15: import pathlib
+17: from db import get_code_version
+18: from predictor_core.kernel import obs
+19: from predictor_core.measurement.stats import max_drawdown, sharpe, sortino
+21: ROOT = pathlib.Path(__file__).parent.parent
+22: DOMAIN = "predictor-stocks"
+24: REPORTS_ENV = "PREDICTOR_REPORTS_DIR"
+27: def _num(x):
+29:     return x if isinstance(x, (int, float)) and math.isfinite(x) else None
+32: def _equity_curve(returns):
+34:     eq, v = [], 1.0
+35:     for r in returns:
+36:         v *= (1.0 + r)
+37:         eq.append(v)
+38:     return eq
+41: def summarize_series(returns, periods_per_year=252):
+43:     if not returns:
+44:         return {"n": 0, "sharpe": None, "sortino": None,
+45:                 "total_return": None, "max_drawdown": None}
+46:     eq = _equity_curve(returns)
+47:     return {
+48:         "n": len(returns),
+49:         "sharpe": _num(sharpe(returns, periods_per_year)),
+50:         "sortino": _num(sortino(returns, periods_per_year)),
+51:         "total_return": eq[-1] - 1.0,
+52:         "max_drawdown": max_drawdown(eq),
+53:     }
+56: def _fmt(x, pct=False):
+57:     if x is None:
+58:         return "n/d"
+59:     return f"{x * 100:.2f}%" if pct else f"{x:.4f}"
+62: _BIAS_NOTE = {
+63:     "H1": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; o viés FAVORECE a "
+64:           "estratégia de momentum contra o benchmark (declarado no pré-registro).",
+65:     "H2": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; papéis de baixa "
+66:           "volatilidade tendem a MAIOR yield, logo o viés PENALIZA a estratégia contra "
+67:           "o benchmark — conservador (declarado no pré-registro da H2).",
+68:     "H4": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; a ponderação "
+69:           "1/vol sobrepesa papéis de baixa volatilidade (maior yield), logo o viés "
+70:           "PENALIZA a estratégia contra o benchmark — conservador (declarado no "
+71:           "pré-registro da H4).",
+72:     "H5": "- Retorno **só-preço** (rota (b)): quedas ex-dividendo classificam papéis "
+73:           "de maior yield como 'perdedores' e o provento omitido subestima o retorno "
+74:           "da carteira → o viés tende a PENALIZAR a estratégia — conservador "
+75:           "(declarado no pré-registro da H5).",
+76:     "H6": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; papéis de "
+77:           "momentum tendem a MENOR yield, logo o viés FAVORECE a estratégia de "
+78:           "momentum 6-1 contra o benchmark — mesma direção e racional da H1 (não "
+79:           "fixado explicitamente no pré-registro original da H6; nota técnica "
+80:           "adicionada na revisão de código de 2026-08-28).",
+81:     "H8": "- Retorno **só-preço** (rota (b)): direção MISTA — a perna momentum tende "
+82:           "a FAVORECER a estratégia (menor yield, como H1/H6) e a perna baixa-vol "
+83:           "tende a PENALIZAR (maior yield, como H2/H4); como a H8 é a INTERSEÇÃO das "
+84:           "duas, o viés líquido não tem sinal a priori (não fixado explicitamente no "
+85:           "pré-registro original da H8; nota técnica adicionada na revisão de código "
+86:           "de 2026-08-28).",
+87:     "H7": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; SEM direção "
+88:           "declarada a priori — ao contrário de H1/H2/H4/H5/H6/H8 (fatores de "
+89:           "preço/vol, onde a relação com yield é conhecida da literatura), a relação "
+90:           "entre ROE alto e política de dividendos de empresas B3 não foi "
+91:           "estabelecida nesta rodada (poderia ir em qualquer direção: empresa lucrativa "
+92:           "paga mais OU reinveste mais). Viés não quantificado, registrado como "
+93:           "limitação honesta (declarado no pré-registro da H7, 2026-09-03) — não "
+94:           "inferir sinal. Adicionalmente: o dado de ROE tem embargo de divulgação de "
+95:           "90 dias sobre `ref_date` (`h7_factor.disclosure_embargo_days`), mas não "
+96:           "cobre a data REAL de entrega da DFP à CVM (ver `ingest_cvm.py`) — um "
+97:           "embargo curto demais vazaria informação contábil antes da publicação real.",
+98:     "H9": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; SEM direção "
+99:           "declarada a priori — mesma limitação da H7 (a relação entre baixa "
+100:           "alavancagem e política de dividendos de empresas B3 não foi estabelecida "
+101:           "nesta rodada; empresa pouco endividada poderia distribuir mais OU menos, "
+102:           "sem prior claro). Viés não quantificado, registrado como limitação honesta "
+103:           "(declarado no pré-registro da H9, 2026-09-04) — não inferir sinal. Mesmo "
+104:           "embargo de divulgação de 90 dias sobre `ref_date` da H7 "
+105:           "(`h9_factor.disclosure_embargo_days`, mesma fonte DFP/CVM), mesma limitação "
+106:           "de não cobrir a data REAL de entrega à CVM.",
+107:     "H10": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; SEM direção "
+108:            "declarada a priori — mesma limitação de H7/H9 (a interseção de ROE alto "
+109:            "e baixa alavancagem não tem relação estabelecida com política de "
+110:            "dividendos nesta rodada). Viés não quantificado, registrado como "
+111:            "limitação honesta (declarado no pré-registro da H10, 2026-09-04) — não "
+112:            "inferir sinal. Mesmo embargo de divulgação de 90 dias por variável "
+113:            "(`h10_factor.roe_disclosure_embargo_days`/`leverage_disclosure_embargo_days`), "
+114:            "mesma fonte DFP/CVM de H7/H9.",
+115:     "H17": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; direção do "
+116:            "viés NÃO estabelecida — empresa com lucro lastreado em caixa tem mais "
+117:            "folga para distribuir provento (o que PENALIZARIA a estratégia numa "
+118:            "medida só-preço), mas a relação não foi verificada nesta amostra; "
+119:            "registrada como limitação honesta, não como sinal. Mesmo embargo de "
+120:            "divulgação de 90 dias sobre `ref_date` de H7/H9/H12/H13 "
+121:            "(`h17_factor.disclosure_embargo_days`, mesma fonte DFP/CVM), mesma "
+122:            "limitação de não cobrir a data REAL de entrega à CVM.\n"
+123:            "- **Cobertura da DFC-MI não é universal**: companhia que publica a DFC "
+124:            "pelo método DIRETO (DFC-MD), e ano cujo zip não traga o arquivo, ficam "
+125:            "com `accruals` NULL e simplesmente FORA do sinal "
+126:            "(`ingest_cvm.ingest_dfp_year` avisa e segue). O universo efetivo da H17 "
+127:            "pode portanto ser MENOR que o de H7/H9/H12/H13 — comparar contagem de "
+128:            "papéis por rebalance antes de interpretar o veredito.",
+129:     "H18": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; aqui a "
+130:            "direção do viés É conhecida e PENALIZA a estratégia: ações de valor "
+131:            "(E/P alto) têm sistematicamente MAIOR dividend yield, e a rota (b) "
+132:            "descarta justamente esse componente do retorno. O teste é portanto "
+133:            "CONSERVADOR — um veredito NOT_SUPPORTED aqui não separa 'o fator não "
+134:            "funciona' de 'o retorno do fator está no provento que esta rota não "
+135:            "mede'. Declarado no pré-registro (2026-09-04), não descoberto depois.\n"
+136:            "- **Duas fontes com datas próprias**: lucro vem da DFP, quantidade de "
+137:            "ações vem do FRE — formulários distintos, cada um com sua `ref_date` e "
+138:            "seu embargo, deliberadamente NÃO casados à força "
+139:            "(`ingest_cvm.ingest_fre_shares_year`). A capitalização de mercado usa a "
+140:            "contagem de ações mais recente JÁ DIVULGADA em `asof`, que pode estar "
+141:            "defasada de uma emissão/recompra recente — limitação real da "
+142:            "granularidade anual do FRE, registrada, não corrigida por estimativa.\n"
+143:            "- **Preço CRU, não ajustado**, no denominador do múltiplo (ver "
+144:            "`factor._price_at`): multiplicar a série retro-ajustada pela contagem de "
+145:            "ações vigente daria uma capitalização que nunca existiu.",
+146:     "H19": "- Retorno **só-preço** (rota (b)): mesma direção de viés da H18 e pela "
+147:            "mesma razão (B/M alto e E/P alto selecionam carteiras muito "
+148:            "sobrepostas, ambas com yield acima da média) — teste CONSERVADOR, "
+149:            "declarado no pré-registro.\n"
+150:            "- Mesmas duas limitações de fonte da H18 (DFP e FRE com datas próprias "
+151:            "não casadas à força; preço CRU no múltiplo).\n"
+152:            "- **Patrimônio líquido contábil não é valor de reposição**: empresas "
+153:            "com muito intangível não capitalizado (serviços, tecnologia) aparecem "
+154:            "com B/M estruturalmente baixo sem estarem 'caras'. É a crítica clássica "
+155:            "ao B/M e vale aqui igual; o veredito mede o fator COMO DEFINIDO, não "
+156:            "'valor' em abstrato.",
+157:     "H11": "- Retorno **TOTAL** (rota (a), 2026-09-04): proventos "
+158:            "REINVESTIDOS via `adjust.total_return_series`, ao contrário de "
+159:            "H1-H10 (só-preço). **Cobertura de proventos parcial**: a fonte "
+160:            "(CVM/FRE, `dividends`) só é confiável 2018-2022 (achado "
+161:            "registrado no HANDOFF 2026-09-04 — 2023-2026 têm quase zero "
+162:            "cobertura) — por isso a janela da H11 é restrita a 2018-2022 "
+163:            "(`h11_backtest.test_start/test_end`), não os anos completos de "
+164:            "H1-H10. Duas aproximações do dado de provento em si (não "
+165:            "escondidas): valor por ação médio ON+PN (não por classe "
+166:            "específica) e data de PAGAMENTO como proxy de data-ex (a CVM "
+167:            "não expõe a data-ex real neste dataset).",
+168:     "H12": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; SEM direção "
+169:            "declarada a priori — a relação entre margem líquida e política de "
+170:            "dividendos de empresas B3 não foi estabelecida nesta rodada. Viés "
+171:            "não quantificado, registrado como limitação honesta (declarado no "
+172:            "pré-registro da H12, 2026-09-04) — não inferir sinal. Mesmo embargo "
+173:            "de divulgação de 90 dias sobre `ref_date` de H7/H9/H10 "
+174:            "(`h12_factor.disclosure_embargo_days`, mesma fonte DFP/CVM).",
+175:     "H13": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; SEM direção "
+176:            "declarada a priori — a relação entre crescimento de receita e "
+177:            "política de dividendos de empresas B3 não foi estabelecida nesta "
+178:            "rodada. Viés não quantificado, registrado como limitação honesta "
+179:            "(declarado no pré-registro da H13, 2026-09-04) — não inferir sinal. "
+180:            "Mesmo embargo de divulgação de 90 dias de H7/H9/H10/H12 "
+181:            "(`h13_factor.disclosure_embargo_days`, mesma fonte DFP/CVM). "
+182:            "Adicionalmente: granularidade ANUAL da DFP (não ITR trimestral) — "
+183:            "as duas linhas mais recentes elegíveis usadas no cálculo de "
+184:            "crescimento nem sempre estão exatamente 12 meses de distância "
+185:            "se houver ano com dado faltante (ver `factor.revenue_growth_signals`).",
+186:     "H14": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; papel "
+187:            "próximo da máxima de 52 semanas tende a ter yield mais BAIXO "
+188:            "(preço subiu recentemente), na mesma direção do viés já declarado "
+189:            "no pré-registro da H1 pra momentum — mecanismo semelhante, não "
+190:            "quantificado aqui separadamente.",
+191:     "H15": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos; SEM "
+192:            "direção declarada a priori — a relação entre surto de volume e "
+193:            "política de dividendos de empresas B3 não foi estabelecida nesta "
+194:            "rodada. Viés não quantificado, registrado como limitação honesta "
+195:            "(declarado no pré-registro da H15, 2026-09-04) — não inferir sinal.",
+196:     "H16": "- Retorno **só-preço** (rota (b)): dividendos/JCP omitidos — "
+197:            "irrelevante pro mecanismo desta hipótese (TIMING, não seleção "
+198:            "de papel; estratégia e benchmark usam o MESMO universo, "
+199:            "diferem só em quais dias contam o retorno). Custo simplificado: "
+200:            "cobra 1 perna (`one_way`) em cada transição cash/posicionado, "
+201:            "ignora turnover de composição do universo entre rebalances "
+202:            "mensais (ver `backtest.run_h16`) — aproximação declarada, não "
+203:            "escondida.",
+204: }
+207: def build_markdown(verdict, strat, bench, cfg, run_id=None, hypothesis="H1"):
+210:     s, b = summarize_series(strat), summarize_series(bench)
+211:     lo, hi = verdict.get("sharpe_diff_ci", (None, None))
+212:     boot = cfg.get("bootstrap", {})
+213:     lines = [
+214:         f"# predictor-stocks — Relatório do veredito da {hypothesis}",
+215:         "",
+216:         f"- **run_id:** `{run_id or 'n/d'}`",
+217:         f"- **pregões pareados:** {verdict.get('n', 0)}",
+218:         f"- **veredito {hypothesis}:** **{verdict.get('veredito', 'n/d')}**",
+219:         "",
+220:         "## Pedágio de 2 lentes",
+221:         "",
+222:         f"- **Lente 1 (PSR):** {_fmt(_num(verdict.get('psr')))}  "
+223:         f"— P(Sharpe estratégia > Sharpe benchmark), corrige não-normalidade",
+224:         f"- **Lente 2 (IC {int(boot.get('confidence', 0.95) * 100)}% da diferença de "
+225:         f"Sharpe, block bootstrap pareado, bloco {boot.get('block_length', 21)}):** "
+226:         f"[{_fmt(lo)}, {_fmt(hi)}]",
+227:         f"  - {hypothesis} comprovada só se o IC não cruzar zero → "
+228:         f"{'ACIMA de zero' if lo is not None and lo > 0 else 'CRUZA zero / negativo'}",
+229:     ]
+230:     if "dsr" in verdict:
+235:         crit = cfg.get(f"{hypothesis.lower()}_criteria", {})
+236:         lines += [
+237:             f"- **Critério (ii) — DSR (Deflated Sharpe Ratio):** "
+238:             f"{_fmt(_num(verdict.get('dsr')))} contra E[max SR | N="
+239:             f"{verdict.get('n_trials')}] = {_fmt(_num(verdict.get('sr0')))} por-período "
+240:             f"(mínimo pré-registrado: {crit.get('dsr_min', 0.95)})",
+241:         ]
+242:     if verdict.get("maxdd_strat") is not None:
+243:         dd_s, dd_b = verdict["maxdd_strat"], verdict["maxdd_bench"]
+244:         lines += [
+245:             f"- **Critério (iii) — drawdown (\"Sharpe E drawdown\", design §10):** "
+246:             f"maxDD estratégia {_fmt(dd_s, pct=True)} vs benchmark {_fmt(dd_b, pct=True)} "
+247:             f"→ {'OK (não pior)' if dd_s <= dd_b else 'REPROVADO (pior que o benchmark)'}",
+248:         ]
+249:     lines += [
+250:         "",
+251:         "## Estratégia vs. benchmark (equiponderado do universo)",
+252:         "",
+253:         "| métrica | estratégia | benchmark |",
+254:         "|---|---|---|",
+255:         f"| Sharpe (anual.) | {_fmt(s['sharpe'])} | {_fmt(b['sharpe'])} |",
+256:         f"| Sortino (anual.) | {_fmt(s['sortino'])} | {_fmt(b['sortino'])} |",
+257:         f"| retorno total | {_fmt(s['total_return'], pct=True)} | {_fmt(b['total_return'], pct=True)} |",
+258:         f"| max drawdown | {_fmt(s['max_drawdown'], pct=True)} | {_fmt(b['max_drawdown'], pct=True)} |",
+259:         "",
+260:         "## Ressalvas registradas (não-negociáveis)",
+261:         "",
+262:         _BIAS_NOTE.get(hypothesis, "- Retorno **só-preço** (rota (b)): dividendos/JCP "
+263:                                    f"omitidos; direção do viés NÃO documentada para "
+264:                                    f"{hypothesis} em `report._BIAS_NOTE` — adicionar "
+265:                                    "antes de interpretar o veredito (não herdar a nota "
+266:                                    "de outra hipótese)."),
+267:         "- Custo proporcional ao turnover real; execução na abertura de D+1.",
+268:         f"- Veredito real da {hypothesis} exige COTAHIST **real** da B3 — sintético só "
+269:         "valida a máquina.",
+270:         "",
+271:     ]
+272:     return "\n".join(lines), s, b
+275: def write_report(verdict, strat, bench, cfg, run_id=None, reports_dir=None,
+276:                  hypothesis="H1"):
+278:     body, s, b = build_markdown(verdict, strat, bench, cfg, run_id, hypothesis)
+280:     rel = reports_dir or os.getenv(REPORTS_ENV) or cfg.get("data", {}).get("reports_dir", "reports")
+281:     out_dir = pathlib.Path(rel)
+282:     if not out_dir.is_absolute():
+283:         out_dir = ROOT / out_dir
+284:     out_dir.mkdir(parents=True, exist_ok=True)
+285:     tag = hypothesis.lower()
+286:     fname = f"{tag}_verdict_{run_id or 'adhoc'}.md"
+287:     out_path = out_dir / fname
+288:     out_path.write_text(body, encoding="utf-8")
+292:     lo, hi = verdict.get("sharpe_diff_ci", (None, None))
+293:     metrics = {"n_pregoes": verdict.get("n", 0), "psr": verdict.get("psr"),
+294:                "ic_lower": lo, "ic_upper": hi,
+295:                "dsr": verdict.get("dsr"), "sr0": verdict.get("sr0"),
+296:                "sharpe_strat": s["sharpe"], "sharpe_bench": b["sharpe"],
+297:                "maxdd_strat": s["max_drawdown"], "maxdd_bench": b["max_drawdown"]}
+298:     metrics = {k: v for k, v in metrics.items() if _num(v) is not None}
+299:     obs.emit_event(
+300:         DOMAIN, f"{tag}_verdict", run_id=run_id, code_version=get_code_version(),
+301:         metrics=metrics,
+302:         metadata={"veredito": verdict.get("veredito", "n/d"),
+303:                   "report_path": str(out_path.name)})
+304:     return out_path
+
+### stocks_predictor/research_profile.py
+2: from dataclasses import dataclass
+3: from decimal import Decimal
+6: @dataclass(frozen=True)
+7: class ResearchProfile:
+8:     capital_brl: Decimal
+9:     horizon_months: int | None = None
+10:     resident_pf_brazil: bool | None = None
+11:     brokerage_per_order_brl: Decimal | None = None
+12:     monthly_fixed_brl: Decimal | None = None
+13:     advisor_annual_fraction: Decimal | None = None
+14:     loss_limit_brl: Decimal | None = None
+15:     setup_cost_brl: Decimal | None = None
+16:     monthly_maintenance_hours: Decimal | None = None
+17:     hourly_opportunity_cost_brl: Decimal | None = None
+19:     def validate(self) -> None:
+20:         if not self.capital_brl.is_finite() or self.capital_brl <= 0:
+21:             raise ValueError('positive finite capital required')
+22:         if self.horizon_months is not None and (type(self.horizon_months) is not int or self.horizon_months <= 0):
+23:             raise ValueError('positive integer horizon required')
+24:         if self.resident_pf_brazil is not None and type(self.resident_pf_brazil) is not bool:
+25:             raise ValueError('residency must be explicitly confirmed or unknown')
+26:         for value in (self.brokerage_per_order_brl, self.monthly_fixed_brl,
+27:                       self.advisor_annual_fraction, self.loss_limit_brl, self.setup_cost_brl,
+28:                       self.monthly_maintenance_hours, self.hourly_opportunity_cost_brl):
+29:             if value is not None and (not value.is_finite() or value < 0):
+30:                 raise ValueError('costs and loss limits must be finite and nonnegative')
+31:         if self.advisor_annual_fraction is not None and self.advisor_annual_fraction > 1:
+32:             raise ValueError('advisor rate must be a fraction between zero and one')
+34:     def assess(self, *, planned_orders: int = 2) -> dict:
+35:         self.validate()
+36:         if type(planned_orders) is not int or planned_orders < 0:
+37:             raise ValueError('planned_orders must be a nonnegative integer')
+38:         required = ('horizon_months', 'resident_pf_brazil', 'brokerage_per_order_brl',
+39:                     'monthly_fixed_brl', 'advisor_annual_fraction', 'setup_cost_brl',
+40:                     'monthly_maintenance_hours', 'hourly_opportunity_cost_brl')
+41:         missing = [key for key in required if getattr(self, key) is None]
+42:         fixed = None
+43:         if self.horizon_months is not None and self.monthly_fixed_brl is not None and self.brokerage_per_order_brl is not None:
+44:             fixed = self.monthly_fixed_brl * self.horizon_months + self.brokerage_per_order_brl * planned_orders
+45:         project_cost = None
+46:         if (self.horizon_months is not None and self.setup_cost_brl is not None
+47:                 and self.monthly_maintenance_hours is not None and self.hourly_opportunity_cost_brl is not None):
+48:             project_cost = self.setup_cost_brl + self.horizon_months * self.monthly_maintenance_hours * self.hourly_opportunity_cost_brl
+49:         return {
+50:             'status': 'INCOMPLETE_PERSONAL_SCENARIO' if missing else 'INPUTS_COMPLETE_NOT_PROFIT_VALIDATION',
+51:             'capital_brl': str(self.capital_brl), 'missing_inputs': missing,
+52:             'planned_orders': planned_orders,
+53:             'known_fixed_reserve_brl': None if fixed is None else str(fixed),
+54:             'fixed_reserve_fits_capital': None if fixed is None else fixed < self.capital_brl,
+55:             'project_and_time_cost_brl': None if project_cost is None else str(project_cost),
+56:             'cost_scope': 'Brokerage/fixed reserve and project opportunity cost are separate; taxes and exchange fees still require applicable trade records.',
+57:             'advisor_cost_basis': 'requires future valuation path; rate is not a fixed expense',
+58:             'risk_limit_confirmed': self.loss_limit_brl is not None,
+59:             'absolute_net_profit_demonstrated': False, 'capital_enabled': False,
+60:         }

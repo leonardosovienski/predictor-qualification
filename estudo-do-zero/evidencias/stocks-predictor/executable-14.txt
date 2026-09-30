@@ -1,0 +1,421 @@
+
+### stocks_predictor/factor.py
+11: import datetime
+12: import statistics
+14: if __package__:
+15:     from . import cvm_pit, db as db_mod, universe as universe_mod
+16: else:
+17:     import cvm_pit
+18:     import db as db_mod
+19:     import universe as universe_mod
+22: def _idx_le(dates, asof):
+24:     res = None
+25:     for i, d in enumerate(dates):
+26:         if d <= asof:
+27:             res = i
+28:         else:
+29:             break
+30:     return res
+33: def momentum_12_1(dates, closes, asof, lookback=252, skip=21):
+36:     i = _idx_le(dates, asof)
+37:     if i is None:
+38:         return None
+39:     i_end, i_start = i - skip, i - lookback
+43:     if i_start < 0 or i_end < 0 or closes[i_start] <= 0 or closes[i_end] <= 0:
+44:         return None   # preço <= 0 em qualquer ponta = retorno indefinido
+45:     return closes[i_end] / closes[i_start] - 1.0
+48: def signals(series_by_ticker, asof, lookback=252, skip=21):
+50:     out = {}
+51:     for t, (dates, closes) in series_by_ticker.items():
+52:         m = momentum_12_1(dates, closes, asof, lookback, skip)
+53:         if m is not None:
+54:             out[t] = m
+55:     return out
+58: def realized_vol(dates, closes, asof, lookback=252):
+62:     i = _idx_le(dates, asof)
+63:     if i is None or i - lookback < 0:
+64:         return None
+65:     window = closes[i - lookback:i + 1]
+66:     if any(c <= 0 for c in window):
+67:         return None
+68:     rets = [window[j] / window[j - 1] - 1.0 for j in range(1, len(window))]
+69:     return statistics.pstdev(rets)
+72: def vol_signals(series_by_ticker, asof, lookback=252):
+74:     out = {}
+75:     for t, (dates, closes) in series_by_ticker.items():
+76:         v = realized_vol(dates, closes, asof, lookback)
+77:         if v is not None:
+78:             out[t] = v
+79:     return out
+82: def _fundamental_signals(conn, tickers, asof, disclosure_embargo_days, column,
+83:                          use_known_at=True):
+95:     if column not in ("roe", "leverage", "net_margin", "accruals",
+96:                       "lucro_liquido", "patrimonio_liquido", "shares_outstanding"):
+97:         raise ValueError(f"coluna de fundamentals não suportada: {column!r}")
+98:     out = {}
+99:     for t in tickers:
+100:         rows = conn.execute(
+101:             f"SELECT ref_date, {column}, known_at FROM fundamentals WHERE ticker = ?"
+102:             f" AND {column} IS NOT NULL ORDER BY ref_date DESC", (t,)).fetchall()
+103:         for ref_date, value, observed_at in rows:
+104:             known_at = (observed_at if (use_known_at and observed_at) else (
+105:                 datetime.date.fromisoformat(ref_date)
+106:                 + datetime.timedelta(days=disclosure_embargo_days)).isoformat())
+107:             if known_at <= asof:
+108:                 out[t] = value
+109:                 break
+110:     return out
+113: def roe_signals(conn, tickers, asof, disclosure_embargo_days=90):
+116:     return _fundamental_signals(conn, tickers, asof, disclosure_embargo_days,
+117:                                 "roe", use_known_at=False)
+120: def leverage_signals(conn, tickers, asof, disclosure_embargo_days=90):
+126:     return _fundamental_signals(conn, tickers, asof, disclosure_embargo_days,
+127:                                 "leverage", use_known_at=False)
+130: def net_margin_signals(conn, tickers, asof, disclosure_embargo_days=90):
+136:     return _fundamental_signals(conn, tickers, asof, disclosure_embargo_days,
+137:                                 "net_margin", use_known_at=False)
+140: def revenue_growth_signals(conn, tickers, asof, disclosure_embargo_days=90):
+156:     out = {}
+157:     for t in tickers:
+158:         rows = conn.execute(
+159:             "SELECT ref_date, receita_liquida FROM fundamentals WHERE ticker = ?"
+160:             " AND receita_liquida IS NOT NULL ORDER BY ref_date DESC", (t,)).fetchall()
+161:         eligible = []
+162:         for ref_date, receita in rows:
+164:             known_at = (datetime.date.fromisoformat(ref_date)
+165:                        + datetime.timedelta(days=disclosure_embargo_days)).isoformat()
+166:             if known_at <= asof:
+167:                 eligible.append((ref_date, receita))
+168:             if len(eligible) == 2:
+169:                 break
+170:         if len(eligible) < 2:
+171:             continue
+172:         (_, latest), (_, previous) = eligible
+173:         if previous is None or previous <= 0:
+174:             continue
+175:         out[t] = (latest - previous) / previous
+176:     return out
+179: def near_52w_high(dates, closes, asof, lookback=252):
+187:     i = _idx_le(dates, asof)
+188:     if i is None or i - lookback < 0:
+189:         return None
+190:     window = closes[i - lookback:i + 1]
+191:     high = max(window)
+192:     if high <= 0 or closes[i] <= 0:
+193:         return None
+194:     return closes[i] / high
+197: def near_52w_high_signals(series_by_ticker, asof, lookback=252):
+200:     out = {}
+201:     for t, (dates, closes) in series_by_ticker.items():
+202:         v = near_52w_high(dates, closes, asof, lookback)
+203:         if v is not None:
+204:             out[t] = v
+205:     return out
+208: def volume_surge_signals(conn, tickers, asof, short_lookback=21, long_lookback=252):
+222:     out = {}
+223:     for t in tickers:
+224:         rows = conn.execute(
+225:             "SELECT volume_fin FROM prices_raw WHERE ticker=? AND market_type=?"
+226:             " AND date < ? ORDER BY date DESC LIMIT ?",
+227:             (t, universe_mod.SPOT_MARKET, asof, long_lookback)).fetchall()
+228:         if len(rows) < long_lookback:
+229:             continue
+230:         vols = [r[0] for r in rows]    # mais recente primeiro
+231:         long_avg = sum(vols) / len(vols)
+232:         if long_avg <= 0:
+233:             continue
+234:         short_avg = sum(vols[:short_lookback]) / short_lookback
+235:         out[t] = short_avg / long_avg - 1.0
+236:     return out
+239: def legacy_accruals_signals(conn, tickers, asof, disclosure_embargo_days=90):
+260:     return _fundamental_signals(conn, tickers, asof, disclosure_embargo_days,
+261:                                 "accruals", use_known_at=True)
+264: def _price_at(conn, ticker, asof):
+277:     row = conn.execute(
+278:         f"SELECT MAX({db_mod.price_expr('close')}) FROM prices_raw"
+279:         " WHERE ticker=? AND market_type=? AND date<=?"
+280:         " GROUP BY date ORDER BY date DESC LIMIT 1",
+281:         (ticker, universe_mod.SPOT_MARKET, asof)).fetchone()
+282:     if row is None or row[0] is None or row[0] <= 0:
+283:         return None
+284:     return row[0]
+287: def legacy__value_signals(conn, tickers, asof, disclosure_embargo_days, column):
+315:     fundamento = _fundamental_signals(conn, tickers, asof,
+316:                                       disclosure_embargo_days, column)
+317:     shares = legacy__shares_with_ref_date(conn, tickers, asof, disclosure_embargo_days)
+318:     out = {}
+319:     for t in tickers:
+320:         f = fundamento.get(t)
+321:         par = shares.get(t)
+322:         if f is None or par is None or f <= 0:
+323:             continue
+324:         s = legacy__shares_on_price_base(conn, t, par[0], par[1], asof)
+325:         if s is None or s <= 0:
+326:             continue
+327:         price = _price_at(conn, t, asof)
+328:         if price is None:
+329:             continue
+330:         out[t] = f / (price * s)
+331:     return out
+334: def legacy__shares_with_ref_date(conn, tickers, asof, disclosure_embargo_days):
+340:     out = {}
+341:     for t in tickers:
+342:         rows = conn.execute(
+343:             "SELECT ref_date, shares_outstanding, known_at FROM fundamentals"
+344:             " WHERE ticker = ? AND shares_outstanding IS NOT NULL"
+345:             " ORDER BY ref_date DESC", (t,)).fetchall()
+346:         for ref_date, value, observed_at in rows:
+347:             known_at = observed_at or (
+348:                 datetime.date.fromisoformat(ref_date)
+349:                 + datetime.timedelta(days=disclosure_embargo_days)).isoformat()
+350:             if known_at <= asof:
+351:                 out[t] = (value, ref_date)
+352:                 break
+353:     return out
+356: def legacy__shares_on_price_base(conn, ticker, shares, shares_ref_date, asof):
+379:     if shares is None or not shares_ref_date:
+380:         return shares
+381:     fatores = [r[0] for r in conn.execute(
+382:         "SELECT factor FROM adjustments WHERE ticker = ? AND approved_by IS NOT NULL"
+383:         " AND type IN ('split', 'grupamento')"
+384:         " AND ex_date > ? AND ex_date <= ?",
+385:         (ticker, shares_ref_date, asof))]
+386:     for f in fatores:
+387:         if not f > 0:
+388:             return None     # fator inválido: sem contagem fabricada
+389:         shares = shares / f
+390:     return shares
+393: def legacy_earnings_yield_signals(conn, tickers, asof, disclosure_embargo_days=90):
+405:     return legacy__value_signals(conn, tickers, asof, disclosure_embargo_days,
+406:                           "lucro_liquido")
+409: def legacy_book_to_market_signals(conn, tickers, asof, disclosure_embargo_days=90):
+423:     return legacy__value_signals(conn, tickers, asof, disclosure_embargo_days,
+424:                           "patrimonio_liquido")
+428: def accruals_signals(conn, tickers, asof, disclosure_embargo_days=90):
+429:     return cvm_pit.fundamental_values(conn, tickers, asof, "accruals")
+432: def earnings_yield_signals(conn, tickers, asof, disclosure_embargo_days=90):
+433:     return cvm_pit.value_signals(conn, tickers, asof, "lucro_liquido")
+436: def book_to_market_signals(conn, tickers, asof, disclosure_embargo_days=90):
+437:     return cvm_pit.value_signals(conn, tickers, asof, "patrimonio_liquido")
+440: def _shares_on_price_base(conn, ticker, shares, basis_date, asof):
+441:     return cvm_pit.shares_on_price_base(conn, ticker, shares, basis_date, asof)
+
+### stocks_predictor/h20_checked.py
+6: import argparse
+7: import hashlib
+8: import importlib.util
+9: import json
+10: from pathlib import Path
+12: from stocks_predictor.continuous_research import verify_manifest
+14: MANIFEST_SHA = "7edf2f20546e9dee910e4f2d1aa6a4a748efcc07dfd2b2a04b393f41a644b6e7"
+15: GATE_SHA = "585c72395fc2fefc2e0bbd90b6756c516e58d0f1e29ada3d6de196f46ea49c27"
+16: CODE_SHA = "359517909d7d3630d8dadef203cfa5df40ec48c5013d407560806ee341de4cba"
+17: OBSERVATION_SHA = "aa184580bf5ba69b515a20cc40115453396bdefa470ac0f5408c0d3ced15e1a3"
+20: def digest(path):
+21:     with path.open("rb") as stream:
+22:         return hashlib.file_digest(stream, "sha256").hexdigest()
+25: def verify_evidence(base, gate):
+26:     if digest(base / "SHA256.json") != MANIFEST_SHA:
+27:         raise ValueError("frozen execution manifest changed")
+28:     verified = verify_manifest(base)
+29:     if "evidence.json" not in verified:
+30:         raise ValueError("evidence inventory absent from manifest")
+31:     if digest(gate) != GATE_SHA:
+32:         raise ValueError("frozen financial gate changed")
+33:     return len(verified)
+36: def run_checked(root, gate):
+37:     repo = root / "work/stocks-predictor"
+38:     base = root / "work/stocks-final-review-bundle/inputs"
+39:     verify_evidence(base, gate)
+40:     code = repo / "research/session-20260908/h20-profit-test/compare_h20.py"
+41:     if digest(code) != CODE_SHA:
+42:         raise ValueError("frozen measurement code changed")
+43:     spec = importlib.util.spec_from_file_location("frozen_h20_checked_comparison", code)
+44:     if spec is None or spec.loader is None:
+45:         raise ValueError("cannot load the frozen measurement module")
+46:     module = importlib.util.module_from_spec(spec)
+47:     spec.loader.exec_module(module)
+48:     result = module.run(root, repo / "docs/research/2026-09-08-h20-profit-test-protocol.json", gate)
+49:     verify_evidence(base, gate)
+50:     raw = (json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False)+"\n").encode("utf-8")
+51:     if hashlib.sha256(raw).hexdigest() != OBSERVATION_SHA:
+52:         raise ValueError("result differs from the frozen diagnostic; no replacement published")
+53:     return raw
+56: def main():
+57:     parser = argparse.ArgumentParser(description=__doc__)
+58:     for name in ("root", "gate", "output"):
+59:         parser.add_argument("--"+name, type=Path, required=True)
+60:     args = parser.parse_args()
+61:     if args.output.exists():
+62:         raise FileExistsError("observations are append-only")
+63:     raw = run_checked(args.root, args.gate)
+64:     with args.output.open("xb") as stream:
+65:         stream.write(raw)
+66:     print(json.dumps({"status": "REPRODUCED_WITH_FULL_EVIDENCE_INTEGRITY",
+67:                       "sha256": OBSERVATION_SHA, "profit": None,
+68:                       "new_historical_return_evaluations": 0}))
+71: if __name__ == "__main__":
+72:     main()
+
+### stocks_predictor/h20_continuous.py
+6: import argparse
+7: from collections import Counter
+8: from copy import deepcopy
+9: import hashlib
+10: import json
+11: from pathlib import Path
+13: from stocks_predictor.buffered_rebalance import freeze_rebalance
+14: from stocks_predictor.continuous_cash import run_continuous
+15: from stocks_predictor.continuous_research import inspect_inputs, load_quotes, read, verify_manifest
+16: from stocks_predictor.h20_research import verify_sources, sha256
+17: from stocks_predictor.retail_cash import iso
+18: from stocks_predictor.value_profitability import ARMS, select_members
+20: SIGNALS_SHA = "13acee7062dddbf96c81356588f36806e758ea9e5c6c8f395e7891620b1f6a8f"
+23: class H20Policy:
+26:     def __init__(self, arm, rankings):
+27:         if arm not in ARMS:
+28:             raise ValueError("unregistered H20 arm")
+29:         self.arm = arm
+30:         self.rankings = deepcopy(rankings)
+32:     def __call__(self, plan, book, capital, signal_quotes, settlement):
+33:         if book.day != plan["asof"]:
+34:             raise ValueError("policy requires the actual signal-date book")
+35:         incumbents = {t: h.isin for t, h in book.positions.items() if h.quantity > 0}
+36:         allowed = {m["ticker"]: m for m in plan["members"]}
+37:         if allowed:
+38:             rows = self.rankings[plan["asof"]]
+39:             if (len({r["cnpj"] for r in rows}) != len(rows)
+40:                     or set(allowed) != {r["ticker"] for r in rows}
+41:                     or any(r["isin"] != allowed[r["ticker"]]["isin"]
+42:                            or iso(r["available_at"]) > book.day for r in rows)):
+43:                 raise ValueError("ranking differs from the causal common universe")
+44:             selection = select_members(rows, incumbents, buffered=self.arm == ARMS[2])
+45:             if not selection["selection_available"]:
+46:                 raise ValueError("insufficient H20 coverage is not a liquidation")
+47:             members = [allowed[r["ticker"]] for r in selection["members"]]
+48:         else:
+49:             members = []  # Explicit terminal liquidation, never a missing ranking.
+50:         frozen = freeze_rebalance(book, members, signal_quotes, plan["entry"], settlement,
+51:                                   capital, buffered=self.arm == ARMS[2])
+52:         return {"arm": self.arm, "members": members, "targets": dict(frozen.targets),
+53:                 "original_targets": dict(frozen.original_targets), "suppressed": frozen.suppressed,
+54:                 "actual_incumbents": {t: {"isin": h.isin, "quantity": h.quantity}
+55:                                        for t, h in book.positions.items()},
+56:                 "sizing_capital_excluding_unpaid_claims": frozen.sizing_capital,
+57:                 "weight_band": frozen.weight_band}
+60: def run_h20_book(tape, rankings, arm):
+66:     result = run_continuous(**tape, selection_policy=H20Policy(arm, rankings))
+67:     return {"arm": arm, "method": "ACTUAL_HOLDINGS_CONTINUOUS_CASH_TAX",
+68:             "source_completeness_certified_by_this_engine": False,
+69:             "future_profit_projection": None, **result}
+72: def make_plans(signals, index):
+74:     source_plans = {p["asof"]: p for p in index["plans"]["comparison"]}
+75:     plans, omitted, rankings = [], [], {a: {} for a in ARMS}
+76:     for period in signals["periods"]:
+77:         if not all(period["arms"][a]["selection_available"] for a in ARMS):
+78:             omitted.append({"asof": period["asof"], "reason": "INSUFFICIENT_FEATURE_COVERAGE"})
+80:             if plans:
+81:                 raise ValueError("internal H20 signal gap requires a registered holding policy")
+82:             continue
+83:         source = source_plans[period["asof"]]
+84:         allowed = {m["ticker"]: m for m in source["members"]}
+85:         common = period["arms"][ARMS[0]]["ranking"]
+86:         ids = {(m["ticker"], m["isin"], m["cnpj"]) for m in common}
+87:         for a in ARMS:
+88:             rows = period["arms"][a]["ranking"]
+89:             if {(r["ticker"], r["isin"], r["cnpj"]) for r in rows} != ids:
+90:                 raise ValueError("H20 arms have different eligible universes")
+91:             rankings[a][period["asof"]] = rows
+92:         if any(m["ticker"] not in allowed or allowed[m["ticker"]]["isin"] != m["isin"] for m in common):
+93:             raise ValueError("H20 identity lacks reviewed execution classification")
+94:         plans.append({"asof": source["asof"], "entry": source["entry"],
+95:                       "members": [allowed[m["ticker"]] for m in common]})
+96:     if not plans or index["plans"]["comparison"][-1]["members"]:
+97:         raise ValueError("eligible H20 periods and explicit source liquidation required")
+98:     plans.append(deepcopy(index["plans"]["comparison"][-1]))
+99:     return plans, rankings, omitted
+102: def canonical_digest(value):
+103:     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+104:                                      default=str).encode("utf-8")).hexdigest()
+107: def validate_source_review(path, requirement):
+113:     if path is None:
+114:         return [{"kind": "H20_CONTINUOUS_SOURCE_ATTESTATION_MISSING"}]
+115:     review = read(path)
+116:     if any(review.get(k) != v for k, v in requirement.items()
+117:            if k not in {"reviewed", "sources"}):
+118:         raise ValueError("H20 source review does not bind the exact required inputs")
+119:     if (review.get("reviewed") is not True or not review.get("reviewer")
+120:             or not review.get("reviewed_on") or not review.get("sources")):
+121:         return [{"kind": "H20_CONTINUOUS_SOURCE_ATTESTATION_UNREVIEWED"}]
+122:     iso(review["reviewed_on"])
+123:     for source in review["sources"]:
+124:         evidence_path = (path.parent / source["path"]).resolve()
+125:         if (not evidence_path.is_relative_to(path.parent.resolve())
+126:                 or not evidence_path.is_file() or sha256(evidence_path) != source["sha256"]):
+127:             raise ValueError("H20 source review evidence absent, outside review directory or changed")
+128:     return []
+131: def historical_readiness(root, source_review=None):
+133:     repo = root / "work/stocks-predictor"
+134:     base = root / "work/stocks-final-review-bundle/inputs"
+135:     verify_sources(repo / "docs/research/2026-09-08-h20-implementation-protocol.json",
+136:                    root / "work/value-prepared-features.json",
+137:                    root / "work/value-capital-source/accounting-v2.json",
+138:                    root / "work/source-acquisition", base)
+139:     initial_manifest_sha = sha256(base / "SHA256.json")
+140:     initial_review_sha = sha256(source_review) if source_review else None
+141:     source = root / "work/h20-implementation-20260908/observation-02.json"
+142:     if sha256(source) != SIGNALS_SHA:
+143:         raise ValueError("frozen H20 signals changed")
+144:     signals = read(source)
+145:     _, index, _, _, _, gate, count = inspect_inputs(base)
+146:     _, quote_count = load_quotes(base, index)
+147:     plans, _, omitted = make_plans(signals, index)
+148:     common = [[m["ticker"], m["isin"], p["entry"], nxt["entry"]]
+149:               for p, nxt in zip(plans, plans[1:]) for m in p["members"]]
+150:     evidence = read(base / "evidence.json")
+153:     required = sorted({tuple(i) for i in common + evidence["required_intervals"]})
+154:     verified = {tuple(r["interval"]) for r in evidence["cash_coverage"]
+155:                 if r.get("verified") is True and r.get("sources")}
+156:     extra_intervals = sorted(set(required) - {tuple(i) for i in evidence["required_intervals"]})
+157:     issues = list(gate["issues"])
+158:     issues.extend({"kind": "H20_ADDITIONAL_CASH_INTERVAL", "interval": i}
+159:                   for i in extra_intervals if i not in verified)
+160:     review_requirement = {"signals_sha256": SIGNALS_SHA,
+161:         "execution_manifest_sha256": sha256(base / "SHA256.json"),
+162:         "conservative_intervals_sha256": canonical_digest(required),
+163:         "scope": "all common eligible holdings and known successor intervals; continuous H20 cash, corporate terms and tax path",
+164:         "reviewed": False, "sources": []}
+165:     issues.extend(validate_source_review(source_review, review_requirement))
+167:     verify_manifest(base)
+168:     if (sha256(source) != SIGNALS_SHA
+169:             or sha256(base / "SHA256.json") != initial_manifest_sha
+170:             or (source_review and sha256(source_review) != initial_review_sha)):
+171:         raise ValueError("frozen H20 signals changed during readiness")
+172:     return {"status": ("BLOCKED_H20_HISTORICAL_NET_PROFIT" if issues
+173:                        else "SOURCE_CHECKS_PASSED_NO_HISTORICAL_RETURN_EXECUTED"), "profit": None,
+174:         "future_profit_projection": None, "full_history_executed": False,
+175:         "new_historical_return_evaluations": 0, "administrative_counts": [53, 55],
+176:         "verified_input_files": count, "validated_quote_records": quote_count,
+177:         "quarterly_rebalance_dates": len(plans)-1, "unavailable_signal_dates": omitted,
+178:         "common_universe_intervals": len(common), "conservative_required_intervals": required,
+179:         "certified_intervals": len(set(required) & verified),
+180:         "issue_counts": dict(Counter(r["kind"] for r in issues)), "issues": issues,
+181:         "code_integration": "actual-position selection, rank/weight bands, dated cash, corporate actions, taxes before buys, fractional execution and final liquidation share the tested continuous engine",
+182:         "economic_limits": "Missing source coverage is not zero income. Prospective evidence and actual maintenance costs are not supplied by code.",
+183:         "required_h20_source_review": review_requirement}
+186: def main(argv=None):
+187:     parser = argparse.ArgumentParser(description=__doc__)
+188:     parser.add_argument("--root", type=Path, required=True)
+189:     parser.add_argument("--output", type=Path, required=True)
+190:     parser.add_argument("--source-review", type=Path)
+191:     args = parser.parse_args(argv)
+192:     if args.output.exists():
+193:         raise FileExistsError("diagnostics are append-only")
+194:     result = historical_readiness(args.root, args.source_review)
+195:     with args.output.open("x", encoding="utf-8", newline="\n") as stream:
+196:         json.dump(result, stream, indent=2, ensure_ascii=False, default=str)
+197:         stream.write("\n")
+198:     print(json.dumps({k: v for k, v in result.items() if k not in {"issues", "conservative_required_intervals"}}, default=str))
+199:     return 2 if result["issues"] else 0
+202: if __name__ == "__main__":
+203:     raise SystemExit(main())

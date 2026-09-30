@@ -1,0 +1,500 @@
+
+### stocks_predictor/db.py
+2: from contextlib import closing
+3: import datetime
+4: import json
+5: import os
+6: import pathlib
+7: import sqlite3
+8: import subprocess
+10: from predictor_core.kernel import infra
+12: DB_DEFAULT = pathlib.Path(__file__).parent.parent / "data" / "stocks.db"
+16: DB_PATH_ENV = "PREDICTOR_DB_PATH"
+22: MIGRATIONS: list[tuple[str, str]] = [
+23:     ("0001_initial_schema", """
+24:         -- preços como publicados pela B3 — append-only, imutável
+25:         CREATE TABLE IF NOT EXISTS prices_raw (
+26:             id          INTEGER PRIMARY KEY,
+27:             date        TEXT    NOT NULL,          -- YYYY-MM-DD
+28:             ticker      TEXT    NOT NULL,
+29:             bdi_code    TEXT    NOT NULL,
+30:             market_type TEXT    NOT NULL,
+31:             open        REAL    NOT NULL,
+32:             high        REAL    NOT NULL,
+33:             low         REAL    NOT NULL,
+34:             close       REAL    NOT NULL,
+35:             volume_fin  REAL    NOT NULL,
+36:             qty         INTEGER NOT NULL,
+37:             quote_factor INTEGER NOT NULL DEFAULT 1,
+38:             source_file TEXT    NOT NULL,
+39:             inserted_at TEXT    NOT NULL DEFAULT (datetime('now')),
+40:             UNIQUE(date, ticker, source_file)
+41:         );
+42:         CREATE INDEX IF NOT EXISTS idx_prices_raw_ticker_date ON prices_raw(ticker, date);
+44:         -- fatores de ajuste (proventos, splits) — append-only, com fonte obrigatória
+45:         CREATE TABLE IF NOT EXISTS adjustments (
+46:             id          INTEGER PRIMARY KEY,
+47:             ticker      TEXT    NOT NULL,
+48:             ex_date     TEXT    NOT NULL,           -- YYYY-MM-DD
+49:             factor      REAL    NOT NULL,           -- multiplicar preços anteriores
+50:             type        TEXT    NOT NULL,           -- 'split','grupamento','dividendo','jcp','outro'
+51:             source      TEXT    NOT NULL,           -- 'inferred','csv_manual','yfinance_xcheck'
+52:             notes       TEXT,
+53:             approved_by TEXT,                       -- null = pendente aprovação humana
+54:             inserted_at TEXT    NOT NULL DEFAULT (datetime('now')),
+55:             UNIQUE(ticker, ex_date, type)
+56:         );
+58:         -- papéis em quarentena — salto sem ajuste explicado
+59:         CREATE TABLE IF NOT EXISTS quarantine (
+60:             id          INTEGER PRIMARY KEY,
+61:             ticker      TEXT    NOT NULL,
+62:             date        TEXT    NOT NULL,
+63:             reason      TEXT    NOT NULL,
+64:             raw_return  REAL,                       -- retorno overnight que disparou
+65:             resolved_at TEXT,
+66:             resolution  TEXT,
+67:             inserted_at TEXT    NOT NULL DEFAULT (datetime('now')),
+68:             UNIQUE(ticker, date)
+69:         );
+71:         -- universo point-in-time materializado
+72:         CREATE TABLE IF NOT EXISTS universe_snapshots (
+73:             asof_date   TEXT    NOT NULL,
+74:             ticker      TEXT    NOT NULL,
+75:             median_vol  REAL    NOT NULL,           -- mediana vol financeiro na janela
+76:             rank        INTEGER NOT NULL,
+77:             inserted_at TEXT    NOT NULL DEFAULT (datetime('now')),
+78:             PRIMARY KEY (asof_date, ticker)
+79:         );
+81:         -- ledger de decisões — parte EVAL (universal)
+82:         CREATE TABLE IF NOT EXISTS decisions (
+83:             id              INTEGER PRIMARY KEY,
+84:             run_id          TEXT    NOT NULL,
+85:             asof            TEXT    NOT NULL,       -- data do sinal (último pregão do mês)
+86:             ticker          TEXT    NOT NULL,
+87:             signal_value    REAL    NOT NULL,       -- momentum 12-1
+88:             rank            INTEGER NOT NULL,
+89:             conviction_band TEXT    NOT NULL,       -- 'quintil_superior','resto'
+90:             frozen_mode     INTEGER NOT NULL DEFAULT 0,  -- 1=paper forward
+91:             inserted_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+92:             -- parte RISK — preenchida na liquidação, write-once via COALESCE
+93:             exec_date       TEXT,
+94:             exec_price      REAL,
+95:             exit_date       TEXT,
+96:             exit_price      REAL,
+97:             cost_paid       REAL,
+98:             realized_return_net REAL,
+99:             holding_days    INTEGER,
+100:             UNIQUE(run_id, asof, ticker)
+101:         );
+103:         -- runs — registro de cada execução do pipeline
+104:         CREATE TABLE IF NOT EXISTS runs (
+105:             run_id          TEXT    PRIMARY KEY,
+106:             config_hash     TEXT    NOT NULL,
+107:             code_version    TEXT    NOT NULL,
+108:             started_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+109:             params_json     TEXT    NOT NULL,
+110:             notes           TEXT
+111:         );
+112:     """),
+114:     ("0002_runs_params_frozen_until", """
+115:         ALTER TABLE runs ADD COLUMN params_frozen_until TEXT;
+116:     """),
+119:     ("0003_idx_prices_raw_market_type_date", """
+120:         CREATE INDEX IF NOT EXISTS idx_prices_raw_mkt_date
+121:             ON prices_raw(market_type, date);
+122:     """),
+126:     ("0004_rj_domain_schema", """
+127:         -- universo PRIMEIRO, rally depois: uma linha por empresa que entrou
+128:         -- em RJ com ação negociada na B3 — nunca filtrado por ter tido rally.
+129:         CREATE TABLE IF NOT EXISTS rj_universe (
+130:             ticker              TEXT    PRIMARY KEY,
+131:             company_name        TEXT    NOT NULL,
+132:             rj_request_date     TEXT    NOT NULL,
+133:             rj_process_number   TEXT,
+134:             plan_presented_date TEXT,
+135:             plan_approved_date  TEXT,
+136:             rj_end_date         TEXT,
+137:             delisted_date       TEXT,
+138:             source              TEXT    NOT NULL,
+139:             approved_by         TEXT,
+140:             notes               TEXT,
+141:             inserted_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+142:         );
+144:         -- episódios: fundo -> outcome. is_primary=1 é a unidade estatística
+145:         -- principal (empresa->episódios); demais entram como secundário.
+146:         CREATE TABLE IF NOT EXISTS rj_episodes (
+147:             id                  INTEGER PRIMARY KEY,
+148:             ticker              TEXT    NOT NULL REFERENCES rj_universe(ticker),
+149:             trough_date         TEXT    NOT NULL,
+150:             trough_price        REAL    NOT NULL,
+151:             is_primary          INTEGER NOT NULL DEFAULT 1,
+152:             outcome             TEXT,
+153:             rally_pct           REAL,
+154:             rally_date          TEXT,
+155:             trading_days_to_rally INTEGER,
+156:             censored            INTEGER NOT NULL DEFAULT 0,
+157:             inserted_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+158:             UNIQUE(ticker, trough_date)
+159:         );
+161:         -- eventos discretos (fato relevante, entrada de investidor >=5%).
+162:         -- known_at != event_date: um evento só existe para decisão simulada
+163:         -- em D se known_at <= D (anti-lookahead informacional).
+164:         CREATE TABLE IF NOT EXISTS rj_events (
+165:             id          INTEGER PRIMARY KEY,
+166:             ticker      TEXT    NOT NULL REFERENCES rj_universe(ticker),
+167:             event_date  TEXT    NOT NULL,
+168:             published_at TEXT,
+169:             known_at    TEXT    NOT NULL,
+170:             event_type  TEXT    NOT NULL,
+171:             source      TEXT    NOT NULL,
+172:             approved_by TEXT,
+173:             notes       TEXT,
+174:             inserted_at TEXT    NOT NULL DEFAULT (datetime('now'))
+175:         );
+176:         CREATE INDEX IF NOT EXISTS idx_rj_events_ticker_known ON rj_events(ticker, known_at);
+178:         -- scores por família, um valor por episódio
+179:         CREATE TABLE IF NOT EXISTS rj_family_scores (
+180:             episode_id  INTEGER NOT NULL REFERENCES rj_episodes(id),
+181:             family      TEXT    NOT NULL,
+182:             value       REAL,
+183:             computed_at TEXT    NOT NULL DEFAULT (datetime('now')),
+184:             PRIMARY KEY (episode_id, family)
+185:         );
+186:     """),
+191:     ("0005_rj_universe_snapshots", """
+192:         CREATE TABLE IF NOT EXISTS rj_universe_snapshots (
+193:             snapshot_date TEXT    NOT NULL,
+194:             source        TEXT    NOT NULL,
+195:             ticker        TEXT    NOT NULL,
+196:             company_name  TEXT    NOT NULL,
+197:             payload_hash  TEXT    NOT NULL,
+198:             raw_payload   TEXT,
+199:             inserted_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+200:             PRIMARY KEY (snapshot_date, source, ticker)
+201:         );
+202:     """),
+203:     ("0006_rj_secondary_outcome", """
+204:         ALTER TABLE rj_episodes ADD COLUMN secondary_outcome TEXT;
+205:         ALTER TABLE rj_episodes ADD COLUMN secondary_rally_pct REAL;
+206:         ALTER TABLE rj_episodes ADD COLUMN secondary_rally_date TEXT;
+207:         ALTER TABLE rj_episodes ADD COLUMN secondary_trading_days_to_rally INTEGER;
+208:         ALTER TABLE rj_episodes ADD COLUMN secondary_censored INTEGER;
+209:     """),
+210:     ("0007_fundamentals", """
+211:         -- Demonstrações financeiras padronizadas (DFP/ITR da CVM) — insumo
+212:         -- da futura H7 (fator de qualidade: ROE/alavancagem). Domínio
+213:         -- INDEPENDENTE de ações/RJ (não referencia prices_raw/rj_*); um
+214:         -- ticker+ref_date por linha, append-only via UNIQUE(ticker,ref_date).
+215:         CREATE TABLE IF NOT EXISTS fundamentals (
+216:             id                  INTEGER PRIMARY KEY,
+217:             ticker              TEXT    NOT NULL,
+218:             ref_date            TEXT    NOT NULL,      -- DT_REFER (fim do exercício/trimestre)
+219:             ativo_total         REAL,
+220:             passivo_total       REAL,
+221:             patrimonio_liquido  REAL,
+222:             lucro_liquido       REAL,
+223:             roe                 REAL,                  -- lucro_liquido / patrimonio_liquido
+224:             leverage            REAL,                  -- passivo_total / ativo_total
+225:             source              TEXT    NOT NULL,       -- 'CVM DFP <ano>' / 'CVM ITR <ano>'
+226:             inserted_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+227:             UNIQUE(ticker, ref_date, source)
+228:         );
+229:         CREATE INDEX IF NOT EXISTS idx_fundamentals_ticker_ref
+230:             ON fundamentals(ticker, ref_date);
+231:     """),
+232:     ("0008_rj_company_censoring", """
+233:         -- Empresas aprovadas sem nenhum candidato a fundo não podem sumir do
+234:         -- denominador. A observação é separada de rj_episodes porque não existe
+235:         -- trough_date legítima para usar como episódio.
+236:         CREATE TABLE IF NOT EXISTS rj_company_observations (
+237:             ticker              TEXT NOT NULL REFERENCES rj_universe(ticker),
+238:             asof                TEXT NOT NULL,
+239:             rj_request_date     TEXT NOT NULL,
+240:             observed_trading_days INTEGER NOT NULL,
+241:             censoring_horizon_trading_days INTEGER NOT NULL,
+242:             status              TEXT NOT NULL CHECK(status IN ('censored','no_candidate_control')),
+243:             inserted_at         TEXT NOT NULL DEFAULT (datetime('now')),
+244:             PRIMARY KEY (ticker, asof)
+245:         );
+246:     """),
+247:     ("0009_dividends", """
+248:         -- Proventos (dividendos/JCP) para a série de retorno TOTAL (preço +
+249:         -- reinvestimento) — corrige o viés só-preço declarado em H1-H10.
+250:         -- Fonte: FRE da CVM (fre_cia_aberta_distribuicao_dividendos_classe_acao),
+251:         -- não a data-ex real (não capturada por este dataset) — ver
+252:         -- ingest_cvm.ingest_fre_dividends_year para as duas aproximações
+253:         -- declaradas (valor por ação via divisão pelo total de ações em
+254:         -- circulação; ex_date = data de PAGAMENTO como proxy conservador,
+255:         -- não a data-ex real). Domínio INDEPENDENTE de ações (não referencia
+256:         -- prices_raw/adjustments); um ticker+ex_date+source por linha,
+257:         -- append-only via UNIQUE.
+258:         CREATE TABLE IF NOT EXISTS dividends (
+259:             id                  INTEGER PRIMARY KEY,
+260:             ticker              TEXT    NOT NULL,
+261:             ex_date             TEXT    NOT NULL,   -- proxy: Data_Pagamento_Dividendo
+262:             value_per_share     REAL    NOT NULL,
+263:             source              TEXT    NOT NULL,   -- 'CVM FRE <ano>'
+264:             inserted_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+265:             UNIQUE(ticker, ex_date, source)
+266:         );
+267:         CREATE INDEX IF NOT EXISTS idx_dividends_ticker_exdate
+268:             ON dividends(ticker, ex_date);
+269:     """),
+270:     ("0010_fundamentals_revenue", """
+271:         -- Receita líquida (DRE, já baixada/parseada desde a H7 mas nunca
+272:         -- extraída) — insumo da H12 (margem líquida) e H13 (crescimento de
+273:         -- receita YoY), pré-registradas 2026-09-04. Append-only: nova coluna
+274:         -- em `fundamentals`, migração 0007 intocada. `net_margin` gravado
+275:         -- (mesmo padrão de roe/leverage, calculado uma vez na ingestão);
+276:         -- crescimento YoY é calculado no sinal (precisa comparar 2 linhas),
+277:         -- não faz sentido como coluna de uma linha só.
+278:         ALTER TABLE fundamentals ADD COLUMN receita_liquida REAL;
+279:         ALTER TABLE fundamentals ADD COLUMN net_margin REAL;
+280:     """),
+281:     ("0011_fundamentals_cashflow_shares", """
+282:         -- Insumos de H17 (accruals) e H18/H19 (valor), pré-registradas
+283:         -- 2026-09-04. Append-only: colunas novas em `fundamentals`,
+284:         -- migrações 0007/0010 intocadas.
+285:         --
+286:         -- `fluxo_caixa_operacional`: conta 6.01 da DFC-MI consolidada
+287:         -- (`dfp_cia_aberta_DFC_MI_con_YYYY.csv`) — arquivo que já vem DENTRO
+288:         -- do zip DFP baixado desde a H7, mas que nunca foi aberto. É a
+289:         -- primeira DEMONSTRAÇÃO nova ingerida desde o M2 (BPA/BPP/DRE):
+290:         -- fluxo de caixa não é derivável de nenhuma das três.
+291:         -- `accruals` gravado (mesmo padrão de roe/leverage/net_margin,
+292:         -- calculado uma vez na ingestão).
+293:         --
+294:         -- `shares_outstanding`: quantidade total de ações do FRE. O parser
+295:         -- já existia (`ingest_cvm.parse_fre_capital_total_rows`, usado para
+296:         -- converter montante de provento em valor-por-ação) mas o valor era
+297:         -- transitório, nunca persistido. Sem ele não há capitalização de
+298:         -- mercado, logo não há múltiplo — é a peça que faltava para
+299:         -- qualquer hipótese de VALOR.
+300:         ALTER TABLE fundamentals ADD COLUMN fluxo_caixa_operacional REAL;
+301:         ALTER TABLE fundamentals ADD COLUMN accruals REAL;
+302:         ALTER TABLE fundamentals ADD COLUMN shares_outstanding REAL;
+303:     """),
+304:     ("0012_fundamentals_known_at", """
+305:         -- `known_at`: data em que o documento FICOU PÚBLICO, OBSERVADA, não
+306:         -- estimada. Vem do `DT_RECEB` do arquivo principal do FRE
+307:         -- (`fre_cia_aberta_{ano}.csv`), casado por `ID_Documento` -> `ID_DOC`,
+308:         -- então é por companhia E por versão do documento.
+309:         --
+310:         -- Por que existe (achado da ingestão real 2026-09-05, ver HANDOFF): o
+311:         -- embargo fixo de 90 dias sobre `ref_date` erra em direções OPOSTAS
+312:         -- antes e depois de 2023, porque `DT_REFER` do FRE é rótulo de
+313:         -- exercício e não data do dado — no FRE 2023 a referência
+314:         -- (2023-12-31) é POSTERIOR à entrega (2023-05-30). Somar dias a esse
+315:         -- campo não produz nada interpretável.
+316:         --
+317:         -- Append-only: coluna nova, migrações 0007/0010/0011 intocadas.
+318:         -- NULL = desconhecido, e o consumidor (`factor._fundamental_signals`)
+319:         -- cai no embargo por `ref_date` — as linhas da DFP não têm known_at
+320:         -- e continuam se comportando EXATAMENTE como antes, preservando
+321:         -- H7/H9/H12/H13/H17 já julgadas ou pré-registradas.
+322:         ALTER TABLE fundamentals ADD COLUMN known_at TEXT;
+323:     """),
+324:     ("0013_verified_derivations", """
+325:         -- New derivations only. Historical raw data, fundamentals and ledgers remain intact.
+326:         CREATE TABLE ingestion_issues (
+327:             source_sha256 TEXT NOT NULL, document_key TEXT NOT NULL, reason TEXT NOT NULL,
+328:             UNIQUE(source_sha256,document_key,reason)
+329:         );
+330:         CREATE TABLE fundamentals_pit (
+331:             ticker TEXT NOT NULL, cnpj TEXT NOT NULL, ref_date TEXT NOT NULL,
+332:             document_version INTEGER NOT NULL CHECK(document_version>0),
+333:             received_at TEXT NOT NULL, available_at TEXT NOT NULL,
+334:             source TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+335:             ativo_total REAL, passivo_total REAL, patrimonio_liquido REAL,
+336:             lucro_liquido REAL, receita_liquida REAL, fluxo_caixa_operacional REAL,
+337:             roe REAL, leverage REAL, net_margin REAL, accruals REAL,
+338:             CHECK(available_at>received_at),
+339:             UNIQUE(ticker,cnpj,ref_date,document_version,source_sha256)
+340:         );
+341:         CREATE INDEX idx_fundamentals_pit ON fundamentals_pit(ticker,available_at,ref_date);
+342:         CREATE TABLE shares_pit (
+343:             ticker TEXT NOT NULL, ref_date TEXT NOT NULL, document_id TEXT NOT NULL,
+344:             received_at TEXT NOT NULL, available_at TEXT NOT NULL,
+345:             shares_outstanding REAL NOT NULL CHECK(shares_outstanding>0),
+346:             basis_date TEXT, basis_source TEXT, price_basis_source TEXT,
+347:             source TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+348:             CHECK(available_at>received_at),
+349:             CHECK(basis_date IS NULL OR (basis_date<=received_at AND basis_source IS NOT NULL)),
+350:             UNIQUE(ticker,document_id,source_sha256)
+351:         );
+352:         CREATE INDEX idx_shares_pit ON shares_pit(ticker,available_at);
+353:         CREATE TABLE cash_events (
+354:             ticker TEXT NOT NULL, event_id TEXT NOT NULL, ex_date TEXT NOT NULL,
+355:             payment_date TEXT NOT NULL, value_per_share REAL NOT NULL CHECK(value_per_share>0),
+356:             source TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+357:             CHECK(payment_date>=ex_date), UNIQUE(ticker,event_id)
+358:         );
+359:         CREATE TABLE cash_event_coverage (
+360:             ticker TEXT NOT NULL, start_date TEXT NOT NULL, end_date TEXT NOT NULL,
+361:             source TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+362:             CHECK(end_date>=start_date), UNIQUE(ticker,start_date,end_date)
+363:         );
+364:     """),
+365:     ("0014_research_source_documents", """
+366:         -- Source audit staging only. Factor/return APIs do not read this table.
+367:         CREATE TABLE research_source_documents (
+368:             record_id TEXT PRIMARY KEY, kind TEXT NOT NULL, archive_year INTEGER,
+369:             cnpj TEXT, document_id TEXT, available_at TEXT,
+370:             source_sha256 TEXT NOT NULL, payload_json TEXT NOT NULL
+371:         );
+372:         CREATE INDEX idx_research_sources ON research_source_documents(kind,cnpj,available_at);
+373:     """),
+374:     ("0015_stock_bonus_events", """
+375:         CREATE TABLE stock_bonus_events (
+376:             ticker TEXT NOT NULL, event_id TEXT NOT NULL, ex_date TEXT NOT NULL,
+377:             credit_date TEXT NOT NULL, new_shares_per_old REAL NOT NULL CHECK(new_shares_per_old>0),
+378:             source TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+379:             CHECK(credit_date>=ex_date), UNIQUE(ticker,event_id)
+380:         );
+381:     """),
+382: ]
+386: def price_expr(col: str) -> str:
+393:     return f"{col} * 1.0 / (CASE WHEN quote_factor > 0 THEN quote_factor ELSE 1 END)"
+396: def get_connection(db_path: pathlib.Path | str | None = None,
+397:                    busy_timeout_ms: int = 5000) -> sqlite3.Connection:
+398:     path = pathlib.Path(db_path or os.getenv(DB_PATH_ENV) or DB_DEFAULT)
+399:     if path.is_file():
+400:         with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True)) as probe:
+401:             _reject_managed_store(probe)
+402:     path.parent.mkdir(parents=True, exist_ok=True)
+403:     conn = infra.connect(path, busy_timeout_ms=busy_timeout_ms)
+404:     try:
+405:         infra.run_migrations(conn, MIGRATIONS)
+406:     except BaseException:
+407:         conn.close()
+408:         raise
+409:     return conn
+412: def get_readonly_connection(db_path: pathlib.Path | str | None = None) -> sqlite3.Connection:
+414:     path = pathlib.Path(db_path or os.getenv(DB_PATH_ENV) or DB_DEFAULT).resolve()
+415:     if not path.is_file():
+416:         raise FileNotFoundError(f"Banco de leitura ausente: {path}")
+417:     conn = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)
+418:     try:
+419:         _reject_managed_store(conn)
+420:         conn.execute('PRAGMA query_only=ON')
+421:     except BaseException:
+422:         conn.close()
+423:         raise
+424:     return conn
+427: def _reject_managed_store(conn: sqlite3.Connection) -> None:
+430:     if conn.execute('PRAGMA application_id').fetchone()[0] == 0x53544B50:
+431:         raise ValueError('managed research store requires python -m stocks_predictor; legacy access refused')
+434: def get_code_version() -> str:
+436:     try:
+437:         out = subprocess.run(
+438:             ["git", "rev-parse", "--short", "HEAD"],
+439:             cwd=pathlib.Path(__file__).parent, capture_output=True, text=True, timeout=10,
+440:         )
+441:         if out.returncode == 0:
+442:             return out.stdout.strip()
+443:     except (OSError, subprocess.TimeoutExpired):
+444:         pass
+445:     return "unknown"
+448: def new_run(conn: sqlite3.Connection, params: dict, notes: str | None = None,
+449:             params_frozen_until: str | None = None) -> str:
+454:     cfg_hash = infra.config_hash(params)
+455:     now = datetime.datetime.now(datetime.timezone.utc)
+457:     run_id = now.strftime("%Y%m%dT%H%M%S%f") + "-" + cfg_hash[:6]
+458:     conn.execute(
+459:         """INSERT INTO runs(run_id, config_hash, code_version, params_json,
+460:                             notes, params_frozen_until)
+461:            VALUES(?,?,?,?,?,?)""",
+462:         (run_id, cfg_hash, get_code_version(),
+463:          json.dumps(params, sort_keys=True, ensure_ascii=True),
+464:          notes, params_frozen_until),
+465:     )
+466:     conn.commit()
+467:     return run_id
+
+### stocks_predictor/diagnostics.py
+6: import argparse
+7: from contextlib import closing
+8: from importlib import metadata
+9: import json
+10: from pathlib import Path
+11: import re
+12: import sqlite3
+13: import sys
+16: def _dependency(name: str, minimum: tuple[int, int], maximum_major: int) -> dict:
+17:     try:
+18:         version = metadata.version(name)
+19:     except metadata.PackageNotFoundError:
+20:         return {"version": None, "metadata_compatible": False, "status": "missing"}
+21:     match = re.fullmatch(r"(\d+)\.(\d+)(?:\.(\d+))?", version)
+22:     compatible = bool(match and minimum <= (int(match[1]), int(match[2])) < (maximum_major, 0))
+23:     return {"version": version, "metadata_compatible": compatible,
+24:             "status": "compatible_stable_release" if compatible else "unsupported_or_unverified_version"}
+27: def inspect_database(path: Path) -> dict:
+28:     path = path.resolve()
+29:     result = {"path": str(path), "status": "missing", "read_only": True}
+30:     if not path.is_file():
+31:         return result
+32:     try:
+33:         with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1.0)) as conn:
+34:             conn.execute("PRAGMA query_only=ON")
+35:             integrity = [row[0] for row in conn.execute("PRAGMA quick_check")]
+36:             tables = [row[0] for row in conn.execute(
+37:                 "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+38:         result.update(status="ok" if integrity == ["ok"] else "integrity_failed",
+39:                       quick_check=integrity, tables=tables)
+40:     except sqlite3.Error as exc:
+41:         result.update(status="unreadable", error=str(exc))
+42:     return result
+45: def diagnose(db_path: Path | None = None) -> dict:
+46:     dependencies = {"predictor-core": _dependency("predictor-core", (3, 2), 4),
+47:                     "PyYAML": _dependency("PyYAML", (6, 0), 7)}
+48:     supported = (3, 13) <= sys.version_info[:2] < (3, 15)
+49:     return {
+50:         "python": {"version": sys.version.split()[0], "executable": sys.executable,
+51:                    "supported": supported, "required": ">=3.13,<3.15"},
+52:         "sqlite_version": sqlite3.sqlite_version,
+53:         "dependencies": dependencies,
+54:         "runtime_metadata_compatible": supported and all(
+55:             dep["metadata_compatible"] for dep in dependencies.values()),
+56:         "database": inspect_database(db_path) if db_path is not None else {"status": "not_requested"},
+57:         "scope": "Offline metadata and optional SQLite quick_check; no dependency import, migration, or operational certification.",
+58:     }
+61: def main(argv: list[str] | None = None) -> int:
+62:     parser = argparse.ArgumentParser(description=__doc__)
+63:     parser.add_argument("--db", type=Path, help="Inspect this existing SQLite database in read-only mode")
+64:     parser.add_argument("--check", action="store_true", help="Exit 1 for incompatible metadata or a failed requested DB inspection")
+65:     args = parser.parse_args(argv)
+66:     result = diagnose(args.db)
+67:     print(json.dumps(result, ensure_ascii=False, indent=2))
+68:     database_ok = result["database"]["status"] in ("not_requested", "ok")
+69:     return int(args.check and not (result["runtime_metadata_compatible"] and database_ok))
+72: if __name__ == "__main__":
+73:     raise SystemExit(main())
+
+### stocks_predictor/disclosed_accounting.py
+3: import unicodedata
+6: def normalized(text):
+7:     return "".join(c for c in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(c))
+10: def owner_accounts(bpp, dre):
+12:     owners = [r for code, r in dre.items() if len(code) == 7 and
+13:               "empresa controladora" in normalized(r["description"]) and
+14:               "atribu" in normalized(r["description"])]
+15:     earnings = owners[0] if len(owners) == 1 else None
+16:     if earnings:
+17:         parent = dre.get(earnings["account"][:4])
+18:         if not parent or not any(x in normalized(parent["description"]) for x in ("lucro", "preju")):
+19:             earnings = None
+20:     roots = [r for code, r in bpp.items() if len(code) == 4 and
+21:              normalized(r["description"]).startswith("patrimonio liquido")]
+22:     equity, evidence = None, []
+23:     if len(roots) == 1:
+24:         total = roots[0]
+25:         nci = [r for code, r in bpp.items() if code.startswith(total["account"]+".") and len(code) == 7
+26:                and "nao controlad" in normalized(r["description"])]
+27:         if len(nci) == 1:
+28:             equity = total["value_brl"]-nci[0]["value_brl"]
+29:             evidence = [total, nci[0]]
+30:     return {"owner_earnings_brl": earnings["value_brl"] if earnings else None,
+31:             "owner_equity_brl": equity, "earnings_source": earnings, "equity_sources": evidence,
+32:             "issues": (["NO_CONSOLIDATED_OWNER_EARNINGS"] if earnings is None else []) +
+33:                       (["NO_UNAMBIGUOUS_OWNER_EQUITY"] if equity is None else [])}

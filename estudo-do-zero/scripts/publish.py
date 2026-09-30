@@ -6,6 +6,7 @@ files=[]; findings=[]
 for directory in ['relatorios','evidencias','scripts']:
  for p in (r/directory).rglob('*'):
   if not p.is_file() or p.suffix.lower() not in allowed: continue
+  if p.name.startswith(('source-text','narrative-','raw-source','all-source')): continue
   if any(part in ('__pycache__','.venv','node_modules','.pytest_cache') for part in p.parts):continue
   rel=p.relative_to(r); content=p.read_text(encoding='utf-8-sig',errors='replace')
   for name,pattern in patterns:

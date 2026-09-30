@@ -1,0 +1,540 @@
+
+### stocks_predictor/economic_gate.py
+8: from dataclasses import dataclass
+9: import math
+10: import statistics
+13: @dataclass(frozen=True)
+14: class EdgeEstimate:
+15:     mean_gross_edge: float
+16:     lower_gross_edge: float
+17:     observations: int
+20: @dataclass(frozen=True)
+21: class RebalanceDecision:
+22:     action: str
+23:     expected_gross_edge: float | None
+24:     lower_gross_edge: float | None
+25:     turnover_cost: float
+26:     conservative_net_edge: float | None
+27:     observations: int
+28:     reason: str
+29:     capital_enabled: bool = False
+32: def estimate_edge(observations, *, minimum_observations=12, z_score=1.96):
+34:     if type(minimum_observations) is not int or minimum_observations < 2 or not math.isfinite(z_score) or z_score < 0:
+35:         raise ValueError("minimum_observations deve ser >= 2 e z_score >= 0")
+36:     xs = [float(x) for x in observations]
+37:     if any(not math.isfinite(x) for x in xs):
+38:         raise ValueError("observations must be finite; missing outcomes cannot be silently dropped")
+39:     if len(xs) < minimum_observations:
+40:         return None
+41:     mean = statistics.mean(xs)
+42:     standard_error = statistics.stdev(xs) / math.sqrt(len(xs)) if len(xs) > 1 else 0.0
+43:     lower = mean - z_score * standard_error
+44:     if not math.isfinite(mean) or not math.isfinite(lower):
+45:         raise ValueError("nonfinite edge estimate")
+46:     return EdgeEstimate(mean, lower, len(xs))
+49: def decide_rebalance(estimate, turnover_cost, *, minimum_net_edge=0.0):
+51:     if any(not math.isfinite(x) or x < 0 for x in (turnover_cost, minimum_net_edge)):
+52:         raise ValueError("turnover_cost e minimum_net_edge devem ser >= 0")
+53:     if estimate is None:
+54:         return RebalanceDecision(
+55:             "HOLD", None, None, turnover_cost, None, 0,
+56:             "amostra madura insuficiente")
+57:     if (any(not math.isfinite(x) for x in (estimate.mean_gross_edge, estimate.lower_gross_edge))
+58:             or estimate.lower_gross_edge > estimate.mean_gross_edge
+59:             or type(estimate.observations) is not int or estimate.observations < 2):
+60:         raise ValueError("invalid supplied edge estimate")
+61:     conservative_net = estimate.lower_gross_edge - turnover_cost
+62:     action = "REBALANCE" if conservative_net > minimum_net_edge else "HOLD"
+63:     reason = ("edge conservador paga custo e hurdle" if action == "REBALANCE"
+64:               else "edge conservador não paga custo e hurdle")
+65:     return RebalanceDecision(
+66:         action, estimate.mean_gross_edge, estimate.lower_gross_edge,
+67:         turnover_cost, conservative_net, estimate.observations, reason)
+70: class EconomicRebalanceGate:
+73:     def __init__(self, *, minimum_observations=12, z_score=1.96,
+74:                  minimum_net_edge=0.0):
+75:         if (type(minimum_observations) is not int or minimum_observations < 2
+76:                 or any(not math.isfinite(x) or x < 0 for x in (z_score, minimum_net_edge))):
+77:             raise ValueError("política econômica inválida")
+78:         self.minimum_observations = minimum_observations
+79:         self.z_score = z_score
+80:         self.minimum_net_edge = minimum_net_edge
+81:         self._matured_gross_edges = []
+82:         self.audit = []
+84:     @property
+85:     def matured_gross_edges(self):
+86:         return tuple(self._matured_gross_edges)
+88:     def decide(self, turnover_cost):
+89:         estimate = estimate_edge(
+90:             self._matured_gross_edges,
+91:             minimum_observations=self.minimum_observations,
+92:             z_score=self.z_score)
+93:         decision = decide_rebalance(
+94:             estimate, turnover_cost, minimum_net_edge=self.minimum_net_edge)
+95:         self.audit.append(decision)
+96:         return decision
+98:     def observe(self, gross_switch_edge):
+100:         value = float(gross_switch_edge)
+101:         if not math.isfinite(value):
+102:             raise ValueError("gross_switch_edge deve ser finito")
+103:         self._matured_gross_edges.append(value)
+
+### stocks_predictor/economics.py
+34: import math
+35: import statistics
+37: PERIODS_PER_YEAR = 252
+43: UNDECLARED = "NAO_DECLARADO"
+46: NAO_DECLARADO = "NAO_DECLARADO"
+47: SEM_SERIE = "SEM_SERIE"
+48: ABAIXO_DO_MINIMO = "REAL_EDGE_BUT_ECONOMICALLY_TOO_SMALL"
+49: ACIMA_DO_MINIMO = "ECONOMICAMENTE_RELEVANTE"
+52: def _declared(value):
+56:     if value is None or isinstance(value, bool):
+57:         return None
+58:     if isinstance(value, (int, float)):
+59:         return float(value) if math.isfinite(value) else None
+60:     return None
+63: def declared_minimum(cfg):
+71:     e = cfg.get("economics", {}) or {}
+72:     return {
+73:         "capital_brl": _declared(e.get("capital_brl")),
+74:         "min_annual_net_profit_brl": _declared(e.get("min_annual_net_profit_brl")),
+75:         "max_acceptable_drawdown": _declared(e.get("max_acceptable_drawdown")),
+76:     }
+79: def required_net_annual_return(cfg):
+87:     m = declared_minimum(cfg)
+88:     capital, minimo = m["capital_brl"], m["min_annual_net_profit_brl"]
+89:     if capital is None or minimo is None or capital <= 0:
+90:         return None
+91:     return minimo / capital
+94: def max_drawdown(returns):
+101:     peak = equity = 1.0
+102:     worst = 0.0
+103:     for r in returns:
+104:         equity *= (1.0 + r)
+105:         if equity <= 0.0:
+106:             return 1.0
+107:         peak = max(peak, equity)
+108:         worst = max(worst, (peak - equity) / peak)
+109:     return worst
+112: def screen(strat, periods_per_year=PERIODS_PER_YEAR):
+118:     if not strat:
+119:         return None
+120:     n = len(strat)
+121:     total = 1.0
+122:     ruin = False
+123:     for r in strat:
+124:         total *= (1.0 + r)
+125:         if total <= 0.0:
+126:             ruin, total = True, 0.0
+127:             break
+128:     years = n / periods_per_year
+129:     if ruin or total <= 0.0:
+130:         net_annual = -1.0
+131:     else:
+132:         net_annual = total ** (1.0 / years) - 1.0 if years > 0 else 0.0
+133:     sd = statistics.pstdev(strat) if n > 1 else 0.0
+134:     mean = statistics.mean(strat)
+135:     return {
+136:         "n_periods": n,
+137:         "years": years,
+138:         "net_annual_return": net_annual,
+139:         "annual_vol": sd * math.sqrt(periods_per_year),
+140:         "sharpe_annual": (mean / sd * math.sqrt(periods_per_year)) if sd else 0.0,
+141:         "max_drawdown": max_drawdown(strat),
+142:         "ruin": ruin,
+145:         "capacity_brl": None,
+146:         "evidence_class": "BACKTEST_IN_SAMPLE_NET_OF_MODELED_COSTS",
+147:     }
+150: def classify(scr, cfg):
+157:     if scr is None:
+158:         return SEM_SERIE, "série vazia — nada a avaliar", {}
+159:     m = declared_minimum(cfg)
+160:     faltando = [k for k, v in m.items() if v is None]
+161:     capital = m["capital_brl"]
+162:     equivalente_historico = capital * scr["net_annual_return"] if capital is not None else None
+163:     detalhe = {
+165:         "expected_annual_profit_brl": None,
+166:         "historical_annualized_profit_equivalent_brl": equivalente_historico,
+167:         "forecast_status": "NOT_ESTIMATED",
+168:         "profit_scope": "Historical annualized backtest equivalent before unmodeled expenses; not a forecast",
+169:         "required_net_annual_return": required_net_annual_return(cfg),
+170:         **m,
+171:     }
+172:     if faltando:
+173:         return (NAO_DECLARADO,
+174:                 "mínimo econômico não declarado no config.yaml (seção `economics`): "
+175:                 + ", ".join(faltando),
+176:                 detalhe)
+177:     falhas = []
+178:     if equivalente_historico is not None and equivalente_historico < m["min_annual_net_profit_brl"]:
+179:         falhas.append(
+180:             f"equivalente histórico anualizado R$ {equivalente_historico:,.0f} < mínimo "
+181:             f"R$ {m['min_annual_net_profit_brl']:,.0f}")
+182:     if scr["max_drawdown"] > m["max_acceptable_drawdown"]:
+183:         falhas.append(
+184:             f"drawdown máximo {scr['max_drawdown']:.1%} > aceitável "
+185:             f"{m['max_acceptable_drawdown']:.1%}")
+186:     if falhas:
+187:         return ABAIXO_DO_MINIMO, "; ".join(falhas), detalhe
+188:     return (ACIMA_DO_MINIMO,
+189:             "passa o mínimo declarado — em BACKTEST líquido de custos MODELADOS; "
+190:             "não é evidência deployable nem autorização de capital",
+191:             detalhe)
+194: def summary_line(strat, cfg, periods_per_year=PERIODS_PER_YEAR):
+197:     try:
+198:         scr = screen(strat, periods_per_year)
+199:         estado, motivo, detalhe = classify(scr, cfg)
+200:         if scr is None:
+201:             return f"economia: {estado} ({motivo})"
+202:         lucro = detalhe.get("historical_annualized_profit_equivalent_brl")
+203:         dinheiro = f" | equivalente histórico anualizado R$ {lucro:,.0f}" if lucro is not None else ""
+204:         return (f"economia: retorno histórico anualizado líquido de custos modelados "
+205:                 f"{scr['net_annual_return']:.2%} (não é previsão) | "
+206:                 f"vol {scr['annual_vol']:.2%} | maxDD {scr['max_drawdown']:.2%}"
+207:                 f"{dinheiro} | {estado} ({motivo})")
+208:     except Exception as exc:  # pragma: no cover - guarda de última instância
+209:         return f"economia: INDISPONÍVEL ({type(exc).__name__}: {exc})"
+
+### stocks_predictor/ecosystem_plugin.py
+7: from __future__ import annotations
+10: class StocksPredictorPlugin:
+11:     name = "stocks-predictor"
+12:     domain = "stocks"
+14:     def health(self) -> dict[str, object]:
+15:         return {
+16:             "domain": self.domain,
+17:             "status": "WAITING",
+18:             "version": "0.2.0",
+19:             "details": {
+20:                 "mode": "research",
+21:                 "active_line": "H21_BOVA11_CONDITIONAL_RESEARCH",
+22:                 "adapter": "plugin-v1",
+23:             },
+24:         }
+26:     def capabilities(self) -> dict[str, object]:
+27:         return {
+28:             "domain": self.domain,
+29:             "supports_prediction": False,
+30:             "supports_settlement": False,
+31:             "supports_collection": False,
+32:             "scientific_status": "DISCOVERY_INCONCLUSIVE",
+33:             "predictive_status": "NO_VALIDATED_NET_EDGE",
+34:             "economic_status": "NO_GO",
+35:             "capital_permission": "FORBIDDEN",
+36:             "extra": {
+37:                 "mode": "research",
+38:                 "active_line": "H21_BOVA11_CONDITIONAL_RESEARCH",
+39:                 "net_historical_replay_complete": False,
+40:                 "historical_lines_preserved": ["H1-H20", "predictor-rj"],
+41:                 "source_of_scientific_truth": "STOCKS_CURRENT_STATE.md",
+42:             },
+43:         }
+46: PLUGIN = StocksPredictorPlugin()
+
+### stocks_predictor/entry_feasibility.py
+2: from decimal import Decimal
+3: import hashlib
+5: from stocks_predictor.continuous_research import read
+7: from stocks_predictor.retail_cash import RetailBook, integer_targets, iso
+10: def entry_case(capital, cost, plan, quotes, settlement, action_requirements, unit_reviews=()):
+12:     result = {'capital_brl': capital, 'one_way_cost_rate': cost, 'signal_date': plan['asof'],
+13:               'entry_date': plan['entry'], 'settlement_date': settlement,
+14:               'target_names': len(plan['members']), 'status': 'BLOCKED',
+15:               'actual_continuous_turnover': None, 'profit': None}
+16:     identities = {m['ticker']: m for m in plan['members']}
+17:     names = set(identities)
+18:     reviewed = {r['event_id']: r for r in unit_reviews}
+19:     boundary = []
+20:     applied = []
+21:     for r in action_requirements:
+22:         if r['ticker'] not in names or not plan['asof'] < r['ex_date'] <= plan['entry']:
+23:             continue
+24:         review = reviewed.get(r['event_id'], {})
+25:         if (review.get('kind') == 'BONUS_IN_DIFFERENT_CLASS' and review.get('removes_original') is False
+26:                 and review.get('original_share_units_unchanged') is True
+27:                 and review.get('ticker') == r['ticker']
+28:                 and review.get('isin') == identities[r['ticker']]['isin']
+29:                 and (not r.get('isin') or review['isin'] == r['isin'])
+30:                 and review.get('ex_date') == r['ex_date'] and review.get('sources_verified') is True
+31:                 and iso(review['terms_known_on']) <= plan['entry']
+32:                 and review.get('delivered_tickers') and r['ticker'] not in review['delivered_tickers']):
+33:             applied.append(r['event_id'])
+34:         else:
+35:             boundary.append(r['event_id'])
+36:     if applied:
+37:         result['unit_reviews_applied'] = applied
+38:         result['bonus_rights_received_by_new_entry'] = 0
+39:     if boundary:
+41:         return {**result, 'reason': 'ENTRY_ACTION_REQUIRES_REVIEWED_ORDER_UNITS', 'events': boundary}
+42:     try:
+43:         closes = {}
+44:         for m in plan['members']:
+45:             q = quotes[(plan['asof'], m['ticker'])]
+46:             if q['isin'] != m['isin'] or q['date'] != plan['asof']:
+47:                 raise ValueError('signal identity mismatch')
+48:             closes[m['ticker']] = q['close']
+49:         targets = integer_targets(capital, closes)
+50:         book = RetailBook(capital, plan['asof']); book.advance(plan['entry'])
+51:         execution_quotes = {t: quotes[(plan['entry'], t)] for t in names}
+52:         trades = book.rebalance(targets, execution_quotes, identities, plan['asof'], settlement, cost)
+53:         book.advance(settlement)
+54:     except (ValueError, KeyError, TypeError) as exc:
+55:         return {**result, 'reason': str(exc)}
+56:     amounts = {r['ticker']: r['quantity'] for r in trades}
+57:     standard_tickets = sum(r['quantity'] >= identities[r['ticker']]['lot'] for r in trades)
+58:     fractional_tickets = sum(r['quantity'] % identities[r['ticker']]['lot'] > 0 for r in trades)
+59:     return {**result, 'status': 'SIMULATED_ENTRY_ONLY', 'funded_names': len(trades),
+60:             'zero_share_targets': sum(q == 0 for q in targets.values()),
+61:             'requested_shares': sum(targets.values()), 'filled_shares': sum(amounts.values()),
+62:             'standard_tickets': standard_tickets, 'fractional_tickets': fractional_tickets,
+63:             'traded_notional_brl': sum((r['gross'] for r in trades), Decimal(0)),
+64:             'modeled_cost_brl': sum((r['costs'] for r in trades), Decimal(0)),
+65:             'settled_residual_cash_brl': book.cash,
+66:             'unfilled_shares': {t: q-amounts.get(t, 0) for t, q in targets.items() if q != amounts.get(t, 0)},
+67:             'orders': trades}
+71: def load_unit_reviews(path):
+73:     if path is None:
+74:         return []
+75:     rows = read(path)
+76:     if not rows or len({r['event_id'] for r in rows}) != len(rows):
+77:         raise ValueError('nonempty unique entry-unit reviews required')
+78:     for row in rows:
+79:         if row.get('source_review') is not True or not row.get('sources'):
+80:             raise ValueError('reviewed entry-unit sources required')
+81:         for source in row['sources']:
+82:             raw = (path.parent / source['file']).resolve()
+83:             if not raw.is_relative_to(path.parent.resolve()):
+84:                 raise ValueError('entry-unit source outside its bundle')
+85:             if hashlib.sha256(raw.read_bytes()).hexdigest() != source['sha256']:
+86:                 raise ValueError('entry-unit source checksum mismatch')
+87:         row['sources_verified'] = True
+88:     return rows
+
+### stocks_predictor/etf_hold.py
+6: from __future__ import annotations
+8: from datetime import date
+9: from decimal import Decimal, ROUND_FLOOR, ROUND_HALF_UP
+12: def number(value):
+13:     if isinstance(value, bool):
+14:         raise ValueError("Boolean financial input")
+15:     result = Decimal(str(value))
+16:     if not result.is_finite():
+17:         raise ValueError("Nonfinite financial input")
+18:     return result
+21: def cents(value):
+22:     return number(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+25: def settlement(trade_date, sessions, lag):
+26:     days = sorted(set(sessions))
+27:     if trade_date not in days or days.index(trade_date) + lag >= len(days):
+28:         raise ValueError("Settlement calendar incomplete")
+29:     return days[days.index(trade_date) + lag]
+32: def validate_quotes(records, sessions, entry, exit_date, isin):
+33:     if not records or entry >= exit_date:
+34:         raise ValueError("Empty or invalid holding interval")
+35:     dates = [r["date"] for r in records]
+36:     for day in dates:
+37:         date.fromisoformat(day)
+38:     if dates != sorted(set(dates)) or dates[0] != entry or dates[-1] != exit_date:
+39:         raise ValueError("Duplicate, unsorted or absent endpoint")
+40:     expected = {day for day in sessions if entry <= day <= exit_date}
+41:     if set(dates) != expected:
+42:         raise ValueError("Missing quote coverage")
+43:     for rec in records:
+44:         if rec["isin"] != isin or rec["quote_factor"] != 1 or rec["currency"] != "R$":
+45:             raise ValueError("Identity, currency or quote basis changed")
+46:         if rec["ticker"] != "BOVA11" or rec["market_type"] != "010":
+47:             raise ValueError("Wrong instrument/market")
+48:         op, close, low, high, volume = [number(rec[k]) for k in ("open", "close", "low", "high", "volume_fin")]
+49:         if not 0 < low <= min(op, close) <= max(op, close) <= high or volume <= 0:
+50:             raise ValueError("Invalid OHLC or liquidity observation")
+53: def simulate(records, sessions, *, capital, rate, mode, entry_signal, exit_signal,
+54:              tax_rate="0.15", lot=10):
+61:     capital, rate, tax_rate = number(capital), number(rate), number(tax_rate)
+62:     if capital <= 0 or not 0 <= rate < 1 or not 0 <= tax_rate <= 1:
+63:         raise ValueError("Invalid capital/cost/tax")
+64:     if isinstance(lot, bool) or not isinstance(lot, int) or lot < 1:
+65:         raise ValueError("Invalid lot")
+66:     if mode not in {"open", "worst_open_close"}:
+67:         raise ValueError("Unsupported execution scenario")
+68:     if not records:
+69:         raise ValueError("Empty holding interval")
+70:     date.fromisoformat(entry_signal)
+71:     date.fromisoformat(exit_signal)
+72:     entry, exit_date = records[0]["date"], records[-1]["date"]
+73:     validate_quotes(records, sessions, entry, exit_date, "BRBOVACTF003")
+74:     if not entry_signal < entry or not entry <= exit_signal < exit_date:
+75:         raise ValueError("Decision must precede trade")
+76:     buy = number(records[0]["open"])
+77:     sell = number(records[-1]["open"])
+78:     if mode == "worst_open_close":
+79:         buy = max(buy, number(records[0]["close"]))
+80:         sell = min(sell, number(records[-1]["close"]))
+81:     units = int((capital / (buy * (1 + rate) * lot)).to_integral_value(rounding=ROUND_FLOOR)) * lot
+82:     buy_notional = cents(units * buy)
+83:     buy_cost = cents(buy_notional * rate)
+84:     while units > 0 and buy_notional + buy_cost > capital:
+85:         units -= lot
+86:         buy_notional = cents(units * buy)
+87:         buy_cost = cents(buy_notional * rate)
+88:     next_notional = cents((units + lot) * buy)
+89:     if next_notional + cents(next_notional * rate) <= capital:
+90:         units += lot
+91:         buy_notional = next_notional
+92:         buy_cost = cents(buy_notional * rate)
+93:     if units <= 0:
+94:         raise ValueError("No affordable lot; not a zero-return observation")
+95:     basis = buy_notional + buy_cost
+96:     residual = capital - basis
+97:     sale_notional = cents(units * sell)
+98:     sale_cost = cents(sale_notional * rate)
+99:     sale_receivable = sale_notional - sale_cost
+100:     pretax = sale_receivable - basis
+101:     tax = cents(max(Decimal(0), pretax) * tax_rate)
+102:     final_equity = residual + sale_receivable - tax
+103:     profit = final_equity - capital
+104:     if profit != pretax - tax:
+105:         raise ArithmeticError("Wealth and realized-profit paths disagree")
+106:     buy_settlement = settlement(entry, sessions, 3 if entry < "2019-05-27" else 2)
+107:     sell_settlement = settlement(exit_date, sessions, 3 if exit_date < "2019-05-27" else 2)
+108:     curve, deltas, annual = [], [], {}
+109:     peak, previous, worst, min_equity = capital, capital, Decimal(0), capital
+110:     peak_date, worst_dates = entry, None
+111:     underwater = longest_underwater = 0
+112:     for i, rec in enumerate(records):
+114:         equity = final_equity if i == len(records) - 1 else residual + units * number(rec["close"])
+115:         delta = equity - previous
+116:         deltas.append((rec["date"], delta))
+117:         year = rec["date"][:4]
+118:         annual[year] = annual.get(year, Decimal(0)) + delta
+119:         if equity >= peak:
+120:             peak, peak_date, underwater = equity, rec["date"], 0
+121:         else:
+122:             underwater += 1
+123:             longest_underwater = max(longest_underwater, underwater)
+124:         drawdown = (peak - equity) / peak
+125:         if drawdown > worst:
+126:             worst, worst_dates = drawdown, {"peak": peak_date, "trough": rec["date"]}
+127:         min_equity = min(min_equity, equity)
+128:         curve.append({"date": rec["date"], "equity_brl": float(equity), "drawdown": float(drawdown)})
+129:         previous = equity
+130:     if sum(annual.values()) != profit:
+131:         raise ArithmeticError("Calendar attribution does not reconcile")
+132:     days = (date.fromisoformat(exit_date) - date.fromisoformat(entry)).days
+133:     years = days / 365.25
+134:     top5 = sorted(deltas, key=lambda item: item[1], reverse=True)[:5]
+135:     early = sum((v for d, v in deltas if d < "2022-01-01"), Decimal(0))
+136:     late = sum((v for d, v in deltas if d >= "2022-01-01"), Decimal(0))
+137:     volumes = [number(r["volume_fin"]) for r in records]
+138:     last20 = sum(volumes[-21:-1], Decimal(0)) / len(volumes[-21:-1]) if len(volumes) > 1 else None
+139:     return {
+140:         "capital_brl": float(capital), "mode": mode, "one_way_cost_rate": float(rate),
+141:         "entry": entry, "exit": exit_date, "holding_calendar_days": days, "holding_years": years,
+142:         "units": units, "lot_at_entry": lot, "buy_reference_brl": float(buy),
+143:         "sell_reference_brl": float(sell), "buy_notional_brl": float(buy_notional),
+144:         "buy_cost_brl": float(buy_cost), "tax_basis_brl": float(basis),
+145:         "residual_cash_brl": float(residual), "sale_notional_brl": float(sale_notional),
+146:         "sale_cost_brl": float(sale_cost), "sale_receivable_brl": float(sale_receivable),
+147:         "modeled_pretax_profit_brl": float(pretax), "tax_obligation_brl": float(tax),
+148:         "end_equity_after_tax_reserve_brl": float(final_equity),
+149:         "conditional_profit_before_unknown_expenses_brl": float(profit),
+150:         "cumulative_conditional_return": float(profit / capital),
+151:         "historical_annualized_conditional_return": (float(final_equity / capital) ** (1 / years)) - 1,
+152:         "unknown_additional_expenses_brl": None, "fully_net_executable_profit_brl": None,
+153:         "expected_future_profit_brl": None, "event_inventory_certified": False,
+154:         "equity_reconciliation_difference_brl": 0,
+155:         "entry_capital_committed_brl": float(basis), "entry_equity_exposure_fraction": float(buy_notional / capital),
+156:         "entry_daily_volume_participation": float(buy_notional / volumes[0]),
+157:         "exit_daily_volume_participation": float(sale_notional / volumes[-1]),
+158:         "exit_prior20_mean_volume_participation": float(sale_notional / last20) if last20 else None,
+159:         "minimum_daily_volume_brl": float(min(volumes)), "certified_capacity_brl": None,
+160:         "max_marked_drawdown": float(worst), "max_drawdown_dates": worst_dates,
+161:         "longest_underwater_observations": longest_underwater,
+162:         "largest_marked_loss_from_initial_brl": float(capital - min_equity),
+163:         "calendar_year_pnl_brl": {k: float(v) for k, v in annual.items()},
+164:         "pre_2022_pnl_brl": float(early), "from_2022_pnl_brl": float(late),
+165:         "top5_positive_daily_pnl": [{"date": d, "pnl_brl": float(v)} for d, v in top5 if v > 0],
+166:         "top5_positive_share_of_net_profit": float(sum(v for _, v in top5 if v > 0) / profit) if profit > 0 else None,
+167:         "historical_undiscounted_expense_break_even_brl": float(profit),
+168:         "historical_expense_budget_per_year_brl": float(profit) / years,
+169:         "historical_hours_per_month_at_25_brl": max(0, float(profit)) / years / 12 / 25,
+170:         "historical_hours_per_month_at_50_brl": max(0, float(profit)) / years / 12 / 50,
+171:         "cash_timeline": [
+172:             {"date": entry, "event": "BUY_RESERVED", "cash_available": float(residual),
+173:              "cash_reserved": float(basis), "purchase_payable": float(basis),
+174:              "etf_units_receivable": units, "position_value_at_trade": float(buy_notional),
+175:              "equity": float(capital - buy_cost)},
+176:             {"date": buy_settlement, "event": "BUY_SETTLED", "cash_available": float(residual),
+177:              "cash_reserved": 0, "purchase_payable": 0, "etf_units": units},
+178:             {"date": exit_date, "event": "SALE_UNSETTLED_TAX_RESERVED", "cash_available": float(residual),
+179:              "etf_units": 0, "sale_receivable": float(sale_receivable), "tax_obligation": float(tax),
+180:              "equity": float(final_equity)},
+181:             {"date": sell_settlement, "event": "SALE_SETTLED_TAX_STILL_RESERVED",
+182:              "cash_total": float(residual + sale_receivable), "sale_receivable": 0,
+183:              "tax_obligation": float(tax), "cash_after_tax_reserve": float(final_equity)}],
+184:         "notes": ["One purchase/one sale; all alternatives reuse the same hypothetical initial capital.",
+185:                   "Conditional on unchanged ETF units and no external ETF distributions; not a complete event audit.",
+186:                   "No investor dividend credit added to accumulating-fund prices; fund expenses not charged twice.",
+187:                   "Withholding credits are part of total tax, not an additional tax charge. Payment timing not simulated.",
+188:                   "Marked drawdown is at daily closes (terminal sale after tax); intraday loss can be larger.",
+189:                   "Maintenance budget is an undiscounted historical ceiling, not spendable recurring income or a forecast.",
+190:                   "Full capital reserved at entry; residual cash unremunerated; no early use of unsettled sale proceeds."],
+191:         "equity_curve": curve,
+192:     }
+195: def selic_reference(data, sessions, entry, exit_date):
+197:     rates = {}
+198:     for row in data:
+199:         day, month, year = row["data"].split("/")
+200:         key = f"{year}-{month}-{day}"
+201:         date.fromisoformat(key)
+202:         if key in rates:
+203:             raise ValueError("Duplicate Selic observation")
+204:         value = number(row["valor"]) / 100
+205:         if value <= -1 or not entry <= key < exit_date:
+206:             raise ValueError("Invalid Selic date/rate")
+207:         rates[key] = value
+208:     if not rates or min(rates) != entry:
+209:         raise ValueError("Incomplete Selic endpoints")
+210:     missing = sorted({d for d in sessions if entry <= d < exit_date} - rates.keys())
+211:     if missing:
+212:         raise ValueError(f"Selic missing trading dates: {missing}")
+213:     factor = Decimal(1)
+214:     for key in sorted(rates):
+215:         factor *= 1 + rates[key]
+216:     return {"series": 11, "n_observations": len(rates), "start_inclusive": entry,
+217:             "end_exclusive": exit_date, "gross_factor": float(factor),
+218:             "label": "Gross overnight Selic opportunity reference; no investable product, fees, tax or equal equity risk implied."}
+
+### stocks_predictor/execution.py
+8: def next_open_after(dates, opens, signal_date):
+11:     for d, o in zip(dates, opens):
+12:         if d > signal_date:
+13:             return d, o
+14:     return None
+17: def roundtrip_cost(fee_pct, slippage_pct):
+19:     return 2.0 * (fee_pct + slippage_pct)
+22: def one_way_cost(fee_pct, slippage_pct):
+24:     return fee_pct + slippage_pct
+27: def calculate_turnover_cost(prev_port, curr_port, cost_per_side):
+43:     prev_port, curr_port = set(prev_port), set(curr_port)
+44:     exiting = len(prev_port - curr_port)
+45:     entering = len(curr_port - prev_port)
+46:     return (exiting + entering) * cost_per_side
+49: def equal_weight_turnover_cost(prev_port, curr_port, cost_per_side):
+60:     prev_port, curr_port = set(prev_port), set(curr_port)
+61:     exits = len(prev_port - curr_port)
+62:     entries = len(curr_port - prev_port)
+63:     cost = entries * cost_per_side / len(curr_port) if curr_port else 0.0
+64:     if prev_port:
+65:         cost += exits * cost_per_side / len(prev_port)
+66:     return cost
+69: def weighted_turnover_cost(prev_weights, curr_weights, cost_per_side):
+77:     tickers = set(prev_weights) | set(curr_weights)
+78:     turnover = sum(abs(curr_weights.get(t, 0.0) - prev_weights.get(t, 0.0))
+79:                    for t in tickers)
+80:     return turnover * cost_per_side
+83: def net_return(entry_price, exit_price, fee_pct, slippage_pct):
+85:     if entry_price <= 0:
+86:         raise ValueError(f"entry_price inválido: {entry_price}")
+87:     gross = exit_price / entry_price - 1.0
+88:     return gross - roundtrip_cost(fee_pct, slippage_pct)

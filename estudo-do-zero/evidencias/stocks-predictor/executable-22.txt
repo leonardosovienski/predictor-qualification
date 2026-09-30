@@ -1,0 +1,386 @@
+
+### stocks_predictor/rj_pipeline.py
+35: import argparse
+36: import json
+37: import logging
+38: import sqlite3
+39: from datetime import date
+41: import rj_episodes as episodes
+42: import rj_families as families
+43: import rj_judge as judge
+44: import universe
+45: from adjust import adjusted_series
+47: logger = logging.getLogger(__name__)
+49: _VOL = "volume_fin"
+52: def _load_price_series(conn: sqlite3.Connection, ticker: str,
+53:                        asof: str) -> tuple[list[str], list[float]]:
+56:     dates, closes = adjusted_series(conn, ticker)
+57:     idx = [i for i, d in enumerate(dates) if d <= asof]
+58:     return ([dates[i] for i in idx], [closes[i] for i in idx])
+61: def _load_volumes(conn: sqlite3.Connection, ticker: str,
+62:                   asof: str) -> tuple[list[str], list[float]]:
+66:     rows = conn.execute(
+67:         f"SELECT date, MAX({_VOL}) FROM prices_raw "
+68:         "WHERE ticker=? AND date<=? AND market_type=? GROUP BY date ORDER BY date",
+69:         (ticker, asof, universe.SPOT_MARKET)).fetchall()
+70:     return ([r[0] for r in rows], [r[1] for r in rows])
+73: def _load_events(conn: sqlite3.Connection, ticker: str) -> list[dict]:
+78:     cols = ["event_date", "published_at", "known_at", "event_type"]
+79:     rows = conn.execute(
+80:         f"SELECT {', '.join(cols)} FROM rj_events "
+81:         "WHERE ticker=? AND approved_by IS NOT NULL", (ticker,))
+82:     return [dict(zip(cols, r)) for r in rows]
+85: def _pre_rj_high(dates: list[str], closes: list[float],
+86:                  rj_request_date: str) -> str | None:
+88:     idx = [i for i, d in enumerate(dates) if d < rj_request_date]
+89:     if not idx:
+90:         return None
+91:     return dates[max(idx, key=lambda i: closes[i])]
+94: def build_episodes(conn: sqlite3.Connection, cfg: dict, asof: str) -> dict:
+101:     rcfg = cfg["rally"]
+102:     lookback = rcfg["point_in_time_backward_lookback_days"]
+103:     min_sep = rcfg["primary_window_trading_days"]
+104:     out, excluded, company_observations = [], {}, []
+108:     approved_universe = conn.execute(
+109:         "SELECT ticker, rj_request_date, plan_presented_date, "
+110:         "plan_approved_date, rj_end_date FROM rj_universe "
+111:         "WHERE approved_by IS NOT NULL ORDER BY ticker"
+112:     ).fetchall()
+113:     for ticker, rj_date, plan_pres, plan_appr, rj_end in approved_universe:
+114:         dates, closes = _load_price_series(conn, ticker, asof)
+115:         if not dates:
+116:             excluded[ticker] = "sem serie de precos no banco"
+117:             continue
+118:         candidates = episodes.point_in_time_candidates(
+119:             dates, closes, rj_date, backward_lookback=lookback)
+120:         primary = episodes.select_primary_episode(candidates)
+121:         if primary is None:
+122:             observed = sum(1 for trading_day in dates if rj_date <= trading_day <= asof)
+123:             horizon = int(rcfg["censoring_horizon_trading_days"])
+124:             status = "no_candidate_control" if observed >= horizon else "censored"
+125:             company_observations.append({
+126:                 "ticker": ticker,
+127:                 "asof": asof,
+128:                 "rj_request_date": rj_date,
+129:                 "observed_trading_days": observed,
+130:                 "censoring_horizon_trading_days": horizon,
+131:                 "status": status,
+132:             })
+133:             continue
+134:         kept = episodes.select_secondary_episodes(candidates, dates, min_sep)
+135:         for k, trough_date in enumerate(kept):
+136:             trough_idx = dates.index(trough_date)
+137:             ep = {
+138:                 "ticker": ticker, "trough_date": trough_date,
+139:                 "trough_price": closes[trough_idx],
+140:                 "is_primary": 1 if k == 0 else 0,
+141:                 "rj_request_date": rj_date,
+142:                 "plan_presented_date": plan_pres,
+143:                 "plan_approved_date": plan_appr,
+144:                 "rj_end_date": rj_end,
+145:                 "primary": episodes.classify_episode(
+146:                     dates, closes, trough_date, cfg, asof,
+147:                     window_key="primary_window_trading_days"),
+148:                 "secondary": episodes.classify_episode(
+149:                     dates, closes, trough_date, cfg, asof,
+150:                     window_key="secondary_window_trading_days"),
+151:                 "dates": dates, "closes": closes,
+152:             }
+153:             out.append(ep)
+154:     return {
+155:         "episodes": out,
+156:         "excluded": excluded,
+157:         "company_observations": company_observations,
+158:     }
+161: def compute_family_scores(conn: sqlite3.Connection, ep: dict, cfg: dict,
+162:                           free_float: dict | None, asof: str) -> dict:
+165:     ticker, trough = ep["ticker"], ep["trough_date"]
+166:     dates, closes = ep["dates"], ep["closes"]
+167:     vdates, vols = _load_volumes(conn, ticker, asof)
+168:     events = _load_events(conn, ticker)
+169:     pre_high = _pre_rj_high(dates, closes, ep["rj_request_date"])
+171:     scores = {
+172:         "drawdown": (families.drawdown(dates, closes, trough, pre_high)
+173:                      if pre_high else None),
+174:         "liquidity": (families.liquidity(vols, vdates, trough, free_float[ticker])
+175:                       if free_float and ticker in free_float else None),
+176:         "volume_dynamics_antecedent":
+177:             families.volume_dynamics_antecedent(vols, vdates, trough),
+178:         "volume_dynamics_contemporaneous":
+179:             families.volume_dynamics(vols, vdates, trough),
+180:         "rj_stage": families.rj_stage(trough, ep["plan_presented_date"],
+181:                                       ep["plan_approved_date"], ep["rj_end_date"]),
+191:         "ownership": None,
+192:         "momentum_volatility": families.momentum_volatility(dates, closes, trough),
+193:         "time_since_rj": families.time_since_rj(ep["rj_request_date"], trough, dates),
+194:         "info_trigger": families.info_trigger(events, trough),
+195:     }
+196:     return scores
+199: def persist_run(conn: sqlite3.Connection, built: dict, asof: str) -> None:
+206:     for observation in built["company_observations"]:
+207:         conn.execute(
+208:             "INSERT INTO rj_company_observations(ticker,asof,rj_request_date,"
+209:             "observed_trading_days,censoring_horizon_trading_days,status) "
+210:             "VALUES(?,?,?,?,?,?) ON CONFLICT(ticker,asof) DO UPDATE SET "
+211:             "rj_request_date=excluded.rj_request_date, "
+212:             "observed_trading_days=excluded.observed_trading_days, "
+213:             "censoring_horizon_trading_days=excluded.censoring_horizon_trading_days, "
+214:             "status=excluded.status",
+215:             tuple(observation[key] for key in (
+216:                 "ticker", "asof", "rj_request_date", "observed_trading_days",
+217:                 "censoring_horizon_trading_days", "status"
+218:             )),
+219:         )
+220:     for ep in built["episodes"]:
+221:         cols = (ep["ticker"], ep["trough_date"], ep["trough_price"], ep["is_primary"],
+222:                 ep["primary"]["outcome"], ep["primary"]["rally_pct"],
+223:                 ep["primary"]["rally_date"], ep["primary"]["trading_days_to_rally"],
+224:                 ep["primary"]["censored"], ep["secondary"]["outcome"],
+225:                 ep["secondary"]["rally_pct"], ep["secondary"]["rally_date"],
+226:                 ep["secondary"]["trading_days_to_rally"], ep["secondary"]["censored"])
+227:         conn.execute(
+228:             "INSERT OR IGNORE INTO rj_episodes(ticker, trough_date, trough_price,"
+229:             " is_primary, outcome, rally_pct, rally_date, trading_days_to_rally,"
+230:             " censored, secondary_outcome, secondary_rally_pct, secondary_rally_date,"
+231:             " secondary_trading_days_to_rally, secondary_censored)"
+232:             " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", cols)
+233:         old = conn.execute(
+234:             "SELECT trough_price, is_primary, outcome, rally_pct, rally_date,"
+235:             " trading_days_to_rally, censored, secondary_outcome, secondary_rally_pct,"
+236:             " secondary_rally_date, secondary_trading_days_to_rally, secondary_censored"
+237:             " FROM rj_episodes"
+238:             " WHERE ticker=? AND trough_date=?",
+239:             (ep["ticker"], ep["trough_date"])).fetchone()
+240:         new = cols[2:]
+241:         if tuple(old) != tuple(new):
+242:             conn.execute(
+243:                 "UPDATE rj_episodes SET trough_price=?, is_primary=?, outcome=?,"
+244:                 " rally_pct=?, rally_date=?, trading_days_to_rally=?, censored=?"
+245:                 ", secondary_outcome=?, secondary_rally_pct=?, secondary_rally_date=?"
+246:                 ", secondary_trading_days_to_rally=?, secondary_censored=?"
+247:                 " WHERE ticker=? AND trough_date=?",
+248:                 (*new, ep["ticker"], ep["trough_date"]))
+249:         episode_id = conn.execute(
+250:             "SELECT id FROM rj_episodes WHERE ticker=? AND trough_date=?",
+251:             (ep["ticker"], ep["trough_date"])).fetchone()[0]
+252:         for fam, val in ep["scores"].items():
+253:             if isinstance(val, str):      # rj_stage categórico: guarda hash-free
+254:                 continue                  # (tabela é REAL; categórico vive no relatório)
+255:             if val is None:
+260:                 continue
+261:             conn.execute(
+262:                 "INSERT OR IGNORE INTO rj_family_scores(episode_id, family, value)"
+263:                 " VALUES(?,?,?)", (episode_id, fam, val))
+264:             conn.execute(
+265:                 "UPDATE rj_family_scores SET value=?"
+266:                 " WHERE episode_id=? AND family=? AND value IS NOT ?",
+267:                 (val, episode_id, fam, val))
+268:     conn.commit()
+271: def run_pipeline(conn: sqlite3.Connection, cfg: dict, asof: str,
+272:                  free_float: dict | None = None) -> dict:
+276:     built = build_episodes(conn, cfg, asof)
+277:     for ep in built["episodes"]:
+278:         ep["scores"] = compute_family_scores(conn, ep, cfg, free_float, asof)
+283:     primary = [ep for ep in built["episodes"]
+284:                if ep["is_primary"] == 1 and ep["primary"]["censored"] == 0
+285:                and ep["primary"]["outcome"] != "invalid_data"]
+286:     units_by_family = {name: [] for name in families.REGISTRY}
+287:     for ep in primary:
+288:         group = 1 if ep["primary"]["outcome"] == "rally" else 0
+289:         for name, val in ep["scores"].items():
+290:             if val is None:
+291:                 continue
+292:             if name in families.CATEGORICAL_FAMILIES:
+293:                 units_by_family[name].append((ep["ticker"], val, group))
+294:             else:
+295:                 units_by_family[name].append((ep["ticker"], float(val), group))
+297:     verdicts = judge.run_all_families(units_by_family, cfg)
+303:     secondary_eps = [ep for ep in built["episodes"]
+304:                      if ep["secondary"]["censored"] == 0
+305:                      and ep["secondary"]["outcome"] != "invalid_data"]
+306:     units_secondary = {name: [] for name in families.REGISTRY}
+307:     for ep in secondary_eps:
+308:         group = 1 if ep["secondary"]["outcome"] == "rally" else 0
+309:         for name, val in ep["scores"].items():
+310:             if val is None:
+311:                 continue
+312:             if name in families.CATEGORICAL_FAMILIES:
+313:                 units_secondary[name].append((ep["ticker"], val, group))
+314:             else:
+315:                 units_secondary[name].append((ep["ticker"], float(val), group))
+316:     secondary_tickers = [ep["ticker"] for ep in secondary_eps]
+317:     secondary_repeated = len(set(secondary_tickers)) != len(secondary_tickers)
+318:     if secondary_repeated:
+319:         verdicts_secondary = None
+320:         secondary_status = "blocked_repeated_company_requires_cluster_permutation"
+321:     elif secondary_eps:
+322:         verdicts_secondary = judge.run_all_families(units_secondary, cfg)
+323:         secondary_status = "computed_one_observation_per_company"
+324:     else:
+325:         verdicts_secondary = None
+326:         secondary_status = "no_eligible_episodes"
+328:     n_universe = conn.execute(
+329:         "SELECT COUNT(*) FROM rj_universe WHERE approved_by IS NOT NULL"
+330:     ).fetchone()[0]
+331:     n_rally = sum(1 for ep in primary if ep["primary"]["outcome"] == "rally")
+332:     missing = {name: sum(1 for ep in primary if ep["scores"][name] is None)
+333:                for name in families.REGISTRY}
+334:     report = {
+335:         "asof": asof,
+338:         "universe_size": n_universe,
+339:         "excluded": built["excluded"],
+340:         "n_primary_analyzed": len(primary),
+341:         "n_rally": n_rally,
+342:         "n_control": len(primary) - n_rally,
+343:         "n_censored_excluded": sum(
+344:             1 for ep in built["episodes"]
+345:             if ep["is_primary"] == 1 and ep["primary"]["censored"] == 1),
+346:         "n_company_censored": sum(
+347:             item["status"] == "censored" for item in built["company_observations"]),
+348:         "n_company_no_candidate_control": sum(
+349:             item["status"] == "no_candidate_control"
+350:             for item in built["company_observations"]),
+351:         "company_observations": built["company_observations"],
+353:         "n_invalid_data_excluded": sum(
+354:             1 for ep in built["episodes"]
+355:             if ep["primary"]["outcome"] == "invalid_data"
+356:             or ep["secondary"]["outcome"] == "invalid_data"),
+357:         "missing_scores_by_family": missing,
+358:         "verdicts": verdicts,
+359:         "verdicts_secondary_check": verdicts_secondary,
+360:         "secondary_inference_status": secondary_status,
+361:         "n_secondary_check": len(secondary_eps),
+362:         "episodes": [
+363:             {"ticker": ep["ticker"], "trough_date": ep["trough_date"],
+364:              "is_primary": ep["is_primary"],
+365:              "outcome_primary_window": ep["primary"]["outcome"],
+366:              "outcome_secondary_window": ep["secondary"]["outcome"],
+367:              "scores": ep["scores"]}
+368:             for ep in built["episodes"]],
+369:     }
+370:     persist_run(conn, built, asof)
+371:     return report
+374: def load_free_float_csv(path: str) -> dict:
+377:     import csv
+378:     with open(path, newline="", encoding="utf-8") as f:
+379:         return {r["ticker"]: float(r["shares_outstanding"]) for r in csv.DictReader(f)}
+382: def main(argv=None) -> int:
+383:     import pathlib
+384:     import sys
+385:     import yaml
+387:     sys.path.insert(0, str(pathlib.Path(__file__).parent))
+388:     from db import get_connection  # noqa: E402
+390:     ap = argparse.ArgumentParser(description="Runner integrado do predictor-rj")
+391:     ap.add_argument("--db", default=None, help="caminho do SQLite (default: db.DB_DEFAULT)")
+392:     ap.add_argument("--config", default=str(
+393:         pathlib.Path(__file__).parent.parent / "config_rj.yaml"))
+394:     ap.add_argument("--asof", default=date.today().isoformat(),
+395:                     help="data de corte point-in-time (default: hoje)")
+396:     ap.add_argument("--out", default=None, help="caminho do relatório JSON")
+397:     ap.add_argument("--free-float-csv", default=None)
+398:     args = ap.parse_args(argv)
+400:     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+401:     with open(args.config, encoding="utf-8") as f:
+402:         cfg = yaml.safe_load(f)
+403:     ff = load_free_float_csv(args.free_float_csv) if args.free_float_csv else None
+404:     if ff is None:
+405:         logger.warning("sem --free-float-csv: familia 'liquidity' ficara indisponivel")
+407:     conn = get_connection(args.db)
+408:     report = run_pipeline(conn, cfg, args.asof, free_float=ff)
+410:     out = args.out or f"reports/rj_run_{args.asof}.json"
+411:     pathlib.Path(out).parent.mkdir(parents=True, exist_ok=True)
+412:     with open(out, "w", encoding="utf-8") as f:
+413:         json.dump(report, f, ensure_ascii=False, indent=2, default=str)
+414:     print(f"universo: {report['universe_size']} | analisados: "
+415:           f"{report['n_primary_analyzed']} (rally={report['n_rally']}, "
+416:           f"controle={report['n_control']}) | censurados fora: "
+417:           f"{report['n_censored_excluded']} | excluidos: {len(report['excluded'])}")
+418:     print(f"relatorio: {out}")
+419:     return 0
+422: if __name__ == "__main__":
+423:     raise SystemExit(main())
+
+### stocks_predictor/rj_power.py
+27: import argparse
+28: import copy
+29: import random
+31: import rj_families as families
+32: import rj_judge as judge
+35: def simulate_power(cfg: dict, n_companies: int, planted_effect: float,
+36:                    n_reps: int = 50, seed: int = 0,
+37:                    family: str = "drawdown") -> float:
+43:     if n_reps < 1:
+44:         raise ValueError(f"n_reps deve ser >= 1 (recebido: {n_reps})")
+45:     names = list(families.REGISTRY.keys())
+46:     n_detected = 0
+47:     for rep in range(n_reps):
+48:         rng = random.Random(seed + rep)
+49:         units_by_family = {name: [] for name in names}
+50:         for i in range(n_companies):
+51:             ticker = f"PWR{i:03d}3"
+52:             group = 1 if i < n_companies // 2 else 0
+53:             for name in names:
+54:                 if name in families.CATEGORICAL_FAMILIES:
+58:                     cats = ["requested", "plan_presented", "plan_approved", "exited"]
+59:                     val = cats[rng.randrange(len(cats))]
+60:                 else:
+61:                     val = rng.gauss(0.0, 1.0)
+62:                     if name == family and group == 1:
+63:                         val += planted_effect
+64:                 units_by_family[name].append((ticker, val, group))
+65:         verdicts = judge.run_all_families(units_by_family, cfg)
+66:         if verdicts[family]["significant_after_fdr"]:
+67:             n_detected += 1
+68:     return n_detected / n_reps
+71: def power_grid(cfg: dict, n_companies_list: list[int],
+72:                effect_sizes: list[float], n_reps: int = 50,
+73:                seed: int = 0, family: str = "drawdown") -> dict:
+75:     return {(n, d): simulate_power(cfg, n, d, n_reps, seed, family)
+76:             for n in n_companies_list for d in effect_sizes}
+79: def minimum_detectable_effect(grid: dict, n_companies: int,
+80:                               target_power: float = 0.80) -> float | None:
+84:     candidates = sorted(d for (n, d), p in grid.items()
+85:                         if n == n_companies and p >= target_power)
+86:     return candidates[0] if candidates else None
+89: def format_grid(grid: dict, n_companies_list: list[int],
+90:                 effect_sizes: list[float]) -> str:
+91:     header = "N\\effect | " + " | ".join(f"{d:+.1f}sd" for d in effect_sizes)
+92:     lines = [header, "-" * len(header)]
+93:     for n in n_companies_list:
+94:         row = [f"{grid[(n, d)]:6.0%}" for d in effect_sizes]
+95:         lines.append(f"{n:8d} | " + "  | ".join(row))
+96:     return "\n".join(lines)
+99: def main(argv=None) -> int:
+100:     import pathlib
+101:     import yaml
+103:     ap = argparse.ArgumentParser(description="Poder prospectivo do judge RJ")
+104:     ap.add_argument("--config", default=str(
+105:         pathlib.Path(__file__).parent.parent / "config_rj.yaml"))
+106:     ap.add_argument("--n-companies", type=int, nargs="+", default=[20, 30, 40])
+107:     ap.add_argument("--effects", type=float, nargs="+",
+108:                     default=[0.5, 1.0, 1.5, 2.0])
+109:     ap.add_argument("--reps", type=int, default=50)
+110:     ap.add_argument("--seed", type=int, default=0)
+111:     ap.add_argument("--fast", action="store_true",
+112:                     help="n_boot reduzido (300) para rodar em minutos; "
+113:                          "aproximação — a hipótese real usa o config vigente")
+114:     args = ap.parse_args(argv)
+116:     with open(args.config, encoding="utf-8") as f:
+117:         cfg = yaml.safe_load(f)
+118:     if args.fast:
+119:         cfg = copy.deepcopy(cfg)
+120:         cfg["judge"]["n_boot"] = 300
+122:     grid = power_grid(cfg, args.n_companies, args.effects,
+123:                       n_reps=args.reps, seed=args.seed)
+124:     print(format_grid(grid, args.n_companies, args.effects))
+125:     print()
+126:     for n in args.n_companies:
+127:         mde = minimum_detectable_effect(grid, n)
+128:         if mde is None:
+129:             print(f"N={n}: MDE >= 80% de poder NÃO alcançado no grid "
+130:                   f"(maior efeito simulado: {max(args.effects):+.1f}sd)")
+131:         else:
+132:             print(f"N={n}: MDE = {mde:+.1f} desvios-padrão")
+133:     return 0
+136: if __name__ == "__main__":
+137:     raise SystemExit(main())

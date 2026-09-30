@@ -1,0 +1,372 @@
+
+### stocks_predictor/continuous_research.py
+8: import argparse
+9: from collections import Counter
+10: from decimal import Decimal
+11: import hashlib
+12: import json
+13: from pathlib import Path
+15: from stocks_predictor.continuous_cash import run_continuous
+16: from stocks_predictor.retail_cash import execution_readiness, iso, number
+19: H19_PROTOCOL_SHA256 = '721f1ce6f8d5f0dcaa89e75aa5226f2cad9de9d9774e1902d675ba8d6002d115'
+20: H19_OBSERVATION_SHA256 = 'c47fcca89d07e2064c1ba6ebc7a1f1dc763473a1364291284dfe6d761d7e9128'
+23: def validate_contract(base, manifest, protocol, index):
+25:     capital = [number(v) for v in protocol['capital_brl']]
+26:     costs = [number(v) for v in protocol['one_way_cost_rates']]
+27:     if (not capital or not costs or len(set(capital)) != len(capital) or len(set(costs)) != len(costs)
+28:             or any(c <= 0 for c in capital) or any(not 0 <= c < 1 for c in costs)):
+29:         raise ValueError('nonempty unique valid capital and cost cases required')
+30:     sessions = index['sessions']
+31:     if not sessions or sessions != sorted(set(sessions)) or any(iso(d) != d for d in sessions):
+32:         raise ValueError('unique chronological sessions required')
+33:     if iso(index['start']) >= iso(index['end']):
+34:         raise ValueError('invalid replay endpoints')
+35:     if set(index['plans']) != {'strategy', 'comparison'}:
+36:         raise ValueError('strategy and comparison plans required')
+37:     schedules = []
+38:     for plans in index['plans'].values():
+39:         if len(plans) < 2 or plans[-1]['members'] or any(not p['members'] for p in plans[:-1]):
+40:             raise ValueError('nonempty plans and explicit liquidation required')
+41:         if plans[0]['asof'] != index['start'] or plans[-1]['entry'] != index['end']:
+42:             raise ValueError('index endpoints differ from replay plans')
+43:         if [p['entry'] for p in plans] != sorted({p['entry'] for p in plans}):
+44:             raise ValueError('unique chronological plans required')
+45:         for p in plans:
+46:             if (p['asof'] not in sessions or p['entry'] not in sessions
+47:                     or sessions.index(p['entry']) != sessions.index(p['asof']) + 1):
+48:                 raise ValueError('plan must execute in the next session')
+49:             delivery = index['settlements'].get(p['entry'])
+50:             if delivery not in sessions or delivery <= p['entry']:
+51:                 raise ValueError('settlement must be a later exchange session')
+52:             if len({m['ticker'] for m in p['members']}) != len(p['members']):
+53:                 raise ValueError('duplicate plan member')
+54:             for m in p['members']:
+55:                 if (type(m['lot']) is not int or m['lot'] <= 0 or m['tax_class'] not in {'equity', 'bdr'}
+56:                         or m['lot'] != index['security_lots'].get(m['ticker']) or not m['isin']):
+57:                     raise ValueError('invalid member identity or trading lot')
+58:         schedules.append([(p['asof'], p['entry']) for p in plans])
+59:     if schedules[0] != schedules[1]:
+60:         raise ValueError('asymmetric comparison schedule')
+64:     if protocol.get('protocol') == 'SYNTHETIC_ENGINE_TEST':
+65:         return 'SYNTHETIC_ENGINE_TEST'
+66:     if protocol.get('protocol') != 'H19_QUARTERLY_RETAIL_CASH_1':
+67:         raise ValueError('unknown registered research protocol')
+68:     if manifest['protocol.json'] != H19_PROTOCOL_SHA256:
+69:         raise ValueError('registered H19 protocol changed')
+70:     source = protocol['source_observation']
+71:     if (manifest.get(source) != H19_OBSERVATION_SHA256
+72:             or index.get('source_observation_sha256') != H19_OBSERVATION_SHA256):
+73:         raise ValueError('frozen H19 observation absent or changed')
+74:     observation = read(base / source)
+75:     trials = [t for t in observation['trials'] if t['family'] == 'H19' and t['holding_months'] == 3]
+76:     if len(trials) != 1:
+77:         raise ValueError('ambiguous frozen H19 trial')
+78:     periods = [p for p in trials[0]['periods'] if any(m['selected'] for m in p['members'])]
+79:     for portfolio, selected in [('strategy', True), ('comparison', False)]:
+80:         expected = [{'asof': p['asof'], 'entry': p['entry'], 'members': [
+81:             {'ticker': m['ticker'], 'isin': m['isin'], 'lot': 1 if m['ticker'] == 'JBSS32' else 100,
+82:              'tax_class': 'bdr' if m['ticker'] == 'JBSS32' else 'equity'}
+83:             for m in p['members'] if not selected or m['selected']]} for p in periods]
+84:         endpoint = periods[-1]['exit']
+85:         expected.append({'asof': sessions[sessions.index(endpoint)-1], 'entry': endpoint, 'members': []})
+86:         if index['plans'][portfolio] != expected:
+87:             raise ValueError('replay plans differ from frozen H19 selection')
+88:     return 'REGISTERED_H19_DISCOVERY'
+91: def read(path):
+92:     return json.loads(path.read_text(encoding='utf-8'), parse_float=Decimal)
+95: def verify_manifest(base):
+96:     manifest = read(base / 'SHA256.json')
+97:     if not manifest:
+98:         raise ValueError('empty input manifest')
+99:     for name, expected in manifest.items():
+100:         path = (base / name).resolve()
+101:         if not path.is_relative_to(base.resolve()) or not path.is_file():
+102:             raise ValueError('invalid manifest path: ' + name)
+103:         with path.open('rb') as stream:
+104:             actual = hashlib.file_digest(stream, 'sha256').hexdigest()
+105:         if actual != expected:
+106:             raise ValueError('input checksum mismatch: ' + name)
+107:     return manifest
+110: def load_quotes(base, index):
+112:     quotes = {}
+113:     rows = 0
+114:     sessions = set(index['sessions'])
+115:     for source in index['sources']:
+116:         with (base / source['quotes']).open(encoding='utf-8') as stream:
+117:             for line in stream:
+118:                 r = json.loads(line)
+119:                 if r['market_type'] not in {'010', '020'}:
+120:                     raise ValueError('unsupported execution market')
+121:                 if iso(r['date']) not in sessions or not index['start'] <= r['date'] <= index['end']:
+122:                     raise ValueError('quote outside registered trading calendar')
+123:                 if number(r['open']) <= 0 or number(r['close']) <= 0:
+124:                     raise ValueError('nonpositive execution quote')
+125:                 key = (r['date'], r['ticker'])
+126:                 q = quotes.setdefault(key, {'date': r['date'], 'isin': r['isin'],
+127:                     'lot': index['security_lots'][r['ticker']]})
+128:                 if q['isin'] != r['isin']:
+129:                     raise ValueError('ambiguous quote identity')
+130:                 field = 'standard' if r['market_type'] == '010' else 'fractional'
+131:                 if field in q:
+132:                     raise ValueError('duplicate execution quote')
+133:                 q[field] = r['open']
+134:                 if field == 'standard':
+135:                     q['close'] = r['close']
+136:                 rows += 1
+137:     if not rows:
+138:         raise ValueError('empty execution quote tape')
+139:     return quotes, rows
+142: def inspect_inputs(base):
+143:     manifest = verify_manifest(base)
+144:     required = {'protocol.json', 'quote-tape-index.json', 'evidence.json',
+145:                 'cash-events.json', 'corporate-actions.json', 'tax-calendar.json'}
+146:     if not required <= set(manifest):
+147:         raise ValueError('required replay inputs are outside the manifest')
+148:     protocol = read(base / 'protocol.json')
+149:     index = read(base / 'quote-tape-index.json')
+150:     evidence = read(base / 'evidence.json')
+151:     cash = read(base / 'cash-events.json')
+152:     actions = read(base / 'corporate-actions.json')
+153:     tax = read(base / 'tax-calendar.json')
+154:     validate_contract(base, manifest, protocol, index)
+155:     for source in index['sources']:
+156:         if source['quotes'] not in manifest or manifest[source['quotes']] != source['quotes_sha256']:
+157:             raise ValueError('quote tape not covered by its source manifest')
+158:     gate = execution_readiness(evidence['required_intervals'], evidence['cash_coverage'],
+159:         cash, evidence['action_gaps'], evidence['execution_checks'])
+160:     gate['issues'].extend(evidence.get('additional_issues', []))
+161:     months = sorted({d[:7] for d in index['sessions']
+162:                      if index['start'] <= d <= index['end']})
+163:     for month in months:
+164:         row = tax.get(month, {})
+165:         if row.get('source_review') is not True or not row.get('sources') or not row.get('due_date'):
+166:             gate['issues'].append({'kind': 'TAX_CALENDAR_MONTH', 'month': month})
+167:     for row in cash:
+168:         if not row.get('known_on'):
+169:             gate['issues'].append({'kind': 'CASH_KNOWLEDGE_DATE', 'event': row.get('event_id')})
+170:     required_actions = {r['event_id'] for r in evidence['required_actions']}
+171:     approved = {r['event_id'] for r in actions if r.get('source_review') is True
+172:                 and r.get('sources') and r.get('tax_source')}
+173:     for event_id in sorted(required_actions - approved):
+174:         gate['issues'].append({'kind': 'CORPORATE_EVENT_INPUT', 'event': event_id})
+175:     for event in actions:
+176:         try:
+177:             if iso(event.get('terms_known_on')) > iso(event['ex_date']):
+178:                 raise ValueError('future quantity terms')
+179:         except ValueError:
+180:             gate['issues'].append({'kind': 'CORPORATE_QUANTITY_KNOWLEDGE', 'event': event.get('event_id')})
+181:     gate['ready'] = not gate['issues']
+182:     return protocol, index, cash, actions, tax, gate, len(manifest)
+185: def execute(base):
+186:     protocol, index, cash, actions, tax, gate, count = inspect_inputs(base)
+187:     quotes, quote_rows = load_quotes(base, index)
+188:     common = {'protocol': protocol, 'verified_input_files': count,
+189:               'validated_quote_records': quote_rows,
+190:               'evidence_kind': ('SYNTHETIC_ENGINE_TEST' if protocol.get('protocol') == 'SYNTHETIC_ENGINE_TEST'
+191:                                 else 'REGISTERED_H19_DISCOVERY'),
+192:               'full_history_executed': False, 'profit': None,
+193:               'new_historical_return_evaluations': 0,
+194:               'issue_counts': dict(Counter(r['kind'] for r in gate['issues'])),
+195:               'issues': gate['issues']}
+196:     if not gate['ready']:
+197:         return 2, {'status': 'BLOCKED_MISSING_EVIDENCE', **common}
+198:     results = []
+200:     for capital in protocol['capital_brl']:
+201:         for cost in protocol['one_way_cost_rates']:
+202:             pair = {}
+203:             try:
+204:                 for portfolio in ('strategy', 'comparison'):
+205:                     pair[portfolio] = run_continuous(capital, cost, index['plans'][portfolio],
+206:                         quotes, index['sessions'], index['settlements'], cash, actions, tax, True)
+207:             except (ValueError, KeyError, TypeError) as exc:
+208:                 return 1, {**common, 'status': 'EXECUTION_FAILURE_NO_PARTIAL_PROFIT',
+209:                     'error': str(exc), 'attempted_pair_evaluations': len(results) + 1,
+210:                     'completed_pairs_suppressed': len(results),
+211:                     'new_historical_return_evaluations': (0 if common['evidence_kind'] == 'SYNTHETIC_ENGINE_TEST'
+212:                                                           else len(results) + 1)}
+213:             results.append({'capital_brl': capital, 'one_way_cost_rate': cost, 'portfolios': pair})
+214:     return 0, {**common, 'status': ('COMPLETE_SYNTHETIC_TEST_NOT_PROFIT_EVIDENCE'
+215:                if common['evidence_kind'] == 'SYNTHETIC_ENGINE_TEST'
+216:                else 'COMPLETE_HISTORICAL_REPLAY_NOT_PROOF_OF_EDGE'),
+217:                'full_history_executed': True, 'cases': results,
+218:                'synthetic_pair_evaluations': len(results) if common['evidence_kind'] == 'SYNTHETIC_ENGINE_TEST' else 0,
+219:                'new_historical_return_evaluations': (0 if common['evidence_kind'] == 'SYNTHETIC_ENGINE_TEST'
+220:                                                       else len(results))}
+223: def main(argv=None):
+224:     parser = argparse.ArgumentParser(description=__doc__)
+225:     parser.add_argument('--inputs', type=Path, required=True)
+226:     parser.add_argument('--output', type=Path, required=True)
+227:     args = parser.parse_args(argv)
+228:     try:
+229:         code, result = execute(args.inputs)
+230:     except (ValueError, KeyError, TypeError, OSError) as exc:
+231:         code, result = 1, {'status': 'INVALID_INPUT_OR_EXECUTION_FAILURE',
+232:             'full_history_executed': False, 'profit': None,
+233:             'new_historical_return_evaluations': 0, 'error': str(exc)}
+234:     args.output.parent.mkdir(parents=True, exist_ok=True)
+235:     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+236:     print(json.dumps({k: v for k, v in result.items() if k not in ('cases', 'issues', 'protocol')},
+237:                      ensure_ascii=False, default=str))
+238:     return code
+241: if __name__ == '__main__':
+242:     raise SystemExit(main())
+
+### stocks_predictor/cotahist.py
+12: import logging
+13: import random
+14: from datetime import date
+16: logger = logging.getLogger(__name__)
+18: RECORD_LEN = 245
+21: F_TIPREG = slice(0, 2)      # 1-2    fixo "01"
+22: F_DATA = slice(2, 10)       # 3-10   AAAAMMDD
+23: F_CODBDI = slice(10, 12)    # 11-12
+24: F_CODNEG = slice(12, 24)    # 13-24  código de negociação (ticker)
+25: F_TPMERC = slice(24, 27)    # 25-27  tipo de mercado (010 = à vista)
+26: F_PREABE = slice(56, 69)    # 57-69  abertura  (V99)
+27: F_PREMAX = slice(69, 82)    # 70-82  máxima    (V99)
+28: F_PREMIN = slice(82, 95)    # 83-95  mínima    (V99)
+29: F_PREULT = slice(108, 121)  # 109-121 último/fechamento (V99)
+30: F_QUATOT = slice(152, 170)  # 153-170 quantidade total
+31: F_VOLTOT = slice(170, 188)  # 171-188 volume financeiro (V99)
+32: F_FATCOT = slice(210, 217)  # 211-217 fator de cotação
+35: def parse_line(line: str):
+38:     raw = line.rstrip("\r\n")
+39:     if raw[F_TIPREG] != "01":
+40:         return None
+41:     if len(raw) != RECORD_LEN:
+42:         raise ValueError(f"registro tipo 01 deve ter {RECORD_LEN} caracteres: {len(raw)}")
+43:     d = raw[F_DATA]
+52:     if not (len(d) == 8 and d.isdigit()):
+53:         raise ValueError(f"data malformada no registro tipo 01: {d!r}")
+54:     day = date.fromisoformat(f"{d[0:4]}-{d[4:6]}-{d[6:8]}").isoformat()
+55:     quote_factor = int(raw[F_FATCOT])
+56:     if quote_factor <= 0:
+57:         raise ValueError("fator de cotação deve ser positivo")
+58:     return {
+59:         "date": day,
+60:         "ticker": raw[F_CODNEG].strip(),
+61:         "bdi_code": raw[F_CODBDI].strip(),
+62:         "market_type": raw[F_TPMERC].strip(),
+63:         "open": int(raw[F_PREABE]) / 100.0,
+64:         "high": int(raw[F_PREMAX]) / 100.0,
+65:         "low": int(raw[F_PREMIN]) / 100.0,
+66:         "close": int(raw[F_PREULT]) / 100.0,
+67:         "qty": int(raw[F_QUATOT]),
+68:         "volume_fin": int(raw[F_VOLTOT]) / 100.0,
+69:         "quote_factor": quote_factor,
+70:     }
+73: def _pack(date, ticker, bdi, tpmerc, o, h, lo, c, qty, vol_fin, fatcot) -> str:
+75:     buf = [" "] * RECORD_LEN
+77:     def put(start1, text):
+78:         i = start1 - 1
+79:         buf[i:i + len(text)] = list(text)
+81:     def cents(v, w):
+82:         return str(int(round(v * 100))).zfill(w)
+84:     put(1, "01")
+85:     put(3, str(date).replace("-", ""))
+86:     put(11, str(bdi).rjust(2, "0"))
+87:     put(13, ticker.ljust(12)[:12])
+88:     put(25, str(tpmerc).rjust(3, "0"))
+89:     put(57, cents(o, 13)); put(70, cents(h, 13)); put(83, cents(lo, 13))
+90:     put(96, cents(c, 13))                 # PREMED (filler)
+91:     put(109, cents(c, 13))
+92:     put(148, "00100")                     # TOTNEG (filler)
+93:     put(153, str(int(qty)).zfill(18))
+94:     put(171, cents(vol_fin, 18))
+95:     put(211, str(int(fatcot)).zfill(7))
+96:     return "".join(buf)
+99: def synthetic_cotahist(tickers, dates, seed=42, start=20.0, vol=0.02):
+102:     rng = random.Random(seed)
+103:     price = {t: start * (1 + 0.05 * i) for i, t in enumerate(tickers)}
+104:     out = []
+105:     for d in dates:
+106:         for t in tickers:
+107:             o = price[t]
+108:             c = max(0.01, o * (1 + rng.gauss(0, vol)))
+109:             h = max(o, c) * (1 + abs(rng.gauss(0, vol / 2)))
+110:             lo = min(o, c) * (1 - abs(rng.gauss(0, vol / 2)))
+111:             qty = rng.randint(1_000, 1_000_000)
+112:             out.append(_pack(d, t, "02", "010", o, h, lo, c, qty, c * qty, 1))
+113:             price[t] = c
+114:     return out
+122: AVISTA_MARKET = "010"
+123: AVISTA_BDI = "02"
+126: def is_avista(rec) -> bool:
+127:     return rec["market_type"] == AVISTA_MARKET and rec["bdi_code"] == AVISTA_BDI
+130: def _iter_parsed_records(lines, stats):
+132:     for line in lines:
+133:         if line[F_TIPREG] != "01":
+134:             continue
+135:         stats['quotes'] += 1
+136:         try:
+137:             rec = parse_line(line)
+138:         except (ValueError, IndexError):
+139:             stats['malformed'] += 1
+140:             continue
+141:         if rec is not None:
+142:             yield rec
+143:     if not stats['quotes']:
+144:         raise ValueError("0 linhas de registro tipo 01 na fonte — arquivo errado, vazio ou layout mudou")
+145:     if stats['malformed'] == stats['quotes']:
+146:         raise ValueError(f"{stats['malformed']} linhas malformadas em {stats['quotes']} "
+147:                          "linhas de cotação — arquivo inteiro ilegível, revisar layout/fonte")
+150: def parse_lines(lines):
+160:     stats = {'quotes': 0, 'malformed': 0}
+161:     recs = list(_iter_parsed_records(lines, stats))
+162:     return recs, stats['malformed']
+165: _PRICE_COLUMNS = ('date', 'ticker', 'bdi_code', 'market_type', 'open', 'high',
+166:                   'low', 'close', 'volume_fin', 'qty', 'quote_factor', 'source_file')
+167: _LOAD_BATCH_SIZE = 1000
+170: def _insert_price_batch(conn, rows):
+172:     unique = {}
+173:     for row in rows:
+174:         key = (row[0], row[1], row[-1])
+175:         if key in unique and unique[key] != row:
+176:             raise ValueError(f"source content conflict for {key!r}")
+177:         unique[key] = row
+178:     columns = ','.join(_PRICE_COLUMNS)
+179:     cursor = conn.executemany(
+180:         f"INSERT INTO prices_raw({columns}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) "
+181:         "ON CONFLICT(date,ticker,source_file) DO NOTHING", unique.values())
+182:     if cursor.rowcount != len(unique):
+185:         keys = list(unique)
+186:         for start in range(0, len(keys), 250):
+187:             group = keys[start:start + 250]
+188:             placeholders = ','.join('(?,?,?)' for _ in group)
+189:             params = [value for key in group for value in key]
+190:             for stored in conn.execute(
+191:                     f"SELECT {columns} FROM prices_raw WHERE "
+192:                     f"(date,ticker,source_file) IN ({placeholders})", params):
+193:                 row = tuple(stored)
+194:                 key = (row[0], row[1], row[-1])
+195:                 if row != unique[key]:
+196:                     raise ValueError(f"source content conflict for {key!r}")
+197:     return cursor.rowcount
+200: def load_prices(conn, lines, source_file: str, avista_only: bool = True) -> int:
+207:     if not isinstance(source_file, str) or not source_file.strip():
+208:         raise ValueError("source_file must identify the source")
+209:     stats = {'quotes': 0, 'malformed': 0}
+210:     rows, inserted = [], 0
+211:     caller_transaction = conn.in_transaction
+212:     conn.execute("SAVEPOINT stocks_price_load")
+213:     try:
+214:         for rec in _iter_parsed_records(lines, stats):
+215:             if avista_only and not is_avista(rec):
+216:                 continue
+217:             rows.append(tuple(rec[key] for key in _PRICE_COLUMNS[:-1]) + (source_file,))
+218:             if len(rows) >= _LOAD_BATCH_SIZE:
+219:                 inserted += _insert_price_batch(conn, rows)
+220:                 rows.clear()
+221:         if rows:
+222:             inserted += _insert_price_batch(conn, rows)
+223:         conn.execute("RELEASE stocks_price_load")
+224:     except BaseException:
+225:         if not caller_transaction:
+228:             conn.rollback()
+229:         elif conn.in_transaction:
+230:             conn.execute("ROLLBACK TO stocks_price_load")
+231:             conn.execute("RELEASE stocks_price_load")
+232:         raise
+233:     if stats['malformed']:
+234:         logger.warning("%s: %d linhas malformadas puladas no parse", source_file, stats['malformed'])
+235:     return inserted

@@ -1,0 +1,134 @@
+[
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "CLI e plugin",
+    "Propósito": "CLI legado e operacional, plugin-v1 introspectivo",
+    "Implementação": "main.py; stocks_predictor/{operations,ecosystem_plugin}.py",
+    "Testes": "tests/test_ecosystem_plugin.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "health/capabilities constantes não provam pipeline ativo",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Ingestão COTAHIST",
+    "Propósito": "Parser245chars e streamingSavepoint",
+    "Implementação": "stocks_predictor/{cotahist,ingest_cotahist}.py",
+    "Testes": "tests/test_cotahist.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "Skip/count legacy vs strictcatálogo",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Catálogo operacional",
+    "Propósito": "Fontes versionadas e preços WAL appendonly, snapshots",
+    "Implementação": "stocks_predictor/{source_catalog,operational_store,dataset_selection}.py",
+    "Testes": "tests/test_operational_store.py; test_dataset_selection.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "observed_at não disponibilidade pública histórica",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Fundamentos e fatores",
+    "Propósito": "DFP/FRE PIT e preço×ações; legacy estimado preservado",
+    "Implementação": "stocks_predictor/{cvm_pit,factor,ingest_cvm}.py",
+    "Testes": "tests/test_repairs_cvm.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "Parser/ingest completo ainda pendente; timestamps depende fonte",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Universo/carteira/execução",
+    "Propósito": "Liquidez calendário, quintis e inverso vol; D+1/custos",
+    "Implementação": "stocks_predictor/{universe,portfolio,execution}.py",
+    "Testes": "tests/test_execution_feasibility.py; smoke-run.json",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC+ET-RUN",
+    "Limitações": "Smoke11checks não suíte/backtest",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Simulação/judge/trials",
+    "Propósito": "Motor causal e legacy; bootstrapSharpe eDSRestrito",
+    "Implementação": "stocks_predictor/{simulation,backtest,trials_gate}.py",
+    "Testes": "tests/test_dsr_deflation_guard.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "Judge COMPROVADA é gate estatístico, não permissão capital",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Eventos/caixa/economia",
+    "Propósito": "Livro direitos impostos custos entradas e gates",
+    "Implementação": "stocks_predictor/{continuous_cash,retail_cash,cash_events,economics,economic_gate}.py",
+    "Testes": "tests/test_continuous_cash.py; smoke-run.json",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC+ET-RUN",
+    "Limitações": "Leitura semântica parcial; fontes e custos reais NV",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Recuperação judicial",
+    "Propósito": "Episódios PIT, 8 famílias predictive e1descriptive, companyunits FDR/maxT",
+    "Implementação": "stocks_predictor/rj_*.py",
+    "Testes": "tests/test_rj_pipeline.py; test_rj_power_gate.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "Ownership indisponível; influence/haircut não OOS",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Staging externo",
+    "Propósito": "B3/CVM rawCAS versions/observations/rejections/receipts",
+    "Implementação": "stocks_predictor/external_intelligence.py",
+    "Testes": "tests/test_external_intelligence.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "Métodos centrais lidos, completo pendente; status/verify CLI escrevem DB",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Experimentos congelados",
+    "Propósito": "Bigwinner etf linhas históricas e pre-registros",
+    "Implementação": "stocks_predictor/{big_winner_v2,etf_hold,prospective_big_winner,monthly_etf}.py; experiments/",
+    "Testes": "tests/test_big_winner_v2.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "Revisão integral pendente; não recomputado lucro",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Governança e perfil",
+    "Propósito": "Capitalfalse e personalcompleteness, DatedOutcome",
+    "Implementação": "stocks_predictor/{economic_gate,research_profile,temporal_evidence}.py",
+    "Testes": "tests/test_economic_gate.py; smoke-run.json",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC+ET-RUN",
+    "Limitações": "Maturidade/timestamps declarados não certificados",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  },
+  {
+    "Projeto": "stocks-predictor",
+    "Componente": "Exportação CAIN",
+    "Propósito": "SnapshotV1 eBundleV1 explícitos com hashes",
+    "Implementação": "tools/export_cain_{status,bundle}.py",
+    "Testes": "tools/test_export_cain_bundle.py",
+    "Uso": "NV nesta investigação",
+    "Estado": "OD+ET-SRC",
+    "Limitações": "Sem envelopeV2 nesta árvore; relatos parciais não fonte produtor completo",
+    "Evidências": "evidencias/stocks-predictor/hashes.json; source-index.json; REGISTRO.log"
+  }
+]

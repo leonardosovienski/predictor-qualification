@@ -1,0 +1,658 @@
+
+### audit_db.py
+1: import sys
+2: import sqlite3
+3: from pathlib import Path
+9: if hasattr(sys.stdout, "reconfigure"):
+10:     sys.stdout.reconfigure(encoding="utf-8")
+12: db_path = Path("data/stocks.db")
+14: if not db_path.exists():
+15:     print("❌ Erro: O arquivo data/stocks.db não foi encontrado neste diretório!")
+16:     exit(1)
+18: print(True and "--- INICIANDO AUDITORIA DO BANCO DE DADOS ---")
+19: conn = sqlite3.connect(db_path)
+20: cursor = conn.cursor()
+23: cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+24: tables = [row[0] for row in cursor.fetchall()]
+26: print(f"\n[Tabelas Encontradas]: {len(tables)}")
+27: print("-" * 50)
+30: for table in tables:
+31:     cursor.execute(f"SELECT COUNT(*) FROM {table}")
+32:     count = cursor.fetchone()[0]
+33:     print(f" Tabela: {table:<25} | Total de Linhas: {count:,}")
+36: if "prices_raw" in tables:
+37:     print("\n" + "-" * 50)
+38:     print("[Análise Temporal de prices_raw]")
+39:     try:
+41:         cursor.execute("PRAGMA table_info(prices_raw)")
+42:         cols = [c[1] for c in cursor.fetchall()]
+43:         date_col = next((c for c in cols if "data" in c.lower() or "date" in c.lower()), None)
+45:         if date_col:
+46:             cursor.execute(f"SELECT MIN({date_col}), MAX({date_col}) FROM prices_raw")
+47:             data_min, data_max = cursor.fetchone()
+48:             print(f" Amostra Inicia em: {data_min}")
+49:             print(f" Amostra Termina em: {data_max}")
+50:     except Exception as e:
+51:         print(f" ⚠️ Não foi possível extrair a janela temporal: {e}")
+53: conn.close()
+54: print("\n--- AUDITORIA CONCLUÍDA ---")
+
+### diagnose_universe.py
+1: import sys
+2: import sqlite3
+3: from pathlib import Path
+5: db_path = Path("data/stocks.db")
+6: if not db_path.exists():
+7:     print(f"Erro: {db_path} não existe (rode a partir da raiz do projeto, "
+8:           "após algum ingest).")
+9:     sys.exit(1)
+10: conn = sqlite3.connect(db_path)
+12: print("=== DIAGNÓSTICO SISTÊMICO DO UNIVERSO ===")
+15: tickers = [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM prices_raw LIMIT 5")]
+16: print(f"\n[1] Formato exato dos Tickers no banco (representação literal):")
+17: for t in tickers:
+18:     print(f"  - Ticker: {repr(t)} | Tamanho real: {len(t)} caracteres")
+21: print(f"\n[2] Verificando presença de Blue Chips icônicas:")
+22: for target in ['PETR4', 'VALE3', 'ITUB4']:
+23:     exact = conn.execute("SELECT COUNT(*) FROM prices_raw WHERE ticker = ?", (target,)).fetchone()[0]
+24:     like = conn.execute("SELECT COUNT(*) FROM prices_raw WHERE ticker LIKE ?", (f"%{target}%",)).fetchone()[0]
+25:     print(f"  - {target} -> Busca Exata: {exact} linhas | Busca por aproximação (LIKE): {like} linhas")
+28: most_frequent = conn.execute(
+29:     "SELECT ticker, COUNT(*) as c FROM prices_raw GROUP BY ticker ORDER BY c DESC LIMIT 1"
+30: ).fetchone()
+32: if most_frequent:
+33:     tk, count = most_frequent
+34:     print(f"\n[3] Ticker com maior volume de dados na base: {repr(tk)} ({count} linhas)")
+37:     sample_date = conn.execute(f"SELECT date FROM prices_raw WHERE ticker=? LIMIT 1", (tk,)).fetchone()[0]
+38:     print(f"  - Formato real da string de data no banco: {repr(sample_date)}")
+45:     asof = "2024-12-30"
+46:     vols = [r[0] for r in conn.execute(
+47:         "SELECT volume_fin FROM prices_raw WHERE ticker=? AND date < ? "
+48:         "AND market_type = '010' ORDER BY date",
+49:         (tk, asof))]
+50:     print(f"  - Executando: WHERE ticker={repr(tk)} AND date < {repr(asof)} "
+51:           "AND market_type = '010'")
+52:     print(f"  - Resultado: {len(vols)} registros de volume retornados.")
+54: conn.close()
+55: print("\n=== FIM DO DIAGNÓSTICO ===")
+
+### main.py
+20: import os
+21: import pathlib
+22: import sys
+23: from contextlib import closing
+25: ROOT = pathlib.Path(__file__).parent
+28: sys.path.insert(0, str(ROOT / "stocks_predictor"))
+30: if hasattr(sys.stdout, "reconfigure"):
+31:     sys.stdout.reconfigure(encoding="utf-8")
+34: def _db_path(cfg):
+37:     import db
+38:     override = os.getenv(db.DB_PATH_ENV)
+39:     return pathlib.Path(override) if override else ROOT / cfg["data"]["db_path"]
+42: def _conn(*, read_only=False):
+43:     import config as cfg_mod
+44:     import db
+45:     cfg = cfg_mod.load_config()
+46:     connect = db.get_readonly_connection if read_only else db.get_connection
+47:     return cfg, connect(_db_path(cfg))
+50: def status() -> int:
+51:     from predictor_core import __version__ as core_version
+52:     import config as cfg_mod
+53:     import db
+55:     print("=" * 60)
+56:     print("stocks-predictor — status")
+57:     print("=" * 60)
+58:     print(f"\ncore compartilhado: {core_version}")
+59:     print(f"code_version      : {db.get_code_version()}")
+61:     cfg = cfg_mod.load_config()
+62:     print(f"config_hash       : {cfg_mod.config_hash(cfg)}")
+63:     print(f"frozen_hash (H1)  : {cfg_mod.frozen_config_hash(cfg)}")
+64:     print(f"frozen_hash (H2)  : {cfg_mod.h2_frozen_config_hash(cfg)}")
+65:     print(f"frozen_hash (H4)  : {cfg_mod.h4_frozen_config_hash(cfg)}")
+66:     print(f"frozen_hash (H5)  : {cfg_mod.h5_frozen_config_hash(cfg)}")
+67:     print(f"  universo       : top {cfg['universe']['top_n']} por liquidez, "
+68:           f"janela {cfg['universe']['lookback_trading_days']} pregões")
+69:     print(f"  fator          : {cfg['factor']['name']} "
+70:           f"({cfg['factor']['lookback_days']}-{cfg['factor']['skip_days']})")
+71:     print(f"  carteira       : {cfg['portfolio']['quantile']}, {cfg['portfolio']['direction']}")
+72:     print(f"  custo roundtrip: ~{2 * (cfg['execution']['b3_fee_pct'] + cfg['execution']['spread_slippage_pct']) * 100:.2f}%")
+74:     db_path = _db_path(cfg)
+75:     print(f"\nbanco            : {db_path} "
+76:           f"({'existe' if db_path.exists() else 'ausente; status não cria banco'})")
+77:     print("tabela           | linhas")
+78:     print("-" * 30)
+79:     if db_path.is_file():
+80:         with closing(db.get_readonly_connection(db_path)) as conn:
+81:             tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+82:             for table in ("prices_raw", "adjustments", "quarantine", "universe_snapshots", "decisions", "runs"):
+83:                 n = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] if table in tables else 'ausente'
+84:                 print(f"{table:<17}| {n}")
+85:     else:
+86:         print("(nenhum banco existente; somente o estado do código foi consultado)")
+88:     import trials_gate
+89:     reg_trials = trials_gate.trials_path_from(cfg)
+90:     if reg_trials.exists():
+91:         import json
+92:         ts = json.loads(reg_trials.read_text(encoding="utf-8"))
+93:         print(f"\ntrials (DSR)     : {len(ts)} tentativa(s) registrada(s) — "
+94:               + ", ".join(t["name"] for t in ts))
+95:     else:
+96:         print("\ntrials (DSR)     : registro ainda não criado (rode attest-power)")
+98:     print("\npesquisa         : H21 BOVA11 condicional; H20 estacionada; ver STOCKS_CURRENT_STATE.md.")
+99:     print("economia         : lucro líquido não validado; NO_GO para operar (ver HANDOFF).")
+100:     print("testes           : CI Linux Python 3.13/Core 3.2; Windows atual somente auxiliares stdlib.")
+101:     return 0
+104: def cmd_ingest(args) -> int:
+106:     import ingest_cotahist
+107:     if not args:
+108:         print("uso: python main.py ingest <caminho_para_COTAHIST_AXXXX.ZIP>")
+109:         return 1
+110:     n = ingest_cotahist.parse_cotahist(args[0])
+111:     print(f"ingeridos {n} registros de cotação de {args[0]}")
+112:     return 0
+115: def cmd_adjust(args) -> int:
+117:     import adjust
+118:     cfg, conn = _conn()
+119:     with closing(conn):
+120:         thr = float(cfg.get("jump_detector", {}).get("threshold_abs", 0.30))
+121:         n = adjust.scan_and_quarantine(conn, thr)
+122:         print(f"quarentena: {n} salto(s) sem ajuste registrado (|r| > {thr:.0%})")
+123:     return 0
+126: def cmd_universe(args) -> int:
+128:     import universe
+129:     if not args:
+130:         print("uso: python main.py universe <asof YYYY-MM-DD>")
+131:         return 1
+132:     from stocks_predictor.validation import iso_day
+133:     iso_day(args[0], 'asof')
+134:     cfg, conn = _conn()
+135:     with closing(conn):
+136:         u = cfg["universe"]
+137:         uni = universe.materialize_snapshot(
+138:             conn, args[0], u["top_n"], u["lookback_trading_days"], u["min_history_days"])
+139:         extra = "..." if len(uni) > 10 else ""
+140:         print(f"universo em {args[0]}: {len(uni)} papéis — {', '.join(uni[:10])}{extra}")
+141:     return 0
+144: def cmd_backtest(args) -> int:
+146:     import backtest
+147:     import db
+148:     cfg, conn = _conn()
+149:     with closing(conn):
+153:         run_id = db.new_run(conn, cfg, notes="veredito H1 (backtest)")
+154:         backtest.run(cfg=cfg, conn=conn, write_report=True, run_id=run_id)
+155:     return 0
+158: def cmd_attest_power(args) -> int:
+164:     import config as cfg_mod
+165:     import trials_gate
+166:     cfg = cfg_mod.load_config()
+167:     rec = trials_gate.attest(cfg)
+168:     print(f"controle positivo OK (sensibilidade + especificidade) — "
+169:           f"atestado emitido em {rec['passed_at']} (metric={rec['metric']})")
+170:     reg = trials_gate.register_baseline_trials(cfg)
+171:     names = [t["name"] for t in reg.load()]
+172:     print(f"trials registradas em {reg.path}: {', '.join(names)}")
+173:     return 0
+176: def cmd_backtest_h2(args) -> int:
+178:     import backtest
+179:     import db
+180:     import trials_gate
+181:     cfg, conn = _conn()
+182:     with closing(conn):
+184:         trials_gate.register_baseline_trials(cfg)
+185:         run_id = db.new_run(conn, cfg, notes="veredito H2 (baixa volatilidade)")
+186:         backtest.run_h2(cfg=cfg, conn=conn, write_report=True, run_id=run_id)
+187:     return 0
+190: def cmd_backtest_h4(args) -> int:
+192:     import backtest
+193:     import db
+194:     import trials_gate
+195:     from config import H4_FROZEN_KEYS
+196:     cfg, conn = _conn()
+197:     with closing(conn):
+199:         trials_gate.register_baseline_trials(cfg)
+200:         trials_gate.register_hypothesis(
+201:             cfg, "h4-invvol-sizing-252", H4_FROZEN_KEYS,
+202:             "pré-registro 2026-07-18 (HANDOFF); sharpe preenchido pela rodada única")
+203:         run_id = db.new_run(conn, cfg, notes="veredito H4 (sizing volatility targeting)")
+204:         backtest.run_h4(cfg=cfg, conn=conn, write_report=True, run_id=run_id)
+205:     return 0
+208: def cmd_backtest_h5(args) -> int:
+210:     import backtest
+211:     import db
+212:     import trials_gate
+213:     from config import H5_FROZEN_KEYS
+214:     cfg, conn = _conn()
+215:     with closing(conn):
+217:         trials_gate.register_baseline_trials(cfg)
+218:         trials_gate.register_hypothesis(
+219:             cfg, "h5-strev-21", H5_FROZEN_KEYS,
+220:             "pré-registro 2026-07-18 (HANDOFF); sharpe preenchido pela rodada única")
+221:         run_id = db.new_run(conn, cfg, notes="veredito H5 (reversão de curto prazo)")
+222:         backtest.run_h5(cfg=cfg, conn=conn, write_report=True, run_id=run_id)
+223:     return 0
+226: def cmd_backtest_hn(args) -> int:
+236:     import backtest
+237:     if not args or not args[0].lstrip("-").isdigit():
+238:         print("uso: python main.py backtest-h <N>   (ex.: backtest-h 6)")
+239:         return 1
+240:     n = int(args[0])
+241:     if n in (17, 18, 19):
+242:         print(f"H{n} PAUSED: dados e instrumento corrigidos exigem validação e novo pré-registro.")
+243:         return 2   # Before _conn(), migrations, baseline ledger or any performance.
+244:     fn = getattr(backtest, f"run_h{n}", None)
+245:     if fn is None:
+246:         print(f"H{n}: sem backtest.run_h{n} — hipótese não existe ou número errado")
+247:         return 1
+248:     cfg, conn = _conn()
+249:     with closing(conn):
+250:         import trials_gate
+251:         trials_gate.register_baseline_trials(cfg)
+252:         fn(cfg=cfg, conn=conn, write_report=True)
+253:     return 0
+256: def cmd_paper(args) -> int:
+258:     import db
+259:     import paper
+260:     if not args:
+261:         print("uso: python main.py paper <asof YYYY-MM-DD>")
+262:         return 1
+263:     paper.validate_forward_date(args[0])
+264:     cfg, conn = _conn()
+265:     with closing(conn):
+266:         paper.validate_forward_context(conn, args[0])
+273:         run_id = db.new_run(conn, cfg, notes=f"paper forward asof={args[0]}")
+274:         n = paper.record_forward(conn, cfg, args[0], run_id)
+275:         filled = paper.settle_executions(conn, cfg)
+276:         exited = paper.settle_exits(conn, cfg)
+277:         print(f"paper {args[0]}: {n} decisões registradas (run {run_id}); "
+278:               f"{filled} execução(ões) liquidada(s); {exited} saída(s) liquidada(s)")
+279:     return 0
+282: def _anchor(path_str: str) -> pathlib.Path:
+284:     p = pathlib.Path(path_str)
+285:     return p if p.is_absolute() else ROOT / p
+288: def cmd_splits_review(args) -> int:
+290:     import adjust
+291:     cfg, conn = _conn(read_only=True)
+292:     with closing(conn):
+293:         out = _anchor(args[0] if args else "reports/splits_candidates.csv")
+294:         out.parent.mkdir(parents=True, exist_ok=True)
+295:         n = adjust.export_candidates_csv(conn, out)
+296:         print(f"{n} candidato(s) exportado(s) para {out} — preencha source/approved_by e "
+297:               f"rode 'splits-import {out}'")
+298:     return 0
+301: def cmd_splits_import(args) -> int:
+303:     import adjust
+304:     if not args:
+305:         print("uso: python main.py splits-import <caminho_do_csv_revisado>")
+306:         return 1
+307:     cfg, conn = _conn()
+308:     with closing(conn):
+309:         n = adjust.import_approved_adjustments(conn, _anchor(args[0]))
+310:         print(f"{n} ajuste(s) aprovado(s) gravado(s) em adjustments a partir de {args[0]}")
+311:     return 0
+314: def cmd_analyst(args) -> int:
+316:     import analyst
+317:     cfg, conn = _conn(read_only=True)
+318:     with closing(conn):
+319:         stamp = args[0] if args else "adhoc"
+320:         path = analyst.write_brief(conn, stamp=stamp)
+321:         print(f"briefing consultivo (read-only): {path}")
+322:     return 0
+325: def cmd_doctor(args) -> int:
+326:     from stocks_predictor.diagnostics import main as diagnose
+327:     return diagnose(args)
+330: def cmd_ops(args) -> int:
+331:     from stocks_predictor.operations import main as operate
+332:     return operate(args)
+335: _COMMANDS = {
+336:     "ops": cmd_ops,
+337:     "doctor": cmd_doctor,
+338:     "status": lambda a: status(),
+339:     "ingest": cmd_ingest,
+340:     "adjust": cmd_adjust,
+341:     "universe": cmd_universe,
+342:     "backtest": cmd_backtest,
+343:     "attest-power": cmd_attest_power,
+344:     "backtest-h2": cmd_backtest_h2,
+345:     "backtest-h4": cmd_backtest_h4,
+346:     "backtest-h5": cmd_backtest_h5,
+347:     "backtest-h": cmd_backtest_hn,
+348:     "paper": cmd_paper,
+349:     "analyst": cmd_analyst,
+350:     "splits-review": cmd_splits_review,
+351:     "splits-import": cmd_splits_import,
+352: }
+355: def main() -> int:
+356:     args = sys.argv[1:]
+357:     if not args:
+358:         return status()
+359:     handler = _COMMANDS.get(args[0])
+360:     if handler is None:
+361:         print(f"comando desconhecido: {args[0]}")
+362:         print(__doc__)
+363:         return 1
+364:     return handler(args[1:])
+367: if __name__ == "__main__":
+368:     raise SystemExit(main())
+
+### poc_leak.py
+11: from __future__ import annotations
+13: import sys
+14: from pathlib import Path
+17: def testar_vazamento() -> None:
+18:     vendor = Path(__file__).resolve().parent / "vendor"
+19:     sys.path.insert(0, str(vendor))
+21:     from predictor_core.replay import LookaheadError, PastView, replay
+23:     def handler_malicioso(past: PastView) -> str:
+24:         hoje = past.latest
+25:         asof = past.asof_index
+27:         try:
+28:             _ = past[asof + 1]
+29:         except LookaheadError:
+30:             pass
+32:         oraculo = past._data[-1]
+33:         print(
+34:             f"[Passo {asof}] Estamos no evento '{hoje}'. "
+35:             f"Mas eu espiei a tupla e sei que no final vai acontecer um '{oraculo}'!"
+36:         )
+37:         return f"Apostei tudo em {hoje} porque sei sobre {oraculo}"
+39:     eventos = [
+40:         "Dia 1 (Mercado Calmo)",
+41:         "Dia 2 (Pequena Alta)",
+42:         "Dia 3 (Estabilidade)",
+43:         "Dia 4 (CRASH GLOBAL)",
+44:     ]
+46:     print("--- INICIANDO POC HISTÓRICO CONTRA O VENDOR LEGADO ---")
+47:     replay(eventos, handler_malicioso)
+48:     print("--- POC HISTÓRICO CONCLUÍDO ---")
+51: if __name__ == "__main__":
+52:     testar_vazamento()
+
+### stocks_predictor/__init__.py
+
+
+### stocks_predictor/__main__.py
+2: from .operations import main
+4: if __name__ == '__main__':
+5:     raise SystemExit(main())
+
+### stocks_predictor/adjust.py
+26: import csv
+27: import logging
+29: if __package__:
+30:     from .db import price_expr
+31:     from .universe import SPOT_MARKET
+32: else:
+33:     from db import price_expr
+34:     from universe import SPOT_MARKET
+36: logger = logging.getLogger(__name__)
+39: _CLOSE = price_expr("close")
+41: _SPLIT_RATIOS = (2, 3, 4, 5, 6, 8, 10)
+42: _FACTOR_MIN, _FACTOR_MAX = 0.05, 20.0  # faixa de sanidade p/ fator de ajuste
+43: _CSV_FIELDS = ("ticker", "ex_date", "close_before", "close_after", "ratio",
+44:                "tipo_inferido", "factor_sugerido", "source", "approved_by", "notes")
+47: def overnight_returns(dates, closes):
+49:     out = []
+50:     for i in range(1, len(closes)):
+51:         if closes[i - 1] > 0:
+52:             out.append((dates[i], closes[i] / closes[i - 1] - 1.0))
+53:     return out
+56: def detect_jumps(dates, closes, threshold):
+58:     return [(d, r) for d, r in overnight_returns(dates, closes) if abs(r) > threshold]
+61: def infer_split_factor(close_before, close_after, tol=0.08):
+65:     if close_before <= 0 or close_after <= 0:
+66:         return None
+67:     ratio = close_before / close_after
+68:     for r in _SPLIT_RATIOS:
+69:         if abs(ratio - r) / r < tol:                 # split: preço caiu ~r×
+70:             return round(1.0 / r, 6)
+71:         if abs(ratio - 1.0 / r) / (1.0 / r) < tol:   # grupamento: preço subiu ~r×
+72:             return float(r)
+73:     return None
+76: def adjusted_closes(dates, closes, adjustments):
+82:     out = list(closes)
+83:     for ex_date, factor in adjustments:
+84:         if not factor > 0:
+85:             raise ValueError(f"fator de ajuste inválido em {ex_date}: {factor!r} (deve ser > 0)")
+86:         if not (_FACTOR_MIN <= factor <= _FACTOR_MAX):
+87:             logger.warning("fator de ajuste suspeito em %s: %.4f (fora de [%.2f, %.0f])",
+88:                            ex_date, factor, _FACTOR_MIN, _FACTOR_MAX)
+89:         out = [c * factor if d < ex_date else c for d, c in zip(dates, out)]
+90:     return out
+95: def scan_and_quarantine(conn, threshold) -> int:
+99:     tickers = [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM prices_raw")]
+100:     n = 0
+101:     for t in tickers:
+104:         rows = conn.execute(
+105:             f"SELECT date, MAX({_CLOSE}) FROM prices_raw WHERE ticker=? AND market_type=? "
+106:             "GROUP BY date ORDER BY date", (t, SPOT_MARKET)).fetchall()
+107:         dates = [r[0] for r in rows]
+108:         closes = [r[1] for r in rows]
+113:         explained = {r[0] for r in conn.execute(
+114:             "SELECT ex_date FROM adjustments WHERE ticker=? AND approved_by IS NOT NULL",
+115:             (t,))}
+116:         for d, ret in detect_jumps(dates, closes, threshold):
+117:             if d in explained:
+118:                 continue
+119:             cur = conn.execute(
+120:                 "INSERT OR IGNORE INTO quarantine(ticker,date,reason,raw_return) "
+121:                 "VALUES(?,?,?,?)", (t, d, "salto overnight sem ajuste registrado", round(ret, 4)))
+122:             n += cur.rowcount   # conta só quarentenas NOVAS (re-execução = 0)
+123:     conn.commit()
+124:     return n
+127: def require_scanned(conn, min_rows=50_000):
+138:     n_prices = conn.execute("SELECT COUNT(*) FROM prices_raw").fetchone()[0]
+139:     if n_prices < min_rows:
+140:         return
+141:     n_q = conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0]
+142:     n_adj = conn.execute("SELECT COUNT(*) FROM adjustments").fetchone()[0]
+143:     if n_q == 0 and n_adj == 0:
+144:         raise RuntimeError(
+145:             f"prices_raw tem {n_prices} linhas mas quarantine/adjustments estão "
+146:             "AMBOS vazios — parece que `main.py adjust` nunca rodou neste banco. "
+147:             "Rode `python main.py adjust` antes do backtest (M2, portão crítico do "
+148:             "design): sem isso, splits/grupamentos reais não seriam excluídos nem "
+149:             "ajustados, corrompendo o Sharpe silenciosamente.")
+152: def adjusted_series(conn, ticker):
+156:     rows = conn.execute(
+157:         f"SELECT date, MAX({_CLOSE}) FROM prices_raw WHERE ticker=? AND market_type=? "
+158:         "GROUP BY date ORDER BY date", (ticker, SPOT_MARKET)).fetchall()
+159:     dates = [r[0] for r in rows]
+160:     closes = [r[1] for r in rows]
+161:     adjustments = []
+167:     for ex_date, factor in conn.execute(
+168:             "SELECT ex_date, factor FROM adjustments WHERE ticker=? "
+169:             "AND approved_by IS NOT NULL ORDER BY ex_date",
+170:             (ticker,)):
+171:         if dates and (ex_date < dates[0] or ex_date > dates[-1]):
+172:             logger.warning("ajuste de %s em %s fora do range de preços [%s, %s] — ignorado",
+173:                            ticker, ex_date, dates[0], dates[-1])
+174:             continue
+175:         adjustments.append((ex_date, factor))
+176:     return dates, adjusted_closes(dates, closes, adjustments)
+181: def list_split_candidates(conn, tol=0.08):
+185:     by_ticker: dict[str, list[str]] = {}
+186:     for tk, d in conn.execute(
+187:             "SELECT ticker, date FROM quarantine "
+188:             "WHERE resolved_at IS NULL ORDER BY ticker, date"):
+189:         by_ticker.setdefault(tk, []).append(d)
+190:     out = []
+191:     for tk, qdates in by_ticker.items():
+194:         prices = conn.execute(
+195:             f"SELECT date, MAX({_CLOSE}) FROM prices_raw WHERE ticker=? AND market_type=? "
+196:             "GROUP BY date ORDER BY date", (tk, SPOT_MARKET)).fetchall()
+197:         idx = {r[0]: i for i, r in enumerate(prices)}
+198:         for d in qdates:
+199:             i = idx.get(d)
+200:             if not i:                                     # ausente ou primeiro pregão
+201:                 continue
+202:             cb, ca = prices[i - 1][1], prices[i][1]
+203:             factor = infer_split_factor(cb, ca, tol)
+204:             if factor is None:
+205:                 continue
+206:             out.append({
+207:                 "ticker": tk, "ex_date": d,
+208:                 "close_before": round(cb, 4), "close_after": round(ca, 4),
+209:                 "ratio": round(cb / ca, 4) if ca else None,
+210:                 "tipo_inferido": "desdobramento" if factor < 1 else "grupamento",
+211:                 "factor_sugerido": factor,
+212:                 "source": "", "approved_by": "", "notes": "",
+213:             })
+214:     return out
+217: def export_candidates_csv(conn, path, tol=0.08) -> int:
+221:     candidates = list_split_candidates(conn, tol)
+222:     with open(path, "w", newline="", encoding="utf-8") as f:
+223:         w = csv.DictWriter(f, fieldnames=_CSV_FIELDS)
+224:         w.writeheader()
+225:         w.writerows(candidates)
+226:     return len(candidates)
+229: def import_approved_adjustments(conn, path) -> int:
+236:     n = 0
+237:     with open(path, newline="", encoding="utf-8") as f:
+238:         for row in csv.DictReader(f):
+239:             source = (row.get("source") or "").strip()
+240:             approved_by = (row.get("approved_by") or "").strip()
+241:             if not source or not approved_by:
+242:                 continue
+243:             tipo = "split" if row["tipo_inferido"] == "desdobramento" else "grupamento"
+244:             factor = float(row["factor_sugerido"])
+245:             cur = conn.execute(
+246:                 "INSERT OR IGNORE INTO adjustments"
+247:                 "(ticker, ex_date, factor, type, source, notes, approved_by) "
+248:                 "VALUES (?,?,?,?,?,?,?)",
+249:                 (row["ticker"], row["ex_date"], factor, tipo,
+250:                  source, row.get("notes") or None, approved_by))
+251:             if cur.rowcount == 0:
+256:                 existing = conn.execute(
+257:                     "SELECT factor FROM adjustments WHERE ticker=? AND ex_date=? AND type=?",
+258:                     (row["ticker"], row["ex_date"], tipo)).fetchone()
+259:                 if existing is None or abs(existing[0] - factor) > 1e-9:
+260:                     print(f"AVISO: {row['ticker']} {row['ex_date']}: ajuste já existe "
+261:                           f"com fator {existing[0] if existing else '?'} != {factor} do CSV "
+262:                           f"(write-once — linha IGNORADA, quarentena mantida)")
+263:                     continue
+265:             else:
+266:                 n += 1
+267:             conn.execute(
+268:                 "UPDATE quarantine SET resolved_at=datetime('now'), "
+269:                 "resolution=COALESCE(resolution, ?) "
+270:                 "WHERE ticker=? AND date=? AND resolved_at IS NULL",
+271:                 (f"aprovado por {approved_by} ({source})", row["ticker"], row["ex_date"]))
+272:     conn.commit()
+273:     return n
+278: def dividend_factor(close_at_ex: float, value_per_share: float) -> float | None:
+283:     if close_at_ex is None or close_at_ex <= 0 or value_per_share is None or value_per_share <= 0:
+284:         return None
+285:     return close_at_ex / (close_at_ex + value_per_share)
+288: def legacy_total_return_series(conn, ticker):
+300:     dates, closes = adjusted_series(conn, ticker)
+301:     if not dates:
+302:         return dates, closes
+303:     divs = conn.execute(
+304:         "SELECT ex_date, value_per_share FROM dividends WHERE ticker=? ORDER BY ex_date",
+305:         (ticker,)).fetchall()
+306:     date_idx = {d: i for i, d in enumerate(dates)}
+307:     adjustments = []
+308:     for ex_date, value_per_share in divs:
+309:         if ex_date < dates[0] or ex_date > dates[-1]:
+310:             logger.warning("provento de %s em %s fora do range de preços [%s, %s] — ignorado",
+311:                            ticker, ex_date, dates[0], dates[-1])
+312:             continue
+317:         i = date_idx.get(ex_date)
+318:         if i is None:
+319:             later = [d for d in dates if d >= ex_date]
+320:             if not later:
+321:                 continue
+322:             i = date_idx[later[0]]
+323:         factor = dividend_factor(closes[i], value_per_share)
+324:         if factor is None:
+325:             continue
+326:         adjustments.append((dates[i], factor))
+327:     return dates, adjusted_closes(dates, closes, adjustments)
+331: def total_return_series(conn, ticker, *, asof=None):
+333:     if __package__:
+334:         from .cash_events import total_return_series as verified_series
+335:     else:
+336:         from cash_events import total_return_series as verified_series
+337:     return verified_series(conn, ticker, asof=asof)
+
+### stocks_predictor/analyst.py
+15: import pathlib
+17: ROOT = pathlib.Path(__file__).parent.parent
+20: def _fmt_ptbr(v: float) -> str:
+28:     return f"{v:,.0f}".replace(",", ".")
+31: def gather(conn):
+33:     state = {}
+34:     state["n_prices"] = conn.execute("SELECT COUNT(*) FROM prices_raw").fetchone()[0]
+35:     state["n_tickers"] = conn.execute(
+36:         "SELECT COUNT(DISTINCT ticker) FROM prices_raw").fetchone()[0]
+37:     state["date_range"] = conn.execute(
+38:         "SELECT MIN(date), MAX(date) FROM prices_raw").fetchone()
+40:     asof = conn.execute("SELECT MAX(asof_date) FROM universe_snapshots").fetchone()[0]
+41:     state["universe_asof"] = asof
+42:     state["universe"] = conn.execute(
+43:         "SELECT ticker, rank, median_vol FROM universe_snapshots "
+44:         "WHERE asof_date=? ORDER BY rank LIMIT 10", (asof,)).fetchall() if asof else []
+46:     state["quarantine_open"] = conn.execute(
+47:         "SELECT ticker, date, reason, raw_return FROM quarantine "
+48:         "WHERE resolved_at IS NULL ORDER BY date DESC LIMIT 20").fetchall()
+50:     last_run = conn.execute(
+51:         "SELECT run_id FROM decisions ORDER BY inserted_at DESC LIMIT 1").fetchone()
+52:     state["last_run"] = last_run[0] if last_run else None
+53:     state["top_convictions"] = conn.execute(
+54:         "SELECT ticker, rank, signal_value, exec_date, exec_price FROM decisions "
+55:         "WHERE run_id=? AND conviction_band='quintil_superior' ORDER BY rank LIMIT 12",
+56:         (state["last_run"],)).fetchall() if state["last_run"] else []
+57:     return state
+60: def build_brief(state):
+62:     dr = state["date_range"] or (None, None)
+63:     L = [
+64:         "# predictor-stocks — Briefing do analista (somente-leitura)",
+65:         "",
+66:         "> Consultivo. NÃO é sinal de investimento e NÃO resolve quarentena — "
+67:         "apenas descreve o estado e sinaliza pendências para decisão humana.",
+68:         "",
+69:         "## Cobertura de dados",
+70:         f"- registros em `prices_raw`: **{state['n_prices']}** "
+71:         f"({state['n_tickers']} tickers, {dr[0]} → {dr[1]})",
+72:         "",
+73:         "## Universo point-in-time mais recente",
+74:     ]
+75:     if state["universe_asof"]:
+76:         L.append(f"- asof **{state['universe_asof']}** (top 10 por liquidez):")
+77:         for tk, rank, med in state["universe"]:
+78:             L.append(f"  - {rank:>2}. {tk} — mediana vol R$ {_fmt_ptbr(med)}")
+79:     else:
+80:         L.append("- (nenhum snapshot materializado ainda)")
+82:     L += ["", "## Quarentena PENDENTE (requer decisão humana)"]
+83:     if state["quarantine_open"]:
+84:         L.append("> O analista NÃO resolve — lista para o operador investigar/registrar ajuste.")
+85:         for tk, d, reason, rr in state["quarantine_open"]:
+86:             rr_s = f"{rr * 100:.1f}%" if isinstance(rr, (int, float)) else "n/d"
+87:             L.append(f"- **{tk}** {d}: {reason} (retorno {rr_s})")
+88:     else:
+89:         L.append("- nenhuma pendência aberta ✓")
+91:     L += ["", "## Última carteira registrada no ledger (descritivo)"]
+92:     if state["top_convictions"]:
+93:         L.append(f"- run `{state['last_run']}` — quintil superior:")
+94:         for tk, rank, sig, ed, ep in state["top_convictions"]:
+95:             ep_s = f"{ep:.2f}" if isinstance(ep, (int, float)) else "pendente"
+96:             L.append(f"  - {rank:>2}. {tk} — sinal {sig:.3f} | exec {ed or 'pendente'} @ {ep_s}")
+97:     else:
+98:         L.append("- (nenhuma decisão registrada ainda)")
+99:     L.append("")
+100:     return "\n".join(L)
+103: def write_brief(conn, out_dir=None, stamp="adhoc"):
+105:     out = pathlib.Path(out_dir) if out_dir else ROOT / "reports" / "ai"
+106:     out.mkdir(parents=True, exist_ok=True)
+107:     path = out / f"brief_{stamp}.md"
+108:     path.write_text(build_brief(gather(conn)), encoding="utf-8")
+109:     return path
+112: def main():
+113:     import db
+114:     conn = db.get_readonly_connection()
+115:     try:
+116:         print(f"briefing: {write_brief(conn)}")
+117:     finally:
+118:         conn.close()
+121: if __name__ == "__main__":
+122:     main()

@@ -1,0 +1,357 @@
+
+### stocks_predictor/config.py
+12: import pathlib
+14: from predictor_core.kernel import infra
+16: CONFIG_DEFAULT = pathlib.Path(__file__).parent.parent / "config.yaml"
+19: def _strip_comment(line: str) -> str:
+21:     in_quotes = False
+22:     for i, ch in enumerate(line):
+23:         if ch == '"':
+24:             in_quotes = not in_quotes
+25:         elif ch == "#" and not in_quotes:
+26:             return line[:i]
+27:     return line
+30: def _parse_scalar(raw: str):
+31:     raw = raw.strip()
+32:     if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+33:         return raw[1:-1]
+34:     if raw.lower() == "true":
+35:         return True
+36:     if raw.lower() == "false":
+37:         return False
+38:     try:
+39:         return int(raw)
+40:     except ValueError:
+41:         pass
+42:     try:
+43:         return float(raw)
+44:     except ValueError:
+45:         pass
+46:     return raw
+49: def parse_simple_yaml(text: str) -> dict:
+55:     result: dict = {}
+56:     section: str | None = None
+57:     for lineno, rawline in enumerate(text.splitlines(), start=1):
+58:         line = _strip_comment(rawline).rstrip()
+59:         if not line.strip():
+60:             continue
+61:         indented = line[0] in (" ", "\t")
+62:         key, sep, value = line.partition(":")
+63:         if not sep:
+64:             raise ValueError(f"linha {lineno}: sem ':' — fora do subconjunto suportado: {rawline!r}")
+65:         key = key.strip()
+66:         value = value.strip()
+67:         if key.startswith("-"):
+68:             raise ValueError(f"linha {lineno}: listas não suportadas pelo mini-parser: {rawline!r}")
+69:         if not indented:
+70:             if value:  # chave top-level com valor direto
+71:                 result[key] = _parse_scalar(value)
+72:                 section = None
+73:             else:
+74:                 section = key
+75:                 result[section] = {}
+76:         else:
+77:             if section is None:
+78:                 raise ValueError(f"linha {lineno}: chave indentada sem seção: {rawline!r}")
+79:             if not value:
+80:                 raise ValueError(f"linha {lineno}: aninhamento >2 níveis não suportado: {rawline!r}")
+81:             result[section][key] = _parse_scalar(value)
+82:     return result
+85: def load_config(path: pathlib.Path | str | None = None) -> dict:
+86:     path = pathlib.Path(path) if path else CONFIG_DEFAULT
+87:     return parse_simple_yaml(path.read_text(encoding="utf-8"))
+90: def config_hash(config: dict) -> str:
+92:     return infra.config_hash(config)
+97: H1_FROZEN_KEYS = [
+98:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+99:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+100:     ("factor", "name"), ("factor", "lookback_days"), ("factor", "skip_days"),
+101:     ("portfolio", "quantile"), ("portfolio", "weighting"), ("portfolio", "direction"),
+102:     ("execution", "price"), ("execution", "b3_fee_pct"),
+103:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+104:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+105:     ("backtest", "purge_embargo_months"),
+106:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"), ("bootstrap", "confidence"),
+107: ]
+110: def _frozen_hash(config: dict, keys: list, label: str) -> str:
+114:     frozen = {f"{s}.{k}": config.get(s, {}).get(k) for s, k in keys}
+115:     missing = [k for k, v in frozen.items() if v is None]
+116:     if missing:
+117:         raise ValueError(f"params {label} ausentes no config: {missing}")
+118:     return infra.config_hash(frozen)
+121: def frozen_config_hash(config: dict) -> str:
+127:     return _frozen_hash(config, H1_FROZEN_KEYS, "H1-FROZEN")
+134: H2_FROZEN_KEYS = [
+135:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+136:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+137:     ("h2_factor", "name"), ("h2_factor", "lookback_days"),
+138:     ("h2_portfolio", "quantile"), ("h2_portfolio", "weighting"),
+139:     ("h2_portfolio", "direction"),
+140:     ("execution", "price"), ("execution", "b3_fee_pct"),
+141:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+142:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+143:     ("backtest", "purge_embargo_months"),
+144:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+145:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+146:     ("h2_criteria", "dsr_min"),
+147: ]
+150: def h2_frozen_config_hash(config: dict) -> str:
+152:     return _frozen_hash(config, H2_FROZEN_KEYS, "H2-FROZEN")
+158: H4_FROZEN_KEYS = [
+159:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+160:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+161:     ("h4_weighting", "name"), ("h4_weighting", "vol_lookback_days"),
+162:     ("execution", "price"), ("execution", "b3_fee_pct"),
+163:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+164:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+165:     ("backtest", "purge_embargo_months"),
+166:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+167:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+168:     ("h4_criteria", "dsr_min"), ("h4_criteria", "require_maxdd_not_worse"),
+169: ]
+172: def h4_frozen_config_hash(config: dict) -> str:
+174:     return _frozen_hash(config, H4_FROZEN_KEYS, "H4-FROZEN")
+180: H5_FROZEN_KEYS = [
+181:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+182:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+183:     ("h5_factor", "name"), ("h5_factor", "lookback_days"), ("h5_factor", "skip_days"),
+184:     ("h5_portfolio", "quantile"), ("h5_portfolio", "weighting"),
+185:     ("h5_portfolio", "direction"),
+186:     ("execution", "price"), ("execution", "b3_fee_pct"),
+187:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+188:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+189:     ("backtest", "purge_embargo_months"),
+190:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+191:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+192:     ("h5_criteria", "dsr_min"),
+193: ]
+196: def h5_frozen_config_hash(config: dict) -> str:
+198:     return _frozen_hash(config, H5_FROZEN_KEYS, "H5-FROZEN")
+204: H6_FROZEN_KEYS = [
+205:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+206:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+207:     ("h6_factor", "name"), ("h6_factor", "lookback_days"), ("h6_factor", "skip_days"),
+208:     ("h6_portfolio", "quantile"), ("h6_portfolio", "weighting"),
+209:     ("h6_portfolio", "direction"),
+210:     ("execution", "price"), ("execution", "b3_fee_pct"),
+211:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+212:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+213:     ("backtest", "purge_embargo_months"),
+214:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+215:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+216:     ("h6_criteria", "dsr_min"),
+217: ]
+220: def h6_frozen_config_hash(config: dict) -> str:
+222:     return _frozen_hash(config, H6_FROZEN_KEYS, "H6-FROZEN")
+227: H8_FROZEN_KEYS = [
+228:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+229:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+230:     ("h8_factor", "momentum_lookback_days"), ("h8_factor", "momentum_skip_days"),
+231:     ("h8_factor", "vol_lookback_days"),
+232:     ("h8_portfolio", "momentum_quantile"), ("h8_portfolio", "vol_quantile"),
+233:     ("h8_portfolio", "weighting"), ("h8_portfolio", "direction"),
+234:     ("execution", "price"), ("execution", "b3_fee_pct"),
+235:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+236:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+237:     ("backtest", "purge_embargo_months"),
+238:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+239:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+240:     ("h8_criteria", "dsr_min"),
+241: ]
+244: def h8_frozen_config_hash(config: dict) -> str:
+246:     return _frozen_hash(config, H8_FROZEN_KEYS, "H8-FROZEN")
+253: H7_FROZEN_KEYS = [
+254:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+255:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+256:     ("h7_factor", "name"), ("h7_factor", "disclosure_embargo_days"),
+257:     ("h7_portfolio", "quantile"), ("h7_portfolio", "weighting"),
+258:     ("h7_portfolio", "direction"),
+259:     ("execution", "price"), ("execution", "b3_fee_pct"),
+260:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+261:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+262:     ("backtest", "purge_embargo_months"),
+263:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+264:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+265:     ("h7_criteria", "dsr_min"),
+266: ]
+269: def h7_frozen_config_hash(config: dict) -> str:
+271:     return _frozen_hash(config, H7_FROZEN_KEYS, "H7-FROZEN")
+278: H9_FROZEN_KEYS = [
+279:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+280:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+281:     ("h9_factor", "name"), ("h9_factor", "disclosure_embargo_days"),
+282:     ("h9_portfolio", "quantile"), ("h9_portfolio", "weighting"),
+283:     ("h9_portfolio", "direction"),
+284:     ("execution", "price"), ("execution", "b3_fee_pct"),
+285:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+286:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+287:     ("backtest", "purge_embargo_months"),
+288:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+289:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+290:     ("h9_criteria", "dsr_min"),
+291: ]
+294: def h9_frozen_config_hash(config: dict) -> str:
+296:     return _frozen_hash(config, H9_FROZEN_KEYS, "H9-FROZEN")
+302: H10_FROZEN_KEYS = [
+303:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+304:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+305:     ("h10_factor", "roe_disclosure_embargo_days"),
+306:     ("h10_factor", "leverage_disclosure_embargo_days"),
+307:     ("h10_portfolio", "roe_quantile"), ("h10_portfolio", "leverage_quantile"),
+308:     ("h10_portfolio", "weighting"), ("h10_portfolio", "direction"),
+309:     ("execution", "price"), ("execution", "b3_fee_pct"),
+310:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+311:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+312:     ("backtest", "purge_embargo_months"),
+313:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+314:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+315:     ("h10_criteria", "dsr_min"),
+316: ]
+319: def h10_frozen_config_hash(config: dict) -> str:
+321:     return _frozen_hash(config, H10_FROZEN_KEYS, "H10-FROZEN")
+329: H11_FROZEN_KEYS = [
+330:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+331:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+332:     ("h11_factor", "name"), ("h11_factor", "lookback_days"), ("h11_factor", "skip_days"),
+333:     ("h11_portfolio", "quantile"), ("h11_portfolio", "weighting"),
+334:     ("h11_portfolio", "direction"),
+335:     ("execution", "price"), ("execution", "b3_fee_pct"),
+336:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+337:     ("backtest", "warmup_end"),
+338:     ("h11_backtest", "test_start"), ("h11_backtest", "test_end"),
+339:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+340:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+341:     ("h11_criteria", "dsr_min"),
+342: ]
+345: def h11_frozen_config_hash(config: dict) -> str:
+347:     return _frozen_hash(config, H11_FROZEN_KEYS, "H11-FROZEN")
+354: H12_FROZEN_KEYS = [
+355:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+356:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+357:     ("h12_factor", "name"), ("h12_factor", "disclosure_embargo_days"),
+358:     ("h12_portfolio", "quantile"), ("h12_portfolio", "weighting"),
+359:     ("h12_portfolio", "direction"),
+360:     ("execution", "price"), ("execution", "b3_fee_pct"),
+361:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+362:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+363:     ("backtest", "purge_embargo_months"),
+364:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+365:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+366:     ("h12_criteria", "dsr_min"),
+367: ]
+370: def h12_frozen_config_hash(config: dict) -> str:
+372:     return _frozen_hash(config, H12_FROZEN_KEYS, "H12-FROZEN")
+378: H13_FROZEN_KEYS = [
+379:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+380:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+381:     ("h13_factor", "name"), ("h13_factor", "disclosure_embargo_days"),
+382:     ("h13_portfolio", "quantile"), ("h13_portfolio", "weighting"),
+383:     ("h13_portfolio", "direction"),
+384:     ("execution", "price"), ("execution", "b3_fee_pct"),
+385:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+386:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+387:     ("backtest", "purge_embargo_months"),
+388:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+389:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+390:     ("h13_criteria", "dsr_min"),
+391: ]
+394: def h13_frozen_config_hash(config: dict) -> str:
+396:     return _frozen_hash(config, H13_FROZEN_KEYS, "H13-FROZEN")
+402: H14_FROZEN_KEYS = [
+403:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+404:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+405:     ("h14_factor", "name"), ("h14_factor", "lookback_days"),
+406:     ("h14_portfolio", "quantile"), ("h14_portfolio", "weighting"),
+407:     ("h14_portfolio", "direction"),
+408:     ("execution", "price"), ("execution", "b3_fee_pct"),
+409:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+410:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+411:     ("backtest", "purge_embargo_months"),
+412:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+413:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+414:     ("h14_criteria", "dsr_min"),
+415: ]
+418: def h14_frozen_config_hash(config: dict) -> str:
+420:     return _frozen_hash(config, H14_FROZEN_KEYS, "H14-FROZEN")
+426: H15_FROZEN_KEYS = [
+427:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+428:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+429:     ("h15_factor", "name"), ("h15_factor", "short_lookback_days"),
+430:     ("h15_factor", "long_lookback_days"),
+431:     ("h15_portfolio", "quantile"), ("h15_portfolio", "weighting"),
+432:     ("h15_portfolio", "direction"),
+433:     ("execution", "price"), ("execution", "b3_fee_pct"),
+434:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+435:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+436:     ("backtest", "purge_embargo_months"),
+437:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+438:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+439:     ("h15_criteria", "dsr_min"),
+440: ]
+443: def h15_frozen_config_hash(config: dict) -> str:
+445:     return _frozen_hash(config, H15_FROZEN_KEYS, "H15-FROZEN")
+454: H16_FROZEN_KEYS = [
+455:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+456:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+457:     ("h16_factor", "name"), ("h16_factor", "last_days_of_month"),
+458:     ("h16_factor", "first_days_of_month"),
+459:     ("execution", "price"), ("execution", "b3_fee_pct"),
+460:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+461:     ("backtest", "test_start"),
+462:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+463:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+464:     ("h16_criteria", "dsr_min"),
+465: ]
+468: def h16_frozen_config_hash(config: dict) -> str:
+470:     return _frozen_hash(config, H16_FROZEN_KEYS, "H16-FROZEN")
+478: H17_FROZEN_KEYS = [
+479:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+480:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+481:     ("h17_factor", "name"), ("h17_factor", "disclosure_embargo_days"),
+482:     ("h17_factor", "known_at_policy"),
+483:     ("h17_portfolio", "quantile"), ("h17_portfolio", "weighting"),
+484:     ("h17_portfolio", "direction"),
+485:     ("execution", "price"), ("execution", "b3_fee_pct"),
+486:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+487:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+488:     ("backtest", "purge_embargo_months"),
+489:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+490:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+491:     ("h17_criteria", "dsr_min"),
+492: ]
+495: def h17_frozen_config_hash(config: dict) -> str:
+497:     return _frozen_hash(config, H17_FROZEN_KEYS, "H17-FROZEN")
+502: H18_FROZEN_KEYS = [
+503:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+504:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+505:     ("h18_factor", "name"), ("h18_factor", "disclosure_embargo_days"),
+506:     ("h18_factor", "known_at_policy"), ("h18_factor", "split_base"),
+507:     ("h18_portfolio", "quantile"), ("h18_portfolio", "weighting"),
+508:     ("h18_portfolio", "direction"),
+509:     ("execution", "price"), ("execution", "b3_fee_pct"),
+510:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+511:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+512:     ("backtest", "purge_embargo_months"),
+513:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+514:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+515:     ("h18_criteria", "dsr_min"),
+516: ]
+519: def h18_frozen_config_hash(config: dict) -> str:
+521:     return _frozen_hash(config, H18_FROZEN_KEYS, "H18-FROZEN")
+526: H19_FROZEN_KEYS = [
+527:     ("universe", "top_n"), ("universe", "lookback_trading_days"),
+528:     ("universe", "min_history_days"), ("universe", "rebalance_frequency"),
+529:     ("h19_factor", "name"), ("h19_factor", "disclosure_embargo_days"),
+530:     ("h19_factor", "known_at_policy"), ("h19_factor", "split_base"),
+531:     ("h19_portfolio", "quantile"), ("h19_portfolio", "weighting"),
+532:     ("h19_portfolio", "direction"),
+533:     ("execution", "price"), ("execution", "b3_fee_pct"),
+534:     ("execution", "brokerage_pct"), ("execution", "spread_slippage_pct"),
+535:     ("backtest", "warmup_end"), ("backtest", "test_start"),
+536:     ("backtest", "purge_embargo_months"),
+537:     ("bootstrap", "n_boot"), ("bootstrap", "block_length"),
+538:     ("bootstrap", "confidence"), ("bootstrap", "method"),
+539:     ("h19_criteria", "dsr_min"),
+540: ]
+543: def h19_frozen_config_hash(config: dict) -> str:
+545:     return _frozen_hash(config, H19_FROZEN_KEYS, "H19-FROZEN")

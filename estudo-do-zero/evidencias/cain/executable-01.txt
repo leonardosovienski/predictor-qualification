@@ -1,0 +1,489 @@
+
+### src/cain/agents/arithmetic.py
+2: import ast
+3: from fractions import Fraction
+4: import operator
+5: import re
+8: def sequence_request(payload: str):
+14:     if len(payload) > 1200:
+15:         return None
+16:     number = r"[+-]?\d{1,15}(?:[.,]\d{1,9})?"
+17:     start = re.match(r"\s*(?:comece|inicie)\s+com\s+(" + number + r")", payload, re.I)
+18:     if not start:
+19:         return None
+20:     tail = payload[start.end():]
+21:     only = re.search(
+22:         r"[.!?]\s*(?:responda|retorne)\s+(?:apenas|somente)\s+"
+23:         r"(?:com\s+)?o\s+(?:resultado|número|numero)\s*[.!?]?\s*$", tail, re.I,
+24:     )
+25:     if only:
+26:         tail = tail[:only.start()]
+27:     tail = tail.rstrip(" .!?")
+28:     operation = re.compile(
+29:         r"\s*(?:[,;]\s*(?:e\s+)?|e\s+)(some|adicione|subtraia|multiplique\s+por|divida\s+por)"
+30:         r"\s+(" + number + r")", re.I,
+31:     )
+32:     operations = []
+33:     offset = 0
+34:     while offset < len(tail):
+35:         match = operation.match(tail, offset)
+36:         if not match or len(operations) >= 16:
+37:             return None
+38:         operations.append((match[1].lower(), match[2].replace(",", ".")))
+39:         offset = match.end()
+40:     return (start[1].replace(",", "."), operations, bool(only)) if operations else None
+43: def answer(payload: str) -> str:
+44:     sequence = sequence_request(payload)
+45:     if sequence is not None:
+46:         initial, steps, only = sequence
+47:         result = Fraction(initial)
+48:         try:
+49:             for operation, operand in steps:
+50:                 value = Fraction(operand)
+51:                 if operation in {"some", "adicione"}:
+52:                     result += value
+53:                 elif operation == "subtraia":
+54:                     result -= value
+55:                 elif operation.startswith("multiplique"):
+56:                     result *= value
+57:                 else:
+58:                     result /= value
+59:                 if max(abs(result.numerator), result.denominator) > 10**18:
+60:                     raise ValueError("numeric limit")
+61:             return str(result) if only else f"Resultado: {result}."
+62:         except (ValueError, ZeroDivisionError):
+63:             return "Não foi possível calcular: divisão por zero ou limite numérico excedido."
+64:     expression = re.sub(r'^.*?(?:quanto\s+(?:é|e|dá|da)|calcule|calcular|what is)\s+',
+65:                         '', payload.strip(), count=1, flags=re.I)
+66:     expression = expression.rstrip('?! .').replace('−', '-').replace('–', '-').replace(',', '.')
+67:     operations = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+68:                   ast.Div: operator.truediv, ast.Mod: operator.mod}
+69:     try:
+70:         if len(expression) > 160:
+71:             raise ValueError('expression limit')
+72:         tree = ast.parse(expression, mode='eval')
+73:         if sum(1 for _ in ast.walk(tree)) > 64:
+74:             raise ValueError('node limit')
+76:         def value(node):
+77:             if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+78:                 result = Fraction(str(node.value))
+79:             elif isinstance(node, ast.UnaryOp) and type(node.op) in (ast.UAdd, ast.USub):
+80:                 result = value(node.operand) * (-1 if isinstance(node.op, ast.USub) else 1)
+81:             elif isinstance(node, ast.BinOp) and type(node.op) in operations:
+82:                 result = operations[type(node.op)](value(node.left), value(node.right))
+83:             else:
+84:                 raise ValueError('unsupported expression')
+85:             if max(abs(result.numerator), result.denominator) > 10**18:
+86:                 raise ValueError('numeric limit')
+87:             return result
+89:         return f'{expression} = {value(tree.body)}.'
+90:     except (SyntaxError, ValueError, ZeroDivisionError, OverflowError, RecursionError):
+91:         return ('Não foi possível calcular esta expressão com segurança. Use números finitos, '
+92:                 'parênteses e +, -, *, / ou %; divisão por zero não é definida.')
+
+### src/cain/api.py
+3: from dataclasses import asdict
+4: from pathlib import Path
+5: import json
+6: import sqlite3
+7: from threading import Lock
+8: from typing import Literal
+9: from urllib.parse import urlsplit
+10: from uuid import uuid4
+12: from fastapi import FastAPI, HTTPException, Request
+13: from fastapi.responses import FileResponse, JSONResponse
+14: from fastapi.staticfiles import StaticFiles
+15: from pydantic import BaseModel, Field, field_validator
+16: from starlette.middleware.trustedhost import TrustedHostMiddleware
+18: from cain.providers import configured_llm, configured_embedding
+19: from cain import __version__
+20: from cain.runtime import build_cain, build_retriever, build_profile
+21: from cain.orchestrator.routing import RuleRouter
+22: from cain.settings import load_settings
+23: from cain.workspace import WorkspaceStore
+25: Scope = Literal["user", "project", "session", "turn"]
+26: PreferenceKey = Literal["format", "verbosity", "language"]
+29: def _normalized_origin(value: str) -> tuple[str, str, int] | None:
+31:     if (not value or "?" in value or "#" in value
+32:             or any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in value)):
+33:         return None
+34:     try:
+35:         parts = urlsplit(value)
+36:         if (parts.scheme not in {"http", "https"} or not parts.hostname
+37:                 or parts.username is not None or parts.password is not None
+38:                 or parts.path or parts.query or parts.fragment
+39:                 or parts.netloc.endswith(":")):
+40:             return None
+41:         port = parts.port if parts.port is not None else (443 if parts.scheme == "https" else 80)
+42:         return parts.scheme, parts.hostname.lower(), port
+43:     except ValueError:
+45:         return None
+48: class RunRequest(BaseModel):
+49:     user_id: str = Field(min_length=1, max_length=200)
+50:     session_id: str = Field(min_length=1, max_length=200)
+51:     payload: str = Field(min_length=1, max_length=100_000)
+52:     intent: Literal["busca", "search", "codigo", "código", "code", "resumo", "summary", "conversa", "chat"] | None = None
+53:     run_id: str | None = Field(default=None, min_length=1, max_length=200)
+54:     project_id: str | None = Field(default=None, max_length=200)
+55:     preference_scope: Scope | None = None
+57:     @field_validator("user_id", "session_id", "payload")
+58:     @classmethod
+59:     def not_blank(cls, value: str) -> str:
+60:         if not value.strip():
+61:             raise ValueError("Campo não pode ser vazio")
+62:         return value
+65: class PreferenceRequest(BaseModel):
+66:     value: str
+67:     scope: Scope = "user"
+68:     project_id: str | None = None
+69:     session_id: str | None = None
+70:     turn_id: str | None = None
+71:     expires_at: str | None = None
+74: class ProjectRequest(BaseModel):
+75:     name: str = Field(min_length=1, max_length=100)
+78: class SessionRequest(BaseModel):
+79:     project_id: str | None = None
+82: class DocumentRequest(BaseModel):
+83:     title: str = Field(min_length=1, max_length=200)
+84:     content: str = Field(min_length=1, max_length=262144)
+87: class FeedbackRequest(BaseModel):
+88:     user_id: str = Field(min_length=1, max_length=200)
+89:     reason: Literal["useful", "incorrect", "format", "source", "memory", "long"]
+90:     note: str = Field(default="", max_length=2000)
+93: def create_app(db_path: str | Path | None = None, llm=None, config_path: Path | None = None,
+94:                embedding=None, research_policy: Path | None = None,
+95:                research_db: Path | None = None) -> FastAPI:
+96:     app = FastAPI(title="Cain — memória e projetos", version=__version__, docs_url=None, redoc_url=None)
+97:     settings = load_settings(config_path)
+98:     storage_path = Path(db_path if db_path is not None else settings.db_path)
+99:     workspace = WorkspaceStore(storage_path)
+100:     generation_lock = Lock()
+101:     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"])
+103:     @app.middleware("http")
+104:     async def same_origin(request: Request, call_next):
+105:         origins = request.headers.getlist("origin")
+106:         if origins:
+107:             supplied = _normalized_origin(origins[0]) if len(origins) == 1 else None
+108:             actual = _normalized_origin(
+109:                 f"{request.scope.get('scheme', '')}://{request.headers.get('host', '')}"
+110:             )
+111:             if supplied is None or supplied != actual:
+112:                 return JSONResponse({"detail": "Origem não autorizada"}, status_code=403)
+113:         response = await call_next(request)
+114:         response.headers["X-Content-Type-Options"] = "nosniff"
+115:         response.headers["Referrer-Policy"] = "no-referrer"
+116:         response.headers["Cache-Control"] = "no-store"
+117:         response.headers["Content-Security-Policy"] = (
+118:             "default-src 'self'; script-src 'self'; style-src 'self'; "
+119:             "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+120:         )
+121:         return response
+123:     @app.exception_handler(ValueError)
+124:     async def validation_error(request, exc):
+125:         return JSONResponse({"detail": str(exc)}, status_code=400)
+127:     @app.exception_handler(sqlite3.Error)
+128:     async def storage_error(request, exc):
+129:         return JSONResponse({"detail": "Falha no armazenamento local; confira os registros do serviço."},
+130:                             status_code=503)
+132:     def validate_context(user_id, project_id=None, session_id=None, *, create_session=False):
+133:         if not user_id.strip() or len(user_id) > 200:
+134:             raise ValueError("Usuário inválido")
+135:         workspace.require_project(user_id, project_id)
+136:         if session_id is not None:
+137:             if create_session:
+138:                 workspace.ensure_session(user_id, session_id, project_id)
+139:             else:
+140:                 workspace.require_session(user_id, session_id, project_id)
+142:     def runtime_for_request(project_id, user_id):
+143:         provider = llm if llm is not None else configured_llm(settings)
+145:         mode = settings.search_mode if llm is None or embedding is not None else "lexical"
+147:         def retrieval_factory():
+148:             encoder = embedding if embedding is not None else configured_embedding(settings) if mode == "hybrid" else None
+149:             corpus = workspace.document_corpus(user_id, project_id) if project_id else None
+150:             paths = [] if project_id else settings.source_paths
+151:             return build_retriever(corpus=corpus, paths=paths, search_mode=mode, embedding=encoder,
+152:                                    cache_path=storage_path.with_suffix(".embeddings.sqlite3"),
+153:                                    allow_public_urls=settings.allow_public_urls)
+155:         runtime = build_cain(storage_path, provider,
+156:                              allow_public_urls=settings.allow_public_urls,
+157:                              router=RuleRouter(provider if settings.llm_routing else None),
+158:                              retrieval_factory=retrieval_factory)
+159:         return runtime, provider
+161:     def runtime_for_profile():
+162:         return build_profile(storage_path)
+164:     from cain.research.api import mount
+165:     mount(app, storage_path, validate_context,
+166:           lambda: llm if llm is not None else configured_llm(settings), generation_lock,
+167:           policy_path=research_policy, research_path=research_db)
+169:     @app.get("/health")
+170:     def health():
+171:         return {"status": "ok", "service": "cain-local-api", "api_contract": 1,
+172:                 "provider_availability": "not_probed", "inference": "not_exercised",
+173:                 "version": __version__, "model": settings.model,
+174:                 "provider": type(llm).__name__ if llm is not None else settings.provider,
+175:                 "search_mode": settings.search_mode, "research_status": "l0-local",
+176:                 "identity_status": "provisional"}
+178:     def deliver(receipt):
+179:         if receipt["status"] != "ready":
+180:             state = "falhou" if receipt["status"] == "failed" else "está em andamento ou foi interrompido"
+181:             raise HTTPException(status_code=409, detail=
+182:                 f"O pedido {state}, sem resultado recuperável. Nenhuma nova geração foi iniciada.")
+183:         try:
+184:             return {**workspace.restore_run(receipt), "history_status": "saved"}
+185:         except (OSError, sqlite3.Error):
+187:             return {**json.loads(receipt["result_json"]), "history_status": "pending"}
+189:     @app.get("/runs/{user_id}/{run_id}")
+190:     def recover_run(user_id: str, run_id: str):
+191:         return deliver(workspace.run_receipt(user_id, run_id))
+193:     @app.post("/run")
+194:     def run(request: RunRequest):
+195:         runtime = None
+196:         claimed = False
+197:         completed = False
+198:         request.run_id = request.run_id or str(uuid4())
+199:         try:
+200:             validate_context(request.user_id, request.project_id, request.session_id, create_session=True)
+201:             with generation_lock:
+202:                 previous = workspace.claim_run(request.model_dump())
+203:                 if previous is not None:
+204:                     return deliver(previous)
+205:                 claimed = True
+206:                 runtime, provider = runtime_for_request(request.project_id, request.user_id)
+208:                 def complete(result, event):
+209:                     record = next(r for r in runtime.decision_log.export(result.run_id)
+210:                                   if r.decision_id == result.decision_id)
+211:                     output = {**asdict(result), "profile": runtime.identity.inspect(
+212:                         request.user_id, project_id=request.project_id, session_id=request.session_id),
+213:                         "sources": record.metadata.get("retrieval_sources", []),
+214:                         "preferences_used": record.metadata.get("preferences_used", {}),
+215:                         "route_reason": record.reason, "generation": getattr(provider, "last_metadata", {}),
+216:                         "project_id": request.project_id, "session_id": request.session_id,
+217:                         "turn_id": result.decision_id}
+218:                     runtime.decision_log.append_with_outcome(event, output)
+220:                 runtime.run(**request.model_dump(), completion_sink=complete)
+221:                 completed = True
+222:                 return deliver(workspace.run_receipt(request.user_id, request.run_id))
+223:         except ValueError as exc:
+224:             raise HTTPException(status_code=400, detail=str(exc)) from exc
+225:         except (RuntimeError, OSError) as exc:
+226:             status = 422 if isinstance(exc.__cause__, ValueError) else 503
+227:             raise HTTPException(status_code=status, detail=str(exc)) from exc
+228:         finally:
+229:             if runtime is not None:
+230:                 runtime.close()
+231:             if claimed and not completed:
+234:                 try:
+235:                     workspace.fail_run(request.user_id, request.run_id)
+236:                 except (OSError, sqlite3.Error):
+237:                     pass  # Durable processing receipt still prevents accidental re-execution.
+239:     @app.get("/profile/{user_id}")
+240:     def profile(user_id: str, project_id: str | None = None, session_id: str | None = None,
+241:                 turn_id: str | None = None):
+242:         validate_context(user_id, project_id, session_id)
+243:         with runtime_for_profile() as runtime:
+244:             return runtime.identity.inspect(user_id, project_id=project_id, session_id=session_id, turn_id=turn_id)
+246:     @app.put("/profile/{user_id}/preferences/{key}")
+247:     def set_preference(user_id: str, key: PreferenceKey, body: PreferenceRequest):
+248:         validate_context(user_id, body.project_id, body.session_id)
+249:         with runtime_for_profile() as runtime:
+250:             runtime.identity.set_preference(user_id, key, **body.model_dump())
+251:             return {"profile": runtime.identity.inspect(user_id, project_id=body.project_id,
+252:                                                          session_id=body.session_id, turn_id=body.turn_id),
+253:                     "audit_history_retained": True}
+255:     @app.delete("/profile/{user_id}/preferences/{key}")
+256:     def forget(user_id: str, key: PreferenceKey, scope: Scope = "user",
+257:                project_id: str | None = None, session_id: str | None = None, turn_id: str | None = None):
+258:         validate_context(user_id, project_id, session_id)
+259:         with runtime_for_profile() as runtime:
+260:             runtime.identity.forget_preference(user_id, key, scope=scope, project_id=project_id,
+261:                                                session_id=session_id, turn_id=turn_id)
+262:             return {"profile": runtime.identity.inspect(user_id, project_id=project_id,
+263:                                                          session_id=session_id, turn_id=turn_id),
+264:                     "audit_history_retained": True}
+266:     @app.delete("/profile/{user_id}/preferences")
+267:     def clear(user_id: str, scope: Scope = "user", project_id: str | None = None,
+268:               session_id: str | None = None, turn_id: str | None = None):
+269:         validate_context(user_id, project_id, session_id)
+270:         with runtime_for_profile() as runtime:
+271:             runtime.identity.clear_preferences(user_id, scope=scope, project_id=project_id,
+272:                                                 session_id=session_id, turn_id=turn_id)
+273:             return {"profile": runtime.identity.inspect(user_id, project_id=project_id,
+274:                                                          session_id=session_id, turn_id=turn_id),
+275:                     "audit_history_retained": True}
+277:     @app.get("/projects/{user_id}")
+278:     def projects(user_id: str):
+279:         return workspace.projects(user_id)
+281:     @app.post("/projects/{user_id}")
+282:     def create_project(user_id: str, body: ProjectRequest):
+283:         validate_context(user_id)
+284:         return workspace.create_project(user_id, body.name)
+286:     @app.get("/projects/{user_id}/{project_id}/documents")
+287:     def documents(user_id: str, project_id: str):
+288:         return workspace.documents(user_id, project_id)
+290:     @app.post("/projects/{user_id}/{project_id}/documents")
+291:     def add_document(user_id: str, project_id: str, body: DocumentRequest):
+292:         return workspace.add_document(user_id, project_id, body.title, body.content)
+294:     @app.get("/sessions/{user_id}")
+295:     def sessions(user_id: str, project_id: str | None = None):
+296:         return workspace.sessions(user_id, project_id)
+298:     @app.post("/sessions/{user_id}")
+299:     def new_session(user_id: str, body: SessionRequest):
+300:         validate_context(user_id, body.project_id)
+301:         return workspace.ensure_session(user_id, str(uuid4()), body.project_id)
+303:     @app.get("/sessions/{user_id}/{session_id}")
+304:     def conversation(user_id: str, session_id: str, project_id: str | None = None):
+305:         workspace.restore_session(user_id, session_id, project_id)
+306:         return workspace.turns(user_id, session_id, project_id)
+308:     @app.post("/feedback/{turn_id}")
+309:     def feedback(turn_id: str, body: FeedbackRequest):
+310:         return workspace.feedback(body.user_id, turn_id, body.reason, body.note)
+312:     web_root = Path(__file__).with_name("web")
+313:     if web_root.is_dir():
+314:         app.mount("/assets", StaticFiles(directory=web_root), name="assets")
+316:         @app.get("/", include_in_schema=False)
+317:         def index():
+318:             return FileResponse(web_root / "index.html")
+319:     return app
+
+### src/cain/archive.py
+6: import io
+7: import os
+8: from contextlib import closing
+9: from pathlib import Path
+10: import sqlite3
+12: from research_snapshot import canonical
+13: from research_bundle import loads
+14: from research_bundle.files import no_links, safe_mkdirs, safe_open, transfer
+16: from cain.workspace import WorkspaceStore
+19: def _read(root, name, limit=2_000_000):
+20:     with safe_open(root, name) as source:
+21:         buffer = io.BytesIO()
+22:         transfer(source, buffer, limit=limit)
+23:         return buffer.getvalue()
+26: def _hash(root, name, expected=None):
+27:     with safe_open(root, name) as source:
+28:         return transfer(source, limit=os.fstat(source.fileno()).st_size,
+29:                         expected_sha=expected)[0]
+32: def _snapshot(source, destination):
+33:     source = no_links(source)
+34:     with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src:
+35:         with closing(sqlite3.connect(destination)) as dst:
+36:             src.backup(dst)
+37:             if dst.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
+38:                 raise ValueError("Database integrity check failed")
+41: def _documents(database, source_root, destination):
+43:     store = object.__new__(WorkspaceStore)
+44:     store.documents_root = Path(source_root).absolute()
+45:     with closing(sqlite3.connect(database)) as db:
+46:         db.row_factory = sqlite3.Row
+47:         rows = db.execute("SELECT * FROM project_documents").fetchall()
+48:     for row in rows:
+49:         _, text = store._document_snapshot(row, row["project_id"])
+50:         path = destination / "knowledge" / row["project_id"] / (row["id"] + ".md")
+51:         path.parent.mkdir(parents=True, exist_ok=True)
+52:         with path.open("xb") as handle:
+53:             handle.write(text.encode("utf-8"))
+56: def backup(workspace, research, policy, destination, objects=None):
+57:     destination = Path(destination).absolute()
+58:     safe_mkdirs(destination.parent)
+59:     destination.mkdir(parents=True, exist_ok=False)
+60:     _snapshot(workspace, destination / "workspace.db")
+61:     _documents(destination / "workspace.db", Path(workspace).resolve().parent / "knowledge",
+62:                destination)
+63:     _snapshot(research, destination / "research.db")
+64:     policy_raw = _read(Path(policy).absolute().parent, Path(policy).name)
+66:     from cain.research import ResearchService
+67:     checker = object.__new__(ResearchService)
+68:     checker.policy_path = Path(policy)
+69:     checker.policy()
+70:     (destination / "policy.json").write_bytes(policy_raw)
+71:     from cain.research.bundle_backup import copy_objects
+72:     received = copy_objects(destination / "research.db", objects or
+73:                             os.getenv("CAIN_RESEARCH_OBJECTS") or
+74:                             Path(research).absolute().parent / "research-objects", destination)
+75:     files = {path.relative_to(destination).as_posix(): _hash(destination, path.relative_to(destination).as_posix())
+76:              for path in destination.rglob("*") if path.is_file()}
+77:     manifest = dict(version=2, files=files, objects=received,
+78:                     consistency="independent SQLite snapshots plus hash-verified immutable documents")
+79:     (destination / "manifest.json").write_bytes(canonical(manifest))
+80:     return dict(status="backed_up", files=len(files), destination=str(destination),
+81:                 consistency=manifest["consistency"])
+84: def restore(source, destination):
+85:     source = no_links(source)
+86:     manifest = loads(_read(source, "manifest.json"))
+87:     version = manifest.get("version")
+88:     fields = {"version", "files", "consistency"} | ({"objects"} if version == 2 else set())
+89:     if (set(manifest) != fields or type(version) is not int or version not in (1, 2)
+90:             or type(manifest["files"]) is not dict):
+91:         raise ValueError("Invalid backup manifest")
+92:     files = manifest["files"]
+93:     if not {"workspace.db", "research.db", "policy.json"} <= set(files):
+94:         raise ValueError("Incomplete backup")
+96:     for name, expected in files.items():
+97:         if name not in {"workspace.db", "research.db", "policy.json"}:
+98:             parts = name.split("/")
+99:             from uuid import UUID
+100:             if version == 2 and name.startswith("research-objects/"):
+101:                 from cain.research.objects import Objects
+102:                 if len(parts) != 4 or name != "research-objects/" + Objects.relative(parts[-1]):
+103:                     raise ValueError("Unexpected backup CAS object")
+104:             elif (len(parts) != 3 or parts[0] != "knowledge"
+105:                     or str(UUID(parts[1])) != parts[1]
+106:                     or not parts[2].endswith(".md")
+107:                     or str(UUID(parts[2][:-3])) != parts[2][:-3]):
+108:                 raise ValueError("Unexpected backup object")
+109:         _hash(source, name, expected)
+110:     from cain.research.bundle_backup import verify_objects
+111:     received = verify_objects(source / "research.db", source / "research-objects")
+112:     if version == 1 and received:
+113:         raise ValueError("Legacy backup cannot contain received bundles")
+114:     if version == 2:
+115:         from cain.research.objects import Objects
+116:         if manifest["objects"] != received or any(
+117:                 "research-objects/" + Objects.relative(d) not in files for d in received):
+118:             raise ValueError("Incomplete backup objects")
+119:     from cain.research import ResearchService
+120:     checker = object.__new__(ResearchService)
+121:     checker.policy_path = source / "policy.json"
+122:     checker.policy()
+123:     destination = Path(destination).absolute()
+124:     safe_mkdirs(destination.parent)
+125:     destination.mkdir(parents=True, exist_ok=False)
+126:     for name, expected in files.items():
+127:         target = destination / name
+128:         safe_mkdirs(target.parent)
+129:         with safe_open(source, name) as original:
+130:             with target.open("xb") as handle:
+131:                 transfer(original, handle, limit=os.fstat(original.fileno()).st_size,
+132:                          expected_sha=expected)
+133:                 handle.flush()
+134:                 os.fsync(handle.fileno())
+135:     for name in ("workspace.db", "research.db"):
+136:         with closing(sqlite3.connect(destination / name)) as db:
+137:             if db.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
+138:                 raise ValueError("Restored database is corrupt")
+139:     store = WorkspaceStore(destination / "workspace.db")
+140:     with store.connection() as db:
+141:         for row in db.execute("SELECT * FROM project_documents").fetchall():
+142:             record, _ = store._document_snapshot(row, row["project_id"])
+143:             db.execute("UPDATE project_documents SET path=? WHERE id=?",
+144:                        (record["path"], row["id"]))
+145:     verify_objects(destination / "research.db", destination / "research-objects")
+146:     (destination / "RESTORE_COMPLETE.json").write_bytes(canonical(
+147:         dict(version=1, source=str(source), verified_files=len(files))))
+148:     return dict(status="restored", destination=str(destination),
+149:                 activation="manual; review restored policy and configure paths before use")
+152: def register(sub):
+153:     parser = sub.add_parser("archive", help="Administrator backup/restore including documents")
+154:     commands = parser.add_subparsers(dest="archive_command", required=True)
+155:     make = commands.add_parser("backup")
+156:     for name in ("workspace", "research", "policy"):
+157:         make.add_argument("--" + name, type=Path, required=True)
+158:     make.add_argument("destination", type=Path)
+159:     recover = commands.add_parser("restore")
+160:     recover.add_argument("source", type=Path)
+161:     recover.add_argument("destination", type=Path)
+164: def execute(args):
+165:     if args.archive_command == "backup":
+166:         return backup(args.workspace, args.research, args.policy, args.destination)
+167:     return restore(args.source, args.destination)

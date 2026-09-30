@@ -1,6 +1,6 @@
 import os, sys, json, subprocess, hashlib, datetime, pathlib, re, threading
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ENV = dict(os.environ, GIT_OPTIONAL_LOCKS='0', PYTHONDONTWRITEBYTECODE='1')
+ENV = dict(os.environ, GIT_OPTIONAL_LOCKS='0', PYTHONDONTWRITEBYTECODE='1', PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
 def stamp(): return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def log(project, directory, action, code, output, status='OD', limits='', artifacts=''):
     row = ' | '.join(str(v).replace('\n',' <NL> ').replace('\r','') for v in [project,stamp(),directory,action,code,output,status,limits,artifacts])+'\n'

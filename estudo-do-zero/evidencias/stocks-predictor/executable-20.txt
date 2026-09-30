@@ -1,0 +1,470 @@
+
+### stocks_predictor/retail_cash.py
+8: from collections import defaultdict
+9: from copy import deepcopy
+10: from dataclasses import dataclass, field as dataclass_field
+11: from datetime import date
+12: from decimal import Decimal, InvalidOperation, ROUND_FLOOR
+15: def number(value):
+16:     try:
+17:         result = Decimal(str(value))
+18:     except InvalidOperation as exc:
+19:         raise ValueError("invalid money or quantity") from exc
+20:     if not result.is_finite():
+21:         raise ValueError("nonfinite money or quantity")
+22:     return result
+25: def iso(value):
+26:     if not isinstance(value, str) or date.fromisoformat(value).isoformat() != value:
+27:         raise ValueError("invalid ISO date")
+28:     return value
+31: @dataclass
+32: class Holding:
+33:     isin: str
+34:     quantity: int
+35:     basis: Decimal
+36:     tax_class: str = "equity"
+37:     available_on: str = "0001-01-01"
+38:     locked_deliveries: list = dataclass_field(default_factory=list)
+39:     tradable_on: str | None = None
+41:     def normalize_deliveries(self, day):
+43:         locked = sum(r['quantity'] for r in self.locked_deliveries)
+44:         if locked < 0 or locked > self.quantity:
+45:             raise ValueError('invalid undelivered quantity')
+46:         if self.available_on > day:
+47:             base = self.quantity - locked
+48:             if base:
+49:                 self.locked_deliveries.append({'quantity': base, 'credit_date': self.available_on,
+50:                                               'tradable_on': self.tradable_on})
+51:             self.available_on = day
+52:             self.tradable_on = None
+53:         self.locked_deliveries[:] = [r for r in self.locked_deliveries if r['credit_date'] > day]
+55:     def consume_delivery(self, quantity, day, settlement_date):
+61:         self.normalize_deliveries(day)
+62:         remaining = max(0, quantity - (self.quantity - sum(r['quantity'] for r in self.locked_deliveries)))
+63:         for row in sorted(self.locked_deliveries, key=lambda r: r['credit_date']):
+64:             if row.get('tradable_on') is not None and row['tradable_on'] <= day and row['credit_date'] <= settlement_date:
+65:                 take = min(remaining, row['quantity'])
+66:                 row['quantity'] -= take
+67:                 remaining -= take
+68:         if remaining:
+69:             raise ValueError('sale exceeds delivered position')
+70:         self.locked_deliveries[:] = [r for r in self.locked_deliveries if r['quantity']]
+72:     def available_quantity(self, day, settlement_date=None):
+73:         def usable(credit, tradable):
+74:             return credit <= day or (tradable is not None and tradable <= day
+75:                                      and settlement_date is not None and credit <= settlement_date)
+76:         if not usable(self.available_on, self.tradable_on):
+77:             return 0
+78:         locked = sum(r['quantity'] for r in self.locked_deliveries
+79:                      if not usable(r['credit_date'], r.get('tradable_on')))
+80:         if locked < 0 or locked > self.quantity:
+81:             raise ValueError('invalid undelivered quantity')
+82:         return self.quantity - locked
+85: def trade_value(quantity, quote, lot=100):
+87:     if type(quantity) is not int or quantity < 0 or type(lot) is not int or lot <= 0:
+88:         raise ValueError("integer nonnegative shares and positive lot required")
+89:     standard, remainder = divmod(quantity, lot)
+90:     result = Decimal(0)
+91:     if standard:
+92:         price = number(quote["standard"])
+93:         if price <= 0:
+94:             raise ValueError("nonpositive standard price")
+95:         result += standard * lot * price
+96:     if remainder:
+97:         price = number(quote["fractional"])
+98:         if price <= 0:
+99:             raise ValueError("nonpositive fractional price")
+100:         result += remainder * price
+101:     return result
+104: def integer_targets(capital, close_prices):
+106:     capital = number(capital)
+107:     if capital < 0 or not close_prices:
+108:         raise ValueError("nonnegative capital and nonempty prices required")
+109:     each = capital / len(close_prices)
+110:     targets = {}
+111:     for ticker, value in close_prices.items():
+112:         price = number(value)
+113:         if price <= 0:
+114:             raise ValueError("nonpositive sizing price")
+115:         targets[ticker] = int((each / price).to_integral_value(rounding=ROUND_FLOOR))
+116:     return targets
+119: def ordinary_month_tax(trades, prior_loss: Decimal | int | float | str = 0,
+120:                        exemption=20000, rate="0.15", corporate_disposals=()):
+127:     loss, limit, fraction = map(number, (prior_loss, exemption, rate))
+128:     if loss < 0 or limit < 0 or not 0 <= fraction <= 1:
+129:         raise ValueError("invalid tax inputs")
+130:     trades = list(trades)
+131:     if any(r.get('corporate_disposal') for r in trades):
+132:         raise ValueError('corporate disposals must use the separate reviewed input')
+133:     disposals = list(corporate_disposals)
+134:     ids = set()
+135:     for row in disposals:
+136:         event_id = row.get('event_id')
+137:         if not event_id or event_id in ids:
+138:             raise ValueError('unique corporate disposal required')
+139:         ids.add(event_id)
+140:         if row.get('source_review') is not True or not row.get('sources') or not row.get('tax_source'):
+141:             raise ValueError('reviewed ordinary corporate disposal required')
+142:         quantity, gross, costs, basis = map(number, (row['quantity'], row['gross'], row['costs'], row['basis']))
+143:         if quantity <= 0 or gross <= 0 or not 0 <= costs <= gross or basis < 0:
+144:             raise ValueError('invalid corporate disposal economics')
+145:         if number(row['gain']) != gross - costs - basis:
+146:             raise ValueError('corporate gain must use allocated position basis')
+149:         trades.append({**row, 'quantity': -quantity, 'corporate_disposal': True})
+150:     if len({iso(r["date"])[:7] for r in trades}) > 1:
+151:         raise ValueError("one calendar month required")
+152:     sides = defaultdict(set)
+153:     for row in trades:
+154:         if ((type(row["quantity"]) is not int and not row.get('corporate_disposal'))
+155:                 or not row["quantity"] or number(row["gross"]) < 0):
+156:             raise ValueError("invalid trade quantity or gross proceeds")
+157:         if row["tax_class"] not in {"equity", "bdr"}:
+158:             raise ValueError("unreviewed tax treatment")
+159:         sides[(row["isin"], row["date"])].add(row["quantity"] > 0)
+160:     if any(len(v) > 1 for v in sides.values()):
+161:         raise ValueError("day trade requires a separate tax calculation")
+162:     sales_rows = [r for r in trades if r["quantity"] < 0]
+163:     sales = sum((number(r["gross"]) for r in sales_rows if r["tax_class"] == "equity"), Decimal(0))
+164:     gains = defaultdict(Decimal)
+165:     for row in sales_rows:
+166:         gains[row["tax_class"]] += number(row["gain"])
+167:     exempt_gain = max(gains["equity"], Decimal(0)) if sales <= limit else Decimal(0)
+168:     taxable_before_loss = gains["equity"] - exempt_gain + gains["bdr"]
+169:     taxable = max(Decimal(0), taxable_before_loss - loss)
+170:     remaining_loss = max(Decimal(0), loss - taxable_before_loss)
+171:     return {"equity_sales": sales, "exempt_equity_gain": exempt_gain,
+172:             "taxable_gain": taxable, "tax": taxable * fraction, "loss_carry": remaining_loss}
+175: class RetailBook:
+178:     def __init__(self, capital, start_date):
+179:         self.cash = number(capital)
+180:         if self.cash < 0:
+181:             raise ValueError("negative starting capital")
+182:         self.day = iso(start_date)
+183:         self.positions = {}
+184:         self.pending = []
+185:         self.rights = {}
+186:         self.seen_right_ids = set()
+187:         self.trades = []
+188:         self.corporate_disposals = []
+189:         self.cash_buffer = Decimal(0)
+191:     def advance(self, day):
+192:         day = iso(day)
+193:         if day < self.day:
+194:             raise ValueError("ledger cannot move backward")
+195:         paid = {k: r for k, r in self.rights.items() if r["available_on"] <= day}
+196:         due = [f for f in self.pending if f["date"] <= day]
+197:         due += [{"date": r["available_on"], "amount": r["net"]} for r in paid.values()]
+198:         remaining = [f for f in self.pending if f["date"] > day]
+201:         cash = self.cash
+202:         for when in sorted({f["date"] for f in due}):
+203:             cash += sum((f["amount"] for f in due if f["date"] == when), Decimal(0))
+204:             if cash < 0:
+205:                 raise ValueError("settlement deficit")
+206:         self.cash, self.pending, self.day = cash, remaining, day
+207:         for key in paid:
+208:             del self.rights[key]
+210:     def fundable(self, amount, settlement_date):
+212:         amount = number(amount)
+213:         if amount < 0 or iso(settlement_date) <= self.day:
+214:             raise ValueError("nonnegative funding after the current date required")
+215:         flows = [*self.pending, {"date": settlement_date, "amount": -amount}]
+216:         cash = self.cash - self.cash_buffer
+217:         for day in sorted({f["date"] for f in flows}):
+218:             cash += sum((f["amount"] for f in flows if f["date"] == day), Decimal(0))
+219:             if cash < 0:
+220:                 return False
+221:         return True
+223:     def entitlement(self, event_id, ticker, isin, ex_date, payment_date, available_on, net_per_share):
+225:         if event_id in self.seen_right_ids:
+226:             raise ValueError("duplicate entitlement or installment identifier")
+227:         if not event_id or any(r["date"] == self.day for r in self.trades):
+228:             raise ValueError("identify entitlements before ex-day trades")
+229:         if iso(ex_date) != self.day or not iso(ex_date) <= iso(payment_date) < iso(available_on):
+230:             raise ValueError("invalid entitlement/payment availability chronology")
+231:         amount = number(net_per_share)
+232:         if amount < 0:
+233:             raise ValueError("negative net entitlement")
+234:         holding = self.positions.get(ticker)
+235:         if holding and holding.isin != isin:
+236:             raise ValueError("entitlement security identity mismatch")
+237:         net = amount * (holding.quantity if holding else 0)
+238:         self.seen_right_ids.add(event_id)
+239:         if net:
+240:             self.rights[event_id] = {"net": net, "payment_date": payment_date,
+241:                                      "available_on": available_on, "ticker": ticker}
+242:         return net
+244:     def order(self, ticker, isin, delta, quote, signal_date, settlement_date,
+245:               cost_rate="0.0018", lot=100, tax_class="equity"):
+246:         if type(delta) is not int or iso(signal_date) >= self.day:
+247:             raise ValueError("integer order after its signal required")
+248:         if quote.get("date") != self.day or quote.get("isin") != isin:
+249:             raise ValueError("execution quote date or identity mismatch")
+250:         if iso(settlement_date) <= self.day or tax_class not in {"equity", "bdr"}:
+251:             raise ValueError("invalid settlement or unreviewed tax class")
+252:         fee = number(cost_rate)
+253:         if not 0 <= fee < 1:
+254:             raise ValueError("invalid cost rate")
+255:         existing = self.positions.get(ticker)
+256:         if existing and (existing.isin != isin or existing.tax_class != tax_class):
+257:             raise ValueError("holding identity mismatch")
+258:         if not delta:
+259:             return None
+260:         if any(r["date"] == self.day and r["isin"] == isin and (r["quantity"] > 0) != (delta > 0)
+261:                for r in self.trades):
+262:             raise ValueError("intraday reversal requires a separate day-trade ledger")
+263:         quantity = abs(delta)
+264:         if delta < 0:
+265:             if not existing or quantity > existing.available_quantity(self.day, settlement_date):
+266:                 raise ValueError("sale exceeds delivered position")
+267:         gross = trade_value(quantity, quote, lot)
+268:         costs = gross * fee
+269:         if delta > 0 and not self.fundable(gross + costs, settlement_date):
+270:             return None  # Unfilled, never a loan or negative cash.
+271:         if delta > 0:
+272:             gain = Decimal(0)
+273:             if existing:
+274:                 existing.normalize_deliveries(self.day)
+275:                 existing.quantity += quantity
+276:                 existing.basis += gross + costs
+277:             else:
+278:                 self.positions[ticker] = Holding(isin, quantity, gross + costs, tax_class)
+279:             cash_flow = -gross - costs
+280:         else:
+281:             assert existing is not None  # Sale validation above establishes this invariant.
+282:             removed_basis = existing.basis * quantity / existing.quantity
+283:             gain = gross - costs - removed_basis
+284:             existing.consume_delivery(quantity, self.day, settlement_date)
+285:             existing.quantity -= quantity
+286:             existing.basis -= removed_basis
+287:             if not existing.quantity:
+288:                 del self.positions[ticker]
+289:             cash_flow = gross - costs
+290:         self.pending.append({"date": settlement_date, "amount": cash_flow})
+291:         row = {"ticker": ticker, "isin": isin, "date": self.day, "signal_date": signal_date,
+292:                "settlement_date": settlement_date, "quantity": delta, "gross": gross,
+293:                "costs": costs, "gain": gain, "tax_class": tax_class}
+294:         self.trades.append(row)
+295:         return row
+297:     def rebalance(self, targets, quotes, identities, signal_date, settlement_date, cost_rate="0.0018"):
+301:         staged = deepcopy(self)
+302:         log = staged._rebalance(targets, quotes, identities, signal_date, settlement_date, cost_rate)
+303:         self.__dict__.update(staged.__dict__)
+304:         return log
+306:     def _rebalance(self, targets, quotes, identities, signal_date, settlement_date, cost_rate):
+307:         if any(type(q) is not int or q < 0 for q in targets.values()):
+308:             raise ValueError("nonnegative integer targets required")
+309:         deltas = {t: targets.get(t, 0) - (self.positions[t].quantity if t in self.positions else 0)
+310:                   for t in set(targets) | set(self.positions)}
+311:         log = []
+312:         for buying in (False, True):
+313:             for ticker in sorted(deltas):
+314:                 delta = deltas[ticker]
+315:                 if not delta or (delta > 0) != buying:
+316:                     continue
+317:                 identity = identities[ticker]
+318:                 while delta:
+319:                     result = self.order(ticker, identity["isin"], delta, quotes[ticker], signal_date,
+320:                                         settlement_date, cost_rate, identity.get("lot", 100),
+321:                                         identity.get("tax_class", "equity"))
+322:                     if result:
+323:                         log.append(result)
+324:                         break
+325:                     delta -= 1  # Only buys can be unfilled for buying power.
+326:         return log
+328:     def deliver_conversion(self, ticker, isin, deliveries, removed_basis_allocation):
+334:         original = self.positions[ticker]
+335:         if original.isin != isin:
+336:             raise ValueError("conversion identity mismatch")
+337:         weights = [number(v) for v in removed_basis_allocation]
+338:         if len(weights) != len(deliveries) or sum(weights) != 1 or any(v < 0 for v in weights):
+339:             raise ValueError("explicit complete cost-basis allocation required")
+340:         staged = {}
+341:         for leg, weight in zip(deliveries, weights):
+342:             quantity = leg["quantity"]
+343:             if type(quantity) is not int or quantity <= 0:
+344:                 raise ValueError("fractional or missing stock-delivery terms")
+345:             if iso(leg["credit_date"]) < self.day or leg["tax_class"] not in {"equity", "bdr"}:
+346:                 raise ValueError("invalid delivery date or tax class")
+347:             dest = leg["ticker"]
+348:             if dest in staged or (dest in self.positions and dest != ticker):
+349:                 raise ValueError("conversion merging requires separate delivered lots")
+350:             staged[dest] = Holding(leg["isin"], quantity, original.basis * weight,
+351:                                    leg["tax_class"], iso(leg["credit_date"]))
+352:         del self.positions[ticker]
+353:         self.positions.update(staged)
+356: def execution_readiness(required_intervals, coverage, cash_rows, action_gaps, execution_checks=None):
+358:     issues = []
+359:     required_intervals = list(required_intervals)
+360:     if not required_intervals:
+361:         issues.append({"kind": "EMPTY_COVERAGE_UNIVERSE"})
+362:     verified = {tuple(r["interval"]) for r in coverage if r.get("verified") is True and r.get("sources")}
+363:     for key in required_intervals:
+364:         if tuple(key) not in verified:
+365:             issues.append({"kind": "CASH_COVERAGE", "interval": key})
+366:     keys = set()
+367:     for r in cash_rows:
+368:         key = r.get("event_id")
+369:         if not key or key in keys:
+370:             issues.append({"kind": "ENTITLEMENT_IDENTITY", "event": key})
+371:         keys.add(key)
+372:         for field in ("ticker", "isin", "ex_date", "payment_date", "available_on", "tax_source", "sources"):
+373:             if not r.get(field):
+374:                 issues.append({"kind": "CASH_EVENT_FIELD", "event": key, "field": field})
+375:         if r.get("source_review") is not True:
+376:             issues.append({"kind": "CASH_EVENT_FIELD", "event": key, "field": "source_review"})
+377:         try:
+378:             if number(r.get("net_per_share")) < 0:
+379:                 raise ValueError("negative net amount")
+380:         except ValueError:
+381:             issues.append({"kind": "CASH_EVENT_FIELD", "event": key, "field": "net_per_share"})
+382:         try:
+383:             if not iso(r.get("ex_date")) <= iso(r.get("payment_date")) < iso(r.get("available_on")):
+384:                 raise ValueError("cash chronology")
+385:         except ValueError:
+386:             issues.append({"kind": "CASH_CHRONOLOGY", "event": key})
+387:     for name in ("quotes", "corporate_actions", "tax_schedule", "cash_coverage_inventory"):
+388:         check = (execution_checks or {}).get(name, {})
+389:         if check.get("verified") is not True or not check.get("sources"):
+390:             issues.append({"kind": "EXECUTION_CHECK", "check": name})
+391:     issues.extend(action_gaps)
+392:     return {"ready": not issues, "issues": issues, "profit": None,
+393:             "new_historical_return_evaluations": 0}
+
+### stocks_predictor/returns.py
+4: def month_end_dates(dates):
+6:     last = {}
+7:     for d in dates:
+8:         last[d[:7]] = d
+9:     return [last[k] for k in sorted(last)]
+12: def monthly_returns(dates, closes):
+14:     me = month_end_dates(dates)
+15:     price = dict(zip(dates, closes))
+16:     out = []
+17:     for prev, cur in zip(me, me[1:]):
+18:         if price[prev] > 0:
+19:             out.append((cur, price[cur] / price[prev] - 1.0))
+20:     return out
+23: def returns_matrix(series_by_ticker):
+25:     return {t: dict(monthly_returns(dates, closes))
+26:             for t, (dates, closes) in series_by_ticker.items()}
+
+### stocks_predictor/rj_coda.py
+23: import math
+26: def impute_zeros(matrix: list[list[float]], delta: float = 0.5) -> dict:
+33:     if not matrix:
+34:         return {"data": [], "mask": [], "dropped_cols": []}
+35:     n_cols = len(matrix[0])
+36:     if any(len(row) != n_cols for row in matrix):
+37:         raise ValueError(
+38:             "matriz não retangular: linhas com tamanhos diferentes "
+39:             f"(esperado {n_cols} colunas) — erro de domínio, não de CoDa")
+40:     mins = []
+41:     for c in range(n_cols):
+42:         positives = [row[c] for row in matrix
+43:                      if row[c] is not None and row[c] > 0]
+44:         mins.append(min(positives) if positives else None)
+45:     data, mask = [], []
+46:     for r, row in enumerate(matrix):
+47:         new_row = list(row)
+48:         for c in range(n_cols):
+49:             if (row[c] is None or row[c] == 0) and mins[c] is not None:
+50:                 new_row[c] = delta * mins[c]
+51:                 mask.append((r, c))
+52:         data.append(new_row)
+53:     dropped = [c for c in range(n_cols) if mins[c] is None]
+54:     return {"data": data, "mask": mask, "dropped_cols": dropped}
+57: def clr(row: list[float]) -> list[float] | None:
+61:     if not row or any(x is None or x <= 0 for x in row):
+62:         return None
+63:     log_mean = sum(math.log(x) for x in row) / len(row)
+64:     return [math.log(x) - log_mean for x in row]
+67: def clr_matrix(matrix: list[list[float]], delta: float = 0.5) -> dict:
+75:     imp = impute_zeros(matrix, delta=delta)
+76:     dropped = set(imp["dropped_cols"])
+77:     kept_cols = [c for c in range(len(matrix[0]) if matrix else 0) if c not in dropped]
+78:     out, failed = [], 0
+79:     for row in imp["data"]:
+80:         trimmed = [row[c] for c in kept_cols]
+81:         v = clr(trimmed)
+82:         if v is None:
+83:             failed += 1
+84:         out.append(v)
+93:     col_remap = {old: new for new, old in enumerate(kept_cols)}
+94:     remapped_mask = [(r, col_remap[c]) for r, c in imp["mask"]]
+95:     return {"data": out, "mask": remapped_mask, "dropped_cols": imp["dropped_cols"],
+96:             "rows_failed": failed}
+
+### stocks_predictor/rj_episodes.py
+44: def find_local_trough(dates: list[str], closes: list[float],
+45:                        start_date: str, end_date: str | None = None) -> tuple[str, float] | None:
+50:     idxs = [i for i, d in enumerate(dates)
+51:             if d >= start_date and (end_date is None or d < end_date)]
+52:     if not idxs:
+53:         return None
+54:     j = min(idxs, key=lambda i: closes[i])
+55:     return dates[j], closes[j]
+58: def point_in_time_candidates(dates: list[str], closes: list[float],
+59:                               rj_request_date: str, backward_lookback: int = 40) -> list[str]:
+76:     idx_rj = next((i for i, d in enumerate(dates) if d >= rj_request_date), None)
+77:     if idx_rj is None:
+78:         return []
+79:     candidates = []
+80:     for i in range(idx_rj, len(dates)):
+81:         if i - idx_rj < backward_lookback:
+82:             continue    # janela incompleta — não é candidato válido ainda
+83:         lo = i - backward_lookback
+84:         window = closes[lo:i + 1]
+85:         if window and closes[i] == min(window):
+86:             candidates.append(dates[i])
+87:     return candidates
+90: def select_primary_episode(candidates: list[str]) -> str | None:
+97:     return candidates[0] if candidates else None
+100: def select_secondary_episodes(candidates: list[str], all_dates: list[str],
+101:                                min_separation_trading_days: int) -> list[str]:
+108:     if not candidates:
+109:         return []
+110:     idx_of = {d: i for i, d in enumerate(all_dates)}
+111:     kept = [candidates[0]]
+112:     for c in candidates[1:]:
+113:         if idx_of[c] - idx_of[kept[-1]] >= min_separation_trading_days:
+114:             kept.append(c)
+115:     return kept
+119: def first_rally_after_trough(dates: list[str], closes: list[float],
+120:                               trough_idx: int, threshold_pct: float,
+121:                               max_window_trading_days: int) -> tuple[str, float, int] | None:
+126:     trough_price = closes[trough_idx]
+127:     if trough_price <= 0:
+128:         return None
+129:     target = trough_price * (1.0 + threshold_pct)
+130:     limit = min(len(dates), trough_idx + 1 + max_window_trading_days)
+131:     for i in range(trough_idx + 1, limit):
+132:         if closes[i] >= target:
+133:             return dates[i], closes[i] / trough_price - 1.0, i - trough_idx
+134:     return None
+137: def classify_episode(dates: list[str], closes: list[float], trough_date: str,
+138:                       cfg: dict, asof_today: str, window_key: str = "primary_window_trading_days") -> dict:
+164:     if dates and dates[-1] > asof_today:
+165:         raise AssertionError(
+166:             f"série estende além do asof ({dates[-1]} > {asof_today}) — "
+167:             "lookahead estrutural; truncar a série no chamador")
+168:     rcfg = cfg["rally"]
+169:     max_window = rcfg[window_key]
+170:     trough_idx = dates.index(trough_date)
+171:     if closes[trough_idx] <= 0:
+172:         return {"outcome": "invalid_data", "rally_pct": None,
+173:                 "rally_date": None, "trading_days_to_rally": None,
+174:                 "censored": 0}
+175:     hit = first_rally_after_trough(
+176:         dates, closes, trough_idx, rcfg["threshold_pct"], max_window)
+177:     if hit is not None:
+178:         rally_date, rally_pct, td = hit
+179:         return {"outcome": "rally", "rally_pct": rally_pct,
+180:                 "rally_date": rally_date, "trading_days_to_rally": td,
+181:                 "censored": 0}
+183:     window_end_idx = trough_idx + max_window
+184:     if window_end_idx <= len(dates) - 1:
+185:         return {"outcome": "no_rally_observed", "rally_pct": None,
+186:                 "rally_date": None, "trading_days_to_rally": None,
+187:                 "censored": 0}
+188:     return {"outcome": "censored", "rally_pct": None, "rally_date": None,
+189:             "trading_days_to_rally": None, "censored": 1}

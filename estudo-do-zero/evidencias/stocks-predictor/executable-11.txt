@@ -1,0 +1,498 @@
+
+### stocks_predictor/discovery_value.py
+7: import argparse
+8: from bisect import bisect_right
+9: from collections import Counter, defaultdict
+10: from datetime import date, datetime, timedelta, timezone
+11: import hashlib
+12: import json
+13: import math
+14: from pathlib import Path
+15: import sqlite3
+16: import statistics
+18: from stocks_predictor.discovery_h17 import (
+19:     adjustment_map, digest, identity_at, read_json, score_outcome, spearman,
+20: )
+22: PROTOCOL_ID = "H18-H19-DISCOVERY-DISCLOSED-CAPITAL-1"
+24: PROTOCOL_SHA256 = "b6a2cc4ba4cbe8fb2d614427ad4d26a3193c7943bbba4e4c9449982ff72a1dde"
+27: def document_key(row):
+28:     return row["cnpj"], row["ref_date"], row["document_version"]
+31: def index_unique(rows):
+32:     result = {}
+33:     for row in rows:
+34:         key = document_key(row)
+35:         if key in result:
+36:             raise ValueError("duplicate source document")
+37:         result[key] = row
+38:     return result
+41: def group_events(panel):
+42:     events, legacy = defaultdict(list), defaultdict(list)
+43:     for row in panel["events"]:
+44:         events[row["ticker"]].append(row)
+45:     for row in panel["legacy_adjustments"]:
+46:         legacy[row["ticker"]].append(row)
+47:     for row in panel.get("secondary_action_audit", []):
+48:         if row["status"] == "CROSSCHECK_CONFLICT":
+49:             events[row["ticker"]].append({"ex_date": row["date"], "price_factor": None,
+50:                                           "label": "CROSS_SOURCE_FACTOR_CONFLICT"})
+51:     return events, legacy
+54: def value_feature(member, asof, capitals, accounts, bars, identities, events, legacy):
+56:     base = {"ticker": member["ticker"], "cnpj": member["cnpj"], "isin": member["isin"]}
+58:     def unavailable(reason):
+59:         return {**base, "eligible": False, "reason": reason}
+61:     filing = member.get("filing")
+62:     if not filing:
+63:         return unavailable("NO_PUBLIC_FINANCIAL_FILING")
+64:     if filing["cnpj"] != member["cnpj"]:
+65:         raise ValueError("financial issuer mismatch")
+66:     ref = filing["ref_date"]
+67:     if filing["available_at"] > asof or ref > asof:
+68:         raise ValueError("future financial filing")
+69:     if not member.get("security_documents"):
+70:         raise ValueError("missing security provenance")
+71:     for security in member["security_documents"]:
+72:         if security["available_at"] > asof or security["cnpj"] != member["cnpj"]:
+73:             raise ValueError("future or wrong-issuer security document")
+74:     age = (date.fromisoformat(asof) - date.fromisoformat(ref)).days
+75:     if age > 550:
+76:         return unavailable("REPORTED_CAPITAL_OLDER_THAN_550_DAYS")
+77:     if member["median_volume"] < 1_000_000:
+78:         return unavailable("MEDIAN_DAILY_VOLUME_BELOW_1M_BRL")
+79:     capital, account = capitals.get(document_key(filing)), accounts.get(document_key(filing))
+80:     if not capital or capital["status"] != "ACQUIRED":
+81:         return unavailable("NO_VALID_EXACT_DOCUMENT_CAPITAL")
+82:     if not account:
+83:         return unavailable("NO_EXACT_DOCUMENT_ACCOUNTING")
+84:     for document in (capital, account):
+85:         if document["received_at"] != filing["received_at"]:
+86:             raise ValueError("document receipt differs from PIT filing")
+87:         usable = (date.fromisoformat(document["received_at"]) + timedelta(days=1)).isoformat()
+88:         if usable > asof:
+89:             raise ValueError("capital or accounting not public at signal")
+90:     if capital["document_id"] != account["document_id"] or capital["basis_date"] != ref:
+91:         raise ValueError("capital/accounting document identity mismatch")
+92:     evidence = account["equity_sources"] + ([account["earnings_source"]] if account["earnings_source"] else [])
+93:     if any(row["archive_sha256"] != filing["source_sha256"] for row in evidence):
+94:         raise ValueError("accounting archive differs from PIT filing")
+95:     if capital["preferred"] != 0 or capital["outstanding_ordinary"] <= 0:
+96:         return unavailable("NOT_SINGLE_ORDINARY_SHARE_CLASS")
+97:     ticker = member["ticker"]
+98:     if "ACNOR" not in member["isin"]:
+99:         return unavailable("NOT_ORDINARY_PRICE_INSTRUMENT")
+100:     quotes = bars.get(ticker, {})
+101:     if asof not in quotes:
+102:         return unavailable("NO_SIGNAL_DATE_QUOTE")
+103:     prior = sorted(d for d in quotes if d <= ref)
+104:     if not prior or (date.fromisoformat(ref)-date.fromisoformat(prior[-1])).days > 10:
+105:         return unavailable("NO_NEARBY_FISCAL_DATE_INSTRUMENT")
+106:     basis = prior[-1]
+107:     identity_days = [basis, asof] + [r["first_date"] for r in identities.get(ticker, [])
+108:                                      if basis < r["first_date"] < asof]
+109:     if any(identity_at(identities, ticker, day) != member["isin"] for day in identity_days):
+110:         return unavailable("PAST_INSTRUMENT_IDENTITY_BREAK")
+111:     factors, conflicts = adjustment_map(events, legacy)
+112:     if any(ref < d <= asof for d in conflicts):
+113:         return unavailable("PAST_CONFLICTING_CAPITAL_ACTION")
+114:     if any(ref < r["ex_date"] <= asof and r["price_factor"] is None for r in events):
+115:         return unavailable("PAST_UNMODELLED_CAPITAL_EVENT")
+116:     known_days = sorted(d for d in quotes if basis <= d <= asof)
+117:     for previous, day in zip(known_days, known_days[1:]):
+118:         factor = math.prod(v for d, v in factors.items() if previous < d <= day)
+119:         if abs(quotes[day][0] / (quotes[previous][1] * factor) - 1) > 0.30:
+120:             return unavailable("PAST_UNRESOLVED_OVERNIGHT_GT_30PCT")
+121:     price_factor = math.prod(v for d, v in factors.items() if ref < d <= asof)
+122:     share_proxy = capital["outstanding_ordinary"] / price_factor
+123:     cap_proxy = quotes[asof][1] * share_proxy
+124:     if not math.isfinite(cap_proxy) or cap_proxy <= 0:
+125:         raise ValueError("invalid disclosed market-cap proxy")
+126:     earnings = account["owner_earnings_brl"]
+127:     earnings_source = account["earnings_source"]
+128:     if earnings is not None:
+129:         if not earnings_source or earnings_source["period_end"] != ref:
+130:             raise ValueError("earnings period mismatch")
+131:         duration = (date.fromisoformat(ref)-date.fromisoformat(earnings_source["period_start"])).days + 1
+132:         if not 330 <= duration <= 400:
+133:             earnings = None
+134:     equity = account["owner_equity_brl"]
+135:     for value in (earnings, equity):
+136:         if value is not None and not math.isfinite(value):
+137:             raise ValueError("nonfinite accounting value")
+138:     return {**base, "eligible": True, "reason": None, "H18": earnings/cap_proxy if earnings is not None else None,
+139:             "H19": equity/cap_proxy if equity is not None else None,
+140:             "capital_proxy_brl": cap_proxy, "translated_reported_shares": share_proxy,
+141:             "reported_outstanding_shares": capital["outstanding_ordinary"],
+142:             "share_rounding_unit": capital["rounding_unit_shares"], "price_factor_since_fiscal_date": price_factor,
+143:             "signal_close": quotes[asof][1], "report_age_days": age, "document_id": capital["document_id"],
+144:             "ref_date": ref, "available_at": filing["available_at"], "document_version": filing["document_version"],
+145:             "capital_source_sha256": capital["source_sha256"], "accounting_source_sha256": filing["source_sha256"]}
+148: def prepare_features(snapshots, capitals, accounts, bars, identities, panel):
+149:     capital_index, account_index = index_unique(capitals), index_unique(accounts["rows"])
+150:     events, legacy = group_events(panel)
+151:     prepared = []
+152:     for snap in snapshots:
+153:         if len(snap["universe"]) > 60 or len({m["cnpj"] for m in snap["universe"]}) != len(snap["universe"]):
+154:             raise ValueError("invalid contemporaneous universe")
+155:         members = [value_feature(m, snap["asof"], capital_index, account_index, bars, identities,
+156:                                  events[m["ticker"]], legacy[m["ticker"]]) for m in snap["universe"]]
+157:         prepared.append({"asof": snap["asof"], "members": members})
+158:     return prepared
+161: def feature_coverage(prepared):
+162:     members = [m for s in prepared for m in s["members"]]
+163:     return {"signal_dates": len(prepared), "total_cells": len(members),
+164:             "exclusions": dict(Counter(m["reason"] for m in members if not m["eligible"])),
+165:             "families": {family: {"min_names": min(counts), "median_names": statistics.median(counts),
+166:                                    "max_names": max(counts), "eligible_months_min_20": sum(n >= 20 for n in counts)}
+167:                          for family in ("H18", "H19")
+168:                          for counts in [[sum(m.get(family) is not None for m in s["members"]) for s in prepared]]}}
+171: def period_statistics(members, horizon):
+173:     selected = [m for m in members if m["selected"]]
+174:     if not selected or not members:
+175:         raise ValueError("empty priced cohort")
+176:     scored = [m for m in members if m["price_return"] is not None]
+177:     ic = spearman([m["factor"] for m in scored], [m["price_return"] for m in scored])
+178:     complete = len(scored) == len(members)
+179:     spread = (statistics.mean(m["price_return"] for m in selected)
+180:               - statistics.mean(m["price_return"] for m in members)) if complete else None
+182:     adverse = {m["ticker"]: m["price_return"] if m["price_return"] is not None
+183:                else (-1.0 if m["selected"] else 1.0) for m in members}
+184:     adverse_spread = statistics.mean(adverse[m["ticker"]] for m in selected) - statistics.mean(adverse.values())
+185:     return {"complete": complete, "available_case_ic": ic, "complete_case_spread": spread,
+186:             "adverse_missing_scenario_spread": adverse_spread,
+187:             "adverse_spread_after_36bp_per_month": (adverse_spread-0.0036)/horizon,
+188:             "adverse_spread_after_72bp_per_month": (adverse_spread-0.0072)/horizon}
+191: def observe(prepared, family, horizon, dates, bars, identities, panel):
+192:     months = {d[:7]: d for d in dates}
+193:     month_keys = sorted(months)
+194:     events, legacy = group_events(panel)
+195:     results = []
+196:     for snap in prepared:
+197:         asof = snap["asof"]
+198:         if horizon == 3 and int(asof[5:7]) % 3:
+199:             continue
+200:         candidates = sorted((m for m in snap["members"] if m.get(family) is not None),
+201:                             key=lambda m: (-m[family], m["ticker"]))
+202:         record = {"asof": asof, "factor_names": len(candidates), "universe_names": len(snap["members"])}
+203:         if len(candidates) < 20:
+204:             results.append({**record, "status": "INSUFFICIENT_PIT_FEATURE_COVERAGE", "members": []})
+205:             continue
+206:         exit_month = month_keys[month_keys.index(asof[:7]) + horizon]
+207:         entry = dates[bisect_right(dates, asof)]
+208:         exit_day = dates[bisect_right(dates, months[exit_month])]
+209:         if not asof < entry < exit_day:
+210:             raise ValueError("noncausal execution interval")
+211:         members = [{"ticker": m["ticker"], "cnpj": m["cnpj"], "isin": m["isin"],
+212:                     "factor": m[family], "selected": i < len(candidates)//5,
+213:                     **score_outcome(m, entry, exit_day, bars, identities, events[m["ticker"]], legacy[m["ticker"]])}
+214:                    for i, m in enumerate(candidates)]
+215:         stats = period_statistics(members, horizon)
+216:         results.append({**record, "entry": entry, "exit": exit_day, "members": members, **stats,
+217:                         "status": "COMPLETE_PRICE_MEASUREMENT" if stats["complete"] else "INCOMPLETE_PRICE_MEASUREMENT"})
+218:     return results
+221: def summarize(rows, horizon):
+222:     def mean(values):
+223:         present = [x for x in values if x is not None]
+224:         return statistics.mean(present) if present else None
+226:     def subset(periods):
+227:         eligible = [r for r in periods if r["members"]]
+228:         members = [m for r in eligible for m in r["members"]]
+229:         missing = [m for m in members if m["price_return"] is None]
+230:         selected = [m for m in members if m["selected"]]
+231:         return {"scheduled_periods": len(periods), "eligible_periods": len(eligible),
+232:                 "complete_periods": sum(r["complete"] for r in eligible), "factor_cells": len(members),
+233:                 "selected_cells": len(selected), "unscored_selected_cells": sum(m["selected"] for m in missing),
+234:                 "unscored_other_cells": sum(not m["selected"] for m in missing),
+235:                 "available_case_mean_ic": mean([r["available_case_ic"] for r in eligible]),
+236:                 "complete_case_spread_per_month": mean([r["complete_case_spread"]/horizon
+237:                                                         if r["complete"] else None for r in eligible]),
+238:                 "adverse_spread_after_36bp_per_month": mean([r["adverse_spread_after_36bp_per_month"] for r in eligible]),
+239:                 "adverse_spread_after_72bp_per_month": mean([r["adverse_spread_after_72bp_per_month"] for r in eligible]),
+240:                 "selection_frequency": dict(Counter(m["ticker"] for m in selected)),
+241:                 "missing_reasons": dict(Counter(reason for m in missing for reason in m["quality_reasons"]))}
+243:     overall = subset(rows)
+244:     halves = {"2018_2021": subset([r for r in rows if r["asof"] < "2022-01-01"]),
+245:               "2022_2025": subset([r for r in rows if r["asof"] >= "2022-01-01"])}
+246:     required = 36//horizon
+247:     enough = (overall["eligible_periods"] >= required and
+248:               all(h["eligible_periods"] >= 12//horizon for h in halves.values()))
+249:     stable = all(h["available_case_mean_ic"] is not None and h["available_case_mean_ic"] > 0 and
+250:                  h["adverse_spread_after_72bp_per_month"] is not None and h["adverse_spread_after_72bp_per_month"] > 0
+251:                  for h in halves.values())
+252:     material = overall["adverse_spread_after_72bp_per_month"] is not None and overall["adverse_spread_after_72bp_per_month"] >= 0.0042
+253:     decision = ("INSUFFICIENT_DISCOVERY_COVERAGE" if not enough else
+254:                 "PRIORITIZE_TOTAL_RETURN_AND_EXECUTION_REPAIR" if stable and material else "NO_PRIORITY_UPGRADE")
+255:     return {"resource_decision": decision, "coverage_gate_pass": enough, "stability_gate_pass": stable,
+256:             "materiality_gate_pass": material, "overall": overall, "fixed_halves": halves,
+257:             "investable_alpha_claim": False, "executable_profit_estimate": None}
+260: def load_market(db, identity_dir):
+261:     bars, identities = defaultdict(dict), defaultdict(list)
+262:     for path in sorted(Path(identity_dir).glob("identity-*.jsonl")):
+263:         for line in path.read_text(encoding="utf-8").splitlines():
+264:             row = json.loads(line)
+265:             identities[row["ticker"]].append(row)
+266:     if not identities:
+267:         raise ValueError("missing historical instrument identities")
+268:     with sqlite3.connect(Path(db).resolve().as_uri()+"?mode=ro", uri=True) as conn:
+269:         dates = [r[0] for r in conn.execute("SELECT DISTINCT date FROM prices_raw ORDER BY date")]
+270:         for ticker, day, opening, closing, scale in conn.execute(
+271:             "SELECT ticker,date,open,close,quote_factor FROM prices_raw WHERE market_type='010'"
+272:         ):
+273:             if scale is None or not math.isfinite(scale) or scale <= 0:
+274:                 raise ValueError("invalid quotation scale")
+275:             values = opening/scale, closing/scale
+276:             if any(not math.isfinite(v) or v <= 0 for v in values):
+277:                 raise ValueError("invalid normalized quotation")
+278:             if day in bars[ticker] and bars[ticker][day] != values:
+279:                 raise ValueError("conflicting normalized quote")
+280:             bars[ticker][day] = values
+281:     return dates, bars, identities
+284: def run(db, snapshots_path, panel_path, identity_dir, capitals_path, accounts_path, protocol_path, output):
+285:     output = Path(output)
+286:     if output.exists():
+287:         raise FileExistsError("Observations are append-only; choose a new output")
+288:     protocol = read_json(protocol_path)
+289:     canonical = json.dumps(protocol, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+290:     if protocol["protocol_id"] != PROTOCOL_ID or hashlib.sha256(canonical).hexdigest() != PROTOCOL_SHA256:
+291:         raise ValueError("unsupported preregistration")
+292:     paths = [Path(p) for p in (db, snapshots_path, panel_path, capitals_path, accounts_path, protocol_path, __file__)]
+293:     paths.append(Path(__file__).with_name("discovery_h17.py"))
+294:     paths += sorted(Path(identity_dir).glob("identity-*.jsonl"))
+295:     hashes = {str(p.resolve()): digest(p) for p in paths}
+296:     actual = {p.name: hashes[str(p.resolve())] for p in paths}
+297:     if any(actual.get(Path(name).name) != sha for name, sha in protocol["input_sha256"].items()):
+298:         raise ValueError("dataset differs from preregistration")
+299:     snapshots = read_json(snapshots_path)
+300:     if [s["asof"][:7] for s in snapshots] != [f"{y}-{m:02}" for y in range(2018, 2026) for m in range(1, 13)]:
+301:         raise ValueError("signal window differs from preregistration")
+302:     dates, bars, identities = load_market(db, identity_dir)
+303:     panel = read_json(panel_path)
+304:     features = prepare_features(snapshots, read_json(capitals_path), read_json(accounts_path), bars, identities, panel)
+305:     trials = []
+306:     for family, horizon in (("H18", 1), ("H18", 3), ("H19", 1), ("H19", 3)):
+307:         rows = observe(features, family, horizon, dates, bars, identities, panel)
+308:         trials.append({"family": family, "holding_months": horizon, "summary": summarize(rows, horizon), "periods": rows})
+309:     result = {"protocol_id": PROTOCOL_ID, "observed_at_utc": datetime.now(timezone.utc).isoformat(),
+310:               "mode": "DISCOVERY_PRICE_DIAGNOSTIC_NOT_EXECUTABLE_BACKTEST", "input_sha256": hashes,
+311:               "protocol": protocol, "feature_coverage": feature_coverage(features), "features": features, "trials": trials}
+312:     if any(digest(p) != sha for p, sha in hashes.items()):
+313:         raise ValueError("input changed during observation")
+314:     output.parent.mkdir(parents=True, exist_ok=True)
+315:     with output.open("x", encoding="utf-8") as stream:
+316:         json.dump(result, stream, ensure_ascii=False, indent=2, allow_nan=False)
+317:     return [{"family": t["family"], "holding_months": t["holding_months"], **t["summary"]} for t in trials]
+320: def main():
+321:     parser = argparse.ArgumentParser(description=__doc__)
+322:     for key in ("db", "snapshots", "events", "identity-dir", "capitals", "accounts", "protocol", "output"):
+323:         parser.add_argument("--"+key, required=True, type=Path)
+324:     args = parser.parse_args()
+325:     print(json.dumps(run(args.db, args.snapshots, args.events, args.identity_dir, args.capitals,
+326:                          args.accounts, args.protocol, args.output), ensure_ascii=False, indent=2))
+329: if __name__ == "__main__":
+330:     main()
+
+### stocks_predictor/discovery_value_repair.py
+3: import argparse
+4: from datetime import datetime, timezone
+5: import hashlib
+6: import json
+7: import math
+8: from pathlib import Path
+10: from stocks_predictor.discovery_h17 import adjustment_map, digest, identity_at, read_json
+11: from stocks_predictor.discovery_value import group_events, load_market, period_statistics, summarize
+13: PROTOCOL_ID = "H18-H19-MEASUREMENT-REPAIR-1"
+14: PROTOCOL_SHA256 = "1f4ad50cd682f4611f16676f64cf56de1c37a5eeab9704b8f7257fc816c1ab0f"
+17: def score(member, entry, exit_day, bars, identities, events, legacy, reviewed_moves):
+18:     ticker = member["ticker"]
+19:     quotes = bars.get(ticker, {})
+20:     reasons, notes = [], []
+21:     if entry not in quotes or exit_day not in quotes:
+22:         reasons.append("MISSING_EXECUTION_ENDPOINT")
+23:     check_days = [entry, exit_day] + [r["first_date"] for r in identities.get(ticker, [])
+24:                                     if entry < r["first_date"] < exit_day]
+25:     if any(identity_at(identities, ticker, d) != member["isin"] for d in check_days):
+26:         reasons.append("INSTRUMENT_IDENTITY_BREAK_OR_MISSING")
+27:     factors, conflicts = adjustment_map(events, legacy)
+28:     for day, errors in conflicts.items():
+29:         if entry < day <= exit_day:
+30:             reasons.extend(errors)
+31:     for event in events:
+32:         if entry < event["ex_date"] <= exit_day and event["price_factor"] is None:
+33:             reasons.append("UNMODELLED_"+event["label"].replace(" ", "_"))
+34:     period = sorted(d for d in quotes if entry <= d <= exit_day)
+35:     for previous, day in zip(period, period[1:]):
+36:         factor = math.prod(v for d, v in factors.items() if previous < d <= day)
+37:         gap = quotes[day][0]/(quotes[previous][1]*factor)-1
+38:         if abs(gap) <= 0.30:
+39:             continue
+40:         review = reviewed_moves.get((ticker, day))
+41:         if (review and review["previous_date"] == previous and review["isin"] == member["isin"]
+42:                 and review["previous_close"] == quotes[previous][1] and review["next_open"] == quotes[day][0]
+43:                 and review["price_factor"] == factor):
+44:             notes.append({"code": "PRIMARY_QUOTE_CONFIRMED_LARGE_MOVE", "date": day, "overnight_return": gap})
+45:         else:
+46:             reasons.append("UNRESOLVED_OVERNIGHT_GT_30PCT")
+47:     if reasons:
+48:         return {"price_return": None, "quality_reasons": sorted(set(reasons)), "quality_notes": notes}
+49:     factor = math.prod(v for d, v in factors.items() if entry < d <= exit_day)
+50:     result = quotes[exit_day][0]/(quotes[entry][0]*factor)-1
+51:     if not math.isfinite(result) or result <= -1:
+52:         raise ValueError("invalid remeasured return")
+53:     return {"price_return": result, "quality_reasons": [], "quality_notes": notes}
+56: def run(first_path, db, identity_dir, panel_path, reviews_path, protocol_path, output):
+57:     output = Path(output)
+58:     if output.exists():
+59:         raise FileExistsError("Observations are append-only")
+60:     protocol = read_json(protocol_path)
+61:     canonical = json.dumps(protocol, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+62:     if protocol["protocol_id"] != PROTOCOL_ID or hashlib.sha256(canonical).hexdigest() != PROTOCOL_SHA256:
+63:         raise ValueError("unsupported measurement-repair registration")
+64:     paths = [Path(p) for p in (first_path, db, panel_path, reviews_path, protocol_path, __file__)]
+65:     paths += [Path(__file__).with_name(name) for name in ("discovery_h17.py", "discovery_value.py")]
+66:     paths += sorted(Path(identity_dir).glob("identity-*.jsonl"))
+67:     hashes = {str(p.resolve()): digest(p) for p in paths}
+68:     actual = {p.name: hashes[str(p.resolve())] for p in paths}
+69:     if any(actual.get(Path(p).name) != sha for p, sha in protocol["input_sha256"].items()):
+70:         raise ValueError("measurement dataset differs from registration")
+71:     first = read_json(first_path)
+72:     _, bars, identities = load_market(db, identity_dir)
+73:     events, legacy = group_events(read_json(panel_path))
+74:     reviews = {(r["ticker"], r["date"]): r for r in read_json(reviews_path)}
+75:     trials, differences = [], []
+76:     for trial in first["trials"]:
+77:         horizon = trial["holding_months"]
+78:         periods = []
+79:         for period in trial["periods"]:
+80:             if not period["members"]:
+81:                 periods.append(period)
+82:                 continue
+83:             members = []
+84:             for old in period["members"]:
+85:                 outcome = score(old, period["entry"], period["exit"], bars, identities,
+86:                                 events[old["ticker"]], legacy[old["ticker"]], reviews)
+87:                 members.append({**old, **outcome})
+88:                 if outcome["price_return"] != old["price_return"]:
+89:                     differences.append({"family": trial["family"], "holding_months": horizon, "asof": period["asof"],
+90:                                         "ticker": old["ticker"], "selected": old["selected"], "old_return": old["price_return"],
+91:                                         "new_return": outcome["price_return"], "old_reasons": old["quality_reasons"],
+92:                                         "new_reasons": outcome["quality_reasons"]})
+93:             stats = period_statistics(members, horizon)
+94:             periods.append({**period, "members": members, **stats,
+95:                             "status": "COMPLETE_PRICE_MEASUREMENT" if stats["complete"] else "INCOMPLETE_PRICE_MEASUREMENT"})
+96:         trials.append({"family": trial["family"], "holding_months": horizon,
+97:                        "summary": summarize(periods, horizon), "periods": periods})
+98:     result = {"protocol_id": PROTOCOL_ID, "observed_at_utc": datetime.now(timezone.utc).isoformat(),
+99:               "mode": "FROZEN_COHORT_PRICE_REMEASUREMENT_NOT_EXECUTABLE_BACKTEST", "input_sha256": hashes,
+100:               "protocol": protocol, "features": first["features"], "feature_coverage": first["feature_coverage"],
+101:               "trials": trials, "changed_returns": differences,
+102:               "unchanged_selection_and_factor_values": True}
+103:     if any(digest(p) != sha for p, sha in hashes.items()):
+104:         raise ValueError("input changed during observation")
+105:     with output.open("x", encoding="utf-8") as stream:
+106:         json.dump(result, stream, ensure_ascii=False, indent=2, allow_nan=False)
+107:     return [{"family": t["family"], "holding_months": t["holding_months"], **t["summary"]} for t in trials]
+110: def main():
+111:     parser = argparse.ArgumentParser(description=__doc__)
+112:     for key in ("first", "db", "identity-dir", "events", "reviews", "protocol", "output"):
+113:         parser.add_argument("--"+key, required=True, type=Path)
+114:     args = parser.parse_args()
+115:     print(json.dumps(run(args.first, args.db, args.identity_dir, args.events, args.reviews,
+116:                          args.protocol, args.output), ensure_ascii=False, indent=2))
+119: if __name__ == "__main__":
+120:     main()
+
+### stocks_predictor/document_panel.py
+7: from collections import defaultdict
+8: from html import unescape
+9: from html.parser import HTMLParser
+10: import hashlib
+11: import re
+13: if __package__:
+14:     from .cvm_pit import iso_date
+15:     from .source_history import security_links_asof
+16: else:
+17:     from cvm_pit import iso_date
+18:     from source_history import security_links_asof
+21: def fundamentals_asof(financials, securities, asof, *, security_metadata=None):
+23:     iso_date(asof)
+24:     by_issuer = defaultdict(list)
+25:     securities_by_issuer, metadata_by_issuer = defaultdict(list), defaultdict(list)
+26:     for row in securities:
+27:         securities_by_issuer[row["cnpj"]].append(row)
+28:     for row in security_metadata or []:
+29:         metadata_by_issuer[row["cnpj"]].append(row)
+30:     for row in financials:
+31:         if row["available_at"] <= asof and row["ref_date"] <= asof:
+32:             by_issuer[row["cnpj"]].append(row)
+33:     result = {}
+34:     for cnpj, rows in by_issuer.items():
+35:         key = max((r["ref_date"], r["document_version"]) for r in rows)
+36:         latest = [r for r in rows if (r["ref_date"], r["document_version"]) == key]
+38:         content = [{k: v for k, v in r.items() if k not in {"source", "source_sha256"}} for r in latest]
+39:         if any(r != content[0] for r in content[1:]):
+40:             raise ValueError(f"conflicting issuer filings: {cnpj}")
+41:         issuer_securities = securities_by_issuer[cnpj]
+42:         if security_metadata is not None:
+43:             eligible = [r for r in metadata_by_issuer[cnpj] if r["available_at"] <= asof]
+44:             if not eligible:
+45:                 continue
+46:             newest = max((r["ref_date"], r["version"], r["available_at"]) for r in eligible)
+47:             docs = {r["document_id"] for r in eligible
+48:                     if (r["ref_date"], r["version"], r["available_at"]) == newest}
+49:             issuer_securities = [r for r in issuer_securities if r["document_id"] in docs]
+50:         for ticker in security_links_asof(issuer_securities, cnpj, asof):
+51:             if ticker in result and result[ticker]["cnpj"] != cnpj:
+52:                 raise ValueError(f"ambiguous contemporaneous ticker: {ticker}")
+53:             result[ticker] = latest[0]
+54:     return result
+57: class _CapitalCells(HTMLParser):
+58:     def __init__(self):
+59:         super().__init__()
+60:         self.cells = {}
+61:         self.active = None
+63:     def handle_starttag(self, tag, attrs):
+64:         if tag == "td":
+65:             self.active = dict(attrs).get("id")
+66:             if self.active:
+67:                 self.cells[self.active] = ""
+69:     def handle_data(self, data):
+70:         if self.active:
+71:             self.cells[self.active] += data
+73:     def handle_endtag(self, tag):
+74:         if tag == "td":
+75:             self.active = None
+78: def capital_from_viewer(payload, metadata, source):
+85:     text = payload.decode("utf-8-sig")
+86:     plain = unescape(re.sub(r"<[^>]*>", " ", text))
+87:     scales = re.findall(r"Número de Ações\s*\((Unidade|Mil)\)", plain)
+88:     if len(scales) != 1:
+89:         raise ValueError("missing or ambiguous capital share scale")
+90:     scale = {"Unidade": 1, "Mil": 1000}[scales[0]]
+91:     basis = iso_date(metadata["ref_date"])
+92:     if basis[8:10] + "/" + basis[5:7] + "/" + basis[:4] not in plain:
+93:         raise ValueError("capital page reference date mismatch")
+94:     parser = _CapitalCells()
+95:     parser.feed(text)
+96:     ids = {
+97:         "ordinary": "QtdAordCapiItgz_1", "preferred": "QtdAprfCapiItgz_1",
+98:         "total": "QtdTotAcaoCapiItgz_1", "treasury_ordinary": "QtdAordTeso_1",
+99:         "treasury_preferred": "QtdAprfTeso_1", "treasury_total": "QtdTotAcaoTeso_1",
+100:     }
+101:     counts = {}
+102:     for name, cell in ids.items():
+103:         value = parser.cells.get(cell, "").strip()
+104:         if not re.fullmatch(r"\d{1,3}(?:\.\d{3})*|\d+", value):
+105:             raise ValueError(f"missing or invalid capital cell: {cell}")
+106:         counts[name] = int(value.replace(".", "")) * scale
+107:     for prefix in ("", "treasury_"):
+108:         if counts[prefix + "ordinary"] + counts[prefix + "preferred"] != counts[prefix + "total"]:
+109:             raise ValueError("capital class sum mismatch")
+110:     if counts["total"] <= 0 or any(counts["treasury_" + k] > counts[k] for k in ("ordinary", "preferred")):
+111:         raise ValueError("invalid treasury or issued capital")
+112:     return {
+113:         **metadata, **counts, "basis_date": basis, "share_scale": scales[0],
+114:         "rounding_unit_shares": scale, "source": source,
+115:         "source_sha256": hashlib.sha256(payload).hexdigest(),
+116:         "outstanding_ordinary": counts["ordinary"] - counts["treasury_ordinary"],
+117:         "outstanding_preferred": counts["preferred"] - counts["treasury_preferred"],
+118:         "eligible_for_valuation": False,
+119:         "remaining_gate": "class-price equivalence and intervening capital events",
+120:     }

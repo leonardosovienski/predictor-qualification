@@ -1,0 +1,1004 @@
+[
+  {
+    "path": "packages/research-bundle/tests/test_contract.py",
+    "name": "test_canonical_and_identity",
+    "line": 75,
+    "assertions": [
+      "assert validate(loads(canonical(bundle))) == bundle",
+      "assert seal(bundle) == bundle",
+      "assert loads(json.dumps(bundle, indent=2).encode()) == bundle",
+      "assert digest(canonical(bundle)) != digest(json.dumps(bundle, indent=2).encode())",
+      "assert bundle['entities'][0]['event_at'] is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "packages/research-bundle/tests/test_contract.py",
+    "name": "test_strict_parse",
+    "line": 109,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_contract.py",
+    "name": "test_paths",
+    "line": 132,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_contract.py",
+    "name": "test_resource_errors",
+    "line": 154,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_contract.py",
+    "name": "test_reference_and_external",
+    "line": 161,
+    "assertions": [
+      "assert validate(seal(b))",
+      "assert validate(seal(b))"
+    ],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_contract.py",
+    "name": "test_invariants",
+    "line": 196,
+    "assertions": [],
+    "raises": [
+      "pytest.raises((ValueError, KeyError))"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_contract.py",
+    "name": "test_counts",
+    "line": 229,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_files_export.py",
+    "name": "test_directory_chain_synced_before_descendants",
+    "line": 11,
+    "assertions": [
+      "assert synced[-3:] == [tmp_path, tmp_path / 'cas', tmp_path / 'cas/sha256']",
+      "assert synced[-3:] == [tmp_path, tmp_path / 'cas', tmp_path / 'cas/sha256']",
+      "assert (tmp_path / 'cas').is_dir()",
+      "assert not (tmp_path / 'cas/sha256').exists()"
+    ],
+    "raises": []
+  },
+  {
+    "path": "packages/research-bundle/tests/test_files_export.py",
+    "name": "test_provenance_tracks_dependency_bytes_and_builder_has_no_domain_defaults",
+    "line": 32,
+    "assertions": [
+      "assert first['producer_files'] == second['producer_files']",
+      "assert digest(canonical(first)) != digest(canonical(second))",
+      "assert builder.body['origin'] == origin and builder.body['restrictions'] == restrictions",
+      "assert builder.body['evidence'][0]['payload'] == second"
+    ],
+    "raises": []
+  },
+  {
+    "path": "packages/research-bundle/tests/test_files_export.py",
+    "name": "test_posix_path_errors",
+    "line": 65,
+    "assertions": [
+      "assert caught.value is error",
+      "assert caught.value.__cause__ is error"
+    ],
+    "raises": [
+      "pytest.raises(OSError)",
+      "pytest.raises(ValueError, match='UNSAFE_PATH')"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_files_export.py",
+    "name": "test_pinned_read_only",
+    "line": 108,
+    "assertions": [
+      "assert sources['report.json'] == b'{\"status\":\"UNKNOWN\"}'",
+      "assert not subprocess.check_output(['git', '-C', str(source), 'status', '--porcelain'])"
+    ],
+    "raises": []
+  },
+  {
+    "path": "packages/research-bundle/tests/test_files_export.py",
+    "name": "test_source_rejection",
+    "line": 116,
+    "assertions": [],
+    "raises": [
+      "pytest.raises((ValueError, OSError))"
+    ]
+  },
+  {
+    "path": "packages/research-bundle/tests/test_files_export.py",
+    "name": "test_open_handle_mutation_protection",
+    "line": 149,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(OSError)",
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_key_store.py",
+    "name": "test_rotation_grace_revocation_backup_and_no_secret_leak",
+    "line": 46,
+    "assertions": [
+      "assert provisioned['state'] == 'ACTIVE'",
+      "assert provisioned['secret_fingerprint']",
+      "assert old_secret.hex() not in json.dumps(provisioned)",
+      "assert store.acl_attestation()['protected'] is True",
+      "assert rotation['previous']['state'] == 'VERIFY_ONLY'",
+      "assert store.signing_key(IDENTITY, SCOPE) == ('key-2', new_secret)",
+      "assert store.resolve(IDENTITY, 'key-2', SCOPE, at=T0 + timedelta(seconds=41)) is None",
+      "assert old_secret.hex() not in public_evidence",
+      "assert new_secret.hex() not in public_evidence",
+      "assert old_secret not in store.path.read_bytes()",
+      "assert new_secret not in store.path.read_bytes()",
+      "assert len(backup['manifest_sha256']) == 64",
+      "assert restored.resolve(IDENTITY, 'key-1', SCOPE, at=T0 + timedelta(seconds=30)) == old_secret",
+      "assert restored.resolve(IDENTITY, 'key-2', SCOPE, at=T0 + timedelta(seconds=41)) is None",
+      "assert 'secret' not in {row[1] for row in db.execute('PRAGMA table_info(keys)')}",
+      "assert db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'"
+    ],
+    "raises": [
+      "pytest.raises(PermissionError, match='unknown or revoked')",
+      "pytest.raises(PermissionError, match='no active signing key')"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_key_store.py",
+    "name": "test_secret_corruption_and_legacy_secret_database_fail_closed",
+    "line": 109,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(PermissionError, match='integrity failure')",
+      "pytest.raises(RuntimeError, match='embeds secrets')"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_key_store.py",
+    "name": "test_rotation_is_atomic_and_wrong_identity_scope_fail_closed",
+    "line": 128,
+    "assertions": [
+      "assert store.resolve('other', 'key-1', SCOPE, at=T0) is None",
+      "assert store.resolve(IDENTITY, 'key-1', 'wrong.scope', at=T0) is None",
+      "assert store.signing_key(IDENTITY, SCOPE) == ('key-1', b'x' * 32)"
+    ],
+    "raises": [
+      "pytest.raises(ValueError, match='active key already exists')"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_result_contract.py",
+    "name": "test_result_roundtrip_preserves_separate_authorities_and_states",
+    "line": 107,
+    "assertions": [
+      "assert value['ops_facts']['operational_state'] == 'SUCCEEDED'",
+      "assert value['core_facts']['scientific_state'] == 'REFUTED'",
+      "assert value['crypto_facts']['economic_state'] == 'NO_EDGE'",
+      "assert verify_result(envelope, lambda publisher, key: SECRET) == envelope",
+      "assert envelope['payload_hash'] == payload_hash(value)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "packages/research-protocol/tests/test_result_contract.py",
+    "name": "test_result_fails_closed_on_contradictions_or_unknown_fields",
+    "line": 129,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_result_contract.py",
+    "name": "test_failed_execution_cannot_claim_scientific_or_economic_promotion",
+    "line": 136,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_result_contract.py",
+    "name": "test_forged_or_unknown_result_publisher_fails_closed",
+    "line": 144,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(PermissionError)",
+      "pytest.raises(PermissionError)"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_task_contract.py",
+    "name": "test_canonical_hash_ignores_key_order_and_uses_nfc",
+    "line": 66,
+    "assertions": [
+      "assert canonical(first) == canonical(second)",
+      "assert payload_hash(task()) == payload_hash(reversed_task)",
+      "assert payload_hash(task()) != payload_hash(changed)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "packages/research-protocol/tests/test_task_contract.py",
+    "name": "test_task_and_signature_roundtrip",
+    "line": 77,
+    "assertions": [
+      "assert verify_task(envelope, lambda publisher, key: SECRET) == envelope"
+    ],
+    "raises": []
+  },
+  {
+    "path": "packages/research-protocol/tests/test_task_contract.py",
+    "name": "test_task_fails_closed",
+    "line": 97,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-protocol/tests/test_task_contract.py",
+    "name": "test_forged_unknown_and_revoked_keys_fail_closed",
+    "line": 104,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(PermissionError)",
+      "pytest.raises(PermissionError)"
+    ]
+  },
+  {
+    "path": "packages/research-snapshot/tests/test_publication.py",
+    "name": "test_publication_is_immutable_idempotent_and_cleans_staging",
+    "line": 40,
+    "assertions": [
+      "assert validate(loads(original)) == package",
+      "assert receipt == digest(original)",
+      "assert publish(package, destination) == receipt",
+      "assert destination.read_bytes() == original",
+      "assert list(tmp_path.glob('.snapshot-*')) == []"
+    ],
+    "raises": [
+      "pytest.raises(FileExistsError, match='conflict')"
+    ]
+  },
+  {
+    "path": "packages/research-snapshot/tests/test_publication.py",
+    "name": "test_failed_link_does_not_publish_partial_file",
+    "line": 56,
+    "assertions": [
+      "assert list(tmp_path.iterdir()) == []"
+    ],
+    "raises": [
+      "pytest.raises(OSError)"
+    ]
+  },
+  {
+    "path": "packages/research-snapshot/tests/test_publication.py",
+    "name": "test_invalid_contract_never_creates_destination",
+    "line": 67,
+    "assertions": [
+      "assert list(tmp_path.iterdir()) == []"
+    ],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-snapshot/tests/test_publication.py",
+    "name": "test_path_escape_rejected",
+    "line": 75,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-snapshot/tests/test_publication.py",
+    "name": "test_json_rejects_duplicate_keys_nonfinite_and_excessive_depth",
+    "line": 80,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError)"
+    ]
+  },
+  {
+    "path": "packages/research-snapshot/tests/test_publication.py",
+    "name": "test_received_evidence_hash_and_record_reference",
+    "line": 86,
+    "assertions": [
+      "assert validate(loads(canonical(seal(body))))['records'][0]['source_status'] == 'UNKNOWN'"
+    ],
+    "raises": [
+      "pytest.raises(ValueError, match='evidence hash')"
+    ]
+  },
+  {
+    "path": "tests/contract/test_plugin_protocol.py",
+    "name": "test_plugin_satisfies_the_v1_protocol",
+    "line": 27,
+    "assertions": [
+      "assert isinstance(plugin_under_test, PluginV1)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/contract/test_plugin_protocol.py",
+    "name": "test_domain_attribute_is_a_non_empty_string",
+    "line": 31,
+    "assertions": [
+      "assert isinstance(plugin_under_test.domain, str) and plugin_under_test.domain"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/contract/test_plugin_protocol.py",
+    "name": "test_health_returns_a_typed_report_with_matching_domain",
+    "line": 35,
+    "assertions": [
+      "assert isinstance(report, HealthReport)",
+      "assert report.domain == plugin_under_test.domain",
+      "assert isinstance(report.status, OperationalStatus)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/contract/test_plugin_protocol.py",
+    "name": "test_capabilities_returns_canonical_orthogonal_states",
+    "line": 42,
+    "assertions": [
+      "assert isinstance(manifest, CapabilityManifest)",
+      "assert manifest.domain == plugin_under_test.domain",
+      "assert isinstance(manifest.scientific_status, ScientificStatus)",
+      "assert isinstance(manifest.predictive_status, PredictiveStatus)",
+      "assert isinstance(manifest.economic_status, EconomicStatus)",
+      "assert isinstance(manifest.capital_permission, CapitalPermission)",
+      "assert manifest.supports_no_opportunity is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/contract/test_plugin_protocol.py",
+    "name": "test_missing_state_fails_closed_by_default",
+    "line": 53,
+    "assertions": [
+      "assert manifest.scientific_status is ScientificStatus.UNKNOWN",
+      "assert manifest.predictive_status is PredictiveStatus.UNKNOWN",
+      "assert manifest.economic_status is EconomicStatus.UNKNOWN",
+      "assert manifest.capital_permission is CapitalPermission.FORBIDDEN",
+      "assert manifest.supports_no_opportunity is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/contract/test_plugin_protocol.py",
+    "name": "test_predict_if_present_accepts_a_plain_dict_and_returns_one",
+    "line": 62,
+    "assertions": [
+      "assert isinstance(result, dict)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_architecture_inventory.py",
+    "name": "test_current_architecture_has_seven_repositories_and_four_ecosystem_packages",
+    "line": 13,
+    "assertions": [
+      "assert {item['repository'] for item in record['projects']} == inventory.REPOSITORIES",
+      "assert sum((len(item['packages']) for item in record['projects'])) == 11",
+      "assert not record['shared_database']",
+      "assert not record['capital_permission']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_architecture_inventory.py",
+    "name": "test_subpackage_is_inventoried_independently",
+    "line": 21,
+    "assertions": [
+      "assert result['path'] == 'packages/transport'",
+      "assert result['requires_python'] == '>=3.11'",
+      "assert result['dependencies'] == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_architecture_inventory.py",
+    "name": "test_inventory_detects_omitted_bundle_metadata",
+    "line": 40,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='research-bundle')"
+    ]
+  },
+  {
+    "path": "tests/test_architecture_inventory.py",
+    "name": "test_inventory_rejects_nonexistent_or_duplicate_packages",
+    "line": 52,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='inventory differs')"
+    ]
+  },
+  {
+    "path": "tests/test_architecture_inventory.py",
+    "name": "test_current_local_packages_match_actual_metadata",
+    "line": 58,
+    "assertions": [
+      "assert architecture.validate_package_inventory(item['repository'], item['packages'], files)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_project_registry_has_exactly_six_canonical_projects",
+    "line": 11,
+    "assertions": [
+      "assert scope['complete_current_inventory'] is False",
+      "assert scope['current_inventory'] == 'registries/architecture_registry.json'",
+      "assert {item['project_id'] for item in projects} == {'ecosystem-predictor', 'core-predictor', 'predictor-ops', 'brasileirao-predictor', 'cripto-predictor', 'stocks-predictor'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_required_claims_exist_and_business_claim_stays_b0",
+    "line": 26,
+    "assertions": [
+      "assert required <= claims.keys()",
+      "assert claims['CLAIM-BIZ-001']['state'] == 'B0'",
+      "assert claims['CLAIM-CR-H6']['state'] == 'INCONCLUSIVE'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_br_preservation_is_granular_and_not_false_pass",
+    "line": 58,
+    "assertions": [
+      "assert br['matches_db'] == 'PASS'",
+      "assert br['prediction_store'] == 'MISSING_CONFIRMED'",
+      "assert br['overall'] == 'PARTIAL'",
+      "assert backup['v0_offsite_backup'] == 'PARTIAL'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_exp001_remains_fail_closed",
+    "line": 67,
+    "assertions": [
+      "assert checkpoints['EXP001_DATA_STATUS'] == 'PARTIALLY_READY'",
+      "assert checkpoints['EXP001_HISTORICAL_READY'] == 'NO'",
+      "assert checkpoints['EXP001_EXECUTION'] == 'NOT_STARTED'",
+      "assert checkpoints['BR_RESEARCH_DECISION'] == 'UNKNOWN'",
+      "assert checkpoints['EXP001_HISTORICAL'] == 'NOT_VIABLE'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_exp001_prospective_contract_is_active_and_complete",
+    "line": 76,
+    "assertions": [
+      "assert contract['state'] == 'ACTIVE'",
+      "assert {'dataset_version', 'probabilities'} <= set(contract['required_fields'])"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_commercial_discovery_starts_with_real_names_but_no_claim_promotion",
+    "line": 84,
+    "assertions": [
+      "assert registry['claim_state'] == 'B0'",
+      "assert len(registry['contacts']) >= 10",
+      "assert len({item['contact_id'] for item in registry['contacts']}) == len(registry['contacts'])",
+      "assert {item['ICP'] for item in registry['contacts']} <= {'ICP-1', 'ICP-2'}",
+      "assert registry['gates']['BIZ-001_10_NOMINAL_CONTACTS'] == 'YES'",
+      "assert registry['v1']['outreach'] == 'READY_FOR_HUMAN_EXECUTION'",
+      "assert registry['outreach_001']['selected_contact_id'] == 'ICP2-001'",
+      "assert registry['outreach_001']['status'] == 'READY_FOR_HUMAN_EXECUTION'",
+      "assert registry['outreach_001']['sent_at'] is None",
+      "assert registry['interview_001']['status'] == 'NOT_STARTED'",
+      "assert registry['interview_001']['evidence_source'] is None",
+      "assert len(registry['evidence_capture_template']['subclaims']) == 6",
+      "assert registry['follow_up_rule']['maximum_follow_ups'] == 1",
+      "assert all((item['status'] == 'RESEARCHED_NOT_CONTACTED' for item in registry['contacts']))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_economics_stays_e0_without_fabricated_revenue_or_margin",
+    "line": 102,
+    "assertions": [
+      "assert registry['claim_state'] == 'E0'",
+      "assert registry['actuals']['revenue'] == 0",
+      "assert registry['actuals']['paid_engagements'] == 0",
+      "assert registry['unit_economics'] == 'UNKNOWN'",
+      "assert registry['profitability'] == 'UNKNOWN'",
+      "assert registry['pricing_framework']['market_price'] == 'UNKNOWN'",
+      "assert registry['primary_next_action'] == 'HUMAN_OPERATOR_SEND_OUTREACH_001'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_harness_alignment_does_not_equate_core_versions",
+    "line": 113,
+    "assertions": [
+      "assert statuses['brasileirao-predictor', '3.2.0'] == 'EXPIRED'",
+      "assert statuses['cripto-predictor', '3.0.0'] == 'COMPATIBLE_BUT_OLDER'",
+      "assert statuses['stocks-predictor', '3.1.0'] == 'INVALIDATED_BY_CORE_BUMP'",
+      "assert registry['overall_alignment'] == 'MIXED_BY_DECISION'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_invalidated_harness_demands_reissue_and_is_never_silently_ok",
+    "line": 131,
+    "assertions": [
+      "assert item['reported_core_version'] != 'UNKNOWN'",
+      "assert item['reissue_required'] is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_canonical_registries.py",
+    "name": "test_any_current_alignment_must_match_released_core",
+    "line": 145,
+    "assertions": [
+      "assert not aligned or released in aligned"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_current_representation.py",
+    "name": "test_missing_non_python_component_fails",
+    "line": 15,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValueError, match='documented components missing')",
+      "pytest.raises(ValueError, match='package inventory changed')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_drift.py",
+    "name": "test_detects_core_version_behind_the_registry",
+    "line": 46,
+    "assertions": [
+      "assert _fired(problems, 'core-predictor: registry diz 3.1.0, main diz 3.2.0')",
+      "assert _fired(problems, 'current_released_core_version')"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_drift.py",
+    "name": "test_detects_attestation_that_the_registry_describes_wrong",
+    "line": 63,
+    "assertions": [
+      "assert _fired(problems, 'atestado real diz core 3.1.0')",
+      "assert _fired(problems, 'expires_at do atestado real não bate')"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_drift.py",
+    "name": "test_detects_a_pin_changed_in_one_file_only",
+    "line": 91,
+    "assertions": [
+      "assert _fired(problems, 'pin de Ops divergente')",
+      "assert _fired(problems, 'Dockerfile')"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_drift.py",
+    "name": "test_detects_main_that_moved_past_the_recorded_verification",
+    "line": 115,
+    "assertions": [
+      "assert _fired(notes, 'registry aponta aaaaaaaaaaaa, main está em bbbbbbbbbbbb')",
+      "assert not _fired(problems, 'main está em'), 'SHA movido é aviso, não falha: acontece a cada merge legítimo em qualquer repo'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_drift.py",
+    "name": "test_wheel_versions_reads_every_shape_a_pin_takes",
+    "line": 135,
+    "assertions": [
+      "assert core == {'3.2.0'}",
+      "assert ops == {'4.1.0'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_drift.py",
+    "name": "test_agreeing_pins_do_not_fire",
+    "line": 147,
+    "assertions": [
+      "assert not [p for p in problems if 'pin de' in p]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_drift.py",
+    "name": "test_real_registry_has_current_hash_verified_target_harness",
+    "line": 169,
+    "assertions": [
+      "assert drift.check_offline() == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_output_is_deterministic_and_sorted",
+    "line": 42,
+    "assertions": [
+      "assert [item['repository'] for item in snapshot['repositories']] == ['a', 'z']",
+      "assert facts.render(snapshot) == facts.render(copy.deepcopy(snapshot))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_fixture_without_drift",
+    "line": 48,
+    "assertions": [],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_mechanical_drift",
+    "line": 54,
+    "assertions": [],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_ops_drift",
+    "line": 60,
+    "assertions": [],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_missing_document_is_drift",
+    "line": 66,
+    "assertions": [],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_ci_for_another_commit_is_not_accepted",
+    "line": 72,
+    "assertions": [],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_broken_internal_link",
+    "line": 79,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='FACTUAL_DRIFT: broken internal links')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_external_source_unavailable",
+    "line": 87,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='SOURCE_UNAVAILABLE')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_external_timeout",
+    "line": 93,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='SOURCE_UNAVAILABLE')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_invalid_schema",
+    "line": 99,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='INVALID_SCHEMA')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_human_fields_are_rejected_from_mechanical_schema",
+    "line": 104,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='INVALID_SCHEMA')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_ecosystem_self_head_and_ci_are_derived",
+    "line": 111,
+    "assertions": [
+      "assert 'HEAD derivado em execução' in block",
+      "assert 'aaaaaaaaaaaa' not in block"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_offline_check_never_collects",
+    "line": 121,
+    "assertions": [
+      "assert facts.main(['--offline-check', '--snapshot', str(snapshot_path), '--document', str(document)]) == 0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_diff_is_fail_fast",
+    "line": 132,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='FACTUAL_DRIFT')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_invalid_snapshot_file",
+    "line": 145,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='INVALID_SCHEMA')"
+    ]
+  },
+  {
+    "path": "tests/test_ecosystem_facts.py",
+    "name": "test_expired_snapshot_requires_review",
+    "line": 152,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(facts.FactError, match='STALE_REVIEW_REQUIRED')"
+    ]
+  },
+  {
+    "path": "tests/test_fidelity_regressions.py",
+    "name": "test_expiry_checks_exact_instant_and_requires_timezone",
+    "line": 21,
+    "assertions": [
+      "assert bool(drift.check_expiry(item, datetime(2026, 9, 13, 16, 42, 6, tzinfo=UTC))) is invalid"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_fidelity_regressions.py",
+    "name": "test_historical_expiry_is_not_recertified",
+    "line": 26,
+    "assertions": [
+      "assert drift.check_expiry(item, datetime(2026, 9, 14, tzinfo=UTC)) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_fidelity_regressions.py",
+    "name": "test_plugin_exception_messages_never_escape",
+    "line": 31,
+    "assertions": [
+      "assert marker not in caplog.text",
+      "assert registry.records['synthetic'].error == 'RuntimeError'",
+      "assert marker not in repr(registry.health_snapshot())",
+      "assert marker not in repr(registry.capability_snapshot())",
+      "assert 'RuntimeError' in repr(registry.health_snapshot())",
+      "assert marker not in repr(registry.health_snapshot())",
+      "assert marker not in repr(registry.capability_snapshot())",
+      "assert marker not in repr(registry.diagnostic_snapshot())"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_recorded_harness_evidence.py",
+    "name": "test_matching_recorded_control_passes",
+    "line": 42,
+    "assertions": [
+      "assert drift.check_recorded_evidence(fixture_record(tmp_path), tmp_path) == []"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_recorded_harness_evidence.py",
+    "name": "test_mismatch_is_refused",
+    "line": 57,
+    "assertions": [
+      "assert drift.check_recorded_evidence(record, tmp_path)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/test_recorded_harness_evidence.py",
+    "name": "test_missing_and_outside_evidence_are_refused",
+    "line": 63,
+    "assertions": [
+      "assert drift.check_recorded_evidence(record, tmp_path)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_architecture_registry.py",
+    "name": "test_duplicate_names_never_execute_plugin_code",
+    "line": 9,
+    "assertions": [
+      "assert not registry.records['duplicate'].loaded",
+      "assert registry.records['duplicate'].error == 'duplicate entry-point name'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_architecture_registry.py",
+    "name": "test_invalid_state_retains_literal_producer_payload",
+    "line": 21,
+    "assertions": [
+      "assert result['capabilities']['contract_status'] == 'INVALID'",
+      "assert result['capabilities']['payload']['scientific_status'] == 'REJECTED_BY_PROTOCOL'",
+      "assert result['health']['contract_status'] == 'VALID'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_architecture_registry.py",
+    "name": "test_native_states_have_a_domain_namespace_without_semantic_translation",
+    "line": 38,
+    "assertions": [
+      "assert report['contract_status'] == 'VALID'",
+      "assert report['state_namespace'] == 'crypto'",
+      "assert report['state_mapping'] is None",
+      "assert report['payload']['scientific_status'] == state",
+      "assert result['capital_authorized_by_diagnostic'] is False"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_candidate_artifact_identity.py",
+    "name": "test_requires_exact_artifact_provenance",
+    "line": 27,
+    "assertions": [
+      "assert matches(distribution, {'version': '1', **expected}) is valid"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_contracts.py",
+    "name": "test_health_report_round_trips_through_json",
+    "line": 15,
+    "assertions": [
+      "assert restored == report"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_contracts.py",
+    "name": "test_health_report_rejects_unknown_status",
+    "line": 21,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError)"
+    ]
+  },
+  {
+    "path": "tests/unit/test_contracts.py",
+    "name": "test_capability_manifest_defaults_are_closed_not_open",
+    "line": 26,
+    "assertions": [
+      "assert manifest.supports_prediction is False",
+      "assert manifest.supports_settlement is False",
+      "assert manifest.supports_collection is False"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_contracts.py",
+    "name": "test_prediction_request_response_round_trip",
+    "line": 33,
+    "assertions": [
+      "assert PredictionResponse.model_validate_json(response.model_dump_json()) == response"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_registry.py",
+    "name": "test_discover_loads_a_compliant_plugin",
+    "line": 29,
+    "assertions": [
+      "assert registry.list_domains() == ['reference']",
+      "assert record.loaded",
+      "assert record.instance.health().status == OperationalStatus.SUCCEEDED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_registry.py",
+    "name": "test_non_compliant_plugin_is_registered_as_degraded_not_dropped",
+    "line": 39,
+    "assertions": [
+      "assert record is not None",
+      "assert not record.loaded",
+      "assert 'capabilities' in record.error"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_registry.py",
+    "name": "test_import_error_does_not_crash_discovery",
+    "line": 49,
+    "assertions": [
+      "assert record is not None",
+      "assert not record.loaded"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_registry.py",
+    "name": "test_constructor_error_does_not_crash_discovery",
+    "line": 58,
+    "assertions": [
+      "assert record is not None",
+      "assert not record.loaded",
+      "assert record.error == 'RuntimeError'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_registry.py",
+    "name": "test_health_snapshot_reports_failed_for_unloaded_plugin",
+    "line": 68,
+    "assertions": [
+      "assert snapshot['broken'].status == OperationalStatus.FAILED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_registry.py",
+    "name": "test_attribute_shaped_capabilities_is_rejected_at_load_not_call_time",
+    "line": 76,
+    "assertions": [
+      "assert record is not None",
+      "assert not record.loaded",
+      "assert 'callable' in record.error"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests/unit/test_registry.py",
+    "name": "test_mixed_registry_loads_good_and_degrades_bad_independently",
+    "line": 89,
+    "assertions": [
+      "assert registry.get('reference').loaded",
+      "assert not registry.get('broken').loaded"
+    ],
+    "raises": []
+  }
+]
