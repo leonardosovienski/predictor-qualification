@@ -36,9 +36,11 @@ def main() -> int:
     static_dir = sys.argv[5] if len(sys.argv) > 5 else "contract-revalidation"
     protected_dir = sys.argv[6] if len(sys.argv) > 6 else "protected"
     core_dir = sys.argv[7] if len(sys.argv) > 7 else "core-identity"
+    soak_run = sys.argv[8] if len(sys.argv) > 8 else run  # ciclo 5: a fase soak refeita num run só dela
     root = m.parent.parent
     raw = m / "RAW_LOGS"
     rt, wt = raw / "runtime" / run, raw / "runtime" / win
+    st = raw / "runtime" / soak_run
 
     def cite(path: Path) -> str:
         return f"`{path.relative_to(root).as_posix()}` (sha256 `{sha(path)[:16]}…`)"
@@ -244,7 +246,7 @@ def main() -> int:
         + "".join(f"\n- `{s['path']}`: esperado `{s['expected'][:16]}…`, atual `{s['current'][:16]}…`." + chain_text(s)
                   + "\n" for s in prot["shared"] if not s["ok"]), encoding="utf-8")
     # ---------------------------------------------------------------- SOAK
-    soak = load(rt / "soak" / "SUMMARY.json")
+    soak = load(st / "soak" / "SUMMARY.json")
     profile = load(m / "QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json")
     c = dict(soak["counters"])
     per_class = profile["minimums"].get("runs_per_failure_class", 0)
@@ -252,10 +254,10 @@ def main() -> int:
     c["runs_per_failure_class"] = min(c["failure_runs"].values())
     floors = "\n".join(f"| {k} | {v} | {c.get(k, '-')} |" for k, v in profile["minimums"].items())
     zero = "\n".join(f"| {x['check']} | {'OK' if x['ok'] else 'FALHA'} |" for x in soak["checks"])
-    llm = sorted((rt / "soak").glob("llm-*.audit.json"), key=lambda a: int(re.search(r"llm-(\d+)", a.name).group(1)))
+    llm = sorted((st / "soak").glob("llm-*.audit.json"), key=lambda a: int(re.search(r"llm-(\d+)", a.name).group(1)))
     llm_cfg = load(m / "FROZEN_PARAMETERS.json")["decision_policy"]["stocks_config"]["llm_hypotheses"]
     # decisão de cada proposta: a saída do comando "propose llm <i>" no commands.log do soak
-    soak_log = (rt / "soak" / "commands.log").read_text(encoding="utf-8")
+    soak_log = (st / "soak" / "commands.log").read_text(encoding="utf-8")
     decided = {int(i): json.loads(out) for i, out in re.findall(
         r'"label": "propose llm (\d+)".*\n--- stdout\n(\{.*\})\n--- stderr', soak_log)}
     llm_rows = []
@@ -270,8 +272,8 @@ def main() -> int:
     (m / "SOAK_REPORT.md").write_text(
         "# integration-stocks — SOAK_REPORT\n\n"
         "Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json`, lido e não alterado). Linux primário, "
-        f"run `{run}`, dados reais públicos, runtime só com wheels publicadas. Fonte: {cite(rt / 'soak' / 'SUMMARY.json')}; "
-        f"comandos brutos em `RAW_LOGS/runtime/{run}/soak/commands.log`.\n\n"
+        f"run `{soak_run}`, dados reais públicos, runtime só com wheels publicadas. Fonte: {cite(st / 'soak' / 'SUMMARY.json')}; "
+        f"comandos brutos em `RAW_LOGS/runtime/{soak_run}/soak/commands.log`.\n\n"
         f"Resultado: **{soak['passed']} conferências OK, {soak['failed']} falhas**.\n\n"
         "| Piso | Mínimo | Obtido |\n|---|--:|--:|\n" + floors + "\n\n"
         f"Execuções por classe de falha: {json.dumps(c['failure_runs'])}. Decisões: {json.dumps(c['decisions'])}.\n\n"

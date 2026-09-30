@@ -1,0 +1,450 @@
+{
+ "scenario": "e2e",
+ "finished_at": "2026-09-30T00:36:14Z",
+ "checks": [
+  {
+   "check": "01-allow: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "stocks:episode-1",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "28754997096c5b0778f09da014b03d432a4c4756e2b48fde67e46201b261a1f2",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "e3fd21fcccb09206703b5b6b03ebd5626f1e388534dc96f56b7671e09b89d8c2",
+     "previous_task_id": null,
+     "task_id": "stocks:TASK-c9a2d02d6440e49e4812b3471180838f"
+    }
+   }
+  },
+  {
+   "check": "02-allow-restarts: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "stocks:episode-2",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "0e4135a4409e412e67211f9ecd32d1cbc4f6be2b548ab51707571c62925e7ed7",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "5415ef252c593d4c8180e7b3ada8769f950a3887f7d0995b529a37056e1ac396",
+     "previous_task_id": "stocks:TASK-c9a2d02d6440e49e4812b3471180838f",
+     "task_id": "stocks:TASK-2b3090e727834639ec6537bd95323ab5"
+    }
+   }
+  },
+  {
+   "check": "02: consumer died at after_domain_before_result_write (exit 86)",
+   "ok": true,
+   "exit": 86
+  },
+  {
+   "check": "02: no V2 result written before the restart",
+   "ok": true
+  },
+  {
+   "check": "02: CAIN died at after_inbox_commit_before_memory (exit 86)",
+   "ok": true,
+   "exit": 86
+  },
+  {
+   "check": "02: restarted ingestion completed the memory",
+   "ok": true,
+   "got": [
+    {
+     "action": "remembered",
+     "fact_id": "fact:2db4c5ba646449cb94ad87ea0e9a3df5",
+     "file": "TASK-2b3090e727834639ec6537bd95323ab5.a031074d030bc497.json",
+     "reused": false
+    },
+    {
+     "action": "duplicate",
+     "file": "TASK-c9a2d02d6440e49e4812b3471180838f.13aeadb873e6ef67.json"
+    }
+   ]
+  },
+  {
+   "check": "interleaved: crypto and brasileirao results rejected (DOMAIN_MISMATCH), stocks H9 of a task never emitted rejected (TASK_NOT_FOUND)",
+   "ok": true,
+   "got": {
+    "interleaved-brasileirao-result-h9.json": "DOMAIN_MISMATCH",
+    "interleaved-crypto-result-h9.json": "DOMAIN_MISMATCH",
+    "interleaved-stocks-result-h9.json": "TASK_NOT_FOUND"
+   }
+  },
+  {
+   "check": "03-canary: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "stocks:episode-3",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "ea8dcab4fde6c81cf22bc43b9905e223b125eaae6d168160cb86972dd7b9ddb7",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "e19c51f18c2ef7c8cc2106020e706bf81bf4f98c39dd93dff3bfdce954c9e47a",
+     "previous_task_id": "stocks:TASK-2b3090e727834639ec6537bd95323ab5",
+     "task_id": "stocks:TASK-c963146c95deff0622559d94472e9f18"
+    }
+   }
+  },
+  {
+   "check": "04-duplicate: decision DUPLICATE DUPLICATE_REQUEST",
+   "ok": true,
+   "got": {
+    "decision": "DUPLICATE",
+    "episode_id": "stocks:episode-4",
+    "reason_code": "DUPLICATE_REQUEST",
+    "receipt_sha256": "35aede91e963e49d53d9363b9bd5af4fd617a60c7dcfe9be04b8e51edda90124",
+    "rule": "R08",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "04-duplicate: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "05-h9-closed: decision BLOCK HYPOTHESIS_CLOSED",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "episode_id": "stocks:episode-5",
+    "reason_code": "HYPOTHESIS_CLOSED",
+    "receipt_sha256": "f892f455b5fe2f7a16a7252866f0a31b1d3cdacac9b2f4bd51f8fdc671bb46c2",
+    "rule": "R05",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "05-h9-closed: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "06-crypto-h9: decision BLOCK DOMAIN_MISMATCH",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "episode_id": "stocks:episode-6",
+    "reason_code": "DOMAIN_MISMATCH",
+    "receipt_sha256": "957141b364cfb6d02701a1173bbdd5d7ce290f632a8bbcb37e065d4f558fc60d",
+    "rule": "R01",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "06-crypto-h9: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "07-frozen-family: decision BLOCK HYPOTHESIS_CLOSED",
+   "ok": true,
+   "got": {
+    "decision": "BLOCK",
+    "episode_id": "stocks:episode-7",
+    "reason_code": "HYPOTHESIS_CLOSED",
+    "receipt_sha256": "9a6111ee14008be2dd9bd13c0832b757d60cb4e3afb7d442e1db071e8d372a47",
+    "rule": "R05",
+    "status": "RECORDED",
+    "task": null
+   }
+  },
+  {
+   "check": "07-frozen-family: no task emitted",
+   "ok": true
+  },
+  {
+   "check": "08-next: decision ALLOW",
+   "ok": true,
+   "got": {
+    "decision": "ALLOW",
+    "episode_id": "stocks:episode-8",
+    "reason_code": "ALLOWED",
+    "receipt_sha256": "73096ae5982d919bee831183ae4f8c8181a72a235860ba7841ff4b1c77220dfc",
+    "rule": "R14",
+    "status": "RECORDED",
+    "task": {
+     "payload_sha256": "f64f639e7a723f276d3a8e9a0fa9f97f5cf6eae39db57d63e5a49411b03e203f",
+     "previous_task_id": "stocks:TASK-c963146c95deff0622559d94472e9f18",
+     "task_id": "stocks:TASK-d74576d188f91baf1c271a2a34b5c8a1"
+    }
+   }
+  },
+  {
+   "check": "every emitted task has a V2 result; no result for any other task",
+   "ok": true,
+   "tasks": [
+    "stocks:TASK-2b3090e727834639ec6537bd95323ab5",
+    "stocks:TASK-c963146c95deff0622559d94472e9f18",
+    "stocks:TASK-c9a2d02d6440e49e4812b3471180838f",
+    "stocks:TASK-d74576d188f91baf1c271a2a34b5c8a1"
+   ],
+   "results": [
+    "stocks:TASK-2b3090e727834639ec6537bd95323ab5",
+    "stocks:TASK-c963146c95deff0622559d94472e9f18",
+    "stocks:TASK-c9a2d02d6440e49e4812b3471180838f",
+    "stocks:TASK-d74576d188f91baf1c271a2a34b5c8a1"
+   ]
+  },
+  {
+   "check": "02: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "DUPLICATE"
+   ]
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-002: payload byte-identical to `stocks-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "82f5763bc1256b29686fdc5da6dad54a8c6dfc6bc8b91f0a984e62cf1c4db127",
+   "show_sha256": "82f5763bc1256b29686fdc5da6dad54a8c6dfc6bc8b91f0a984e62cf1c4db127"
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-002: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "5415ef252c593d4c8180e7b3ada8769f950a3887f7d0995b529a37056e1ac396"
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-002: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-002: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-002: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-002: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "stocks-predictor",
+    "module": "stocks_predictor.adapters.research_v2",
+    "version": "0.3.0rc3"
+   }
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-002: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "03: the domain refused the canary (TEMPORAL_INTEGRITY_VIOLATION), no domain result",
+   "ok": true,
+   "got": [
+    "TEMPORAL_INTEGRITY_VIOLATION"
+   ]
+  },
+  {
+   "check": "01: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-001: payload byte-identical to `stocks-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "f169077b9774a04b0052c0db563d1d24b1270cf09f05840caf9ec1cf3b68293c",
+   "show_sha256": "f169077b9774a04b0052c0db563d1d24b1270cf09f05840caf9ec1cf3b68293c"
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-001: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "e3fd21fcccb09206703b5b6b03ebd5626f1e388534dc96f56b7671e09b89d8c2"
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-001: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-001: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-001: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-001: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "stocks-predictor",
+    "module": "stocks_predictor.adapters.research_v2",
+    "version": "0.3.0rc3"
+   }
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-001: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "08: terminal RESULT/DUPLICATE with one domain payload",
+   "ok": true,
+   "got": [
+    "RESULT"
+   ]
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-008: payload byte-identical to `stocks-research show` (new process)",
+   "ok": true,
+   "payload_sha256": "dbe775004c77842e3766cd2f2b08bf0f98f79f2cc4b712d52224012cf9832131",
+   "show_sha256": "dbe775004c77842e3766cd2f2b08bf0f98f79f2cc4b712d52224012cf9832131"
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-008: request content hash of the domain == task payload_sha256 (C24.3 d)",
+   "ok": true,
+   "request_content_hash": "f64f639e7a723f276d3a8e9a0fa9f97f5cf6eae39db57d63e5a49411b03e203f"
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-008: client_ref echoed unchanged",
+   "ok": true
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-008: one ACCEPTED admission linked to the result",
+   "ok": true,
+   "admissions": 1
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-008: one COMPLETED experiment, Ops run and attempts linked",
+   "ok": true,
+   "experiments": 1
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-008: adapter identity is the installed domain distribution",
+   "ok": true,
+   "adapter": {
+    "distribution": "stocks-predictor",
+    "module": "stocks_predictor.adapters.research_v2",
+    "version": "0.3.0rc3"
+   }
+  },
+  {
+   "check": "stocks:REQ-IS-E2E-008: capital_permission false in envelope and payload",
+   "ok": true
+  },
+  {
+   "check": "03: the domain has no authoritative result for the canary",
+   "ok": true,
+   "exit": 3,
+   "got": {
+    "request_id": "stocks:REQ-IS-E2E-003",
+    "status": "NOT_FOUND"
+   }
+  },
+  {
+   "check": "episodes numbered 1..n without gap",
+   "ok": true,
+   "decisions": [
+    "ALLOW",
+    "ALLOW",
+    "ALLOW",
+    "DUPLICATE",
+    "BLOCK",
+    "BLOCK",
+    "BLOCK",
+    "ALLOW"
+   ]
+  },
+  {
+   "check": "one inbox row per result file, memory hash chain intact",
+   "ok": true,
+   "inbox": 4,
+   "memory": {
+    "broken_at": null,
+    "cube": "stocks",
+    "facts": 4,
+    "log": "shared across domains",
+    "projection": "consistent",
+    "status": "intact"
+   }
+  },
+  {
+   "check": "tasks emitted == ALLOW decisions == task files in the spool",
+   "ok": true,
+   "emitted": 4
+  },
+  {
+   "check": "previous_task_id chains the domain's tasks",
+   "ok": true
+  },
+  {
+   "check": "episode IDs are stocks/episode-<n> and every ID is stocks:-qualified",
+   "ok": true
+  },
+  {
+   "check": "e2e: canary token absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: canary price absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026-10-03 absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "e2e: post-cutoff instant 2026-10-04T03:00:00Z absent from CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "no fact of another domain in the CAIN memory",
+   "ok": true
+  },
+  {
+   "check": "no capital_permission true in CAIN state or spool",
+   "ok": true
+  }
+ ],
+ "passed": 55,
+ "failed": 0,
+ "decisions": [
+  "ALLOW",
+  "ALLOW",
+  "ALLOW",
+  "DUPLICATE",
+  "BLOCK",
+  "BLOCK",
+  "BLOCK",
+  "ALLOW"
+ ],
+ "domain_states": {
+  "02": {
+   "result_state": "INCONCLUSIVE",
+   "scientific_state": "INCONCLUSIVE",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  },
+  "01": {
+   "result_state": "INCONCLUSIVE",
+   "scientific_state": "INCONCLUSIVE",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  },
+  "08": {
+   "result_state": "INCONCLUSIVE",
+   "scientific_state": "INCONCLUSIVE",
+   "economic_state": "NO_EDGE",
+   "operational_state": "SUCCEEDED"
+  }
+ },
+ "real_env": {
+  "policy_sha256": "e1fcaa8f8289c2ed34fcbe9352a73f7b11574f1d3c1b73bc06468c3a2c4238dd",
+  "data_cutoff": "2026-09-30T03:00:00Z",
+  "dataset_version": "b3-cvm-real-2021-01-04_2026-09-29-cotahistdc56c7a09f8f-k100",
+  "panel_sha256": "958b75f9f1f7346d2e8cfe7f51765f08f5ace9b054cac19729a660af54811c3e"
+ }
+}

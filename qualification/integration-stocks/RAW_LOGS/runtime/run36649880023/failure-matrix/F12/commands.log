@@ -1,0 +1,43 @@
+{"effective_proposal": "/home/runner/work/_temp/work/failures/F12/proposals/1.json", "template": "fixtures/proposals/e2e/01-allow.json", "sha256": "3519860067d903a862602cd36572ed6496ba4689be02fa9d3ef0821d49f86cca"}
+{"n": 1, "label": "propose 1", "at": "2026-09-30T00:38:07Z", "seconds": 0.14, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F12/proposals/1.json", "--as-of", "2026-09-30T00:38:07Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "stocks:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "5de77fcf7c4cbe9d76e9f8b0eb42b9f024c3f405a40ac11dbcadcadc36d7d513", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "0fe4aa7c59a7204f11b1ea986bfd3564ea968fc466dccc4449c9b2ffa839ca3b", "previous_task_id": null, "task_id": "stocks:TASK-1fb4c1f93856190e9f6b2ddffc221f13"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch 1", "at": "2026-09-30T00:38:07Z", "seconds": 0.12, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "stocks/tasks/TASK-1fb4c1f93856190e9f6b2ddffc221f13.json", "spool": "WRITTEN", "task_id": "stocks:TASK-1fb4c1f93856190e9f6b2ddffc221f13"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer 1", "at": "2026-09-30T00:38:16Z", "seconds": 8.505, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "stocks", "--spool", "/home/runner/work/_temp/work/failures/F12/spool", "--ledger", "/home/runner/work/_temp/work/failures/F12/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F12/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "stocks:episode-1", "result_file": "stocks/results/TASK-1fb4c1f93856190e9f6b2ddffc221f13.f953393074508df2.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "stocks:TASK-1fb4c1f93856190e9f6b2ddffc221f13"}
+--- stderr
+{"duration_ms": 8231, "event": "job_finished", "job_id": "stocks-research-19d59bb9c71b41655f7c55d1", "level": "INFO", "run_id": "bf25903f027848ff8ba96eb0eb8607fe", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-09-30T00:38:16.331520Z"}
+--- end
+{"n": 4, "label": "ingest 1", "at": "2026-09-30T00:38:16Z", "seconds": 0.131, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:ed220aed3e164a19b19d9c8bb1a5f40b", "file": "TASK-1fb4c1f93856190e9f6b2ddffc221f13.f953393074508df2.json", "status": "RESULT", "task_id": "stocks:TASK-1fb4c1f93856190e9f6b2ddffc221f13"}
+--- stderr
+--- end
+{"n": 5, "label": "tamper other-payload", "at": "2026-09-30T00:38:16Z", "seconds": 0.059, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/python", "-I", "/home/runner/work/_temp/work/failures/F12/tamper.py", "other-payload", "/home/runner/work/_temp/work/failures/F12/spool/stocks/tasks/TASK-1fb4c1f93856190e9f6b2ddffc221f13.json", "/home/runner/work/_temp/work/failures/F12/spool/stocks/results/TASK-1fb4c1f93856190e9f6b2ddffc221f13.f953393074508df2.json", "/home/runner/work/_temp/work/failures/F12/spool/stocks/results/other-payload.json"], "fault_env": {}, "exit": 0}
+--- stdout
+{"mode": "other-payload", "bytes": 96420}
+--- stderr
+--- end
+{"n": 6, "label": "ingest other payload", "at": "2026-09-30T00:38:16Z", "seconds": 0.124, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool"], "fault_env": {}, "exit": 2}
+--- stdout
+{"action": "duplicate", "file": "TASK-1fb4c1f93856190e9f6b2ddffc221f13.f953393074508df2.json"}
+{"action": "rejected", "code": "CONFLICT", "file": "other-payload.json", "reason": "another domain payload was already ingested for this task"}
+--- stderr
+--- end
+{"n": 7, "label": "re-dispatch over tampered spool file", "at": "2026-09-30T00:38:16Z", "seconds": 0.12, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F12/spool", "--resend"], "fault_env": {}, "exit": 2}
+--- stdout
+{"detail": "CONFLICT: tasks/TASK-1fb4c1f93856190e9f6b2ddffc221f13.json already has other bytes", "error": "CONFLICT"}
+--- stderr
+--- end
+{"n": 8, "label": "original kept", "at": "2026-09-30T00:38:16Z", "seconds": 0.119, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F12/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-09-30T00:38:07Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-1fb4c1f93856190e9f6b2ddffc221f13"}, "proposal_id": "cain:FM-F12-1", "reason_code": "ALLOWED", "receipt_sha256": "5de77fcf7c4cbe9d76e9f8b0eb42b9f024c3f405a40ac11dbcadcadc36d7d513", "source": "operator", "task_id": "stocks:TASK-1fb4c1f93856190e9f6b2ddffc221f13"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:ed220aed3e164a19b19d9c8bb1a5f40b", "payload_sha256": "c5ef0a0cf4c3343addabb78fde5c140683b15589542282fc96c3ae69f84e4c60", "status": "RESULT", "task_id": "stocks:TASK-1fb4c1f93856190e9f6b2ddffc221f13"}], "memory": {"broken_at": null, "cube": "stocks", "facts": 1, "log": "shared across domains", "projection": "consistent", "status": "intact"}, "rejections": [{"code": "CONFLICT", "file": "other-payload.json"}]}
+--- stderr
+--- end

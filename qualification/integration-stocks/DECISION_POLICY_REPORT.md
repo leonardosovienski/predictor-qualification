@@ -1,6 +1,6 @@
 # integration-stocks — DECISION_POLICY_REPORT
 
-Gate `DECISION_POLICY` (C12). Política `cain-decision-policy` versão 2 do `cain-research` 0.4.13rc13 (`src/cain/orchestration/policy.py`, sha256 `aff2f5fc6198eb49…`, conferido em `fb0e1dcb9003`), receipt `cain-decision-receipt/1`; configuração do Stocks empacotada em `src/cain/orchestration/data/stocks.json`.
+Gate `DECISION_POLICY` (C12). Política `cain-decision-policy` versão 2 do `cain-research` 0.4.13rc15 (`src/cain/orchestration/policy.py`, sha256 `aff2f5fc6198eb49…`, conferido em `fb0e1dcb9003`), receipt `cain-decision-receipt/1`; configuração do Stocks empacotada em `src/cain/orchestration/data/stocks.json`.
 
 ## Regras, na ordem de avaliação (FROZEN_PARAMETERS.json → decision_policy.rule_order)
 
@@ -41,7 +41,7 @@ Fonte: `qualification/integration-stocks/FROZEN_PARAMETERS.json` (sha256 `40d740
 
 ## Decisões do N+1 (receipt em 3 processos novos, byte a byte)
 
-Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/n-plus-1/frozen/SUMMARY.json` (sha256 `e46a865cb741163c…`).
+Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36649880023/n-plus-1/frozen/SUMMARY.json` (sha256 `a178d67ed2e8e953…`).
 
 | Candidata | Decisão | Motivo | Regra |
 |---|---|---|---|

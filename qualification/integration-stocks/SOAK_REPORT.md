@@ -1,6 +1,6 @@
 # integration-stocks — SOAK_REPORT
 
-Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json`, lido e não alterado). Linux primário, run `run36462320273`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36462320273/soak/SUMMARY.json` (sha256 `dd2f4221bb9c31e4…`); comandos brutos em `RAW_LOGS/runtime/run36462320273/soak/commands.log`.
+Gate `SOAK` (C10, perfil `QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json`, lido e não alterado). Linux primário, run `run36652132817`, dados reais públicos, runtime só com wheels publicadas. Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run36652132817/soak/SUMMARY.json` (sha256 `19b3a05a54bc0219…`); comandos brutos em `RAW_LOGS/runtime/run36652132817/soak/commands.log`.
 
 Resultado: **43 conferências OK, 0 falhas**.
 
@@ -25,33 +25,33 @@ Execuções por classe de falha: {"cain_process_death": 10, "delivery_anomaly": 
 | one domain payload per task | OK |
 | one memory fact per terminal task | OK |
 | episodes 1..n without gap | OK |
-| stocks:REQ-IS-SOAK-021: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-007: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-009: payload == authoritative re-read | OK |
-| stocks:REQ-LLM-9ae4d056a2e7b32a: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-003: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-012: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-024: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-013: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-001: payload == authoritative re-read | OK |
-| stocks:REQ-LLM-d0fe310e5118d78c: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-016: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-017: payload == authoritative re-read | OK |
-| stocks:REQ-LLM-d516b11929b7a7de: payload == authoritative re-read | OK |
-| stocks:REQ-LLM-af16d633be77596f: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-005: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-023: payload == authoritative re-read | OK |
-| stocks:REQ-LLM-07dfb4d65ab14036: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-019: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-015: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-011: payload == authoritative re-read | OK |
-| stocks:REQ-IS-SOAK-020: payload == authoritative re-read | OK |
 | stocks:REQ-IS-SOAK-004: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-003: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-019: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-005: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-001: payload == authoritative re-read | OK |
+| stocks:REQ-LLM-9ae4d056a2e7b32a: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-009: payload == authoritative re-read | OK |
+| stocks:REQ-LLM-d516b11929b7a7de: payload == authoritative re-read | OK |
+| stocks:REQ-LLM-74964fc17c52c897: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-007: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-011: payload == authoritative re-read | OK |
+| stocks:REQ-LLM-d0fe310e5118d78c: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-024: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-021: payload == authoritative re-read | OK |
+| stocks:REQ-LLM-07dfb4d65ab14036: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-017: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-016: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-012: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-023: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-013: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-020: payload == authoritative re-read | OK |
 | stocks:REQ-IS-SOAK-008: payload == authoritative re-read | OK |
+| stocks:REQ-IS-SOAK-015: payload == authoritative re-read | OK |
 | soak: canary token absent from CAIN memory | OK |
 | soak: canary price absent from CAIN memory | OK |
-| soak: post-cutoff instant 2026-10-01 absent from CAIN memory | OK |
-| soak: post-cutoff instant 2026-10-02T03:00:00Z absent from CAIN memory | OK |
+| soak: post-cutoff instant 2026-10-03 absent from CAIN memory | OK |
+| soak: post-cutoff instant 2026-10-04T03:00:00Z absent from CAIN memory | OK |
 | no contamination: no fact of another domain | OK |
 | no ALLOW for stocks:H1..H22: every emitted task is a frozen soak or LLM hypothesis | OK |
 | no capital_permission true anywhere | OK |
@@ -69,8 +69,8 @@ Modelo local (Ollama no runner). Cada proposta passa pela mesma DecisionPolicy (
 
 | Proposta | Hipótese escolhida | Modelo | Digest | Decisão | Task |
 |---|---|---|---|---|---|
-| `cain:SOAK-LLM-1` | stocks:QUAL-LLM-CTRL-001 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': '86a003c73384cd1de45bab3118a5604a72cdbf3dec557a3d2348dd5d585cf4e5', 'previous_task_id': 'stocks:TASK-63b0601b27d886c88faf33fd313e0b78', 'task_id': 'stocks:TASK-bf421b4f73e02178d3f4c951e152d4df'} |
-| `cain:SOAK-LLM-2` | stocks:QUAL-LLM-CTRL-002 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': '81c32c5471add586ae691acd4600e5bb4239624b7b9283a209bca5a34bf9f9fd', 'previous_task_id': 'stocks:TASK-bf421b4f73e02178d3f4c951e152d4df', 'task_id': 'stocks:TASK-b84ef64dc457be44314e0745e473db24'} |
-| `cain:SOAK-LLM-3` | stocks:QUAL-LLM-CTRL-003 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': '1a0507e9c150c92336a5af26e32f9116c9e93768a3a5f6b0d73a3941a9f3324b', 'previous_task_id': 'stocks:TASK-b84ef64dc457be44314e0745e473db24', 'task_id': 'stocks:TASK-987992bcf6c32a084ec5de6c31763262'} |
-| `cain:SOAK-LLM-4` | stocks:QUAL-LLM-CTRL-004 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': '24d6d22b5ad39ba0088440c7b7ae57265cca21cab2569675937442df4140f695', 'previous_task_id': 'stocks:TASK-987992bcf6c32a084ec5de6c31763262', 'task_id': 'stocks:TASK-d458239b8cd950edb2121fdfe7d0472d'} |
-| `cain:SOAK-LLM-6` | stocks:QUAL-LLM-CTRL-005 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': '08034a6bcdc4f17bfbaeae7d69c4e7926b4c36c1f188db1472f81dbc56050c09', 'previous_task_id': 'stocks:TASK-d458239b8cd950edb2121fdfe7d0472d', 'task_id': 'stocks:TASK-3a10c5d18eb0f5bc1abd990dca35eb76'} |
+| `cain:SOAK-LLM-2` | stocks:QUAL-LLM-CTRL-001 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': 'af08665ba555940aa66cce6c1f4e691a8f0a3fd9ede8d2a8cd489805c91e1511', 'previous_task_id': 'stocks:TASK-a806cf4812695c7f62922f5446ce22c3', 'task_id': 'stocks:TASK-667961d487ea82ab0da24ff47f3fffd2'} |
+| `cain:SOAK-LLM-3` | stocks:QUAL-LLM-CTRL-002 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': '00c8d21f1302b71b2963ed2d06dad2fb01673b166058d4b4ed3cb82123e7cb70', 'previous_task_id': 'stocks:TASK-667961d487ea82ab0da24ff47f3fffd2', 'task_id': 'stocks:TASK-a56965f647638349681afb36d87bab3a'} |
+| `cain:SOAK-LLM-4` | stocks:QUAL-LLM-CTRL-003 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': '4e9a918c235004b224d1f4c55c08f6ab8edef94913e0dbba7611050fd550d28d', 'previous_task_id': 'stocks:TASK-a56965f647638349681afb36d87bab3a', 'task_id': 'stocks:TASK-ae4f7b35f5a024c18fdb6f70356d3bda'} |
+| `cain:SOAK-LLM-5` | stocks:QUAL-LLM-CTRL-008 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': 'df70df18e56a62e53fadd96da6e1611e93ec0eb55768897c80b106df3dd2e1f0', 'previous_task_id': 'stocks:TASK-ae4f7b35f5a024c18fdb6f70356d3bda', 'task_id': 'stocks:TASK-7d9a8b33bc594d27055f739159c9b243'} |
+| `cain:SOAK-LLM-6` | stocks:QUAL-LLM-CTRL-007 | qwen2.5:0.5b | `a8b0c51577010a27` | ALLOW ALLOWED (R14) | {'payload_sha256': 'eec4d8eece5560bcf315d8cc70efd1e9572df58d74ee1358238d83c153179d2e', 'previous_task_id': 'stocks:TASK-7d9a8b33bc594d27055f739159c9b243', 'task_id': 'stocks:TASK-30f45661cf4fa21388d4719c3f9f5944'} |

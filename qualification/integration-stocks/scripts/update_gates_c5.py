@@ -37,6 +37,9 @@ M = "qualification/integration-stocks"
 RUN = "run36649880023"  # ciclo 5: run do runtime na cain 0.4.13rc15 + transporte 0.1.0rc7 (ciclo 4: run36462320273)
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
 W = f"{M}/RAW_LOGS/runtime/{RUN}-windows"
+RUN_SOAK = "run36652132817"  # ciclo 5: só a fase soak, mesmo perfil V1 e mesmas wheels, depois do piso llm_proposals
+# ficar em 4/5 no run36649880023 (IS-F010: qwen2.5:0.5b no ollama 0.35.0 estourou num_predict em 2 de 6 tentativas)
+RS = f"{M}/RAW_LOGS/runtime/{RUN_SOAK}"
 FM = f"{R}/failure-matrix"
 HOSTED = f"{M}/RAW_LOGS/hosted-ci/final-rc15"  # ciclo 4: final-rc13
 STATIC = f"{M}/RAW_LOGS/contract-revalidation-rc15/static_checks.json"
@@ -257,17 +260,27 @@ def hosted_ci(g, gates):
 
 
 def soak(g, gates):
-    gates["SOAK"] = p("PASS", [f"{R}/run.json", f"{R}/soak/SUMMARY.json", f"{R}/soak/commands.log",
-                               f"{M}/QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json", f"{M}/SOAK_REPORT.md"],
-                      "perfil V1 sem mudança, todos os pisos atingidos, tolerância zero, com as wheels finais; "
-                      "propostas de LLM das hipóteses só para o LLM do ciclo 4 (8 hipóteses, sementes 9001–9008)")
+    summary = json.load(open(f"{RS}/soak/SUMMARY.json", encoding="utf-8"))
+    first = json.load(open(f"{R}/soak/SUMMARY.json", encoding="utf-8"))
+    ok = summary["failed"] == 0
+    gates["SOAK"] = p("PASS" if ok else "FAIL",
+                      [f"{RS}/run.json", f"{RS}/soak/SUMMARY.json", f"{RS}/soak/commands.log",
+                       f"{R}/soak/SUMMARY.json", f"{R}/soak/commands.log",
+                       f"{M}/QUALIFICATION_PROFILE_INTEGRATION_STOCKS_V1.json", f"{M}/SOAK_REPORT.md"],
+                      f"perfil V1 sem mudança, com as wheels finais, no run {RUN_SOAK} (só a fase soak): "
+                      f"{summary['passed']} conferências OK, {summary['failed']} falhas, llm_proposals "
+                      f"{summary['counters']['llm_proposals']}. Primeira execução ({RUN}, todas as fases): "
+                      f"{first['passed']} OK, {first['failed']} falha — piso llm_proposals >= 5 ficou em "
+                      f"{first['counters']['llm_proposals']} (IS-F010: o modelo qwen2.5:0.5b, ollama 0.35.0, estourou "
+                      "num_predict=256 em 2 de 6 tentativas e a CAIN recusou fail-closed; tolerância zero intacta nas "
+                      "duas). Propostas de LLM das hipóteses só para o LLM do ciclo 4 (8 hipóteses, sementes 9001–9008)")
 
 
 def attestation(g, gates):
     gates["SHARED_DEPENDENCY_CLEAR"] = p("PASS", [PREFLIGHT, "qualification/shared/SHARED_ISSUES.json"],
                                          "nenhum issue bloqueante para as wheels usadas (Ops 4.2.2rc1, Core 3.2.1)")
     scan = json.load(open(SECRETS, encoding="utf-8"))
-    gates["SECRETS_CLEAN"] = p("PASS" if scan["clean"] else "FAIL", [SECRETS, f"{HOSTED}/tree_scan_local.log"],
+    gates["SECRETS_CLEAN"] = p("PASS" if scan["clean"] else "FAIL", [SECRETS, f"{HOSTED_STOCKS}/tree_scan_local.log"],
                                f"{len(scan['findings'])} achados nos diffs da missão e nos arquivos da missão; o job "
                                "secrets do CI do stocks-predictor acusa só 1 vazamento de um commit fora da branch da "
                                "missão (IS-F005); a árvore do final_commit com o .gitleaks.toml do repo está limpa "
