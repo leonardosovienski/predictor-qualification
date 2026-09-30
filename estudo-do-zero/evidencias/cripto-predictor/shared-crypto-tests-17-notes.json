@@ -1,0 +1,140 @@
+[
+  {
+    "index": 161,
+    "path": "tests/test_v3_production_paths.py",
+    "sha256_utf8": "49a6e1e0676a1beb960eb699cecf8b9d3add84c8792b506d7d529cf964dd79f4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_v3_mutable_paths_follow_configured_runtime_roots"
+    ],
+    "notes": "Seis paths mutáveis V3 iguais DATA_DIR/CACHE_DIR configurados. Importa módulos, sem executar ingest/paper; igualdade de constantes não audita todos efeitos laterais."
+  },
+  {
+    "index": 162,
+    "path": "tests/test_v3_regime_engine_extra_covariates.py",
+    "sha256_utf8": "8c46374fc66fe99d2aeeeaa76fed75875b70d939a8270763cb3ba6509459a790",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_default_sem_extra_features_bate_com_comportamento_anterior",
+      "test_construtor_rejeita_extra_feature_desconhecida",
+      "test_fit_exige_extra_covariates_quando_extra_features_declaradas",
+      "test_fit_rejeita_tamanho_de_coluna_incompativel",
+      "test_treina_e_infere_com_duas_covariaveis_extras",
+      "test_invariancia_anti_lookahead_preservada_com_extra_covariate",
+      "test_fingerprint_muda_com_extra_features",
+      "test_covariance_type_e_diag_com_extra_features_full_sem",
+      "test_modelo_h7_nao_carrega_como_h1_h3",
+      "test_fit_tenta_seed_alternativa_se_covariancia_nao_convergir",
+      "test_fit_desiste_apos_max_retries_com_erro_claro",
+      "test_fit_tenta_seed_alternativa_se_predict_falhar_apos_fit_ok",
+      "test_covariance_type_e_diag_com_extra_features_e_full_sem",
+      "test_fingerprint_carimba_diag_quando_ha_extra_features",
+      "test_modelo_treinado_com_extra_feature_usa_covariancia_diagonal",
+      "test_predict_last_repassa_extra_covariates"
+    ],
+    "notes": "HMM seeded quatro regimes artificiais, extra covariates nomes/dimensões obrigatórios, inferência e invariância de prefixo com fit150; fingerprint inclui extras/covariance full->diag e modelo H7 não carrega H1. Fake subclasses injetam falha fit/predict duas vezes, seeds42/43/44 e máximo retries error. Covars offdiagonal0 e predict_last repassa extras. importorskip numpy/hmmlearn/sklearn; primeiro nome default-comportamento anterior apenas labels/len, sem golden."
+  },
+  {
+    "index": 163,
+    "path": "tests/test_v3_regime_staleness.py",
+    "sha256_utf8": "3790ba047cb344733043cce9e8d2741a82a66a3ea8d26a50e219d56ee9980b54",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_save_stamps_fingerprint",
+      "test_roundtrip_load_ok",
+      "test_load_rejects_stale_fingerprint",
+      "test_load_rejects_legacy_without_fingerprint_and_preserves_it"
+    ],
+    "notes": "Pickle de DummyModel preserva fingerprint/state_map, rejeita fingerprint999 e legacy sem fingerprint mantendo bytes. Não testa pickle hostil nem treina; fingerprint é compatibilidade declarada, não autenticidade."
+  },
+  {
+    "index": 164,
+    "path": "tests/test_v3_signal_engine.py",
+    "sha256_utf8": "6c46bdbbb29c72ed1a51a3c065e20e5fa7996ee8a57b7aab5222fb80d10d0953",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_dados_degradados_forcam_flat_critical",
+      "test_regime_incerto_forca_flat_degraded",
+      "test_baixa_confianca_de_regime_forca_flat",
+      "test_short_quando_longs_overcrowded_em_bull",
+      "test_long_quando_shorts_overcrowded_em_bear",
+      "test_sem_condicao_vira_flat_healthy",
+      "test_regime_errado_bloqueia_o_sinal",
+      "test_oi_caindo_bloqueia_o_sinal",
+      "test_strength_e_intensidade_vezes_confianca",
+      "test_strength_clipa_em_um",
+      "test_anti_lookahead_signal_ts_nao_precede_exchange_ts",
+      "test_threshold_default_preserva_comportamento_original",
+      "test_threshold_mais_alto_bloqueia_sinal_que_antes_disparava",
+      "test_threshold_mais_baixo_dispara_sinal_que_antes_nao_disparava",
+      "test_min_regime_confidence_override_bloqueia_sinal_antes_valido",
+      "test_min_regime_confidence_override_libera_sinal_antes_bloqueado"
+    ],
+    "notes": "SimpleNamespace de feature/regime testa gates quality.4 critical, uncertainty/degraded, confidence e funding/OI squeeze, strengthclamp, threshold overrides e signal time>=exchange. Posterior/confidence são fixtures, HEALTHY é enum operacional, não previsão correta."
+  },
+  {
+    "index": 165,
+    "path": "tests/test_v3_wfa_actual_slicing.py",
+    "sha256_utf8": "b21ab9434be5b9d6869eab285ddf4277677b45ec207cbe132486616dcec03e76",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_real_wfa_consumes_only_its_declared_fit_and_evaluation_intervals"
+    ],
+    "notes": "WFA real orchestration com loaders sintéticos e SpyEngine observa arrays consumidos: fit180dias, embargo7, OOS30, step30; infer inclui embargo sem usar avaliação, calibrations só labels maduros dentro treino. costAware False/True, nenhum sinal ativo causa RuntimeError nenhum fold completado. Boa verificação de slicing real, sem model fit/edge."
+  },
+  {
+    "index": 166,
+    "path": "tests/test_v3_wfa_purge_contract.py",
+    "sha256_utf8": "47adf3c57a79935a965e37851ce74298a24aa0e95dbe60901b651bf7673335b3",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_purge_gap_e_estritamente_positivo",
+      "test_cada_fold_tem_gap_exato_de_purge_days_entre_is_e_oos",
+      "test_gap_em_milissegundos_bate_com_o_slicing_real_de_timestamps",
+      "test_regressao_purge_zero_e_detectada_pelo_gerador_de_folds",
+      "test_folds_consecutivos_avancam_por_step_days_sem_pular_dados"
+    ],
+    "notes": "Gerador de folds implementado no próprio teste replica fórmula de constantes e comprova purge/step; nome slicing real apenas aritmética ms. Contraprova fakepurge0 trivial assert0. Teste165 cobre consumo da função real e evita confundir este contrato com execução WFA."
+  },
+  {
+    "index": 167,
+    "path": "tests/test_watchdog_coleta.py",
+    "sha256_utf8": "fcb365747bed1eee67fbe3c41f1a41945bcd618e15324bef20d767f0be7d5cbc",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_fallback_nao_conta_como_previsao_do_dia",
+      "test_dia_so_com_fallback_e_tratado_como_zero",
+      "test_legado_com_llm_fallback_null_conta_como_real",
+      "test_outro_dia_fica_de_fora"
+    ],
+    "notes": "SQLite minimal fixture e watchdog import por spec; fallback1 não conta, NULL legado conta como real, dia distinto fora. Não prova que NULL tem juiz autêntico nem fluxo collector real."
+  },
+  {
+    "index": 168,
+    "path": "tests/test_watchdog_paths.py",
+    "sha256_utf8": "2a598c3d8417ce7c829e5781ca45e30c6e1a452e98f9127e64c89fb33bd54c40",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_db_path_bate_com_core_paths",
+      "test_log_e_alerta_nao_apontam_para_o_checkout",
+      "test_heartbeat_do_backtest_le_o_schema_real_do_predictor_ops",
+      "test_heartbeat_ausente_ainda_e_relatado",
+      "test_heartbeat_com_status_diferente_de_succeeded_e_relatado",
+      "test_bridge_sem_historico_local_nao_alarma",
+      "test_bridge_nunca_publicada_com_n_local_positivo_alarma",
+      "test_bridge_estado_publicado_igual_ao_local_nao_alarma_mesmo_velho",
+      "test_bridge_local_avancou_e_publicado_velho_alarma",
+      "test_bridge_local_avancou_mas_ainda_recente_nao_alarma",
+      "test_bridge_le_ultima_linha_do_historico_nao_a_primeira"
+    ],
+    "notes": "Watchdog paths externos; predictor_ops run_job subprocess fakeexit0/1 no pytest execution neste estudo, exige heartbeat schema SUCCEEDED/missing/FAILED. H6 bridge só alarma avanço local mais published antigo; valores iguais há30dias não alarmam, diferença recente12h tolerada, última linha vence inclusive regressão30->6. Não valida verdade/assinatura H6 ou saúde contínua."
+  }
+]

@@ -1,6 +1,6 @@
 # Estudo técnico do zero — oito projetos
 
-Estado: EM EXECUÇÃO. A análise integral de Cripto e Brasileirão continua; este documento preserva o estado e não declara conclusão global.
+Estado: PAUSADO A PEDIDO DO USUÁRIO para preservar o limite semanal. Estudo incompleto. A revisão dos executáveis ativos dos oito projetos está registrada; parte do arquivo histórico Crypto e a consolidação final permanecem pendentes. Retomar por [CONTINUIDADE.md](CONTINUIDADE.md).
 
 ## Escopo e método
 
@@ -16,7 +16,7 @@ A arquitetura observada nas raízes primárias usa contratos V1. No `main` remot
 
 ## Resultados técnicos preservados
 
-CAIN e Stocks têm cobertura semântica dos executáveis próprios encerrada. Core, Ops, Ecosystem e Qualification possuem inventários e estudos técnicos; os suplementos discriminam fontes, ensaios e limites. Brasileirão .NET está revisado sem execução. Python, scripts e testes de Cripto/Brasileirão ainda têm trabalho pendente explícito nas coberturas.
+As revisões de fontes próprias ativas, scripts, testes, configurações e CI dos oito projetos foram registradas nas coberturas individuais. Isso ainda requer reconciliação global por arquivo antes de declarar cobertura integral do estudo. Brasileirão Python, seus 124 scripts e .NET estão revisados; .NET não foi executado. Crypto ativo e 169 testes estão revisados, mas há objetos históricos pendentes. A lista exata está em `../evidencias/RETOMADA_PENDENCIAS_EXATAS.json`. Inventários e matrizes consolidados ainda precisam incorporar os últimos suplementos.
 
 Ensaios leves discriminados nos suplementos incluem contratos, smoke e unittests em cópias. A ausência de pytest/jsonschema e metadata instalada limitou algumas verificações; erros foram preservados, sem substituição por PASS. Os verificadores locais Stocks passaram no HEAD local; CI remoto em outro SHA falhou na identidade R8. Contagens históricas dos recibos não são cargas ou suites reexecutadas.
 

@@ -78,5 +78,40 @@
       "evidencias/REGISTRO.log"
     ],
     "limits": "Sem teste de saturação/serviço; políticas externas de retenção não observadas. Não atribuir à raiz alternativa."
+  },
+  {
+    "id": "CRYPTO-EXTERNAL-PAGINATION-BOUND",
+    "project": "cripto-predictor",
+    "claim": "CoinMetrics adapter valida host de paginação, mas não limita páginas/URLs repetidas nem orçamento total do loop",
+    "status": "OD",
+    "evidence": [
+      "GarimpoInvestimentos/external_intelligence/providers/coinmetrics.py:fetch_pages_with_receipt",
+      "evidencias/REGISTRO.log"
+    ],
+    "limits": "Sem chamada externa/probe de loop; restrição endpoint/dados real pode encerrar normalmente, risco não ocorrência comprovada."
+  },
+  {
+    "id": "CRYPTO-RECOVERY-UNITS",
+    "project": "cripto-predictor",
+    "claim": "money_left_on_table compara soma de retornos fracionários com PnL monetário de paper",
+    "status": "OD",
+    "evidence": "GarimpoInvestimentos/profit_recovery_v1.py:736 money_left_on_table; capturable=future_net_return, captured=net_pnl; SHA em hashes.json/REGISTRO.log",
+    "limits": "Rota replay atual passa paper vazio; divergência manifesta com paper não vazio, não afirma perdas reais"
+  },
+  {
+    "id": "CRYPTO-RECOVERY-ZERO-COST",
+    "project": "cripto-predictor",
+    "claim": "_return_metrics dispensa custo de operação cujo retorno bruto é exatamente zero",
+    "status": "OD",
+    "evidence": "GarimpoInvestimentos/profit_recovery_v1.py:850 _return_metrics active=[value!=0]; estratégia não-flat pode retornar0; SHA hashes.json",
+    "limits": "Não medido painel econômico real; efeito nas métricas de cenários"
+  },
+  {
+    "id": "CRYPTO-PAPER-FUTURE-DEPTH",
+    "project": "cripto-predictor",
+    "claim": "Paper V2 limita fill de entrada também pela profundidade futura da saída e latência apenas declarada",
+    "status": "OD",
+    "evidence": "GarimpoInvestimentos/profit_recovery_v1.py:630 paper_execute_v2 filled_qty=min(qty,available,exit_available); latency_seconds só output",
+    "limits": "Simulador sem envio de ordens; não transferir finding à raiz alternativa"
   }
 ]

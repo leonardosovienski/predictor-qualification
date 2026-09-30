@@ -325,6 +325,49 @@
     "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
   },
   {
+    "ID": "CRYPTO-EXTERNAL-PAGINATION-BOUND",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "CoinMetrics adapter valida host de paginação, mas não limita páginas/URLs repetidas nem orçamento total do loop",
+    "Evidência": [
+      "GarimpoInvestimentos/external_intelligence/providers/coinmetrics.py:fetch_pages_with_receipt",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Sem chamada externa/probe de loop; restrição endpoint/dados real pode encerrar normalmente, risco não ocorrência comprovada.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-RECOVERY-UNITS",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "money_left_on_table compara soma de retornos fracionários com PnL monetário de paper",
+    "Evidência": "GarimpoInvestimentos/profit_recovery_v1.py:736 money_left_on_table; capturable=future_net_return, captured=net_pnl; SHA em hashes.json/REGISTRO.log",
+    "Limites": "Rota replay atual passa paper vazio; divergência manifesta com paper não vazio, não afirma perdas reais",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-RECOVERY-ZERO-COST",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "_return_metrics dispensa custo de operação cujo retorno bruto é exatamente zero",
+    "Evidência": "GarimpoInvestimentos/profit_recovery_v1.py:850 _return_metrics active=[value!=0]; estratégia não-flat pode retornar0; SHA hashes.json",
+    "Limites": "Não medido painel econômico real; efeito nas métricas de cenários",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-PAPER-FUTURE-DEPTH",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Paper V2 limita fill de entrada também pela profundidade futura da saída e latência apenas declarada",
+    "Evidência": "GarimpoInvestimentos/profit_recovery_v1.py:630 paper_execute_v2 filled_qty=min(qty,available,exit_available); latency_seconds só output",
+    "Limites": "Simulador sem envio de ordens; não transferir finding à raiz alternativa",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
     "ID": "stocks-predictor-4",
     "Projeto": "stocks-predictor",
     "Prioridade": "P2",
@@ -538,10 +581,10 @@
     "ID": "predictor-qualification-1",
     "Projeto": "predictor-qualification",
     "Prioridade": "P2",
-    "Certeza": "NV",
-    "Afirmação": "Atestado final local não confere contra árvore atual em contagens e 12 referências de gate; parcial V1.1 possui outra época",
-    "Evidência": "recomputed-attestation.json; attestation-epochs.json; hash-mismatch-original-check.json",
-    "Limites": "Não prova inválido no commit de emissão nem no main remoto",
+    "Certeza": "OD + ET-RUN de hashes",
+    "Afirmação": "Atestados possuem épocas distintas: 94/94 referências do final e 100/100 do parcial conferem nos commits de emissão; 12 referências antigas diferem dos arquivos atuais",
+    "Evidência": "attestation-issuance-check.json; issuance-ATTESTATION_PARTIAL_v1-1-attestation.json; hash-mismatch-original-check.json",
+    "Limites": "Hashes no commit de emissão não reexecutam os gates nem autenticam conclusões científicas; diferença atual não demonstra corrupção histórica",
     "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
   },
   {
