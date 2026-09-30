@@ -94,9 +94,9 @@ ET-RUN:9 sondas Brasil em cópia independente sobre dois arquivos não rastreado
 
 PRELIMINAR foi salvo antes de ler README. README concorda com domínio científico+operacional, exportação documental, shadow e capital desabilitado; referências de entrega concluída referem SHAs datados diferentes da fonte/árvore estudada. A CLI/help e módulos que dizem internacional/Copa demonstram herança de escopo; não presumir que todos dados/cálculos estejam saneados só pelo nome brasileirao. Anexo A foi tratado como hipótese após descoberta; integração não prova lucro ou autorização.
 
-Fonte é OD nesta árvore; lock é configuração OD; build/release investigados centralmente; instalação, banco efetivo, modelos ativos, schedulers/serviços são NV neste estudo. A-L estão mapeados com limites. Ainda não está certificada revisão semântica integral de todos módulos próprios: coverage.json lista aprofundados/pendentes, evitando converter leitura AST em parecer integral. Diagramas em diagramas/brasileirao-predictor_{sequencia,estados,er}.mmd são INF dos contratos inspecionados. Próximo estudo deve terminar pendentes e testes isolados preservando alterações preexistentes, sem concluir homologação por números históricos.
+Fonte é OD nesta árvore; lock é configuração OD; build/release investigados centralmente; instalação, banco efetivo, modelos ativos, schedulers/serviços são NV neste estudo. A-L estão mapeados com limites. Retomada de 2026-09-30 (Linux): coverage.json reconciliado com as coberturas de scripts (124 = 75 root + 35 shared + 14 applications), testes (210), .NET (42) e 26 arquivos residuais lidos no clone do remoto com hash idêntico à linha de base; restam 16 arquivos próprios não certificados (workflows, contratos JSON, pyproject, lock, schemas) cujos bytes locais diferem do remoto — ver retomada-residual-pendentes.json. Leitura AST não foi convertida em parecer integral. Diagramas em diagramas/brasileirao-predictor_{sequencia,estados,er}.mmd são INF dos contratos inspecionados. Próximo estudo deve terminar pendentes e testes isolados preservando alterações preexistentes, sem concluir homologação por números históricos.
 
-Atualização de escopo: outra raiz com versão mais nova foi localizada. Consulte [suplemento de épocas e contratos locais](../relatorios/SUPLEMENTO_RAIZES_DOMINIOS.md). Não misturar interfaces/finding desta fonte primária com a alternativa.
+Atualização de escopo: outra raiz com versão mais nova foi localizada. Consulte [suplemento de épocas e contratos locais](../SUPLEMENTO_RAIZES_DOMINIOS.md). Não misturar interfaces/finding desta fonte primária com a alternativa.
 
 Aprofundamento adicional: `brasileirao_predictor/backtest_event.py`: Revisão integral: joins periodALL, Elo por data, dedup treino event_id com identidade validada, split80% eventos por dia, exclui boundaryday treino, poisson event model, only half lines probability finite, odds>1, edge abertura strict threshold, prioridade over se ambas, CLV abertura/close-1, unit scenario no fees, bootstrap event clusters1000seed42; conditional_price_scenario_not_execution. Timestamps publicação/execução não demonstrados.
 
@@ -140,3 +140,108 @@ Aprofundamento adicional: `brasileirao_predictor/backtest_event.py`: Revisão in
 ## Épocas remotas observadas
 
 Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](../CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.
+
+## Diagramas (modelos INF sobre os módulos e contratos inspecionados)
+
+Os três arquivos abaixo existem em `diagramas/` e estão incorporados aqui; são modelos de leitura, não máquinas de estado literais do código.
+
+### Sequência
+
+```mermaid
+sequenceDiagram
+ participant U as Usuário (brasileirao-predict)
+ participant P as predict.build/show
+ participant DB as SQLite matches (read-only)
+ participant MO as model.predict_match (NB + Dixon-Coles)
+ participant MK as market_pricer
+ participant L as prediction_log (JSONL)
+ U->>P: times, data, flags
+ P->>DB: current_elo, model_parameters, cache_is_current
+ alt cache ausente/obsoleto
+  P->>P: recalcula em memória e avisa (não grava no banco)
+ end
+ P->>MO: diferenças de Elo + parâmetros
+ MO-->>P: grade de placares (1X2/OU/BTTS)
+ P->>MK: derivar mercados da grade
+ P->>DB: _market_probs (odds latest-state, sem prova de oferta executável)
+ P->>L: congela decisão antes do resultado (prediction_id)
+ L-->>U: saída formatada; PredictionReadiness capital=False
+ Note over U,L: settle casa prediction_id e grava results.jsonl; bet_log é manual/declarativo
+```
+
+### Estados
+
+```mermaid
+stateDiagram-v2
+ [*] --> REGISTRADO: Worker registra escalação (Lua atômico, INCR state_version)
+ REGISTRADO --> PENDENTE: request 60 s + identity + pending
+ PENDENTE --> EM_CALCULO: kernel obtém lease 5 s (versão atual)
+ EM_CALCULO --> PENDENTE: lease expira / falha conhecida (recuperável)
+ EM_CALCULO --> CONCLUIDO: dono atual grava fair_odds (≤5 s) + ready
+ CONCLUIDO --> PUBLICADO: MSE compara no Redis e publica lote na signal_outbox
+ CONCLUIDO --> EXPIRADO: validade original esgotada
+ REGISTRADO --> INVALIDADO: nova versão / watchdog fallback
+ PENDENTE --> INVALIDADO
+ PUBLICADO --> [*]: sinal com expires_at; nenhum executor financeiro
+ note right of PUBLICADO: Contrato brasileirao.redis/2 (contracts/redis-protocol-v2.md); modelo INF do texto e do kernel revisados
+```
+
+### Esquema
+
+```mermaid
+erDiagram
+ MATCHES {
+  text event_id
+  text date
+  text home_team
+  text away_team
+  int home_score
+  int away_score
+  text tournament
+  text result_observed_at
+ }
+ SOFASCORE_MATCHES {
+  text event_id
+  text competition
+  text season
+  text kickoff
+  real xg
+ }
+ MATCH_STATISTICS {
+  text event_id
+  text team
+  text period
+  text stat
+ }
+ ODDS_SNAPSHOTS {
+  text event_id
+  text market
+  text selection
+  text captured_at
+  real odd
+ }
+ ODDS_LINES {
+  text event_id
+  text market
+  real line
+ }
+ MATCH_KICKOFF_VERSIONS {
+  text event_id
+  text kickoff
+  text lifecycle
+ }
+ CURRENT_ELO {
+  text team
+  real rating
+ }
+ MODEL_PARAMETERS {
+  text key
+  real value
+ }
+ SOFASCORE_MATCHES ||--|| MATCHES : espelha_event_id
+ MATCHES ||--o{ MATCH_STATISTICS : detalha
+ MATCHES ||--o{ ODDS_SNAPSHOTS : cota
+ MATCHES ||--o{ ODDS_LINES : linhas
+ MATCHES ||--o{ MATCH_KICKOFF_VERSIONS : versiona_kickoff
+ CURRENT_ELO ||--o{ MATCHES : rating_pre_jogo
+```

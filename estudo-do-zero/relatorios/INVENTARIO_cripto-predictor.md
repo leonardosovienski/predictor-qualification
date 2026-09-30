@@ -118,6 +118,10 @@ Leitura estrutural integral bytes + AST não é revisão semântica integral. Ca
 
 
 
+## Retomada 2026-09-30 — cobertura reconciliada
+
+O arquivo histórico (`docs/source_archive_20260908/objects/` e `docs/open_source_research/`) foi fechado nas quatro partições (773 objetos), sem execução, e `coverage.json` passou a refletir por caminho e hash a revisão semântica de módulos (186), packages (9), scripts (75), testes (170), CI/config e histórico. Consolidações: `evidencias/cripto-predictor/crypto-active-coverage-merged.json` (440) e `crypto-archive-coverage-merged.json` (773). Detalhes e limites em `SUPLEMENTO_CRIPTO_HISTORICO_RETOMADA.md`. Leitura não é execução; as sondas ET-RUN continuam sendo as únicas execuções deste estudo.
+
 ## Classificação
 
 

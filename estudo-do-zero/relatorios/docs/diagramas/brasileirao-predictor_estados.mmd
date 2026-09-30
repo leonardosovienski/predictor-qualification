@@ -1,0 +1,12 @@
+stateDiagram-v2
+ [*] --> REGISTRADO: Worker registra escalação (Lua atômico, INCR state_version)
+ REGISTRADO --> PENDENTE: request 60 s + identity + pending
+ PENDENTE --> EM_CALCULO: kernel obtém lease 5 s (versão atual)
+ EM_CALCULO --> PENDENTE: lease expira / falha conhecida (recuperável)
+ EM_CALCULO --> CONCLUIDO: dono atual grava fair_odds (≤5 s) + ready
+ CONCLUIDO --> PUBLICADO: MSE compara no Redis e publica lote na signal_outbox
+ CONCLUIDO --> EXPIRADO: validade original esgotada
+ REGISTRADO --> INVALIDADO: nova versão / watchdog fallback
+ PENDENTE --> INVALIDADO
+ PUBLICADO --> [*]: sinal com expires_at; nenhum executor financeiro
+ note right of PUBLICADO: Contrato brasileirao.redis/2 (contracts/redis-protocol-v2.md); modelo INF do texto e do kernel revisados

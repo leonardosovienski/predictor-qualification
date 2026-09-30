@@ -1,5 +1,24 @@
 # Ponto de retomada — estudo dos oito projetos
 
+**RETOMADO E CONCLUÍDO DENTRO DOS LIMITES em 2026-09-30 (sessão Linux, Claude Code).** O texto da pausa é preservado abaixo como histórico; esta seção registra o que a retomada fechou e o que continua fora do alcance.
+
+## O que a retomada fechou
+
+- Revisão histórica Crypto: 79 objetos pendentes lidos (partição 0: 9, bloco 19; partição 1: 40, índices 0–39; partição 3: 30, `archive-root-extra-domains-coverage.json`); `save_resume.py` → 0 pendentes em 193/193/194/193; `RETOMADA_PENDENCIAS_EXATAS.json` marcado `CONCLUIDO_REVISAO_HISTORICA_CRYPTO`. Ambiente: clone Linux do remoto com o commit 88158f25 no histórico; objetos e bases conferidos por sha256 (o `base_sha256` Windows = mesmo texto em CRLF). Nada executado. Ver `SUPLEMENTO_CRIPTO_HISTORICO_RETOMADA.md`.
+- Consolidação: coberturas Brasil de scripts (75+35+14=124) e testes (107+103=210) mescladas; Crypto histórico (773) e ativo (440) mesclados em arquivos separados; `coverage.json` de Crypto e Brasileirão reconciliados por caminho e hash; 26 arquivos residuais Brasil lidos no clone do remoto com hash idêntico; matrizes regeneradas (88/40/58); `G-COBERTURA` substituído por `G-COBERTURA-RESIDUAL` (P2) com o residual exato; dois links quebrados corrigidos; seis diagramas `.mmd` que os COMO_FUNCIONA de cripto e brasileirão referenciavam foram criados e incorporados; índice de diagramas no guia de leitura.
+- Publicação: mesma branch `estudo-do-zero-2026-09-30`, commit direto na cópia publicada (o `publish.py` original pressupõe caminhos Windows); manifesto e verificação regravados; varredura de segredos repetida; nunca PR/main/merge.
+
+## O que continua fora do alcance desta retomada
+
+- Preservação dos originais Windows: `preservation.py` não pôde rodar (raízes `C:\...` inacessíveis); vale a última verificação do checkpoint anterior (9.888 hashes sem diferença). Não há alegação nova sobre o estado atual dos originais.
+- Brasileirão: 16 arquivos (workflows, contratos JSON, pyproject, lock, schemas) com bytes locais diferentes do remoto — reler no original (`retomada-residual-pendentes.json`).
+- Stocks: `research/` (301 `.py` históricos separados), `vendor/` (43) e protótipos OSS (10) seguem catalogados, não lidos; decisão de escopo do inventário, registrada no residual.
+- Nenhuma suíte completa, harness econômico, serviço, coleta, treino ou capital foi acionado.
+
+---
+
+## Histórico da pausa (preservado)
+
 **PAUSADO A PEDIDO DO USUÁRIO. O estudo não está concluído.** O usuário informou 5% do limite semanal restante e pediu salvar o que foi feito e o que faltou. Não iniciar outra revisão nesta sessão.
 
 ## Começar daqui

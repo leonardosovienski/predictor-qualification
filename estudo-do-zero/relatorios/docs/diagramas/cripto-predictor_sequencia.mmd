@@ -1,0 +1,22 @@
+sequenceDiagram
+ participant U as Usuário (cripto-predictor CLI)
+ participant M as main.run
+ participant I as ingestion.run_ingest
+ participant FS as dpl.FeatureStore (SQLite)
+ participant A as analyzers.ai_insights
+ participant N as Notícias/LLM (rede)
+ participant H as core.history / export
+ U->>M: analyze (sem flag ingest)
+ M->>FS: serving_context(snapshot recente, features do contrato)
+ alt sem snapshot válido
+  FS-->>M: SOURCE_UNAVAILABLE
+ else snapshot válido
+  M->>A: analyze_asset(snapshot, guard, cache por fingerprint)
+  A->>N: notícias + juiz LLM (orçamento api_guard)
+  N-->>A: score 0..100 ou falha
+  A-->>M: previsão ou fallback neutro 50 (llm_fallback)
+  M->>H: append_history antes de cache/export
+  H-->>U: relatório; nenhuma ordem
+ end
+ Note over U,I: ingest é comando separado: providers (fallback/consenso) + Fear&Greed → alinhamento → FeatureStore
+ Note over M,H: Exportação/score não executam ordem; capital_permission False (governance)

@@ -1,5 +1,7 @@
 # Estudo técnico do zero — oito projetos
 
+Estado: CONCLUÍDO DENTRO DOS LIMITES DECLARADOS (retomada de 2026-09-30, em Linux). A revisão dos executáveis ativos dos oito projetos e do arquivo histórico Crypto está registrada e reconciliada nas coberturas; o residual exato está em [PROBLEMAS_PRIORIZADOS](PROBLEMAS_PRIORIZADOS.md) (`G-COBERTURA-RESIDUAL`). A preservação byte a byte dos originais Windows não pôde ser repetida nesta retomada (sem acesso às raízes locais); a última verificação registrada é a do checkpoint anterior. Histórico da retomada em [CONTINUIDADE.md](CONTINUIDADE.md).
+
 Estado: PAUSADO A PEDIDO DO USUÁRIO para preservar o limite semanal. Estudo incompleto. A revisão dos executáveis ativos dos oito projetos está registrada; parte do arquivo histórico Crypto e a consolidação final permanecem pendentes. Retomar por [CONTINUIDADE.md](CONTINUIDADE.md).
 
 ## Escopo e método
@@ -16,7 +18,7 @@ A arquitetura observada nas raízes primárias usa contratos V1. No `main` remot
 
 ## Resultados técnicos preservados
 
-As revisões de fontes próprias ativas, scripts, testes, configurações e CI dos oito projetos foram registradas nas coberturas individuais. Isso ainda requer reconciliação global por arquivo antes de declarar cobertura integral do estudo. Brasileirão Python, seus 124 scripts e .NET estão revisados; .NET não foi executado. Crypto ativo e 169 testes estão revisados, mas há objetos históricos pendentes. A lista exata está em `../evidencias/RETOMADA_PENDENCIAS_EXATAS.json`. Inventários e matrizes consolidados ainda precisam incorporar os últimos suplementos.
+As revisões de fontes próprias ativas, scripts, testes, configurações e CI dos oito projetos foram registradas nas coberturas individuais e, na retomada, reconciliadas por caminho e hash em `evidencias/<projeto>/coverage.json` (Crypto e Brasileirão) — as marcações só ocorreram onde existe nota semântica registrada. Brasileirão Python, seus 124 scripts, 210 testes e .NET estão revisados e reconciliados em coverage.json; .NET não foi executado; 26 arquivos residuais foram lidos no clone do remoto com hash idêntico à linha de base e 16 (configuração/contratos/lock) permanecem não certificados por divergirem do remoto ([suplemento](SUPLEMENTO_BRASIL_RESIDUAL_RETOMADA.md)). Crypto ativo (440 arquivos) e o arquivo histórico completo (773 objetos em quatro partições) estão revisados sem execução ([suplemento](SUPLEMENTO_CRIPTO_HISTORICO_RETOMADA.md)); `../evidencias/RETOMADA_PENDENCIAS_EXATAS.json` registra 0 pendentes. Stocks: `research/` (301 arquivos históricos separados), `vendor/` e protótipos OSS ficaram catalogados sem leitura semântica, por decisão de escopo do inventário.
 
 Ensaios leves discriminados nos suplementos incluem contratos, smoke e unittests em cópias. A ausência de pytest/jsonschema e metadata instalada limitou algumas verificações; erros foram preservados, sem substituição por PASS. Os verificadores locais Stocks passaram no HEAD local; CI remoto em outro SHA falhou na identidade R8. Contagens históricas dos recibos não são cargas ou suites reexecutadas.
 
@@ -26,7 +28,8 @@ Ensaios leves discriminados nos suplementos incluem contratos, smoke e unittests
 - [Matriz de integrações](MATRIZ_INTEGRACOES.md), também CSV/JSON.
 - [Problemas priorizados](PROBLEMAS_PRIORIZADOS.md): prioridade e certeza separadas.
 - [Arquitetura geral](docs/ARQUITETURA_GERAL.md), [glossário](docs/GLOSSARIO.md), [guia de leitura](docs/GUIA_DE_LEITURA.md).
-- Oito `INVENTARIO_*.md`, oito `docs/COMO_FUNCIONA_*.md` e diagramas `.mmd`.
+- Oito `INVENTARIO_*.md`, oito `docs/COMO_FUNCIONA_*.md` e 25 diagramas `.mmd` (índice no [guia de leitura](docs/GUIA_DE_LEITURA.md)).
+- Suplementos da retomada: [Crypto histórico](SUPLEMENTO_CRIPTO_HISTORICO_RETOMADA.md) e [Brasil residual](SUPLEMENTO_BRASIL_RESIDUAL_RETOMADA.md).
 
 ## Limites econômicos
 
@@ -34,4 +37,4 @@ Não se comprovou capital autorizado, lucro real ou vantagem prospectiva. Hashes
 
 ## Continuidade
 
-[CONTINUIDADE.md](CONTINUIDADE.md) mantém pendências, responsáveis, comandos seguros e publicação. O branch de estudo é independente; nenhuma PR, merge ou alteração de main foi solicitada.
+[CONTINUIDADE.md](CONTINUIDADE.md) mantém o histórico da pausa, o que a retomada fechou, o residual e a publicação. O branch de estudo é independente; nenhuma PR, merge ou alteração de main foi solicitada.

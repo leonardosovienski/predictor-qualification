@@ -142,6 +142,10 @@ Leitura estrutural integral bytes + AST não é revisão semântica integral. Ca
 
 
 
+## Retomada 2026-09-30 — cobertura reconciliada
+
+Scripts (124 = 75 root + 35 shared + 14 applications), testes (210) e .NET (42) foram mesclados e reconciliados em `coverage.json` por caminho e hash (`brasil-scripts-coverage-merged.json`, `brasil-tests-coverage-merged.json`). 26 arquivos residuais (`tools/`, `scripts/migration/`, `research/kimi_market05/`, `poc_oddspapi.py`, `compose.yaml`, `config.yaml`, `contracts/redis-protocol-v2.md`) foram lidos no clone do remoto com sha256 idêntico à linha de base; 16 arquivos de configuração/contratos/lock permanecem não certificados porque seus bytes locais diferem do remoto (`retomada-residual-pendentes.json`). Detalhes em `SUPLEMENTO_BRASIL_RESIDUAL_RETOMADA.md`.
+
 ## Classificação
 
 

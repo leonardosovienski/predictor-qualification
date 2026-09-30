@@ -1,5 +1,405 @@
 [
   {
+    "index": 0,
+    "path": "docs/source_archive_20260908/objects/0902dca4ad3ecae4d1af402a4310c5618a19eb48624bf2343e1cbf9fefd2d6ee.py",
+    "base": "GarimpoInvestimentos/v3/backtest_v3.py",
+    "source_sha256": "0902dca4ad3ecae4d1af402a4310c5618a19eb48624bf2343e1cbf9fefd2d6ee",
+    "sha256_utf8": "0902dca4ad3ecae4d1af402a4310c5618a19eb48624bf2343e1cbf9fefd2d6ee",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado 3066fc8b (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: 12 linhas com CR (CRLF) misturadas em arquivo LF (linhas 94–96, 180–182, 186–190, 838) — mesmo conteúdo textual. Nenhuma linha de código difere. Semântica idêntica à do irmão: backtest histórico (ver A0-i000): log-retorno×posição, funding corrente como proxy, Sharpe populacional×√n, sem guardas de finitude/Kelly/scientific_state, veredito GO/'Fase 2 AUTORIZADA' presentes, wfa_returns.json sobrescrito. Só histórico."
+  },
+  {
+    "index": 1,
+    "path": "docs/open_source_research/20260911T0525/evidence/reproduction/validate.py",
+    "base": ".ci/integration-audit/validate.py",
+    "source_sha256": "27f42b6f17bda62ee72dc8a300263007ca511645614d5d02ce8b2a61d628109d",
+    "sha256_utf8": "27f42b6f17bda62ee72dc8a300263007ca511645614d5d02ce8b2a61d628109d",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Stub histórico de 10 linhas de docs/open_source_research/20260911T0525/evidence/reproduction/validate.py: roda ruff, ruff format --check, pyright, pytest completo (junitxml), scan_secrets e build de wheel contra C:/Cripto/pesquisa-20260909, grava um log por verificação e CHECKS.json, e sai com 1 se qualquer verificação falhar. Não compartilha nada com a base .ci/integration-audit/validate.py (391 linhas: clona crypto/cain/ecosystem em commits fixos, constrói wheels, instala em venvs produtor/receptor, roda testes instalados, E2E snapshot→bundle, cleanroom da wheel crypto, plugins do ecossistema); a associação por derivação é só de nome. Sem segredo, sem I/O de mercado, sem alteração de dado protegido; caminho Windows hardcoded torna-o irreprodutível fora da máquina original. Contexto: evidência de reprodução de pesquisa open-source de 2026-09-11."
+  },
+  {
+    "index": 2,
+    "path": "docs/source_archive_20260908/objects/3dd71a8c580f53fb44eb7cd12bdb183ab93113b38fed77ea6683fcfbd712f8d0.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "3dd71a8c580f53fb44eb7cd12bdb183ab93113b38fed77ea6683fcfbd712f8d0",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "carry_deliver.py (sessão 20260907-altcoins, 3 cópias idênticas): entrega da triagem econômica de funding carry BTC/ETH de 2026-09-07. Reconfere sha256 de cada artefato bruto do manifest, soma Decimal das taxas de funding igual ao rate_sum da janela de 365 dias (tolerância 1e-14), n=1095 e 1094 settlements elegíveis, e que o funding com 5.000 USDT a custo zero fica abaixo do piso do benchmark. Grava sources.json com 8 fontes documentais públicas (Binance funding/fees, PTAX, Tesouro Reserva, B3, Receita, mecanismo de funding) e política known_at; copia results.json para docs/evidence/funding_carry_screen_20260907; gera FUNDING_CARRY_DECISAO.md (tabelas por f-string: saldo por ativo, taxas anualizadas por janela 30/90/365, sensibilidade cambial) com decisão REJECT nesta triagem (funding 3,35% BTC / 2,49% ETH vs ~23,14% requerido; benchmark Tesouro Reserva R$2.900–2.907), anexa delta em docs/HYPOTHESES.md, atualiza docs/reopen_dossiers/funding_carry_structural_v1.json para ECONOMIC_SCREEN_REJECTED_NO_ACTIVATION com stopping_rule e cria FUNDING_CARRY_REPRODUCAO.zip (protocolo, download, analyze, dados) + MANIFESTO. Sempre explicita: não são fills, não prova classe inteira, G1 segue bloqueado, sem capital. Todos os números vêm de results.json calculado por carry_analyze.py (A1-i013). Sem segredo, sem ordens, sem rede neste script."
+  },
+  {
+    "index": 3,
+    "path": "docs/source_archive_20260908/objects/ab3f95a017e2c7c8053f434727bce9c6dfb9605365a9cb76ad5151a42460e962.py",
+    "base": "scripts/attest_harness.py",
+    "source_sha256": "ab3f95a017e2c7c8053f434727bce9c6dfb9605365a9cb76ad5151a42460e962",
+    "sha256_utf8": "ab3f95a017e2c7c8053f434727bce9c6dfb9605365a9cb76ad5151a42460e962",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de scripts/attest_harness.py histórico, derivada do irmão certificado e31b1d28 (archive-derivation-2-coverage.json): mesmos juízes sintéticos (Fase 1 Spearman IC95 bootstrap em bloco, seeds 21/22, n=120; V3 PSR ≥ 0,80 & IC_lower > 0, seeds 7/8, n=400), mesmo dry-run sem gravar. Diferença real (+import tempfile, bloco final reescrito): por o Core 3.2 recusar árvore suja (DirtyWorkingTreeError), os dois atestados são emitidos em staging num TemporaryDirectory com repo=ROOT e só depois copiados byte a byte para PHASE1_ATTESTATION_PATH e attestation_path_for(TRIALS_PATH) — evita que o primeiro arquivo canônico alterado suje o repo e bloqueie o segundo juiz. Publicação ainda não transacional (duas escritas separadas). É a versão pós-migração Core 3.2.0 (ver A3-i014). Controles sintéticos não são poder para dado real; sem execução, sem segredo."
+  },
+  {
+    "index": 4,
+    "path": "docs/source_archive_20260908/objects/9b94cc4d6c3dc0df7ec214028d14b2d280987c9fdf808c8b648c04403b2e3411.py",
+    "base": "scripts/feature_store_backup.py",
+    "source_sha256": "9b94cc4d6c3dc0df7ec214028d14b2d280987c9fdf808c8b648c04403b2e3411",
+    "sha256_utf8": "9b94cc4d6c3dc0df7ec214028d14b2d280987c9fdf808c8b648c04403b2e3411",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "scripts/feature_store_backup.py histórico (sdist 1.0.0, pacote CRIPTO_CODIGO_DADOS_REPRODUCAO, worktree cripto-research) versus a base em 88158f25. A base atual é só um entrypoint de compatibilidade de 10 linhas que delega para GarimpoInvestimentos.operational.feature_store_backup (implementação dentro da wheel). A versão histórica é a implementação completa de 227 linhas: create_backup via sqlite3.Connection.backup (consistente com WAL), integrity_check em modo ro/immutable, manifesto BACKUP_MANIFEST.json (schema previsao-cripto-feature-store-backup/1.0, sha256, tamanho), diretório temporário renomeado atomicamente, recusa destino existente; verify_backup confere schema/hash/tamanho/integridade; restore_backup só em raiz nova, nunca sobre output/feature_store.db de produção; timestamped_output gera fs-AAAA-MM-DD-HHMMSS com sufixo em colisão; defaults resolvidos por core.paths (DATA_DIR/backups) com fallback ao checkout. Mostra a migração posterior do script solto para módulo empacotado (requisito de runtime suportado pela wheel). Sem segredo; sem rede."
+  },
+  {
+    "index": 5,
+    "path": "docs/source_archive_20260908/objects/988238ebe64bf2b0083471988e9507ece4949940e7e798fa180fec584b7d278a.py",
+    "base": "GarimpoInvestimentos/v3/regime_engine.py",
+    "source_sha256": "988238ebe64bf2b0083471988e9507ece4949940e7e798fa180fec584b7d278a",
+    "sha256_utf8": "988238ebe64bf2b0083471988e9507ece4949940e7e798fa180fec584b7d278a",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado 6c6a0b10 (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: irmão com 3 linhas em branco finais; pendente sem elas. Nenhuma linha de código difere. Semântica idêntica à do irmão: RegimeEngine histórico schema 1 (ver A0-i005): emissões por linha, sem hash de treino, pickle sem proteção, fingerprint ausente aceito com aviso."
+  },
+  {
+    "index": 6,
+    "path": "docs/open_source_research/20260911T0233/phase2/reproduction/report_phase2.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "b29b10e3071c403f429fc476a0189e6a45253ff8b22232cf0b85449d7c5c97c4",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "report_phase2.py (docs/open_source_research/20260911T0233/phase2/reproduction): gerador do relatório da fase 2 da pesquisa open-source. Lê RESULTS.json, F01_ADVERSARIAL_V1/V2.json e F03_SEMANTIC_GATE.json, exige (assert) que a v1 do adapter de identidade falhou e a v2 passou, que os hashes de work/experiments_v1_preserved.py e experiments.py batem com os registrados e que F04/F05/F02 passaram; embute as fichas de 15 campos dos cinco experimentos (F01 identidade/unidades/versões — v1 aceitou 6/6 controles adversariais indevidamente, v2 rejeita 6/6, READY_FOR_EXPERIMENT_G2_TECHNICAL; F02 Aave segunda rota — ConnectTimeout, 0 chamadas, BLOCKED_DATA; F03 universo PIT — 4/4 controles as-of corretos, sobreviventes atuais erram 3/4, 542 dias ausentes, catálogo de 13 eventos parcial, BLOCKED_DATA; F04 execução/caixa segregado — 9/9 cenários reconciliados por ledger Decimal vs Fraction, PnL −5,195 a +0,599 USD, INCONCLUSIVE_ECONOMIC_ROBUSTNESS; F05 dependência/seleção — AR(1) rho 0,6, IID cobre 62%, bloco 8 cobre 86,25%, oracle 93,5%, seleção sem correção 16,0%, maxT 4,69%, INCONCLUSIVE_MARKET_INFERENCE), grava REGISTRY.json (economic_promotion=False, capital_permission=False, orders=0, new_network_calls=0, sem subagentes/avaliador externo), EXPERIMENTS.md e REPORT.md (com polish() de espaçamento), copia JSONs e scripts de reprodução, verifica preservação (hashes protegidos, inventário Python, HEAD igual ao baseline) em PRESERVATION.json, MANIFEST.json, liga a fase 2 ao REGISTRY/REPORT da iniciativa e empacota entrega em pasta pessoal do dono (ZIP + ENTREGA.json). Todo número do relatório vem dos JSONs de resultado lidos, não de constantes — melhor proveniência que os entregáveis de 09/2026. Caminhos absolutos Windows; sem segredo, sem rede, sem ordens."
+  },
+  {
+    "index": 7,
+    "path": "docs/source_archive_20260908/objects/79caf577e196f14267731843e2873de9866b48d99139adef2c5a8bb066cff80e.py",
+    "base": "GarimpoInvestimentos/v3/macro_features.py",
+    "source_sha256": "79caf577e196f14267731843e2873de9866b48d99139adef2c5a8bb066cff80e",
+    "sha256_utf8": "79caf577e196f14267731843e2873de9866b48d99139adef2c5a8bb066cff80e",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante CRLF (162 linhas, todas com \\r\\n) do mesmo macro_features.py histórico revisado em A0-i007 (dc3a8a62): conteúdo textual idêntico após normalização de EOL (verificado byte a byte). Origens: projeto/ e git-main-integration (checkout Windows com autocrlf) versus sdist/pacote LF. Semântica: versão H7 macro/DXY anterior ao endurecimento PIT por vintage — build_macro_event_dummy sem exigir calendar_available_at/cobertura anual, build_dxy_return por published_at em dias úteis com imputação 0.0, load_dxy_daily_closes CSV simples; a base em 88158f25 exige available_at documentado ou assunção explícita e falha fechado. Histórico; sem execução, sem rede, sem segredo."
+  },
+  {
+    "index": 8,
+    "path": "docs/source_archive_20260908/objects/53aa876f6854f1f24ca27df53d71cb29db764013aa308ef299946c947c25e073.py",
+    "base": "GarimpoInvestimentos/main.py",
+    "source_sha256": "53aa876f6854f1f24ca27df53d71cb29db764013aa308ef299946c947c25e073",
+    "sha256_utf8": "53aa876f6854f1f24ca27df53d71cb29db764013aa308ef299946c947c25e073",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de GarimpoInvestimentos/main.py histórico, derivada do irmão certificado 8d4d62e9 (block18): mesma estrutura (parser embutido, run_ingest com guard de orçamento, cache por ativo sem fingerprint, persistência após cache/export, chamadas de notícias/LLM mesmo no modo descrito como offline). Diferença real: esta variante NÃO define OUTPUT_DIR (só GARIMPO_OUTPUT_DIR) e NÃO tem a validação de --output-dir contra core.paths.OUTPUT_DIR já carregado (o irmão levanta RuntimeError se a flag foi aplicada tarde, evitando escrita silenciosa no lugar errado); importa FEATURE_STORE_DB junto dos demais módulos. Ou seja, versão anterior à correção de 'output-dir aplicado depois de core.paths'. Demais 'linhas diferentes' são CRLF misturado e 3 linhas em branco finais. Histórico; sem execução."
+  },
+  {
+    "index": 9,
+    "path": "docs/source_archive_20260908/objects/5b87e7bccd1438a7873901e1e73c6b5ef9e7b19d582159e16d51880b3f308170.py",
+    "base": "GarimpoInvestimentos/trading/store.py",
+    "source_sha256": "5b87e7bccd1438a7873901e1e73c6b5ef9e7b19d582159e16d51880b3f308170",
+    "sha256_utf8": "5b87e7bccd1438a7873901e1e73c6b5ef9e7b19d582159e16d51880b3f308170",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado d49e19fc (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: apenas o byte final: CRLF no irmão vs LF no pendente. Nenhuma linha de código difere. Semântica idêntica à do irmão: trading store histórico: sem schema denso de proveniência 6/texto de sessão/collector_version e sem allow_nan=False; timestamps float em micros com possível deriva; dedup de eventos ignora mudança de relógio, conflitos de hash via UNION LIMIT 1; validação de venue/símbolo/sessão removida, session_id hex-ou-UTF8 pode corromper ID literal; compactação v1/v2 ON CONFLICT DO NOTHING apaga só hash igual, sem verificação de payload/metadata; laço while True pode não terminar antes do raise final. Fraquezas históricas, não da compactação validada atual."
+  },
+  {
+    "index": 10,
+    "path": "docs/source_archive_20260908/objects/7ef023a698c589ea2a85f80a5a91e3e5b6a18343eba2bd67dd901a701622d130.py",
+    "base": "GarimpoInvestimentos/main.py",
+    "source_sha256": "7ef023a698c589ea2a85f80a5a91e3e5b6a18343eba2bd67dd901a701622d130",
+    "sha256_utf8": "7ef023a698c589ea2a85f80a5a91e3e5b6a18343eba2bd67dd901a701622d130",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de GarimpoInvestimentos/main.py histórico, derivada do irmão certificado 8d4d62e9 (block18): conteúdo textual idêntico ao irmão incluindo a validação de --output-dir contra core.paths.OUTPUT_DIR; as 71 'linhas diferentes' são apenas CRLF misturado em blocos (cabeçalho de imports, run_ingest) e 3 linhas em branco finais. Semântica igual à do irmão: parser/ingestão embutidos, cache sem fingerprint, sem recibo por ativo, ingestão parcial não propaga falha. Histórico; sem execução."
+  },
+  {
+    "index": 11,
+    "path": "docs/source_archive_20260908/objects/f8b9d49335ddc015be3d15cb260552292198e0dc1a1c198e7ab8fd0fb7878d49.py",
+    "base": "GarimpoInvestimentos/dpl/feature_store.py",
+    "source_sha256": "f8b9d49335ddc015be3d15cb260552292198e0dc1a1c198e7ab8fd0fb7878d49",
+    "sha256_utf8": "f8b9d49335ddc015be3d15cb260552292198e0dc1a1c198e7ab8fd0fb7878d49",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado c759260e (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: 3 linhas em branco extras no fim. Nenhuma linha de código difere. Semântica idêntica à do irmão: feature_store histórico sem modo RO/BEGIN IMMEDIATE, sem validação atômica/conflito de metadata/finitude/regra de vintage observado, duplicata de lote 'primeiro vence', dedup por hash ignorando valor/versão/qualidade; sem API de snapshot de input/escrow/identidade imutável de previsão/closed_daily_price; upsert de previsão substitui chave igual (ver A3-i012). O irmão também cobre um bundler de correção histórica que executa testes/relatório no import."
+  },
+  {
+    "index": 12,
+    "path": "docs/source_archive_20260908/objects/e3579bf5b01c7ddfccd9dcfa76e2c02aa70aef69c02bff7199d8a1ff746e3d42.py",
+    "base": "GarimpoInvestimentos/dpl/feature_store.py",
+    "source_sha256": "e3579bf5b01c7ddfccd9dcfa76e2c02aa70aef69c02bff7199d8a1ff746e3d42",
+    "sha256_utf8": "e3579bf5b01c7ddfccd9dcfa76e2c02aa70aef69c02bff7199d8a1ff746e3d42",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado c759260e (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: apenas o byte final: CRLF no irmão vs LF no pendente. Nenhuma linha de código difere. Semântica idêntica à do irmão: feature_store histórico (ver A1-i011/A3-i012): mais permissivo em PIT, idempotência e proveniência de previsões."
+  },
+  {
+    "index": 13,
+    "path": "docs/source_archive_20260908/objects/922d4243c757dff24dc7ee10c564a56eccae04819c6f29b1c01c8a3bdeeb8648.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "922d4243c757dff24dc7ee10c564a56eccae04819c6f29b1c01c8a3bdeeb8648",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "carry_analyze.py (mesma sessão; cópia também no FUNDING_CARRY_REPRODUCAO.zip): cálculo determinístico offline da triagem de carry. Lê carry_protocol.json (fim exclusivo, símbolos, janelas) e os JSONs de funding/spot diário/mark diário; benchmark() = 13,9% Selic sobre capital em BRL (FX fixo 5,1253), IR 17,5%, custódia 0,2% acima de R$10 mil; quality() exige timestamps únicos dentro da janela, offsets <1 s do calendário de 8 h e nenhum settlement faltante; fixed_quantity() usa só a abertura da vela em START/END (campos posteriores ao corte nunca lidos), quantidade 2.500/s0, exclui o primeiro settlement, funding recebido por markPrice×fundingRate, basis, fees ilustrativos (10 bps spot, 5 bps perp), slippage 5 bps por perna, maior perda só de preço da perna short pela máxima diária, e marca explicitamente executable=False com lista do que falta (fills, liquidação, unwind, elegibilidade, USDT/USD, imposto). Por janela: soma de taxas, anualização simples, fração negativa, min/max, somas mensais; nocional normalizado, taxa anual requerida (com/sem atenção R$1.200), 18 sensibilidades de custo e 5 de câmbio (com imposto ilustrativo 15%); decisão por ativo REJECT se 5.000×anual×FX < piso do benchmark. Checagens de contabilidade independentes (spot+perp = basis, linearidade do nocional, sensibilidades ≤ funding) e limitações declaradas. Integridade temporal cuidada (corte explícito, sem leitura de OHLC pós-corte). Sem rede, sem segredo, sem ordens."
+  },
+  {
+    "index": 14,
+    "path": "docs/source_archive_20260908/objects/e91e364c4db5232dede7b1f816bdb638ae21c2221019219099426656660a1d1c.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "e91e364c4db5232dede7b1f816bdb638ae21c2221019219099426656660a1d1c",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "deliver_forward.py (sessão 20260907-altcoins, 3 cópias): entrega do piloto de observação forward v3 de altcoins. stage(): lê audit.json dos dados forward, lê a automação local Codex observar-altcoins-semanalmente (TOML em caminho pessoal do dono) exigindo status ACTIVE e thread fixa, grava automation.json (domingos 21h America/Sao_Paulo, 13/09→06/12/2026, 12 janelas), validation.json com valores declarados (44 testes, ruff/pyright, replay offline, paridade 13/13 features, tick antes do primeiro slot sem decisões, 5 arquivos congelados sem diff contra 9e492f0, formal_attestation=False), sources.json (endpoints públicos Binance market-data, catálogos de anúncios 161/49, 275 respostas brutas), search_log.json (0 trials históricas novas, 0 decisões prospectivas, controles sintéticos 100 réplicas nulas, commits c80f309/cbe5229/9ca6648, OBSERVER_SCHEDULED; NO_EXECUTABLE_PROMOTION), CRIPTO_PROXIMOS_PASSOS.json, ACOMPANHAMENTO_CRIPTO.md (tabela de etapas; 13 elegíveis, 0 qualificadas; round-trip hipotético US$2,14–5,57 por US$1.000; PC precisa estar ligado) e anexa seção em docs/HYPOTHESES.md. package(): patch 9e492f0→HEAD com apply --reverse --check, ZIP com scripts/testes/evidências/dados forward/probes iniciais/REPRODUZIR.py (replay_forward.py reescrito por replace para caminhos do pacote), README, requirements pinados, FILE_HASHES.json reconferido, e MANIFESTO com formal_profitability_proof=False/real_capital=False. Mostra que o piloto forward era automação local Codex, não Ops. Números da validação são constantes no código. Sem segredo; depende de caminhos e automação pessoais."
+  },
+  {
+    "index": 15,
+    "path": "docs/source_archive_20260908/objects/784a88c4cbef2ad07737c4d1e953c7ac6b2892bdb0fa5b8078afef791382a62e.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "784a88c4cbef2ad07737c4d1e953c7ac6b2892bdb0fa5b8078afef791382a62e",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "ferramentas-migracao/restaurar.py: restaurador do snapshot completo do projeto (Windows x64 apenas). Exige destino inexistente, checa espaço livre (bytes lógicos + runtime + 600 MB), valida dados.zip inteiro antes de criar o destino (conjunto de objetos content-addressed igual ao manifesto, sha256 de cada objeto, caminhos relativos sem '..'/':'; duplicatas por casefold), confere runtime embarcado, restaura arquivo a arquivo com open('xb') e reconferência de hash, copia runtime e docs de retomada; realoca o venv de sessoes/20260907-altcoins/work/cripto-v1.2 (pyvenv.cfg home, .pth editável, launchers python.exe/pythonw.exe copiados do runtime) registrando hash antes/depois; se houver git, recria projeto/ a partir do bundle (fetch main+tags, update-ref para git_head do manifesto, remote origin, upstream) e valida HEAD; roda validar.py com o python do venv restaurado e grava RESTAURACAO.json; declara automation_installed=False. Ferramenta de migração/preservação; sem rede, sem segredo; instala nada fora do destino novo. É o par de A0/A1 'validar.py' e 'empacotar' já revisados."
+  },
+  {
+    "index": 16,
+    "path": "docs/open_source_research/20260911T0233/phase3/preserved_first_v3/adapter_v3.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "bdadc504e689f49e4f7531bac0b2e2da192c0528068e2ec42cdda49b4ae50150",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "adapter_v3.py (docs/open_source_research/20260911T0233/phase3/preserved_first_v3): envelope de evidência offline 'F01-real v3' da pesquisa open-source. Define 23 campos de identidade/tempo (ASSET_IDENTITY, CHAIN, CONTRACT_ADDRESS, VENUE, MARKET_TYPE, BASE/QUOTE, SETTLEMENT, MARGIN_ASSET, EXPIRY, PRICE_TYPE, UNIT, CURRENCY, DECIMALS, SOURCE, EVENT/PUBLICATION/INGESTION/REVISION_TIME, OBSERVED_VERSION), todos inicializados como UNKNOWN sem default implícito; normalize() verifica hash físico do receipt contra baseline read_only_hashes e hash de corpo registrado, marca cada campo PROVEN só com ponteiro JSON para a origem (SOURCE/ORIGINAL_FIELD/TRANSFORMATION/HASH), trata kinds klines (close da coluna 4, EVENT_TIME = abertura em ns, PRICE_TYPE mark/trade candle), funding (fundingRate/fundingTime, sem assumir 8 h), exchangeInfo (BTCUSDT, precisão ≠ decimals on-chain), depth (ask displayed, não fill), rpc JSON-RPC (eth_chainId, eth_getBlockByNumber, web3_sha3, eth_call com ABI não interpretada), empty (CORRECTLY_REJECTED) e mapping (UNSUPPORTED); TIMESTAMP de proveniência = ingestão, nunca validade histórica. validate() reconstrói canonicamente e exige igualdade; available(cutoff_ns) exige INGESTION_TIME PROVEN e max(clocks) ≤ cutoff (PIT fail-closed); economic_join() exige identidade completa e igual entre dois envelopes. Protótipo de envelope PIT rigoroso, anterior ao envelope V2 do ecossistema; não integrado à produção; sem rede, sem segredo."
+  },
+  {
+    "index": 17,
+    "path": "docs/source_archive_20260908/objects/24b05e9a95cdd8c0454b85e74732083925bb819385b732cbe71d1177eed674c0.py",
+    "base": "tests/test_trials.py",
+    "source_sha256": "24b05e9a95cdd8c0454b85e74732083925bb819385b732cbe71d1177eed674c0",
+    "sha256_utf8": "24b05e9a95cdd8c0454b85e74732083925bb819385b732cbe71d1177eed674c0",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado 16afcf14 (archive-derivation-0-block16-coverage.json); diferença confinada a fim de arquivo/EOL: irmão com 3 linhas em branco finais e CRLF; pendente termina limpo. Nenhuma linha de código difere. Semântica idêntica à do irmão: tests/test_trials.py legado: DSR com uma tentativa = PSR e Sharpes ausentes com variância 0 aceitos, bypass power_attestation=False, sem controles de família congelada — expectativas de fixture históricas, não prova atual."
+  },
+  {
+    "index": 18,
+    "path": "docs/source_archive_20260908/objects/03b1fba22826b6957c9bf93ea7499c86aa8d539ba0290454df28e4df6f15b8fc.py",
+    "base": "GarimpoInvestimentos/analyzers/backtest.py",
+    "source_sha256": "03b1fba22826b6957c9bf93ea7499c86aa8d539ba0290454df28e4df6f15b8fc",
+    "sha256_utf8": "03b1fba22826b6957c9bf93ea7499c86aa8d539ba0290454df28e4df6f15b8fc",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de GarimpoInvestimentos/analyzers/backtest.py legado (v24), derivada do irmão certificado b1a3f65d (block13). Diferença real no bloco DSR: importa deflated_sharpe_ratio simples (não registry_deflated_sharpe_ratio/DeflationNotEstimableError), filtra trials com sharpe=None fora do denominador ('não entram no máximo-por-sorte') e imprime DSR só se não NaN — versão ANTERIOR ao DSR estrito (a do irmão trata Sharpes ausentes contando em N mas não na variância, com UNKNOWN/promoção bloqueada e sharpe_basis por horizonte). Mesma diferença de política que implement_core.py (A3-i014) aplicou. Resto idêntico ao irmão. Histórico; sem execução."
+  },
+  {
+    "index": 19,
+    "path": "docs/source_archive_20260908/objects/3bec409db687e6e1722b4384fce0b288f4279293564a6c5cea89b53f8c68635a.py",
+    "base": "GarimpoInvestimentos/analyzers/trials.py",
+    "source_sha256": "3bec409db687e6e1722b4384fce0b288f4279293564a6c5cea89b53f8c68635a",
+    "sha256_utf8": "3bec409db687e6e1722b4384fce0b288f4279293564a6c5cea89b53f8c68635a",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado 77a7c67a (archive-derivation-0-block15-coverage.json); diferença confinada a fim de arquivo/EOL: irmão com 3 linhas em branco finais e CRLF; pendente termina em ')\\n'. Nenhuma linha de código difere. Semântica idêntica à do irmão: analyzers/trials.py antigo: sem DSR estrito/unidades de Sharpe/encaminhamento de atestado nem guarda de nome novo em família congelada; só guarda de hipótese encerrada."
+  },
+  {
+    "index": 20,
+    "path": "docs/source_archive_20260908/objects/fa37f911e26756ffa593a8d24da8d6a9f73c6a12fe0ff6560c790d11c16d7aab.py",
+    "base": "tests/test_experiment_registry.py",
+    "source_sha256": "fa37f911e26756ffa593a8d24da8d6a9f73c6a12fe0ff6560c790d11c16d7aab",
+    "sha256_utf8": "fa37f911e26756ffa593a8d24da8d6a9f73c6a12fe0ff6560c790d11c16d7aab",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de tests/test_experiment_registry.py histórico, derivada do irmão certificado 1eecf3e0 (block13). Diferenças reais: reformatação ruff (monkeypatch.setattr e register_trial quebrados em várias linhas) e REMOÇÃO do teste test_backtest_ignora_trial_fechada_sem_impedir_pipeline (fechamento automático não reescreve H5 e devolve controle à H6); mantém test_toda_hipotese_fechada_bloqueia_update_antes_do_core (regressão H4 CLOSED_INSUFFICIENT_SAMPLE) e test_h6_imatura_continua_atualizavel (H6 ainda mutável — anterior à errata de 2026-09-07, A1-i025). Demais linhas: CRLF misturado. Expectativas de fixture históricas, não prova atual; sem execução."
+  },
+  {
+    "index": 21,
+    "path": "docs/source_archive_20260908/objects/d02223b3c250831c0a6ce00ce67352c6826bbcd31ec0f539b786e15e36ba1558.py",
+    "base": "GarimpoInvestimentos/v3/signal_engine.py",
+    "source_sha256": "d02223b3c250831c0a6ce00ce67352c6826bbcd31ec0f539b786e15e36ba1558",
+    "sha256_utf8": "d02223b3c250831c0a6ce00ce67352c6826bbcd31ec0f539b786e15e36ba1558",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado 2d3aeffb (archive-derivation-0-block14-coverage.json); diferença confinada a fim de arquivo/EOL: 3 linhas em branco extras no fim. Nenhuma linha de código difere. Semântica idêntica à do irmão: signal_engine histórico schema v3.1.0 mutável, thresholds fixos sem validação de finitude/posterior/horizonte/futuro/hash de política, sem flag descritivo/capital; append JSON sem lock nem dedup de event_id (ver A3-i025)."
+  },
+  {
+    "index": 22,
+    "path": "docs/open_source_research/20260911T0233/phase3b/work/analyze.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "90e03ba91363b74d605fc19d361f6268233a9900532ac0ef07571ac164e40a6a",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "analyze.py (docs/open_source_research/20260911T0233/phase3b/work): análise offline da fase 3B (socket bloqueado). Lê o diagnóstico de execução BTC (btc-execution-diagnostic-v1, caminho absoluto C:/Cripto/restaurado-20260908) e o probe de capacidade basis; reconfere sha256 de cada corpo bruto contra o registrado (BODY_HASH_CHECKS.json); constrói INSTRUMENT_CONTRACTS.json para BTC_SPOT/BTC_PERPETUAL/BTC_DATED(261225) com cada campo do PROTOCOL.json como UNKNOWN/NOT_PROVEN salvo literal recebido (base/quote/margin asset, contractType ou isSpotTradingAllowed, deliveryDate), todos CURRENT_ONLY, complete_for_replay=False e fórmulas notional/pnl/margin/settlement UNSUPPORTED; CLOCK_MATRIX.json com LOCAL_REQUEST/RECEIPT_TIME provados e SOURCE_EVENT_TIME apenas RAW_PROVEN (semântica de T/E/fundingTime não provada), regras de estado OBSERVED/EVENT_OCCURRED/ECONOMICALLY_ELIGIBLE; CLOCK_INVESTIGATION.json: nos 12 pares de depth futuros, T remoto − recebimento local ≈ +410 ms (status CAUSE_UNKNOWN, sem logs monotônicos/NTP, cabeçalhos não gravados), verifica que o coletor diagnose_btc_execution.py bate com implementation_freeze_v1.json e que o corpo de exchangeInfo do probe e do diagnóstico são idênticos (serverTime não é evidência de frescor); OBSERVATION_SEMANTICS.json (tipo de cada observação, nunca fill executável) e FUNDING_CONTRACT.json (FUNDING_REPLAY_NOT_PROVEN: taxa e timestamp provados como brutos, intervalo/pagamento/direção/moeda não provados). Exercício epistemológico rigoroso sobre PIT/relógios; conclusões negativas explícitas. Sem segredo, sem rede."
+  },
+  {
+    "index": 23,
+    "path": "docs/source_archive_20260908/objects/b9ceea13a15fef2bf20e687832456395f009bddf463152d1546d2803e8c4e401.py",
+    "base": "GarimpoInvestimentos/quality_snapshot.py",
+    "source_sha256": "b9ceea13a15fef2bf20e687832456395f009bddf463152d1546d2803e8c4e401",
+    "sha256_utf8": "b9ceea13a15fef2bf20e687832456395f009bddf463152d1546d2803e8c4e401",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "GarimpoInvestimentos/quality_snapshot.py histórico versus a base em 88158f25 (654 vs 693 linhas). Diferenças mostram endurecimento de integridade na base atual que NÃO existia na época: (1) _spearman_stats na base retorna None quando alguma linha usa o EVALUATION_CONTRACT novo (sem trial inferencial registrada, linhas pooled não ganham confiança por padrão) — o histórico calculava sempre; (2) build_snapshot ganhou include_legacy e evidence_class HISTORICAL_REPRODUCTION vs OPERATIONAL_DIAGNOSTIC, e o veredito H6 só usa linhas legadas — o histórico avaliava H6 sobre todas as linhas com preço; (3) append_history: histórico era append simples (open 'a'), base valida cada linha existente com strict_json_loads sob file_lock e regrava atomicamente; (4) publicação do h6_status.json: histórico tolerava arquivo corrompido (reescrevia), base falha fechado ('preserve before recovery') com file_lock e atomic_write; (5) manifesto do ledger: histórico selava e regravava o manifesto se o head mudou (tolerante a manifesto inválido), base exige report.ok antes de publicar, verifica que o manifesto anterior é prefixo verificado da cadeia (chain_hash/contagem por archive_id) e usa atomic_write. Conclusão: a versão histórica é funcionalmente semelhante mas mais permissiva; a evolução até 88158f25 fechou caminhos de corrupção silenciosa. Sem segredo; sem rede."
+  },
+  {
+    "index": 24,
+    "path": "docs/source_archive_20260908/objects/b6c0931b2a6034e44b1354e7fa9d2bccf71df8be8054a4e006af10090f000b09.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "b6c0931b2a6034e44b1354e7fa9d2bccf71df8be8054a4e006af10090f000b09",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "prepare_git_main_delivery.py (sessão 20260907-pesquisa): consolida a entrega para git-main-integration. Lê 7 freezes de evidência (absolute/basis/chat_review/altcoin_reviewed/carry_forward/immediate_audit) e 3 manifestos FILES_SHA256, monta dicionário path→sha256 esperado (assert sem conflito entre freezes), inclui protocol.json via trials.json['protocol_sha256']; para cada arquivo lê da fonte cripto-research ou do worktree ORIGINAL (caminho absoluto C:/Users/...), exige hash igual, exige igualdade semântica (após normalizar CRLF) com o destino e restaura bytes exatos quando só o EOL difere; escreve .gitattributes marcando todos como -text; copia outputs (exceto GIT_*) para docs/session_archive_20260908/deliverables com DELIVERABLES_SHA256.json; verifica que todos os refs originais são ancestrais de HEAD e grava reconciliation.json (refs, heads remotos, hashes congelados, backups bundle/zip). Script de reconciliação de evidência congelada; sem rede, sem segredo, não altera hashes publicados (só bytes de EOL para bater com o hash). Depende de caminhos locais do dono."
+  },
+  {
+    "index": 25,
+    "path": "docs/source_archive_20260908/objects/90e7c52f7105822739c266f8c1d65d9b0a84f3a316ab5fb68d5b72bd45ad48bb.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "90e7c52f7105822739c266f8c1d65d9b0a84f3a316ab5fb68d5b72bd45ad48bb",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "reconcile_records.py (sessão 20260907-altcoins, 3 cópias): script de errata que edita o checkout cripto-v1.2 por substituição de texto. charters/scientific_state.json: H6 e H9 passam de CLOSED_NO_GO para CLOSED_INSUFFICIENT_SAMPLE com nota (H6: IC cruza zero, n=84, poder 23% para rho=0,2; H9: 44/45 folds insuficientes; não reativa, não altera coleta/ledger/selos/frozen_families); ajusta o teste do charter e as linhas H6/H9 do README; em docs/EVIDENCE_REGISTRY.md reescreve CLAIM-CR-COSTS como SUPPORTED_UNDER_ASSUMED_COST_MODEL / ASSUMED-UNCALIBRATED (fee 10 bps, slippage 5 bps; fee efetiva UNKNOWN; H1 bruto +0,44 bps, líquido −0,09 bps), corrige a afirmação falsa de que H6 continuava COLLECTION_ONLY_IMMATURE, rebaixa H5 de 'bem-poderizado' para 'evidência negativa na direção testada' e marca DSR 0,00 como recalibração pendente (errata P0-A); atualiza CASE-CR-003 (nove hipóteses, H7/H8 registradas sem ativação, H9 1/45 folds), CR_RESEARCH_FREEZE.md (core pin 3.0.0→3.2.0, H6 movida para closed_observations) e CR_FREEZE_INDEX.md; insere bloco de errata em OVERVIEW_E_ROADMAP, H6_REFREEZE, HYPOTHESES (H6/H9), CASE-CR-001 e delta no HANDOFF.md (Core 3.2.0 em worktree isolado, DSR estrito, produção intacta). Evidência primária da disciplina de errata: rótulos causais retirados sem reabrir hipóteses. Sem segredo; edição frágil por índices de texto de uma versão específica."
+  },
+  {
+    "index": 26,
+    "path": "docs/source_archive_20260908/objects/22d0e22be3f49e26bf57b046b9bfb03f9271f2dbdc5da28cba863b397ebadb5d.py",
+    "base": "GarimpoInvestimentos/v3/feature_builder.py",
+    "source_sha256": "22d0e22be3f49e26bf57b046b9bfb03f9271f2dbdc5da28cba863b397ebadb5d",
+    "sha256_utf8": "22d0e22be3f49e26bf57b046b9bfb03f9271f2dbdc5da28cba863b397ebadb5d",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de GarimpoInvestimentos/v3/feature_builder.py histórico, derivada do irmão certificado 5f05b933 (block10): mesmo builder sem validação de finitude/janela/cadência/dedup, vol 24 closes, funding anterior em vez de 8 h exatas, _find_asof (nunca escolhe valor futuro) e spot_curr = candle aberto 1 h antes. Diferença real: esta variante NÃO tem build_volume_index (índice {open_ms: volume} adicionado para H9 razão OI/volume, mantendo build_spot_index intacto para H1–H3) — é a versão anterior à H9. Outras linhas: CRLF misturado. Histórico; sem execução."
+  },
+  {
+    "index": 27,
+    "path": "docs/source_archive_20260908/objects/afe99fefbf71f5078f080f810f32bbef4bf10df98c5be31a0875aaf364a49402.py",
+    "base": "GarimpoInvestimentos/jobs.py",
+    "source_sha256": "afe99fefbf71f5078f080f810f32bbef4bf10df98c5be31a0875aaf364a49402",
+    "sha256_utf8": "afe99fefbf71f5078f080f810f32bbef4bf10df98c5be31a0875aaf364a49402",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de scripts/run_job.py (execução de jobs via predictor_ops) histórico, derivada do irmão certificado 768f8fb8 (archive-derivation-2-coverage.json): conteúdo textual idêntico (exit_statuses com PARTIAL só para phase1, main preservando PARTIAL como código 1 e falha como exit_code ou 3); 20 'linhas diferentes' são CRLF misturado e byte final. Semântica igual à do irmão. Histórico; sem execução."
+  },
+  {
+    "index": 28,
+    "path": "docs/source_archive_20260908/objects/d9c2511b768bf8f812b1d9181bce6fa0bc508567d9b34dd9a900c37e8380aabd.py",
+    "base": "GarimpoInvestimentos/trading/execution.py",
+    "source_sha256": "d9c2511b768bf8f812b1d9181bce6fa0bc508567d9b34dd9a900c37e8380aabd",
+    "sha256_utf8": "d9c2511b768bf8f812b1d9181bce6fa0bc508567d9b34dd9a900c37e8380aabd",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado e49605a8 (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: 3 linhas em branco extras no fim e CRLF final. Nenhuma linha de código difere. Semântica idêntica à do irmão: trading/execution.py histórico (ver A1-i030): sem idempotência por fill_id, tolerância absoluta 1e-9 marca ordens minúsculas como preenchidas, sem terminal_at, fills duplicados aceitos; reconcile só por quantidade; retry do ledger ignora entradas alteradas. O irmão cobre também feature builder e utilitário de restauração históricos."
+  },
+  {
+    "index": 29,
+    "path": "docs/source_archive_20260908/objects/23ac99bf648c2d0cee8d954c9da03e62764dfb8269e7b2c8acb9f4f908dbb7d5.py",
+    "base": "GarimpoInvestimentos/dpl/ingest.py",
+    "source_sha256": "23ac99bf648c2d0cee8d954c9da03e62764dfb8269e7b2c8acb9f4f908dbb7d5",
+    "sha256_utf8": "23ac99bf648c2d0cee8d954c9da03e62764dfb8269e7b2c8acb9f4f908dbb7d5",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado 1e39ca6b (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: apenas o byte final: CRLF no irmão vs LF no pendente. Nenhuma linha de código difere. Semântica idêntica à do irmão: ingestão histórica (paper_report/ingestion): sem recibo final em finally, sem checagens de identidade de provider/símbolo/intervalo/OHLCV finito/ordem; grava bruto antes das features derivadas e constrói todos os intervalos com default v1, sem escrow de snapshot; erro parcial pode deixar dado sem recibo terminal."
+  },
+  {
+    "index": 30,
+    "path": "docs/source_archive_20260908/objects/4c71ac3d14711ffa94e2ff1a1f387c3f1445d4665d53d8a977e8c8e576468430.py",
+    "base": "GarimpoInvestimentos/trading/execution.py",
+    "source_sha256": "4c71ac3d14711ffa94e2ff1a1f387c3f1445d4665d53d8a977e8c8e576468430",
+    "sha256_utf8": "4c71ac3d14711ffa94e2ff1a1f387c3f1445d4665d53d8a977e8c8e576468430",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "GarimpoInvestimentos/trading/execution.py histórico versus a base em 88158f25 (215 vs 287 linhas). O histórico é a versão anterior ao endurecimento de idempotência: apply_fill não deduplicava fill_id (base: mesmo fill_id idêntico → no-op, diferente → OrderLifecycleError) e usava tolerância 1e-9 absoluta (base: math.isclose rel 1e-12 e terminal_at = max filled_at); InMemoryAdapter.record_fill sem dedup; reconcile_order só comparava quantidade total (base: tolerância validada finita/não negativa, e reasons quantity/invalid_exchange_receipts/fill_identity/fill_content comparando qty/price/fee/filled_at/liquidity por fill_id); OrderLedger.submit devolvia a ordem existente para client_order_id repetido sem checar se as condições eram as mesmas (base: rejeita client_order_id vazio, rejeita reutilização com instrumento/lado/tipo/qty/limit diferentes e order_id já ligado a outro client id); update sem invariantes (base: proíbe alterar identidade/condições, remover fills ou reabrir estado terminal). Evidência primária de que os controles de 'ação duplicada ou perdida' exigidos pela qualificação foram adicionados depois desta época. Código de simulação/ledger em memória; nenhum envio de ordem real; sem segredo."
+  },
+  {
+    "index": 31,
+    "path": "docs/source_archive_20260908/objects/e5ce4c9305022de26ef99cc2ca064e4fbbc8602f0ec424bdd886b425692590a1.py",
+    "base": "GarimpoInvestimentos/trading/contracts.py",
+    "source_sha256": "e5ce4c9305022de26ef99cc2ca064e4fbbc8602f0ec424bdd886b425692590a1",
+    "sha256_utf8": "e5ce4c9305022de26ef99cc2ca064e4fbbc8602f0ec424bdd886b425692590a1",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante de GarimpoInvestimentos/trading/contracts.py histórico, derivada do irmão certificado 97a290e6 (archive-derivation-2-coverage.json): mesmos contratos sem guardas de finitude, sem identidade/dedup de fill e sem ordenação terminal. Diferença real: TradeIntent desta variante NÃO tem os campos scientific_family, trial_id, pipeline_fingerprint, cost_model_id e estimated_round_trip_friction nem suas validações (não vazios, fricção ≥ 0) — versão anterior à ligação intenção→trial/fingerprint/custo (AUTHORITY_SEPARATION/PROVENANCE). Mais 3 linhas em branco finais. Histórico; sem execução."
+  },
+  {
+    "index": 32,
+    "path": "docs/source_archive_20260908/objects/d6121b2453541c43d6f9abd06737c9db5d8939f8112266dbac9483f5334283a2.py",
+    "base": "GarimpoInvestimentos/dpl/providers/coingecko.py",
+    "source_sha256": "d6121b2453541c43d6f9abd06737c9db5d8939f8112266dbac9483f5334283a2",
+    "sha256_utf8": "d6121b2453541c43d6f9abd06737c9db5d8939f8112266dbac9483f5334283a2",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "GarimpoInvestimentos/dpl/providers/coingecko.py histórico (época 2026-08-26/27 'hardened' e sdist 1.0.0) versus a base em 88158f25. Conteúdo lógico idêntico nas quatro variantes do arquivo (d6121b24: CRLF + 3 linhas em branco finais; 02cde72e: CRLF; 7cb36dee: CRLF sem newline final; 511ac4d9: LF) — diferem só em EOL/whitespace. Versão histórica: coingecko_auth_headers() lê COINGECKO_API_KEY direto do ambiente (sem injeção); fetch_ohlcv aceita intervalos intradiários via /ohlc (_INTERVAL_TO_DAYS) e preenche volume=0.0 (ausência representada como zero); _fetch_daily pega prices[-limit:] sem filtrar o ponto parcial do dia corrente, sem checar duplicatas/volume ausente, timestamp = ts do CoinGecko e published_at = ts (sem lag). Base atual: recusa intradiário (contrato exige volume real), valida limit, rejeita volumes duplicados conflitantes e timestamps diários duplicados, descarta o ponto parcial (exige meia-noite UTC e close_at + 10 min ≤ agora), exige volume no timestamp do preço, timestamp = close_at − 1 dia e published_at = close_at + 10 min (lag documentado da API Demo), e permite api_key injetada pelo domínio. Ou seja, a base fechou vazamento de dado parcial/futuro e a representação de volume ausente como zero; a versão histórica é a que alimentou coletas da época 08/2026. Lê variável de ambiente de chave de API, mas nenhum valor de segredo está no arquivo. Rede: CoinGecko público."
+  },
+  {
+    "index": 33,
+    "path": "docs/source_archive_20260908/objects/02cde72e600a8a9ee4cdacebdb9c7565414a9550df68bb984480efe2f5fb627e.py",
+    "base": "GarimpoInvestimentos/dpl/providers/coingecko.py",
+    "source_sha256": "02cde72e600a8a9ee4cdacebdb9c7565414a9550df68bb984480efe2f5fb627e",
+    "sha256_utf8": "02cde72e600a8a9ee4cdacebdb9c7565414a9550df68bb984480efe2f5fb627e",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "GarimpoInvestimentos/dpl/providers/coingecko.py histórico (época 2026-08-26/27 'hardened' e sdist 1.0.0) versus a base em 88158f25. Conteúdo lógico idêntico nas quatro variantes do arquivo (d6121b24: CRLF + 3 linhas em branco finais; 02cde72e: CRLF; 7cb36dee: CRLF sem newline final; 511ac4d9: LF) — diferem só em EOL/whitespace. Versão histórica: coingecko_auth_headers() lê COINGECKO_API_KEY direto do ambiente (sem injeção); fetch_ohlcv aceita intervalos intradiários via /ohlc (_INTERVAL_TO_DAYS) e preenche volume=0.0 (ausência representada como zero); _fetch_daily pega prices[-limit:] sem filtrar o ponto parcial do dia corrente, sem checar duplicatas/volume ausente, timestamp = ts do CoinGecko e published_at = ts (sem lag). Base atual: recusa intradiário (contrato exige volume real), valida limit, rejeita volumes duplicados conflitantes e timestamps diários duplicados, descarta o ponto parcial (exige meia-noite UTC e close_at + 10 min ≤ agora), exige volume no timestamp do preço, timestamp = close_at − 1 dia e published_at = close_at + 10 min (lag documentado da API Demo), e permite api_key injetada pelo domínio. Ou seja, a base fechou vazamento de dado parcial/futuro e a representação de volume ausente como zero; a versão histórica é a que alimentou coletas da época 08/2026. Lê variável de ambiente de chave de API, mas nenhum valor de segredo está no arquivo. Rede: CoinGecko público."
+  },
+  {
+    "index": 34,
+    "path": "docs/source_archive_20260908/objects/195c4b827edc5d1fc02bae9738cd86f61997861ca67f6feb0734f39016b07fa4.py",
+    "base": "GarimpoInvestimentos/trading/binance_spot_collector.py",
+    "source_sha256": "195c4b827edc5d1fc02bae9738cd86f61997861ca67f6feb0734f39016b07fa4",
+    "sha256_utf8": "195c4b827edc5d1fc02bae9738cd86f61997861ca67f6feb0734f39016b07fa4",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado c380b0a7 (archive-derivation-0-block10-coverage.json); diferença confinada a fim de arquivo/EOL: irmão com 3 linhas em branco finais e CRLF; pendente termina em ')\\n'. Nenhuma linha de código difere. Semântica idêntica à do irmão: coletor Binance histórico sem guardas de dataclass (finitude/tempo/ID), sem invalidação de buffer/reset em reconexão/métrica de resync, tarefas de consumidor sem gestão e shutdown esperando próxima mensagem; DB de dados relativo."
+  },
+  {
+    "index": 35,
+    "path": "docs/source_archive_20260908/objects/7cb36dee416aa8af7186d95f92241c2673acbd5549c54276981eda01f1e7528a.py",
+    "base": "GarimpoInvestimentos/dpl/providers/coingecko.py",
+    "source_sha256": "7cb36dee416aa8af7186d95f92241c2673acbd5549c54276981eda01f1e7528a",
+    "sha256_utf8": "7cb36dee416aa8af7186d95f92241c2673acbd5549c54276981eda01f1e7528a",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "GarimpoInvestimentos/dpl/providers/coingecko.py histórico (época 2026-08-26/27 'hardened' e sdist 1.0.0) versus a base em 88158f25. Conteúdo lógico idêntico nas quatro variantes do arquivo (d6121b24: CRLF + 3 linhas em branco finais; 02cde72e: CRLF; 7cb36dee: CRLF sem newline final; 511ac4d9: LF) — diferem só em EOL/whitespace. Versão histórica: coingecko_auth_headers() lê COINGECKO_API_KEY direto do ambiente (sem injeção); fetch_ohlcv aceita intervalos intradiários via /ohlc (_INTERVAL_TO_DAYS) e preenche volume=0.0 (ausência representada como zero); _fetch_daily pega prices[-limit:] sem filtrar o ponto parcial do dia corrente, sem checar duplicatas/volume ausente, timestamp = ts do CoinGecko e published_at = ts (sem lag). Base atual: recusa intradiário (contrato exige volume real), valida limit, rejeita volumes duplicados conflitantes e timestamps diários duplicados, descarta o ponto parcial (exige meia-noite UTC e close_at + 10 min ≤ agora), exige volume no timestamp do preço, timestamp = close_at − 1 dia e published_at = close_at + 10 min (lag documentado da API Demo), e permite api_key injetada pelo domínio. Ou seja, a base fechou vazamento de dado parcial/futuro e a representação de volume ausente como zero; a versão histórica é a que alimentou coletas da época 08/2026. Lê variável de ambiente de chave de API, mas nenhum valor de segredo está no arquivo. Rede: CoinGecko público."
+  },
+  {
+    "index": 36,
+    "path": "docs/source_archive_20260908/objects/471894d3214776ce4d23abb7ee3c3f46d1d8532eb1411f7efff2f2e97dbfa527.py",
+    "base": "GarimpoInvestimentos/v3/collectors/funding_collector.py",
+    "source_sha256": "471894d3214776ce4d23abb7ee3c3f46d1d8532eb1411f7efff2f2e97dbfa527",
+    "sha256_utf8": "471894d3214776ce4d23abb7ee3c3f46d1d8532eb1411f7efff2f2e97dbfa527",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "GarimpoInvestimentos/v3/collectors/funding_collector.py histórico (sdist 1.0.0, pacote de reprodução, worktree cripto-research) versus a base em 88158f25 (238 vs 220 linhas). Versão histórica: FundingRecord sem validação em __post_init__; collect() sem checagem de intervalo (start ≤ end, não negativo) e com laço `cursor < end_ms`; páginas não validadas (validate_page) contra símbolo/faixa; save_funding_csv implementado localmente com append + dedup por funding_time_ms lendo o CSV inteiro (não atômico, aceita valor diferente para chave já existente sem rejeitar); load_funding_csv local ordenando por tempo. Base atual: usa record_io compartilhado (load_records/save_records atômicos, rejeição de valor alterado em chave existente, validate_observation/validate_page), rejeita mark_price negativo (zero = ausente no arquivo Vision), laço `cursor <= end_ms` e intervalo validado. Evolução consistente com IDEMPOTENCY/corrupção silenciosa: o histórico podia gravar chave duplicada com conteúdo divergente sem erro. Coleta pública Binance; sem segredo."
+  },
+  {
+    "index": 37,
+    "path": "docs/source_archive_20260908/objects/ad28178df9b95a56ec55a1e03e0807e2507d486b93fb48136331b5f7e38e4b43.py",
+    "base": "GarimpoInvestimentos/v3/collectors/funding_collector.py",
+    "source_sha256": "ad28178df9b95a56ec55a1e03e0807e2507d486b93fb48136331b5f7e38e4b43",
+    "sha256_utf8": "ad28178df9b95a56ec55a1e03e0807e2507d486b93fb48136331b5f7e38e4b43",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado a7f83ae4 (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: apenas o byte final: CRLF no irmão vs LF no pendente. Nenhuma linha de código difere. Semântica idêntica à do irmão: funding_collector histórico (ver A1-i036): sem validação de página/faixa/finitude, laço end-exclusivo, CSV append com dedup só contra timestamps já persistidos (duplicatas dentro do lote sobrevivem), sem conflito de valor/atomicidade/lock. O irmão cobre também jobs H8 e DSL de fatores históricos."
+  },
+  {
+    "index": 38,
+    "path": "docs/source_archive_20260908/objects/7a4dd57e4adca41d56e0740d99c03ce5ef84c693fae3ce9e1fa9635294219bea.py",
+    "base": null,
+    "source_sha256": null,
+    "sha256_utf8": "7a4dd57e4adca41d56e0740d99c03ce5ef84c693fae3ce9e1fa9635294219bea",
+    "state": "historico_corpo_integral_revisado",
+    "execution": "nao_executado",
+    "notes": "restore_workspace.py do session_archive_20260907 (4 origens idênticas no snapshot). Verifica inventory.json (sha256 e bytes de cada parte), reconstrói o ZIP do workspace a partir das partes, valida índice WORKSPACE_FILES_SHA256.json (sem entradas extras, sem duplicatas, sem caminhos absolutos/'..'/':'/'\\\\'), confere sha256 e tamanho de cada membro e, opcionalmente, restaura em diretório NOVO (mkdir exist_ok=False, open 'xb', checagem de escape do root). Imprime JSON com automation_changed=False e public_requests=0. Utilitário de preservação puramente local, sem rede, sem segredos, sem tocar em instalação existente; consistente com a política de nunca sobrescrever."
+  },
+  {
+    "index": 39,
+    "path": "docs/source_archive_20260908/objects/18620be17cf87aa138ffa197c8a4099b05624f86c68bd018bfb974a17149e0d0.py",
+    "base": "GarimpoInvestimentos/v3/collectors/oi_collector.py",
+    "source_sha256": "18620be17cf87aa138ffa197c8a4099b05624f86c68bd018bfb974a17149e0d0",
+    "sha256_utf8": "18620be17cf87aa138ffa197c8a4099b05624f86c68bd018bfb974a17149e0d0",
+    "state": "historico_revisado_por_derivacao_integral",
+    "execution": "nao_executado",
+    "notes": "Variante byte-a-byte do objeto irmão já certificado ce10a3c1 (archive-derivation-0-block08-coverage.json); diferença confinada a fim de arquivo/EOL: 3 linhas em branco extras no fim. Nenhuma linha de código difere. Semântica idêntica à do irmão: coletor de open interest histórico: doc diz 8 h (atual 1 h), afirmação de feed pago; sem validação de registro/página/janela, CSV append sem lock, chave só por tempo, conflito ignorado."
+  },
+  {
     "index": 40,
     "path": "docs/source_archive_20260908/objects/6ebced92af4391d35c66d3b8fe17929491e7780306feb45982e021362678dbd2.py",
     "base": "GarimpoInvestimentos/cli.py",

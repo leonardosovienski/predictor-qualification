@@ -1,0 +1,236 @@
+[
+  {
+    "path": "tools/runtime_lab/run.py",
+    "sha256": "df5012bc29a01a31bbd8a1ceba0d96ab85acf05566bbb9330cc039ab72dedcce",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Runner Windows-only de laboratório: exige saída e binário Redis sob C:/BRASILEIRAO/work, hash sha256 do servidor, porta 26380 livre (SO_EXCLUSIVEADDRUSE), ambiente mínimo (PATH só dotnet+System32, TEMP/APPDATA/NUGET/NUMBA sob a saída), copia dotnet/ e contracts/ sem bin/obj; sobe redis-server próprio (protected-mode, sem persistência), confirma dono da porta via netstat e run_id; executa python_tests.py (DB 14), depois dotnet restore --locked-mode/build --warnaserror/test com cobertura (DB 15/13, kernel sintético), cada comando com timeout e taskkill; receipt.json com exit codes; termina só o próprio processo, nunca SHUTDOWN. Retorno 0 só com todos os comandos = 0. Escopo declarado: build comunitário descartável, não homologação de produção. ET-SRC; não executado (Windows-only)."
+  },
+  {
+    "path": "tools/runtime_lab/lab_guard.py",
+    "sha256": "7ec5c7acaf10c2d05ae3c340ac64997d797b4ef4dfdc5a9337d98b67a2d19753",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Audit hook (sys.addaudithook) do laboratório: permite socket só loopback para socketpair interno ou connect na 26380; bloqueia DNS não local, subprocess/os.system/exec/spawn, sqlite3.connect fora da saída (exceto :memory:), escrita fora da saída, leitura de .env, DADOS_PRESERVADOS e data/research/reports do repo, e mutações de FS fora da saída. Define BRASILEIRAO_LAB_GUARD_ACTIVE=1; modo debug rastreia exceções do hotpath_smoke. Contenção efetiva de dado operacional e rede no lab; não executado."
+  },
+  {
+    "path": "tools/runtime_lab/kernel_synthetic.py",
+    "sha256": "fdbf9a62e6ebd6b700a2078b4990d9fd2fcef488f00270c4daa8091888c5f0a4",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Daemon sintético: importa lab_guard antes de tudo e exige guard ativo; traça fases de import/JIT em log com faulthandler (45 s); exige URL redis://127.0.0.1:26380/13 e run_id do servidor descartável; aquece kernel_daemon._warmup_jit com parâmetros fixos (0.2,1.0,0.1,0.0,0.0,6), sinaliza prontidão por arquivo 'x' dentro do lab, espera arquivo de start (60 s) e chama kernel_daemon._serve_sessions. Nunca abre banco. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/runtime_lab/python_tests.py",
+    "sha256": "21c2e991b9218f72ab927f687bd465f5101c7348611c04827ebbb45836f9467f",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Allowlist explícita de testes de integração (test_lineup_inbox_redis.py, test_redis_integration.py) com guard ativo, curl_cffi Session/AsyncSession.request substituídos por PermissionError, pytest -m integration sem addopts/cache, basetemp e junit dentro da saída. Sem avaliador protegido. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/runtime_lab/sitecustomize.py",
+    "sha256": "90a9997848ff28c439a275079e3c1aad981016f8174adf4d2d0e96bd13ecb307",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "sitecustomize que importa lab_guard e aborta o interpretador com os._exit(70) se o guard falhar — evita laboratório sem contenção silenciosa. ET-SRC."
+  },
+  {
+    "path": "tools/publication_validation/run.py",
+    "sha256": "0baba9ce64cb31d85d6fe17071a163a2a00a9c5c6e84874a29a0139a57e091e6",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Runner de validação de publicação: saída nova fora do checkout, allowlist de testes de scope.json (sem '..'/absolutos), ambiente limpo (mantém só SYSTEMROOT/WINDIR/PATH/COMSPEC/PATHEXT), HOME/TEMP na saída; audit hook nega rede/subprocess (exceto socketpair loopback), sqlite fora da saída, escrita fora da saída, leitura de config.yaml/.env/DADOS_PRESERVADOS/data/reports/research e abre de evaluate_h14/h15/gate_a1/settle_h9 (avaliadores protegidos); bloqueia curl_cffi nativo; roda pytest e grava isolation.json com tentativas bloqueadas e exit code. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/publication_validation/compose_config.py",
+    "sha256": "6535d7785fbc3f347e23c38e1a6f1b1fe57b81253bf21491b5b079d2b06a46a4",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Gera Compose isolado: `docker compose config --format json` com env vazio (chaves de exchange vazias, inputs sintéticos permitidos); isolate() recusa qualquer bind mount fora de config.yaml→config.json sintético (read-only) e ./docker (read-only), zera variáveis LINEUP_Exchange__* e liga AllowSyntheticInputs; grava config.json mínimo e compose.json. Nenhuma configuração/credencial local copiada. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/publication_validation/guard_probes.py",
+    "sha256": "77c8854abf989198b89d610b646e2c58db7dfcbbd6f9359b497192d054a9944e",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Sondas pytest do guard de publicação: leitura de config.yaml/.env/data/reports recusada antes do open, conexão de rede e subprocess recusados, escrita no checkout recusada; isolate() troca só o config e recusa mount não revisado. Testa a contenção, não a ciência. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/publication_validation/installed_shadow.py",
+    "sha256": "3d332b34aadb92769c8841d56fa1ac780492a94bea728571fac7743b9fd28444",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Envelope Ops/shadow instalado: exige brasileirao_predictor importado de sys.prefix (wheel instalada), cria aplicação sintética (config.yaml, teams vazio, matches.db com tabela sintética), remove overrides de caminho, roda `python -I -m brasileirao_scripts.sombra_diaria --task-name brasileirao-sombra-manha --check` com timeout 60 s, exige exit 0, job-*.json schema 3 com provenance input_hashes.matches_database e recibo JSONL do runner contendo o check. Imprime scientific_steps_executed=False. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/integration_validation/run.py",
+    "sha256": "580cfd96ce62a8e71d3c70271389dfe31635617b0b62c49aa713d4e50a7738f2",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Validação BR-CAIN-MAIN-20260912: limpa env CAIN_/OLLAMA_/EXCHANGE_/REDIS_/PYTHONPATH, lê docs/EVIDENCE_REGISTRY.md (pin sha256, HEAD git), extrai CLAIM-BR-MARKET-001..003 (todas BLOCKED_PENDING_PIT_FEATURES); exporta snapshot (export_cain_status) e bundle (export_cain_bundle) validados pelos validadores canônicos; monta ResearchService/BundleService do CAIN com policy v3 (grants reference_only, limites de bytes), verifica rejeição sem aprovação, admitted→duplicate na reingestão, query total=3 com payload igual ao registro, origin.code_revision e inputs pin, relógios event/recorded/available = None, historian FACTUAL sem derivados; API FastAPI in-process com provider proibido (query/historian iguais, 422 em campo desconhecido), CLI cain research bundle historian/search iguais; casos negativos: profile inválido, campo obrigatório ausente, objeto corrompido após aprovação, conflito de identidade, manifesto ausente; verify offline após mover a inbox, materialize recupera bytes idênticos, revogação de grant oculta tudo; fonte inalterada. ET-SRC do consumidor real instalado; não executado aqui."
+  },
+  {
+    "path": "tools/export_cain_bundle.py",
+    "sha256": "771d7f2ea9f8313c608067a5476e8374d44d2a7efbc581cb1ffb168309820e8d",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Exportador de bundle documental para o CAIN: admitted_sources exige pins sha256 explícitos para docs/EVIDENCE_REGISTRY.md e opcionalmente reports/replay_round_2026_08_22.json; entidades 'claim' por linha CLAIM-BR-* com payload = colunas da tabela, relação SUPPORTED_BY ao artefato; recursos referenciados (exp001_*) só como referência sem bytes; replay retrospectivo só se schema retrospective-round-replay/1 e status DIAGNOSTIC_CONTAMINATED_NOT_CONFIRMATORY, ≤20 jogos, entidades match com temporal_admissibility UNKNOWN e published/ingested/cutoff None, observation_selection NOT_PROVEN; coverage.missing declara ausência de previsão/liquidação admissível e relógios desconhecidos. Não acessa banco nem coortes. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/export_cain_status.py",
+    "sha256": "fa4a361b55a209e41bc941b8e919b46f98897170bee5a8183fa84c6727565385",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Exportador ResearchSnapshotV1 stdlib: recusa saída dentro do checkout, exige sha256 explícito, timestamp aware, sem symlinks/junctions no caminho da fonte, fonte ≤100 kB e committed (git status limpo do arquivo); 3 linhas CLAIM-BR-MARKET-* exatas (9 colunas) viram records documented_status_row com evidence por offsets em codepoints e sha da linha; relê a fonte para detectar mudança durante a exportação; package canônico com restrictions (read, no disclose, generate=True) e coverage partial com limitações declaradas; publication_id = sha256 canônico; escrita atômica via mkstemp+fsync+os.link (idempotente se bytes iguais; FileExistsError se diferente) e fsync do diretório. ET-SRC; não executado."
+  },
+  {
+    "path": "tools/test_export_cain_bundle.py",
+    "sha256": "b7307e8269ead5deb330cfd5e9e9f0b2277f809c720483a1f9a36b7cbc5b2919",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "unittest do exportador de bundle com repositório git fictício em C:/BRASILEIRAO/work (Windows-only por caminho): replay preserva kickoff/generated/captured e não certifica PIT (available_at None, sem entidades prediction); determinismo entre duas saídas; rejeições: fonte inesperada, hash errado, arquivo ausente/alterado, saída existente, saída dentro do checkout, registro malformado, conteúdo sensível (SENSITIVE_CONTENT). ET-SRC; não executado."
+  },
+  {
+    "path": "tools/test_export_cain_status.py",
+    "sha256": "a6e6146e374d6133ba1c3c041dee9218eddfe0a6bf09bfcb36c0cfdc5e92c33d",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "unittest stdlib do exportador de status: carrega o módulo por caminho, git mockado; 3 linhas CLAIM-BR-MARKET-00n; verifica records=3, idempotência com timestamp fixo, interrupção simulada em os.link não deixa arquivo parcial nem staging, recusa sobrescrever, hash errado, saída no checkout, linhas duplicadas. ET-SRC; não executado."
+  },
+  {
+    "path": "poc_oddspapi.py",
+    "sha256": "beca4447dddcb72391e368637c5f36e87e4e665ed8d31a41b34b565c0aafd7aa",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "PoC read-only OddsPapi v4 (raiz do repo): chave só de ODDSPAPI_KEY no ambiente, redigida em mensagens de erro; exatamente duas chamadas (fixtures Série A id 325 com odds; odds do próximo fixture, verbosity 3); casa BR por aliases (betano/estrelabet/sportingbet/superbet/kto/pixbet), Pinnacle por alias; gate PASS (Pinnacle + ≥4 casas BR), PASS_PARTIAL ou FAIL; resume mercado 101 (1X2). Sem persistência, sem apostas. Versão saneada do PoC de research/kimi_market05. ET-SRC; não executado (rede)."
+  },
+  {
+    "path": "compose.yaml",
+    "sha256": "c53920a771f7b034fef7a875a12890b1e69ba948999cfe26b18fdc6ac9e6a549",
+    "depth": "semantic-integral",
+    "status": "OD",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Compose: redis 8.2.9-alpine pinado por digest com AOF everysec e healthcheck; init-data (Dockerfile.cli, brasileirao_scripts.init_compose_data, user 0:0) com variáveis de caminho (REDIS_URL, SPORTS/MARKET_DB, VORP, TITULARIDADE, RUNTIME_DIR, KERNEL_VORP_THETA=0.0, KERNEL_MAX_GOALS=12); kernel (Dockerfile.kernel) read_only com tmpfs, app-data ro, healthcheck brasileirao-kernel --healthcheck; worker .NET (Dockerfile.worker) read_only com variáveis LINEUP_Exchange__* vindas do ambiente (default vazio) e AllowSyntheticInputs default false, ./docker e config.yaml ro, healthcheck dotnet LineupWorker.dll --healthcheck. Configuração declarada; nenhum serviço levantado. OD."
+  },
+  {
+    "path": "config.yaml",
+    "sha256": "a0ddbb4353839fc31231ac159fdc48a9e87378f43effb65b1f02dfb9642e6009",
+    "depth": "semantic-integral",
+    "status": "OD",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Configuração científica: liga/torneio Brasileirão Série A 2026, source null (sem ingest de seleções), database data/matches.db; Elo 1500/home 100/janela 6 anos/meia-vida 4 anos/K 30; modelo calibration_window 4 anos, goal_half_life_days null (peso uniforme, política explícita após sweep 2026-08-24), max_goals 12; ensemble_xg enabled=false — desligado em 2026-08-22 pela trial h12 (COMPROVADA: RPS 0,2177→0,2133, IC95 dos quatro ganhos acima de zero em 2021-2024, n=1318) com explicação de que a justificativa anterior usava holdout selado 2025 e 2026 exploratório; hiperparâmetros congelados; dynamic_strength (TRACK A02, não consumido pelo serving); backtest min/max edge 0,02/0,15, OU 2,5, bootstrap 1000/seed 13, walk-forward 19 rodadas; player_stats FBref desativado (403); odds_shop sport key; sofascore ut_id 325 com season_ids 2021–2026. DD/OD de configuração; valores não validados nesta sessão."
+  },
+  {
+    "path": "contracts/redis-protocol-v2.md",
+    "sha256": "f57147e3276b8b3712acd97cbeb4a806b0dc87129713768edb9023079c7ba006",
+    "depth": "semantic-integral",
+    "status": "OD",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Contrato Redis v2 (brasileirao.redis/2): registro atômico ligando snapshot de escalação, state_version (INCR), run_id e idempotency_key; chaves de sequência/current/request (60 s)/identity/lease (5 s)/pending/ready/fair_odds (≤5 s)/signal_outbox (stream 10.000)/watchdogs; healthcheck exige protocol_version + session_id com TTL via Lua; Worker com loops mse e inbox; quatro pontos de aceitação atômica (produtor CAS de bytes, lease só se versão atual, conclusão só do dono, publicação do lote com comparação final no Redis); watchdog condicional com prazo original preservado; recuperação por pendências persistidas dentro dos 60 s; Lua sem rollback; outbox como fonte recuperável com verificação de identidade/versão/expires_at; sem executor financeiro; standalone (não Cluster); inbox lineup:v2:inbox com XREADGROUP/XAUTOCLAIM/XACKDEL (Redis ≥8.2), rejeitados em lineup:v2:rejected; hotpath_smoke verifica solicitação já registrada. DD que descreve o kernel/worker revisados. Não executado."
+  },
+  {
+    "path": "scripts/migration/build_data_archive.py",
+    "sha256": "e2c3b05c4609fe338b9bf6804be5cc5cae15b21c7d98fbd5db2cf211ab33f80b",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Construtor de ZIP data-only para migração: plano explícito (schema 1) com source_sha256/source_manifest_sha256, include_names/excluded (cada exclusão com motivo e metadados iguais ao manifesto)/extras (caminho absoluto + provenance obrigatória); política por nome que bloqueia partes .git/.venv/bin/obj, sufixos de código/binário/arquivos opacos e manifestos de dependência (não inspeciona payload semântico); nomes canônicos POSIX restauráveis no Windows (reservados, colisões casefold NFC, arquivo vs diretório pai); auditoria de ZIPs aninhados com limites (256 MB, 100k entradas, 4 GB expandido, profundidade 3, só tipos de dado); snapshot_restore_map exige fonte/snapshot/recibo incluídos e recibo ok/integrity_ok com sha igual; copia por stream verificando bytes/sha por entrada, re-hasheia a fonte ao fim, verify() do ZIP final, escreve checksum/manifest/plan/exclusions/receipt exclusivos ('xb') e apaga só os artefatos criados nesta invocação em erro. payloads_executed=False. ET-SRC; não executado."
+  },
+  {
+    "path": "scripts/migration/verify_archive.py",
+    "sha256": "01f5f141e55c27108e0790073de21512a19d9802f3bdda926f74375ce8395e23",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Verificador/extrator do ZIP de migração: nomes seguros (sem absolutos/'..'/':'/reservados Windows), sem duplicatas casefold, sem symlinks; MANIFESTO_SHA256.json com paths únicos e conteúdo igual ao ZIP; sha256 e bytes de cada entrada por stream; extração opcional só em pasta nova/vazia (não junction) com caminhos \\\\?\\ e open 'xb'; recibo JSON 'x'; application_started=False. ET-SRC; não executado."
+  },
+  {
+    "path": "research/kimi_market05/bet_engine/bet_engine.py",
+    "sha256": "842039a74fdd9c74c3aced1536a3eda1a42f7745660fafa6fd5683e2fc630045",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Protótipo de pesquisa (kimi_market05): devig proporcional/power/Shin (brentq), detector +EV com filtro de staleness (≤300 s) e arbitragem multi-casa com stakes ótimos; power_analysis_n, PSR/DSR (Bailey & López de Prado, com skew/kurtose), Sharpe e ROI com IC bootstrap. Docstring declara que todos os números citados são de dados SINTÉTICOS com edge injetado (ROI +13,7%, DSR 0,999 recuperando o parâmetro plantado; 0/200 falsos positivos em casa justa) e que a hipótese market-05 está 'pre-registrada' sem resultado econômico — leitura como resultado econômico seria mais forte que a evidência. Sem rede, sem capital. ET-SRC; não executado."
+  },
+  {
+    "path": "research/kimi_market05/bet_engine/paper_ledger.py",
+    "sha256": "0eac826af9e4344a86ed7114ae6e50a6327b2679c8e37644460aba50452de79f",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Ledger JSONL append-only de paper trading com cadeia de hash (hash_prev sha256[:16] da última linha): aposta só com ts_capture < kickoff (timezone obrigatória), stake flat 1.0, odd finita >1, sem duplicata por (event, market, selection); fechamento exige closing_odd (CLV) antes de liquidar; liquidar uma vez; relatório com ROI+IC bootstrap, CLV médio/% positivo, Sharpe, PSR, DSR com trials declarados ex ante e CAPITAL_GATE = ELIGIBLE_FOR_REVIEW só se DSR ≥ gate, CLV > 0 e IC inferior > 0, senão LOCKED (decisão humana). Limites: _load reconstrói estado por replay sem verificar a cadeia; arquivo sem lock. ET-SRC; não executado."
+  },
+  {
+    "path": "research/kimi_market05/bet_engine/test_bet_engine.py",
+    "sha256": "2a58c39906b153b7054e551e13e2d57fa2c1559e99b8b661ae36a1b53509fda9",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Testes do protótipo: devigs somam 1 e Shin infla o favorito (FLB), overround; detector encontra edge plantado, staleness bloqueia, sem edge sem alerta; arbitragem encontrada/ausente com stakes somando 1; poder cresce com odd e cai com edge; DSR < PSR com 50 trials; IC de ROI acima de zero com edge sintético de 10% em 3000 apostas e cobrindo zero sem edge. Controles sintéticos, não mercado. ET-SRC; não executado."
+  },
+  {
+    "path": "research/kimi_market05/bet_engine/test_paper_ledger.py",
+    "sha256": "e638bdda8ef6a4ab61c73e9fa2a5ecf1cb47159e3655bcf1e7c5074497c4486c",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Testes do ledger: stake não flat e datetime naive rejeitados; updates preservam cadeia (3 linhas bet/update/update, hash_prev correto, ret 1,1); fechamento/liquidação exigem estado válido e liquidação repetida é recusada. ET-SRC; não executado."
+  },
+  {
+    "path": "research/kimi_market05/poc_oddspapi.py",
+    "sha256": "acb15eb7136b695764f73e7f52e22fbff6d9e45711b2c38d7871861d540d04e5",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "PoC Gate A1 (versão de pesquisa, anterior à raiz): API_KEY lida no import e passada como query param sem redação de erros (raise_for_status expõe URL com chave em exceções — limitação de higiene, corrigida na versão da raiz que redige); catálogo de bookmakers, fixtures 7 dias sportId 10 filtrando 'brazil', odds de um fixture, veredito PASS se Pinnacle + ≥4 casas BR + ≥1 fixture; instruções de próximo passo. Sem persistência. ET-SRC; não executado (rede)."
+  },
+  {
+    "path": "research/kimi_market05/test_collector_contract.py",
+    "sha256": "9ec1e96017bd8e3bfc0f4073441f02115888b216babb795ba1b01fff415795d5",
+    "depth": "semantic-integral",
+    "status": "ET-SRC",
+    "executed": false,
+    "method": "Leitura integral do corpo no clone Linux do remoto; identidade com a linha de base provada por sha256 igual em hashes.json/untracked-hashes.json. Sem execução.",
+    "notes": "Contrato de testes do coletor MARKET-05 escrito ANTES do coletor: PIT estrito (captured_at ≥ kickoff rejeitado, naive rejeitado), odds inválidas em quarentena (0,5/1,0/negativa/NaN/inf/1001) e limites 1,01–1000 aceitos, identidade canônica (alias desconhecido/fuzzy não resolve sozinho, event_id estável entre fontes, reagendamento gera novo id), append-only com supersedes e hash chain verificável (tamper detectado), dedup exato e conflito mesmo segundo, mercado suspenso fora da cobertura operável, linhas OU distintas, separação coletor/detector (snapshot não homologado recusado, homologação só com Gate A1), proibições (sem roi/stake/place_bet/calculate_ev; sofascore não é fonte). Fixtures collector/detector fazem pytest.skip — suíte inteira pulada até existir implementação. ET-SRC; não executado."
+  }
+]

@@ -1650,70 +1650,94 @@
       "semantic_integral_certified": true,
       "semantic_review": "revisao-semantica-integral-corpo-proprio-historico",
       "semantic_notes": "Gerador documental historico com raiz fixa Superleo13; substituicoes literais README e escrita UTF8LF de handoffs/docs. Corpo integral de 167 linhas lido; datas, resultados e instrucoes contidos em strings sao textos historicos nao verificados, nao fatos nem autorizacao. Nenhuma execucao do gerador."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/1f19238ba24fd76d71fa8d5dfaed54214383cbe6c8d7a36d5a1521f60ff4155a.py",
+      "base": "GarimpoInvestimentos/v3/backtest_v3.py",
+      "source_sha256": "1f19238ba24fd76d71fa8d5dfaed54214383cbe6c8d7a36d5a1521f60ff4155a",
+      "base_sha256": "e581885d0e42257cad3f60ee25e04ffce5a10c817bcef173e0693748ecb693b0",
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-por-derivacao-diff-completo",
+      "semantic_notes": "Variante byte-a-byte do objeto irmão já certificado 3066fc8b (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: 3 linhas em branco extras no fim e último byte CRLF. Nenhuma linha de código difere. Semântica idêntica à do irmão: backtest histórico (v3/backtest.py) que substitui a cronologia guardada de retorno observado/funding realizado/barreiras por log-retorno×posição, custo de funding corrente como proxy, retornos sobrepostos compostos e Sharpe com desvio populacional×√n; remove guardas de finitude/horizonte/símbolo/Kelly, artefatos com SHA de entrada e scientific_state/capital=False; veredito final 'GO' e log 'Fase 2 AUTORIZADA' reaparecem; sweep de Kelly sem família congelada; wfa_returns.json sobrescrito. Só histórico; a base atual é replay descritivo guardado."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/f1aa91e733f10c52a7248f8319ed389d3c14b4ecbdec01173e588a3bdaafd7ba.py",
+      "base": "GarimpoInvestimentos/v3/backtest_v3.py",
+      "source_sha256": "f1aa91e733f10c52a7248f8319ed389d3c14b4ecbdec01173e588a3bdaafd7ba",
+      "base_sha256": "e581885d0e42257cad3f60ee25e04ffce5a10c817bcef173e0693748ecb693b0",
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-por-derivacao-diff-completo",
+      "semantic_notes": "GarimpoInvestimentos/v3/backtest_v3.py histórico (60 KB, 1.500 linhas) derivado do irmão certificado 3066fc8b (backtest histórico de 30 KB). Compartilha com o irmão o núcleo já revisado (WFA com IS/OOS/purge, log-retorno×posição, custo de funding corrente como proxy, Sharpe populacional×√n, veredito GO se PSR ≥ 0,80 & IC_lower > 0 & MaxDD < 20%, Kelly sweep, wfa_returns.json sobrescrito, log 'Fase 2 AUTORIZADA'). Acréscimos reais desta variante (versão mais tardia da linhagem histórica): (1) _find_barrier_return: stop-loss/take-profit intrabar caminhando hora a hora sem lookahead (0 = desligado), P&L usa retorno com barreira e o IC continua usando o horizonte cheio; (2) _portfolio_equity_curve (V-01 rev. 2): netting real de posições concorrentes por eventos de abertura/fechamento com alocação 1/num_slots do equity total — corrige o MaxDD subestimado da composição multiplicativa (exemplo 3×−50%: 0,500 vs 0,579); Sortino não anualizado e Calmar sobre essa curva; (3) cost_aware_filter: calibração de edge estritamente IS (sinais maduros antes do fim do IS, mínimo 20 por direção) via economic_gate.estimate_edge/decide_cost_aware, recusando trades OOS cujo limite inferior não supera fee+slippage+funding — sem usar retorno/threshold do OOS; (4) H7 use_macro_dxy (macro_event_dummy + dxy_return_1d de CSV local, RegimeEngine com extra_features) e H9 use_oi_volume_ratio (build_volume_index + build_oi_volume_ratio), ambos default False preservando fingerprint; (5) run_threshold_grid: varredura fr_zscore × min_regime_confidence com WFA completo por combinação, registrando TODAS as combinações em trials.json via register_trial (metric psr, pipeline_fingerprint do atestado harness) antes de olhar resultados e atualizando o Sharpe depois, com aviso metodológico explícito de data-snooping ('candidato a pré-registrar, nunca veredicto'); (6) flags CLI correspondentes e emissão de métricas Sortino/Calmar/gate. Mantém as fraquezas do irmão (sem guardas de finitude/símbolo, veredito GO logado). Evidência primária de como H7/H9 e a grade de thresholds foram implementadas na época; 12 linhas com CRLF misturado. Sem execução, sem rede, sem segredo."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/5af28e7334925abc65c431efb376ecb26575c313f5b50ecca772ce9e854e848e.py",
+      "base": null,
+      "source_sha256": null,
+      "base_sha256": null,
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-corpo-proprio-historico",
+      "semantic_notes": "deliver_retro.py (sessão 20260907-altcoins; 4 cópias idênticas, inclusive dentro do pacote CRIPTO_TESTE_HISTORICO_REPRODUCAO.zip/provenance). Publica o diagnóstico histórico v5 da regra de altcoins em três modos: stage (assert replay offline byte-idêntico dos 4 arquivos de resultado, code_freeze.json conferido, 10 arquivos protegidos sem diff contra a base 3eabcf4a, grava validation.json com versões de pacotes e '53 testes passaram' declarados, search_log.json com commits de protocolo/freeze/correções de loader e decisão NO_TRADING_EVIDENCE_RULE_ABSTAINS, anexa seção em docs/HYPOTHESES.md e escreve CRIPTO_TESTE_HISTORICO.md/.json e atualiza ACOMPANHAMENTO_CRIPTO.md preservando o texto anterior), package (monta pasta com scripts, testes, evidências, dados brutos/normalizados, treinamento fixo, esperados, README com comandos offline, verify_reproduction.py e FILES_SHA256.json; zipa e reconfere hashes) e manifest (patch git base→HEAD e CRIPTO_TESTE_HISTORICO_MANIFESTO.json). Conteúdo científico embutido: 140 semanas 2024-01-01→2026-09-06, 661 símbolos, 727.447 linhas diárias, 13.996 candidatos, ZERO operações, 5.000→5.000 USDT, 12.730 sem margem positiva, 1.265 com vizinho censurado; declara explicitamente que é diagnóstico adaptativo (histórico já consultado), não validação nem prova de lucro, formal_attestation=False. Números da validação são constantes no código (não derivados de log) — limitação de proveniência. Sem segredo, sem ordens; escreve só em REPO/docs e outputs da sessão."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/7e7457ffbaeab7717382c3492c728308830a8123bf6793e1051d2e9f4c1a8d96.py",
+      "base": "scripts/feature_store_backup.py",
+      "source_sha256": "7e7457ffbaeab7717382c3492c728308830a8123bf6793e1051d2e9f4c1a8d96",
+      "base_sha256": "0bfa5eab06f6210583dc1625fc5619a210622aea1cbc2370acaa30c8103c80c8",
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-por-derivacao-diff-completo",
+      "semantic_notes": "Variante byte-a-byte do objeto irmão já certificado 9a40dbeb (archive-root-semantic-coverage.json); diferença confinada a fim de arquivo/EOL: 3 linhas em branco extras no fim e CRLF final. Nenhuma linha de código difere. Semântica idêntica à do irmão: attest_harness histórico com controles sintéticos edge/noise e PSR/IC, validade temporal e staging de dois atestados com escritas finais separadas (não transacionais); backup SQLite via API backup em modo RO com integrity/hash/size/manifesto e destino novo por rename; restore confere origem antes da cópia mas não o digest do destino depois (janela TOCTOU, sem fsync)."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/a561f7a5811c06b651b6435762c939b468850aa052f431a1a5fb813fcf6ff23e.py",
+      "base": "scripts/attest_harness.py",
+      "source_sha256": "a561f7a5811c06b651b6435762c939b468850aa052f431a1a5fb813fcf6ff23e",
+      "base_sha256": "aa564b5699c6189a9158d73538802e5b801253d145b3969f7d0662eb7f362ffb",
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-por-derivacao-diff-completo",
+      "semantic_notes": "Variante byte-a-byte do objeto irmão já certificado 8e033984 (archive-root-semantic-coverage.json); diferença confinada a fim de arquivo/EOL: 3 linhas em branco extras no fim. Nenhuma linha de código difere. Semântica idêntica à do irmão: atestador anterior emite Fase 1 antes de testar V3; entrega project_review verifica substrings de logs e evidências externas e escreve contagens/testes/lucros fixos (ET-HIST declarado, não controles executados); ZIP com hashes tracked/data/manifest; automação só lida, nada acionado; pacote pode incluir arquivos privados tracked."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/9c29c2cf26e886820a540fbf8e22f372b20a53786c249562a82708da76618132.py",
+      "base": "GarimpoInvestimentos/v3/regime_engine.py",
+      "source_sha256": "9c29c2cf26e886820a540fbf8e22f372b20a53786c249562a82708da76618132",
+      "base_sha256": "3242d3f98ca893973187aff46921278d7d2301c4f5cf576c434a803460d5cd48",
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-por-derivacao-diff-completo",
+      "semantic_notes": "Variante byte-a-byte do objeto irmão já certificado 6c6a0b10 (archive-derivation-2-coverage.json); diferença confinada a fim de arquivo/EOL: irmão termina com 3 linhas em branco e CRLF; pendente termina limpo em '0\\n'. Nenhuma linha de código difere. Semântica idêntica à do irmão: RegimeEngine histórico schema 1 sem extra features/hash de treino, emissões gaussianas por linha (covariância singular → uniforme se tudo inválido), forward causal sem guarda de entrada vazia; só seed 42 HMM full-cov, atribui scaler/modelo antes do mapeamento completo de estados, sem finitude/retry/escrita atômica; pesos devolvidos compartilham dict global; pickle salvo/lido sem proteção, fingerprint ausente aceito com aviso (base atual rejeita)."
+    },
+    {
+      "path": "docs/open_source_research/20260911T0233/phase3b/input_bundle/5f316589e5bbbbeb_diagnose_btc_execution.py",
+      "base": null,
+      "source_sha256": null,
+      "base_sha256": null,
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-corpo-proprio-historico",
+      "semantic_notes": "diagnose_btc_execution.py (V1_CODE.zip de basis_research_20260908 e 3 entregas de sessão; cópia no input_bundle da fase 3b da pesquisa open-source 20260911T0233). Diagnóstico ao vivo do livro público Binance spot/futuros BTCUSDT: importa EVIDENCE/protocol/sha/write de scripts.basis_data; walk() percorre níveis validando ordenação estrita e níveis finitos, falha com 'Insufficient published depth'; grid_floor/common_grid alinham quantidade ao mínimo múltiplo comum de stepSize LOT_SIZE×MARKET_LOT_SIZE via Decimal; filters() extrai step/min/max/minNotional/status; estimate() calcula quantidade para 1.250 USDT, VWAP compra spot/venda futuro e round-trip, custo de livro, taxas assumidas (10 bps spot, 5 bps futuro), reserva de caixa sobre 5.000 USDT, sobra de margem após salto de 30% e alternativa de taxa cobrada em BTC (dust não hedgeado); declara actual_account_fees=UNKNOWN e nada certificado. collect() baixa exchangeInfo e 12 pares de snapshots depth (limit 100, 2 threads, 5 s entre eles), guarda resposta bruta gz com hash/timestamps ns, marca freshness (≤2 s e skew ≤0,5 s), calcula mediana/máximo de bps entre snapshots válidos, grava diagnostic.json com orders_sent=0/account_access=False, ou failure.json. Rede pública sem credenciais (trust_env=False); não envia ordens; saída em diretório novo. Relevante para custos reais do basis trade; não é fill histórico."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/dc3a8a62e5739174be893e209d460f53a49382e88968924ba4f960cac0e74216.py",
+      "base": "GarimpoInvestimentos/v3/macro_features.py",
+      "source_sha256": "dc3a8a62e5739174be893e209d460f53a49382e88968924ba4f960cac0e74216",
+      "base_sha256": "aed24905abe2126661c1295d759cef37aaad024496d2c150cade52edb387358a",
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-por-derivacao-diff-completo",
+      "semantic_notes": "GarimpoInvestimentos/v3/macro_features.py histórico (cópias na sdist 1.0.0, no pacote CRIPTO_CODIGO_DADOS_REPRODUCAO e no worktree cripto-research) versus a base em 88158f25. A versão histórica (H7 macro/DXY) é a anterior e mais permissiva: build_macro_event_dummy só valida window_days ≥ 0 e carrega o calendário sem exigir calendar_available_at nem cobertura por ano; build_dxy_return alinha closes do DXY por published_at(date, publish_lag_days) em dias úteis (predicado direto, correção do bug de fim de semana da auditoria 2026-09-05) e imputa 0.0 em lacuna; dxy_coverage mede a fração imputada; load_dxy_daily_closes lê CSV date,close simples. A base atual removeu o lag presumido como padrão: exige available_at por vintage ou assume_business_day_lag explícito, exige calendar_available_at ou assume_calendar_known, valida closes finitos/positivos, rejeita publicação anterior à referência e observações conflitantes, aceita cabeçalhos FRED, adiciona load_dxy_availability e faz o alinhamento por timestamp em ms com insort (_aligned_dxy). Ou seja: a evolução reforçou a integridade temporal (PIT por vintage documentado, fail-closed) exatamente no ponto que o auditor apontou; a versão histórica é a que gerou os vereditos H7/H9 da época. Sem segredo, sem rede em ambas."
+    },
+    {
+      "path": "docs/source_archive_20260908/objects/cb4ab95b439abaffba9698392fe45a7625fc67a6bb5a2a1783d9a61c74cf6d5a.py",
+      "base": null,
+      "source_sha256": null,
+      "base_sha256": null,
+      "semantic_integral_certified": true,
+      "semantic_review": "revisao-semantica-integral-corpo-proprio-historico",
+      "semantic_notes": "predictor_core/testing/harness.py extraído da wheel do Core embarcada na sessão 20260907-altcoins (3 cópias idênticas). Controle positivo do pipeline: assert_pipeline_has_power exige que evaluate_func detecte edge sintético (edge_verdict) e não confirme ruído, senão PipelineHasNoPowerError (cego ou fabrica significância). attest_pipeline_power emite atestado JSON atômico (schema pipeline-power/2) com passed_at/expires_at (valid_for padrão 7 dias), core_version, code_version de current_code_version(repo), métrica obrigatória e pipeline_fingerprint (sha256 do módulo/qualname/fonte das três funções) — o registry de trials do Core exige o mesmo fingerprint e métrica para abrir trial nova; recusa árvore suja (DirtyWorkingTreeError, achado 7 da auditoria 2026-09-05) salvo allow_dirty=True. É o mecanismo que a fixture registry_attestation de implement_core.py (A3-i014) passa a exercitar no domínio crypto. Cópia de dependência (Core), não código do domínio; sem rede, sem segredo."
     }
   ],
   "state": {
     "assigned": 193,
-    "semantic_integral_certified": 184,
-    "pending": [
-      {
-        "index": 0,
-        "path": "docs/source_archive_20260908/objects/1f19238ba24fd76d71fa8d5dfaed54214383cbe6c8d7a36d5a1521f60ff4155a.py",
-        "base": "GarimpoInvestimentos/v3/backtest_v3.py",
-        "source_sha256": "1f19238ba24fd76d71fa8d5dfaed54214383cbe6c8d7a36d5a1521f60ff4155a"
-      },
-      {
-        "index": 1,
-        "path": "docs/source_archive_20260908/objects/f1aa91e733f10c52a7248f8319ed389d3c14b4ecbdec01173e588a3bdaafd7ba.py",
-        "base": "GarimpoInvestimentos/v3/backtest_v3.py",
-        "source_sha256": "f1aa91e733f10c52a7248f8319ed389d3c14b4ecbdec01173e588a3bdaafd7ba"
-      },
-      {
-        "index": 2,
-        "path": "docs/source_archive_20260908/objects/5af28e7334925abc65c431efb376ecb26575c313f5b50ecca772ce9e854e848e.py",
-        "base": null,
-        "source_sha256": null
-      },
-      {
-        "index": 3,
-        "path": "docs/source_archive_20260908/objects/7e7457ffbaeab7717382c3492c728308830a8123bf6793e1051d2e9f4c1a8d96.py",
-        "base": "scripts/feature_store_backup.py",
-        "source_sha256": "7e7457ffbaeab7717382c3492c728308830a8123bf6793e1051d2e9f4c1a8d96"
-      },
-      {
-        "index": 4,
-        "path": "docs/source_archive_20260908/objects/a561f7a5811c06b651b6435762c939b468850aa052f431a1a5fb813fcf6ff23e.py",
-        "base": "scripts/attest_harness.py",
-        "source_sha256": "a561f7a5811c06b651b6435762c939b468850aa052f431a1a5fb813fcf6ff23e"
-      },
-      {
-        "index": 5,
-        "path": "docs/source_archive_20260908/objects/9c29c2cf26e886820a540fbf8e22f372b20a53786c249562a82708da76618132.py",
-        "base": "GarimpoInvestimentos/v3/regime_engine.py",
-        "source_sha256": "9c29c2cf26e886820a540fbf8e22f372b20a53786c249562a82708da76618132"
-      },
-      {
-        "index": 6,
-        "path": "docs/open_source_research/20260911T0233/phase3b/input_bundle/5f316589e5bbbbeb_diagnose_btc_execution.py",
-        "base": null,
-        "source_sha256": null
-      },
-      {
-        "index": 7,
-        "path": "docs/source_archive_20260908/objects/dc3a8a62e5739174be893e209d460f53a49382e88968924ba4f960cac0e74216.py",
-        "base": "GarimpoInvestimentos/v3/macro_features.py",
-        "source_sha256": "dc3a8a62e5739174be893e209d460f53a49382e88968924ba4f960cac0e74216"
-      },
-      {
-        "index": 8,
-        "path": "docs/source_archive_20260908/objects/cb4ab95b439abaffba9698392fe45a7625fc67a6bb5a2a1783d9a61c74cf6d5a.py",
-        "base": null,
-        "source_sha256": null
-      }
-    ],
-    "root_extra_blocks_007_020": "Nao iniciados: nenhuma leitura semantica, nenhum item certificado.",
-    "stop_reason": "Pai solicitou interromper novas leituras por limite semanal informado pelo usuario.",
-    "original_execution": false,
-    "central_coverage_merge": "Pendente pai; usar archive-derivation-0-coverage.json."
+    "semantic_integral_certified": 193,
+    "pending": [],
+    "closed_at_utc": "2026-09-30T17:45:57.711883+00:00",
+    "closed_by": "retomada Linux (bloco 19)"
   }
 }

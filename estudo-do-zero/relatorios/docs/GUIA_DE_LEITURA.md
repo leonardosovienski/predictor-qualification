@@ -76,3 +76,33 @@ Comece por LINHA_DE_BASE.md e RELATORIO_GERAL.md; depois PRELIMINAR, INVENTARIO 
 6. workflows e RAW_LOGS somente correspondentes ao SHA/gate investigado
 
 Na primeira passagem, ignore caches, wheels, ambientes e datasetsbrutos; catalogue relatóriosdatados/RAW_LOGS sem lê-los como verdade atual. Volte a eles somente para o gate ou conclusão em disputa. Não execute exemplos/doctor/verificadores no original: diversos inicializam bancos ou gravam recibos. Leia o preflight e a saída de ET-RUN antes usar os resultados.
+
+## Diagramas
+
+Arquivos `.mmd` em `diagramas/` (Mermaid). Os de cain, stocks, cripto e brasileirão também estão incorporados nos respectivos COMO_FUNCIONA; core, ops, ecosystem e qualification têm blocos Mermaid inline nos seus COMO_FUNCIONA e ARQUITETURA_GERAL. Todos são modelos de leitura (INF) sobre código e contratos inspecionados.
+
+- `diagramas/brasileirao-predictor_er.mmd`
+- `diagramas/brasileirao-predictor_estados.mmd`
+- `diagramas/brasileirao-predictor_sequencia.mmd`
+- `diagramas/cain-componentes.mmd`
+- `diagramas/cain-conversa.mmd`
+- `diagramas/cain-er.mmd`
+- `diagramas/cain-pesquisa.mmd`
+- `diagramas/cain-workflow-estados.mmd`
+- `diagramas/cripto-predictor_er.mmd`
+- `diagramas/cripto-predictor_estados.mmd`
+- `diagramas/cripto-predictor_sequencia.mmd`
+- `diagramas/geral_contexto.mmd`
+- `diagramas/geral_dados.mmd`
+- `diagramas/geral_pacotes.mmd`
+- `diagramas/qual-componentes.mmd`
+- `diagramas/qual-estados.mmd`
+- `diagramas/qual-schema.mmd`
+- `diagramas/qual-sequencia-atestado.mmd`
+- `diagramas/qual-sequencia-coleta.mmd`
+- `diagramas/qual-sequencia-runtime.mmd`
+- `diagramas/stocks-componentes.mmd`
+- `diagramas/stocks-er.mmd`
+- `diagramas/stocks-estados.mmd`
+- `diagramas/stocks-ingestao-simulacao.mmd`
+- `diagramas/stocks-rj.mmd`

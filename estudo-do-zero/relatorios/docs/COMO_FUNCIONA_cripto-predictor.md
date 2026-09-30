@@ -84,9 +84,9 @@ Separar: fonte observada; build não produzido aqui; release bytes investigados 
 
 ## Cobertura e continuidade
 
-A-L possuem fontes e limites explícitos acima. Profundidade semântica integral de todos os módulos próprios ainda não foi certificada; coverage.json lista arquivos aprofundados e pendentes. Não converter leitura mecânica em revisão humana. Revisão posterior deve terminar módulos pendentes e suítes isoladas antes de declarar integralidade; preserva preliminar, identidade, hashes, logs e probes. Diagramas em diagramas/cripto-predictor_{sequencia,estados,er}.mmd são modelos INF dos caminhos citados, não observações de operação.
+A-L possuem fontes e limites explícitos acima. Retomada de 2026-09-30 (Linux): coverage.json passou a refletir, por caminho e hash, a revisão semântica integral de módulos, packages, scripts (75), testes (169+1), CI/config e das quatro partições do arquivo histórico (773 objetos, sem execução); ver crypto-active-coverage-merged.json e crypto-archive-coverage-merged.json. Leitura não é execução: suítes completas e harness econômicos não foram rodados; preserva preliminar, identidade, hashes, logs e probes. Diagramas em diagramas/cripto-predictor_{sequencia,estados,er}.mmd são modelos INF dos caminhos citados, não observações de operação.
 
-Atualização de escopo: outra raiz com versão mais nova foi localizada. Consulte [suplemento de épocas e contratos locais](../relatorios/SUPLEMENTO_RAIZES_DOMINIOS.md). Não misturar interfaces/finding desta fonte primária com a alternativa.
+Atualização de escopo: outra raiz com versão mais nova foi localizada. Consulte [suplemento de épocas e contratos locais](../SUPLEMENTO_RAIZES_DOMINIOS.md). Não misturar interfaces/finding desta fonte primária com a alternativa.
 
 Aprofundamento adicional: `GarimpoInvestimentos/analyzers/factor_dsl.py`: Revisão semântica de todas funções: whitelist/aridade/validação tipos finitos, AST própria sem eval, lag>=1, rolling fechado i com amostra completa, variância amostral, None em desvio/divisor zero; warmup composição. Causalidade por índice exige input cronológico/alinhado; não comprova disponibilidade histórica externa.
 
@@ -163,3 +163,116 @@ profit_recovery_v1.py separa catálogo ORACLE e detecção por prefixo; previsã
 Há limites adicionais objetivos: paper_execute_v2 reduz o fill pela profundidade disponível na saída futura, registra latência sem deslocar execução, e portfolio_summary soma fechamento serial sem reserva ou margem. money_left_on_table subtrai PnL monetário capturado de soma de retornos fracionários capturáveis, unidades incompatíveis quando paper não está vazio. _return_metrics define operação ativa pelo retorno bruto diferente de zero, dispensando custo de uma operação com retorno bruto exatamente zero. Os rótulos REALISTIC_PAPER_V2 e POSITIVE não validam fills, capacidade ou lucro. Todas as rotas preservam capital_permission=False.
 
 profit_research.py compara só contas com moeda, capital, período, cenário e evidence_kind iguais, exige seis categorias de custo e distingue net desconhecido de teto conhecido. renewal_research.py reconstrói fluxos e limita economias de renovação sob quantidades fixas; seus bounds otimistas e sensibilidades não são backtest executável.
+
+## Diagramas (modelos INF sobre os módulos e contratos inspecionados)
+
+Os três arquivos abaixo existem em `diagramas/` e estão incorporados aqui; são modelos de leitura, não máquinas de estado literais do código.
+
+### Sequência
+
+```mermaid
+sequenceDiagram
+ participant U as Usuário (cripto-predictor CLI)
+ participant M as main.run
+ participant I as ingestion.run_ingest
+ participant FS as dpl.FeatureStore (SQLite)
+ participant A as analyzers.ai_insights
+ participant N as Notícias/LLM (rede)
+ participant H as core.history / export
+ U->>M: analyze (sem flag ingest)
+ M->>FS: serving_context(snapshot recente, features do contrato)
+ alt sem snapshot válido
+  FS-->>M: SOURCE_UNAVAILABLE
+ else snapshot válido
+  M->>A: analyze_asset(snapshot, guard, cache por fingerprint)
+  A->>N: notícias + juiz LLM (orçamento api_guard)
+  N-->>A: score 0..100 ou falha
+  A-->>M: previsão ou fallback neutro 50 (llm_fallback)
+  M->>H: append_history antes de cache/export
+  H-->>U: relatório; nenhuma ordem
+ end
+ Note over U,I: ingest é comando separado: providers (fallback/consenso) + Fear&Greed → alinhamento → FeatureStore
+ Note over M,H: Exportação/score não executam ordem; capital_permission False (governance)
+```
+
+### Estados
+
+```mermaid
+stateDiagram-v2
+ [*] --> SNAPSHOT_CHECK: analyze
+ SNAPSHOT_CHECK --> SOURCE_UNAVAILABLE: sem snapshot recente/identificado
+ SNAPSHOT_CHECK --> PREFILTER: snapshot válido
+ PREFILTER --> EXCLUDED: prefilter exclui ativo
+ PREFILTER --> GUARD: elegível
+ GUARD --> BUDGET_BLOCKED: api_guard nega (limite finito esgotado)
+ GUARD --> LLM_CALL: permitido (default limite 0 = sem teto, CR-BUDGET-001)
+ LLM_CALL --> SCORED: score finito 0..100
+ LLM_CALL --> FALLBACK_50: falha/cota (llm_fallback=True, não cacheado)
+ SCORED --> PERSISTED: append_history
+ FALLBACK_50 --> PERSISTED
+ PERSISTED --> [*]: export; capital_enabled False
+ note right of SCORED: DESCRIPTIVE_SIGNAL / DESCRIPTIVE_REPLAY (V3); nenhum estado autoriza capital
+```
+
+### Esquema
+
+```mermaid
+erDiagram
+ RAW_MARKET_DATA {
+  text source
+  text symbol
+  text interval
+  text ts
+  real open_high_low_close
+  real volume
+  text published_at
+ }
+ RAW_SIGNALS {
+  text source
+  text name
+  text ts
+  text vintage
+  real value
+  text published_at
+  text content_hash
+  text scientific_state
+ }
+ FEATURES_ALIGNED {
+  text symbol
+  text interval
+  text ts
+  text feature_version
+ }
+ INGESTION_PROVENANCE {
+  text run_id
+  text provider
+  text receipt
+ }
+ MARKET_SNAPSHOTS {
+  text snapshot_id
+  text symbol
+  text interval
+  text feature_version
+  text collected_at
+ }
+ PREDICTION_INPUTS {
+  text ativo
+  text ts
+  text input_hash
+ }
+ PREDICTIONS {
+  text ativo
+  text ts
+  real score
+  int llm_fallback
+ }
+ PREDICTIONS_ARCHIVE_CHAIN {
+  int archive_id
+  text chain_hash
+ }
+ RAW_MARKET_DATA ||--o{ FEATURES_ALIGNED : alinha
+ RAW_SIGNALS ||--o{ FEATURES_ALIGNED : enriquece
+ MARKET_SNAPSHOTS ||--o{ PREDICTION_INPUTS : congela_entrada
+ PREDICTION_INPUTS ||--|| PREDICTIONS : identidade_ativo_ts
+ PREDICTIONS ||--o{ PREDICTIONS_ARCHIVE_CHAIN : sela
+```

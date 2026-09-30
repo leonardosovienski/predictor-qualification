@@ -1,0 +1,55 @@
+erDiagram
+ MATCHES {
+  text event_id
+  text date
+  text home_team
+  text away_team
+  int home_score
+  int away_score
+  text tournament
+  text result_observed_at
+ }
+ SOFASCORE_MATCHES {
+  text event_id
+  text competition
+  text season
+  text kickoff
+  real xg
+ }
+ MATCH_STATISTICS {
+  text event_id
+  text team
+  text period
+  text stat
+ }
+ ODDS_SNAPSHOTS {
+  text event_id
+  text market
+  text selection
+  text captured_at
+  real odd
+ }
+ ODDS_LINES {
+  text event_id
+  text market
+  real line
+ }
+ MATCH_KICKOFF_VERSIONS {
+  text event_id
+  text kickoff
+  text lifecycle
+ }
+ CURRENT_ELO {
+  text team
+  real rating
+ }
+ MODEL_PARAMETERS {
+  text key
+  real value
+ }
+ SOFASCORE_MATCHES ||--|| MATCHES : espelha_event_id
+ MATCHES ||--o{ MATCH_STATISTICS : detalha
+ MATCHES ||--o{ ODDS_SNAPSHOTS : cota
+ MATCHES ||--o{ ODDS_LINES : linhas
+ MATCHES ||--o{ MATCH_KICKOFF_VERSIONS : versiona_kickoff
+ CURRENT_ELO ||--o{ MATCHES : rating_pre_jogo
