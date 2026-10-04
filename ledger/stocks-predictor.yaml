@@ -1,0 +1,47 @@
+﻿repo: stocks-predictor
+atualizado: 2026-10-03
+escala: [DECLARED, IMPLEMENTED, WIRED, EXERCISED, REPRODUCED, PROVEN]
+
+componentes:
+  - id: dispatcher-run_h
+    caminho: main.py:244
+    nivel: WIRED
+    evidencia: "CLI despacha via getattr(backtest, f'run_h{n}')"
+    gaps: ["nao verifica o lacre antes de despachar"]
+    proximo: "conferir hN_frozen_config_hash contra seals.json antes de chamar run_h{n}"
+
+  - id: lacres-H17-H19
+    caminho: stocks_predictor/config.py (h17/h18/h19_frozen_config_hash)
+    nivel: EXERCISED
+    evidencia: "hashes calculados em 2026-10-03 (Python 3.13.15) identicos a RESEARCH_FREEZE.md:66"
+    gaps: ["registro so em prosa", "verificacao manual, fora do runtime", "cobertura do instrumento de sinal a confirmar"]
+
+  - id: lacres-H6-H16
+    caminho: stocks_predictor/config.py (h6..h16_frozen_config_hash)
+    nivel: IMPLEMENTED
+    gaps: ["nao conferidos contra os lacres historicos do RESEARCH_FREEZE.md"]
+
+  - id: EconomicRebalanceGate
+    caminho: stocks_predictor/economic_gate.py:70
+    nivel: IMPLEMENTED
+    condicao: "ativacao condicionada a CAPITAL_ALLOWED; nenhum documento afirma que esta ativo"
+
+  - id: sinais-valor-legacy
+    caminho: stocks_predictor/factor.py (legacy_accruals/earnings_yield/book_to_market_signals)
+    nivel: IMPLEMENTED
+    nota: "instrumento pre-registrado de H18/H19 (04/09); sem chamada porque os runners estao pausados"
+
+  - id: sinais-valor-cvm_pit
+    caminho: stocks_predictor/factor.py (accruals/earnings_yield/book_to_market_signals)
+    nivel: IMPLEMENTED
+    nota: "instrumento corrigido; usado apenas por script de cobertura"
+    decisao_pendente: "definir e pre-registrar qual instrumento H18/H19 usarao antes do desbloqueio"
+
+  - id: record_forward
+    caminho: main.py:274 -> paper.py:36
+    nivel: WIRED
+
+  - id: legacy_record_forward
+    caminho: stocks_predictor/paper.py:42
+    nivel: IMPLEMENTED
+    gaps: ["declarado para reproducao historica, mas sem caminho de CLI"]
