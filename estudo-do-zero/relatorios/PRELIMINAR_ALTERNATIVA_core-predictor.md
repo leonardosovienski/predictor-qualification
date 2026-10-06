@@ -1,0 +1,3 @@
+# Caracterização antes da narrativa: core-predictor alternativa
+
+Raiz `C:\QUALIFICACAO\repos\core-predictor`, HEAD `5a0841509f091ea0aa95bde0d3d65e2a1a9e984d` limpo conforme linked-roots.json. Manifest `predictor-core` versão `3.2.1`. Método: hash de todos rastreados; leitura integral de todo código/config/teste alterado; trechos idênticos referenciados à leitura semântica da fonte primária, sem reconstruir execução. Material e hashes em alternative-changes.json/alternative-hashes.json; diff preservado. Nenhum código da raiz alternativa executado. Narrativa alternativa ainda não lida neste bloco.

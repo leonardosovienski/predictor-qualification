@@ -1,0 +1,471 @@
+### tests/test_db_extended_odds.py
+10: import sqlite3
+12: from brasileirao_predictor import db
+15: def _fresh():
+16:     conn = sqlite3.connect(":memory:")
+17:     conn.executescript(db.SCHEMA)
+18:     db._migrate(conn)
+19:     return conn
+27: def test_migration_adds_flat_columns_to_old_db():
+28:     conn = sqlite3.connect(":memory:")
+30:     conn.execute("""CREATE TABLE sofascore_matches (
+31:         event_id INTEGER PRIMARY KEY, competition TEXT, season TEXT, date TEXT,
+32:         home_team TEXT, away_team TEXT, home_score INTEGER, away_score INTEGER,
+33:         home_xg REAL, away_xg REAL, odds_home REAL, odds_draw REAL, odds_away REAL,
+34:         odds_over REAL, odds_under REAL)""")
+35:     conn.execute("INSERT INTO sofascore_matches (event_id, odds_over, odds_under) VALUES (1, 1.9, 1.95)")
+37:     conn.executescript(db.SCHEMA)
+38:     db._migrate(conn)
+40:     cols = {r[1] for r in conn.execute("PRAGMA table_info(sofascore_matches)")}
+41:     for c in db._FLAT_MARKET_COLS:
+42:         assert c in cols, f"coluna {c} não foi adicionada"
+44:     assert conn.execute("SELECT odds_over FROM sofascore_matches WHERE event_id=1").fetchone()[0] == 1.9
+47: def test_migration_is_idempotent():
+48:     conn = _fresh()
+49:     db._migrate(conn)  # rodar de novo não deve quebrar
+50:     db._migrate(conn)
+51:     cols = {r[1] for r in conn.execute("PRAGMA table_info(sofascore_matches)")}
+52:     assert "odds_btts_yes" in cols
+55: def test_backfill_ou_2_5_into_odds_lines():
+56:     conn = _fresh()
+57:     conn.execute(
+58:         "INSERT INTO sofascore_matches (event_id, odds_over, odds_under, "
+59:         "odds_over_open, odds_under_open) VALUES (7, 2.1, 1.8, 2.2, 1.75)"
+60:     )
+61:     db._migrate(conn)  # backfill roda aqui
+62:     row = conn.execute(
+63:         "SELECT odd_a, odd_b, odd_a_open, odd_b_open FROM odds_lines WHERE event_id=7 AND market='ou' AND line=2.5"
+64:     ).fetchone()
+65:     assert row == (2.1, 1.8, 2.2, 1.75)
+68: def test_backfill_skips_when_no_legacy_ou():
+69:     conn = _fresh()
+70:     conn.execute("INSERT INTO sofascore_matches (event_id) VALUES (9)")
+71:     db._migrate(conn)
+72:     n = conn.execute("SELECT COUNT(*) FROM odds_lines WHERE event_id=9").fetchone()[0]
+73:     assert n == 0
+81: def _insert_event(conn, eid=100):
+82:     conn.execute(
+83:         "INSERT INTO sofascore_matches (event_id, home_team, away_team) VALUES (?, 'A', 'B')",
+84:         (eid,),
+85:     )
+86:     conn.commit()
+89: def test_update_flat_markets_close_and_open():
+90:     conn = _fresh()
+91:     _insert_event(conn)
+92:     close = {
+93:         "dc": {"1X": 1.2, "X2": 1.9, "12": 1.4},
+94:         "dnb": {"1": 1.25, "2": 3.75},
+95:         "btts": {"Yes": 2.0, "No": 1.7},
+96:     }
+97:     open_ = {
+98:         "dc": {"1X": 1.25, "X2": 1.85, "12": 1.45},
+99:         "dnb": {"1": 1.30, "2": 3.50},
+100:         "btts": {"Yes": 2.1, "No": 1.65},
+101:     }
+102:     db.update_flat_markets(conn, 100, close, open_)
+103:     r = conn.execute(
+104:         "SELECT odds_dc_1x, odds_dnb_home, odds_btts_yes, "
+105:         "odds_dc_1x_open, odds_btts_yes_open FROM sofascore_matches "
+106:         "WHERE event_id=100"
+107:     ).fetchone()
+108:     assert r == (1.2, 1.25, 2.0, 1.25, 2.1)  # close do parsed_close, open do parsed_open
+111: def test_flat_open_is_write_once():
+112:     conn = _fresh()
+113:     _insert_event(conn)
+115:     db.update_flat_markets(conn, 100, {"btts": {"Yes": 2.0, "No": 1.7}}, {"btts": {"Yes": 2.0, "No": 1.7}})
+117:     db.update_flat_markets(conn, 100, {"btts": {"Yes": 1.6, "No": 2.3}}, {})
+118:     r = conn.execute("SELECT odds_btts_yes, odds_btts_yes_open FROM sofascore_matches WHERE event_id=100").fetchone()
+119:     assert r[0] == 1.6  # fechamento atualizado
+120:     assert r[1] == 2.0  # abertura preservada (write-once)
+123: def test_flat_open_null_when_absent():
+124:     conn = _fresh()
+125:     _insert_event(conn)
+127:     db.update_flat_markets(conn, 100, {"btts": {"Yes": 1.6, "No": 2.3}}, {})
+128:     r = conn.execute("SELECT odds_btts_yes, odds_btts_yes_open FROM sofascore_matches WHERE event_id=100").fetchone()
+129:     assert r[0] == 1.6
+130:     assert r[1] is None
+138: def test_lines_rows_from_parsed_pure():
+139:     close = {
+140:         "ou": {1.5: {"Over": 1.4, "Under": 3.0}, 2.5: {"Over": 2.0, "Under": 1.8}},
+141:         "ah": {-0.75: {"home": 2.0, "away": 1.8}},
+142:     }
+143:     open_ = {
+144:         "ou": {1.5: {"Over": 1.45, "Under": 2.9}, 2.5: {"Over": 2.05, "Under": 1.75}},
+145:         "ah": {-0.75: {"home": 2.02, "away": 1.78}},
+146:     }
+147:     rows = db.lines_rows_from_parsed(42, close, open_)
+148:     assert (42, "ou", 1.5, 1.4, 3.0, 1.45, 2.9) in rows
+149:     assert (42, "ah", -0.75, 2.0, 1.8, 2.02, 1.78) in rows
+150:     assert len(rows) == 3
+153: def test_lines_rows_open_null_when_absent():
+154:     close = {"ou": {2.5: {"Over": 2.0, "Under": 1.8}}}
+155:     rows = db.lines_rows_from_parsed(42, close, {})
+156:     assert rows[0] == (42, "ou", 2.5, 2.0, 1.8, None, None)
+159: def test_upsert_odds_lines_close_overwrites_open_write_once():
+160:     conn = _fresh()
+162:     db.upsert_odds_lines(
+163:         conn,
+164:         db.lines_rows_from_parsed(
+165:             5,
+166:             {"ou": {2.5: {"Over": 2.0, "Under": 1.8}}},
+167:             {"ou": {2.5: {"Over": 2.0, "Under": 1.8}}},
+168:         ),
+169:     )
+171:     db.upsert_odds_lines(conn, db.lines_rows_from_parsed(5, {"ou": {2.5: {"Over": 1.7, "Under": 2.1}}}, {}))
+172:     row = conn.execute(
+173:         "SELECT odd_a, odd_b, odd_a_open, odd_b_open FROM odds_lines WHERE event_id=5 AND market='ou' AND line=2.5"
+174:     ).fetchone()
+175:     assert row == (1.7, 2.1, 2.0, 1.8)  # close novo, open write-once
+178: def test_odds_lines_multiple_lines_coexist():
+179:     conn = _fresh()
+180:     parsed = {
+181:         "ou": {
+182:             0.5: {"Over": 1.1, "Under": 7.0},
+183:             2.5: {"Over": 2.0, "Under": 1.8},
+184:             6.5: {"Over": 41.0, "Under": 1.0},
+185:         }
+186:     }
+187:     db.upsert_odds_lines(conn, db.lines_rows_from_parsed(5, parsed, parsed))
+188:     n = conn.execute("SELECT COUNT(*) FROM odds_lines WHERE event_id=5 AND market='ou'").fetchone()[0]
+189:     assert n == 3
+### tests/test_db_readonly.py
+4: import sqlite3
+6: import pytest
+8: from brasileirao_predictor import db
+11: def _seed(path) -> None:
+12:     conn = db.connect(str(path))
+13:     conn.execute("INSERT INTO matches(date,home_team,away_team,neutral) VALUES('2024-01-01','A','B',1)")
+14:     conn.commit()
+15:     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")  # esvazia o WAL p/ abrir ro limpo
+16:     conn.close()
+19: def test_read_only_allows_reads(tmp_path):
+20:     path = tmp_path / "m.db"
+21:     _seed(path)
+22:     ro = db.connect(str(path), read_only=True)
+23:     assert ro.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 1
+24:     ro.close()
+27: def test_read_only_rejects_writes(tmp_path):
+28:     path = tmp_path / "m.db"
+29:     _seed(path)
+30:     ro = db.connect(str(path), read_only=True)
+31:     with pytest.raises(sqlite3.OperationalError):
+32:         ro.execute("INSERT INTO matches(date,home_team,away_team,neutral) VALUES('2024-01-02','C','D',1)")
+33:     ro.close()
+### tests/test_dixon_coles.py
+3: import math
+5: import pytest
+7: from brasileirao_predictor.dixon_coles import DixonColesMatrix, dc_tau, time_decay_weight
+12: def test_tau_is_one_outside_thin_cells():
+13:     for h, a in [(2, 0), (0, 2), (2, 2), (3, 1), (5, 4)]:
+14:         assert dc_tau(h, a, 1.4, 1.1, -0.1) == 1.0
+17: def test_tau_negative_rho_inflates_draws_deflates_one_zero():
+18:     lam, mu, rho = 1.4, 1.1, -0.08
+19:     assert dc_tau(0, 0, lam, mu, rho) > 1.0
+20:     assert dc_tau(1, 1, lam, mu, rho) > 1.0
+21:     assert dc_tau(1, 0, lam, mu, rho) < 1.0
+22:     assert dc_tau(0, 1, lam, mu, rho) < 1.0
+25: def test_tau_zero_rho_is_identity():
+26:     for h, a in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+27:         assert dc_tau(h, a, 1.4, 1.1, 0.0) == 1.0
+30: def test_tau_out_of_range_rho_raises():
+31:     with pytest.raises(ValueError):
+32:         dc_tau(1, 1, 1.4, 1.1, 1.5)  # 1 - rho < 0
+38: def test_decay_today_is_one_and_monotone():
+39:     xi = math.log(2) / 120
+40:     assert time_decay_weight(0, xi) == 1.0
+41:     assert time_decay_weight(30, xi) > time_decay_weight(240, xi)
+44: def test_decay_halflife():
+45:     xi = math.log(2) / 120
+46:     assert time_decay_weight(120, xi) == pytest.approx(0.5)
+49: def test_decay_zero_xi_is_flat():
+50:     assert time_decay_weight(500, 0.0) == 1.0
+53: def test_decay_rejects_future_match_and_negative_xi():
+54:     with pytest.raises(ValueError):
+55:         time_decay_weight(-1, 0.01)
+56:     with pytest.raises(ValueError):
+57:         time_decay_weight(10, -0.01)
+63: def test_grid_sums_to_one():
+64:     dc = DixonColesMatrix(lam=1.4, mu=1.1, rho=-0.05)
+65:     assert sum(sum(row) for row in dc.grid()) == pytest.approx(1.0)
+68: def test_outcome_probs_sum_to_one_and_favor_home():
+69:     probs = DixonColesMatrix(lam=1.8, mu=0.9, rho=-0.05).outcome_probs()
+70:     assert sum(probs.values()) == pytest.approx(1.0)
+71:     assert probs["home"] > probs["away"]
+74: def test_negative_rho_raises_draw_prob_vs_independent():
+75:     ind = DixonColesMatrix(lam=1.4, mu=1.1, rho=0.0).outcome_probs()
+76:     dc = DixonColesMatrix(lam=1.4, mu=1.1, rho=-0.08).outcome_probs()
+77:     assert dc["draw"] > ind["draw"]
+80: def test_rho_bounds_enforced_at_construction():
+81:     lo, hi = DixonColesMatrix.valid_rho_bounds(1.4, 1.1)
+82:     assert lo < 0 < hi
+83:     with pytest.raises(ValueError):
+84:         DixonColesMatrix(lam=1.4, mu=1.1, rho=hi + 0.1)
+85:     with pytest.raises(ValueError):
+86:         DixonColesMatrix(lam=1.4, mu=1.1, rho=lo - 0.1)
+89: def test_score_prob_matches_grid_and_validates_range():
+90:     dc = DixonColesMatrix(lam=1.4, mu=1.1, rho=-0.05, max_goals=6)
+91:     assert dc.score_prob(1, 1) == dc.grid()[1][1]
+92:     with pytest.raises(ValueError):
+93:         dc.score_prob(7, 0)
+96: def test_invalid_means_raise():
+97:     with pytest.raises(ValueError):
+98:         DixonColesMatrix(lam=0.0, mu=1.0)
+### tests/test_dixon_coles_fit.py
+3: import math
+4: import random
+5: from datetime import UTC, datetime, timedelta
+7: import pytest
+8: from predictor_core.contracts.points import PredictionPoint
+10: from brasileirao_predictor.dixon_coles import fit_dixon_coles_parameters
+11: from brasileirao_predictor.evaluator import BrasileiraoDixonColesEvaluator
+14: def _synth_games(n_rounds: int = 30, seed: int = 7) -> list:
+17:     rng = random.Random(seed)
+18:     attack = {"forte": 1.8, "medio1": 1.0, "medio2": 0.9, "fraco": 0.6}
+19:     teams = list(attack)
+20:     games = []
+21:     day = 0
+22:     for _ in range(n_rounds):
+23:         rng.shuffle(teams)
+24:         for h, a in [(teams[0], teams[1]), (teams[2], teams[3])]:
+25:             lam, mu = 1.3 * attack[h], attack[a]
+26:             games.append(
+27:                 {
+28:                     "home": h,
+29:                     "away": a,
+30:                     "home_goals": _poisson(rng, lam),
+31:                     "away_goals": _poisson(rng, mu),
+32:                     "day": day,
+33:                 }
+34:             )
+35:             day += 2
+36:     last = max(g["day"] for g in games)
+37:     for g in games:
+38:         g["days_ago"] = float(last - g.pop("day"))
+39:     return games
+42: def _poisson(rng: random.Random, lam: float) -> int:
+43:     threshold, k, p = math.exp(-lam), 0, 1.0
+44:     while True:
+45:         p *= rng.random()
+46:         if p <= threshold:
+47:             return k
+48:         k += 1
+54: def test_fit_recovers_strength_ordering():
+55:     params = fit_dixon_coles_parameters(_synth_games(), xi_fixed=0.0)
+56:     assert params["attack"]["forte"] > params["attack"]["medio1"] > params["attack"]["fraco"]
+57:     assert params["home_advantage"] > 1.0
+58:     lo, hi = -0.35, 0.35
+59:     assert lo <= params["rho"] <= hi
+62: def test_fit_identification_mean_attack_near_one():
+63:     params = fit_dixon_coles_parameters(_synth_games(), xi_fixed=0.0)
+64:     logs = [math.log(v) for v in params["attack"].values()]
+65:     assert abs(sum(logs) / len(logs)) < 0.05  # penalidade segura a identificação
+68: def test_fit_rejects_empty_and_single_team():
+69:     with pytest.raises(ValueError):
+70:         fit_dixon_coles_parameters([], xi_fixed=0.0)
+76: def _observations(n_rounds: int = 25) -> list:
+77:     t0 = datetime(2026, 4, 1, tzinfo=UTC)
+78:     games = _synth_games(n_rounds)
+79:     games.sort(key=lambda g: -g["days_ago"])
+80:     obs = []
+81:     for i, g in enumerate(games):
+82:         obs.append(
+83:             {
+84:                 "home": g["home"],
+85:                 "away": g["away"],
+86:                 "kickoff": t0 + timedelta(days=2 * i),
+87:                 "result": {"home_goals": g["home_goals"], "away_goals": g["away_goals"]},
+88:             }
+89:         )
+90:     return obs
+93: def test_evaluator_xi_from_half_life():
+94:     ev = BrasileiraoDixonColesEvaluator(half_life_days=120)
+95:     assert ev.xi == pytest.approx(math.log(2) / 120)
+96:     with pytest.raises(ValueError):
+97:         BrasileiraoDixonColesEvaluator(half_life_days=0)
+100: def test_walkforward_returns_prediction_points():
+101:     ev = BrasileiraoDixonColesEvaluator(half_life_days=120, max_goals=8)
+102:     results = ev.run(_observations(), min_history=30, retrain_every=10)
+103:     assert results
+104:     for r in results:
+105:         pp = r["prediction"]
+106:         assert isinstance(pp, PredictionPoint)
+107:         assert sum(pp.value.values()) == pytest.approx(1.0)
+108:         assert pp.matures_at >= pp.predicted_at  # invariante do contrato
+109:         assert r["actual"]["home_goals"] >= 0
+112: def test_walkforward_prediction_never_uses_future_kickoff():
+113:     ev = BrasileiraoDixonColesEvaluator(half_life_days=120, max_goals=8)
+114:     results = ev.run(_observations(), min_history=30, retrain_every=10)
+115:     for r in results:
+116:         pp = r["prediction"]
+117:         assert pp.predicted_at < pp.matures_at  # treinado só com jogos anteriores
+### tests/test_draw_diagnostics.py
+1: from brasileirao_predictor import display
+3: CFG = {
+4:     "elo": {"home_advantage": 0},
+5:     "model": {"max_goals": 8},
+6:     "backtest": {},
+7: }
+10: def test_display_exposes_draw_hypotheses_in_structured_and_human_output(capsys, monkeypatch):
+11:     monkeypatch.setattr(display, "get_clv_summary", lambda: {})
+12:     data = display.compute(
+13:         "Equilibrado A",
+14:         "Equilibrado B",
+15:         {"Equilibrado A": 1500, "Equilibrado B": 1500},
+16:         (0.2, 0.7, 0.1, -0.03),
+17:         CFG,
+18:         neutral=True,
+19:     )
+21:     draw = data["core"]["draw_diagnostics"]
+22:     assert draw["modal_score_is_draw"] is True
+23:     assert draw["side_probability_gap"] == 0
+24:     assert draw["robust_choice"] is None
+26:     display.render(data)
+27:     output = capsys.readouterr().out
+28:     assert "diagnóstico empate/incerteza" in output
+29:     assert "gap dos líderes" in output
+30:     assert "escolha robusta NÃO AVALIADA" in output
+### tests/test_dynamic_strength.py
+1: import math
+3: import pytest
+5: from brasileirao_predictor.dynamic_strength import corrections, fit
+8: def test_fit_rejects_invalid_alphas():
+9:     with pytest.raises(ValueError, match="alphas"):
+10:         fit([], (0.0, 0.3), [], alpha_short=0.1, alpha_long=0.2)
+13: def test_balanced_observations_keep_corrections_near_zero():
+14:     states = fit(
+15:         [(0.0, 1, 1)] * 20,
+16:         (0.0, 0.3),
+17:         [("a", "b")] * 20,
+18:         alpha_short=0.3,
+19:         alpha_long=0.05,
+20:     )
+21:     home, away = corrections(states, "a", "b")
+22:     assert home == pytest.approx(0.0)
+23:     assert away == pytest.approx(0.0)
+26: def test_attack_and_defence_are_directional_and_unseen_team_is_neutral():
+27:     states = fit(
+28:         [(0.0, 4, 0)] * 12,
+29:         (0.0, 0.3),
+30:         [("forte", "fraco")] * 12,
+31:         alpha_short=0.3,
+32:         alpha_long=0.05,
+33:     )
+34:     home, away = corrections(states, "forte", "fraco")
+35:     assert home > math.log(2)
+36:     assert away < 0
+37:     assert corrections(states, "novo", "outro") == (0.0, 0.0)
+### tests/test_economic_search.py
+3: from dataclasses import replace
+4: from datetime import date, timedelta
+5: from fractions import Fraction
+7: import pytest
+9: from brasileirao_predictor.research.price_strength.economic_search import (
+10:     Match,
+11:     arbitrage,
+12:     ledger,
+13:     predict,
+14:     probabilities,
+15:     read_matches,
+16:     select,
+17: )
+20: def fixture(day=date(2020, 1, 1), home="A", away="B", goals=(1, 0)):
+21:     return Match(2020, day, home, away, goals, "H", (2.0, 3.0, 4.0), (2.0, 3.0, 4.0))
+24: @pytest.mark.parametrize("prices", [(3.3, 3.3, 3.3), (2.4, 4.0, 4.0), (1.8, 3.3, 4.2)])
+25: def test_arbitrage_all_outcomes_and_partial_risk(prices):
+26:     result = arbitrage(prices)
+27:     adjusted = [1 + (Fraction(str(o)) - 1) * Fraction(99, 100) for o in prices]
+28:     total_inverse = sum(1 / o for o in adjusted)
+29:     returned = 1 / total_inverse
+30:     assert sum(result["stakes"]) == pytest.approx(1)
+31:     assert result["returns_by_outcome"] == pytest.approx([float(returned)] * 3)
+32:     assert result["net"] == pytest.approx(float(returned - 1 - Fraction(2, 100)))
+33:     assert len(result["partial_fill_cases"]) == 6
+34:     assert all(c["worst_net"] < 0 for c in result["partial_fill_cases"])
+37: def test_poisson_probability_mass_and_symmetry():
+38:     p = probabilities(1.4, 1.4)
+39:     assert sum(p) == pytest.approx(1)
+40:     assert p[0] == pytest.approx(p[2])
+41:     assert probabilities(2, 1)[0] == pytest.approx(probabilities(1, 2)[2])
+42:     with pytest.raises(ValueError):
+43:         probabilities(float("nan"), 1)
+46: def test_forecast_excludes_target_future_and_recent_results_and_all_odds():
+47:     target = fixture()
+48:     history = [replace(target, day=target.day - timedelta(days=10 + i), goals=(i % 3, i % 2)) for i in range(310)]
+49:     expected = predict(history, target)
+50:     assert expected is not None
+51:     forbidden = [replace(target, day=target.day + timedelta(days=i), goals=(20, 0)) for i in range(-6, 5)]
+52:     changed_odds = [replace(m, pinnacle=(30.0, 50.0, 2.0), maximum=(100.0, 80.0, 40.0)) for m in history]
+53:     assert predict(changed_odds + forbidden, replace(target, goals=(0, 30), result="A")) == expected
+54:     assert expected["latest_training_day"] == (target.day - timedelta(days=10)).isoformat()
+57: def test_season_filter_precedes_all_other_fields():
+58:     source = b"Season,Date,Home,Away,HG,AG,Res\n2026,DO_NOT_PARSE,,,,,\n"
+59:     matches, report = read_matches(source)
+60:     assert matches == []
+61:     assert report["excluded_before_field_interpretation"] == 1
+64: def test_duplicate_identity_rejected_and_bad_label_preserved():
+65:     source = b"Season,Date,Home,Away,HG,AG,Res\n2020,01/01/2020,A,B,2,0,A\n"
+66:     matches, _ = read_matches(source)
+67:     assert matches[0].result is None
+68:     with pytest.raises(ValueError, match="duplicate"):
+69:         read_matches(source + b"2020,02/01/2020,A,B,2,0,H\n")
+72: def test_same_day_winnings_cannot_fund_later_fills():
+73:     rows = [
+74:         {
+75:             "key": str(i),
+76:             "date": "2020-01-01",
+77:             "season": 2020,
+78:             "home": str(i),
+79:             "away": "B",
+80:             "pinnacle": (2.0, 3.0, 4.0),
+81:             "prediction": {"model": (0.8, 0.1, 0.1)},
+82:             "result": "H",
+83:         }
+84:         for i in range(101)
+85:     ]
+86:     result = ledger(rows, "model")
+87:     assert sum(r["stake"] for r in result) == 98
+88:     assert sum(r["net"] for r in result) == pytest.approx(98 * 0.98)
+89:     assert result[-1]["cash_after_day"] == pytest.approx(100 + 98 * 0.98)
+90:     assert result[-1]["day_exposure"] == 98
+91:     assert result[-1]["reason"] == "insufficient_unreserved_bankroll"
+94: def test_unsettled_never_becomes_void_or_zero_return():
+95:     rows = [
+96:         {
+97:             "key": "a",
+98:             "date": "2020-01-01",
+99:             "season": 2020,
+100:             "home": "A",
+101:             "away": "B",
+102:             "pinnacle": (2.0, 3.0, 4.0),
+103:             "prediction": {"model": (0.8, 0.1, 0.1)},
+104:             "result": None,
+105:         }
+106:     ]
+107:     result = ledger(rows, "model")[0]
+108:     assert result["status"] == "unsettled"
+109:     assert result["net"] is None and result["return"] is None
+110:     assert result["cash_after_day"] == pytest.approx(98.98)
+111:     assert result["unsettled_stakes"] == 1
+114: def test_normalizing_own_book_does_not_manufacture_edge():
+115:     o = (2.0, 3.0, 4.0)
+116:     s = sum(1 / x for x in o)
+117:     p = (1 / o[0] / s, 1 / o[1] / s, 1 / o[2] / s)
+118:     assert select(p, o) is None
+### tests/test_ecosystem_plugin.py
+1: from brasileirao_predictor.ecosystem_plugin import PLUGIN
+4: def test_ecosystem_plugin_contract_shape():
+5:     health = PLUGIN.health()
+6:     caps = PLUGIN.capabilities()
+7:     assert health["domain"] == "brasileirao"
+8:     assert health["status"] in {
+9:         "SUCCEEDED",
+10:         "DEGRADED",
+11:         "WAITING",
+12:         "FAILED",
+13:         "SOURCE_UNAVAILABLE",
+14:         "NO_UPSTREAM_EVENTS",
+15:     }
+16:     assert caps["domain"] == "brasileirao"
+17:     assert caps["supports_prediction"] is True
+18:     assert caps["economic_status"] == "NOT_VALIDATED"
+19:     assert caps["capital_permission"] == "FORBIDDEN"

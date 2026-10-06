@@ -1,0 +1,1674 @@
+[
+  {
+    "path": "tests/test_bet_log.py",
+    "sha256_utf8": "d45cdc0007f68ada171940cfa610a7107ae701c3a03f92447b50d4e694031229",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_add_grava_linha_aberta",
+      "test_add_rejeita_mercado_e_odd_invalidos",
+      "test_settle_rejeita_placar_negativo",
+      "test_settle_ganha_perde_e_nao_duplica",
+      "test_settle_casa_por_conjunto_de_times",
+      "test_settle_periodo_exige_ht_e_fecha_com_ht",
+      "test_summary_separa_validado_de_informativo",
+      "test_summary_roi",
+      "test_banca_saldo_exposicao_e_drawdown",
+      "test_banca_deposito_saque_e_reinit",
+      "test_kickoff_marca_aposta_tardia",
+      "test_aviso_de_bilhete_duplicado_aberto",
+      "test_settle_rejeita_ht_maior_que_final",
+      "test_list_bets_casa_aberta_e_fechada",
+      "test_banca_none_sem_init",
+      "test_settle_confronto_repetido_exige_match_date_para_desambiguar",
+      "test_settle_idempotente_sobrevive_a_reordenacao_do_arquivo",
+      "test_settle_placar_none_levanta_valueerror_claro",
+      "test_add_bet_naive_vs_aware_nao_crasha",
+      "test_capital_gate_status_avisa_sem_trial_comprovada",
+      "test_capital_gate_status_silencioso_com_trial_comprovada",
+      "test_capital_gate_status_ignora_mercado_fora_do_gate",
+      "test_capital_gate_status_falha_fechado_sem_trials_json"
+    ],
+    "notes": "JSONL tmp adiciona/settle idempotente por bet_id, confronto invertido e datas desambiguadas; HT obrigatório para mercados parciais, ROI/drawdown e flows/reinit banca, duplicate apenas warning. Naive vs aware marca late None. validated por mercado não é validação deste fixture. Capital_gate é warning baseado status string comprovada de JSON sintético, não verifica evidência/autorização; ou15 fora do gate retorna None."
+  },
+  {
+    "path": "tests/test_bitemporal_store.py",
+    "sha256_utf8": "76dede1bfc65ba9e38d051798cadfbe28a73cdf7973d12b58c7084380e7c3ce2",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_as_known_at_never_sees_a_result_published_later",
+      "test_latest_version_and_idempotency",
+      "test_rejects_impossible_ingestion_clock"
+    ],
+    "notes": "SQLite tmp bitemporal só mostra após published e ingested; revisão mais recente/dedup e clock impossível rejeitado. Source/chater strings declaradas, sem provider real."
+  },
+  {
+    "path": "tests/test_bookmaker_odds.py",
+    "sha256_utf8": "4596e067d1bef1b4c71a403b5e3e8ca829eca530204fbeb00927eeb95182ce5e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_fold_remove_acento_e_caixa",
+      "test_fold_nao_colide_times_distintos",
+      "test_nome_exato",
+      "test_acento_ausente_resolve_quando_unico",
+      "test_alias_explicito_para_nome_comercial_diferente",
+      "test_nome_desconhecido_falha_fechado",
+      "test_alias_para_time_fora_da_base_falha_fechado",
+      "test_ambiguidade_de_dobra_falha_fechado",
+      "test_caixa_exata_tem_precedencia_sobre_a_dobra",
+      "test_casa_fixture_com_acento_divergente",
+      "test_kickoff_distante_nao_casa",
+      "test_placeholder_de_meia_noite_da_api_ainda_casa",
+      "test_alias_sem_h_do_athletico",
+      "test_mesmo_confronto_duas_vezes_na_janela_e_ambiguo",
+      "test_mando_invertido_nao_casa",
+      "test_persistencia_e_idempotente",
+      "test_persistencia_nao_colapsa_bookmaker_ou_mercado",
+      "test_fechamento_pega_a_ultima_antes_do_apito",
+      "test_fechamento_ignora_cotacao_pos_apito",
+      "test_fechamento_ignora_odd_invalida",
+      "test_fechamento_nao_mistura_selecao"
+    ],
+    "notes": "Fixtures de nomes acentos/aliases/ambiguidades, kickoff próximo/placeholder meia-noite e mando invertido; JSONL dedup separa bookmaker/mercado. Closing último pre-kickoff/valid>1/selection. Não observa bookmaker e política tolera placeholder sem hora real."
+  },
+  {
+    "path": "tests/test_bookmaker_stability.py",
+    "sha256_utf8": "b135552cb43f953f54ea18ec3060fb2129a7fa8e013ac4c76543d2a7d4e1a731",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_append_only_and_exchange_is_not_recommended",
+      "test_stable_and_insufficient_coverage_are_deterministic",
+      "test_smoke_uses_retrieval_time_not_bookmaker_update_time",
+      "test_three_smokes_inside_24_hours_remain_pending"
+    ],
+    "notes": "Três dias sintéticos com cobertura10 classificam pinnacle stable, cobertura1 insuficiente e matchbook rejeitado. Retr ievaltime usado e três smokes em24h mantêm pending. Critérios heurísticos não medem estabilidade externa."
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "sha256_utf8": "c0c89b95dbd53531c8de31e14a7a51bfa451546bfb6c26ccc15503c74910ff11",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_ic_contem_a_media_amostral",
+      "test_amostra_constante_colapsa_o_ic",
+      "test_n_igual_a_1_nao_estoura",
+      "test_determinismo_sob_seed_fixa",
+      "test_seeds_diferentes_divergem",
+      "test_amostra_vazia_estoura_em_voz_alta",
+      "test_ic_ordenado_e_estreita_com_n"
+    ],
+    "notes": "Seeded bootstrap média/CI/constante/n1/vazio/determinismo, amostra200 estreita mais que10. Não verifica coverage nominal repetido nem lucro."
+  },
+  {
+    "path": "tests/test_brasileirao_domain.py",
+    "sha256_utf8": "7e6ff5f8a7d4faf41bf334e9eb5a26e68ff79cd876a0fe74ea779c7ae1ee9265",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_config_identidade_do_dominio",
+      "test_k_factor_brasileirao",
+      "test_modelo_com_dois_clubes",
+      "test_settle_resultado_real_brasileirao",
+      "test_espelho_sofascore_para_matches",
+      "test_espelho_marca_e_remove_linha_orfa_de_adiamento",
+      "test_espelho_remove_fixture_legado_sem_event_id_quando_data_muda",
+      "test_odds_shop_sport_key_do_config",
+      "test_proximos_fixtures_excluem_eventos_passados_sem_placar",
+      "test_ht_fraction_forward_only"
+    ],
+    "notes": "Config real identidade325/seasons e sportkey; quatro clubes sintéticos Elo/modelo com probabilidades normalizadas. Resultado Bahia0x2 declarado fixture, não API real. SQL in-memory sync idempotente/remove orphan adiamento/remarca fixture e exclui passado; HT fraction antescutoff/mínimo60."
+  },
+  {
+    "path": "tests/test_build_data_archive.py",
+    "sha256_utf8": "d15e92b7ba02da3899af1dee2f3cbd41d3ffe1157d2f984adcd3811208af713f",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_end_to_end_preserves_bytes_maps_exclusions_and_standalone_verification",
+      "test_source_hash_mismatch_is_rejected_before_creating_output",
+      "test_manifest_hash_mismatch_is_rejected",
+      "test_corrupt_included_hash_removes_own_partial_output",
+      "test_exclusions_cannot_hide_unaccounted_files",
+      "test_existing_output_is_preserved",
+      "test_extra_cannot_sneak_in_source_or_mismatched_bytes",
+      "test_snapshot_components_cannot_be_omitted",
+      "test_nested_zip_is_recursive_and_never_accepts_code",
+      "test_nested_zip_rejects_traversal_collisions_depth_and_size_budget",
+      "test_windows_name_policy_and_source_suffix_chains",
+      "test_source_or_extra_windows_collisions_fail",
+      "test_references_are_full_and_do_not_embed_credentials"
+    ],
+    "notes": "ZIP sintético preserva bytes/mapas/omissões e verifica restore; recusa hashes ruins/overwrite/exclusion incompleta/extras código/snapshot sem receipt/traversal/windowsNFCcase collisions/nesting budget/code referências com credencial. Snapshot é opaco fakeSQLite, receipt integrity_ok declarado não consultaDB real. Não autentica remotecommit nem descriptografa/protege secrets .env que política permite."
+  },
+  {
+    "path": "tests/test_bundle_h9_evidence.py",
+    "sha256_utf8": "a5f3d6157f1568b15b31a978d72891df35732edab513f18b2b2fe7940c0951c4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_bundle_manifest_records_hash_rows_commit_and_capital_lock"
+    ],
+    "notes": "Manifest ledger sintético registra hash real bytes/2rows/commit abc123 e capitalFalse, janelas irrecoverable. Não autentica commit ou conteúdo econômico."
+  },
+  {
+    "path": "tests/test_calibration_gate.py",
+    "sha256_utf8": "9609c93632c72b4af31340f6088fcc4027a214f386fb831b77458a628c3cc2b4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_existing_a10_report_is_formally_no_go",
+      "test_gate_requires_primary_and_every_guardrail",
+      "test_gate_requires_material_rps_gain_and_home_win_guardrail",
+      "test_a10_producer_can_compute_home_win_guardrail"
+    ],
+    "notes": "Report A10 físico NO_GO e servingFalse; métricas declaradas exigem gainRPS>.002/guardrails, candidate só novo protocolo. Losses/CI subset homewin sintético20boot. Sem reexecução do A10 inteiro."
+  },
+  {
+    "path": "tests/test_capture_decision.py",
+    "sha256_utf8": "d7a810c2f82dd2710791d5aeb9bafd6e26d23831fc2a049a0944e5c08c1eca25",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_positive_conditional_price_is_never_promoted_to_an_execution_or_profit",
+      "test_latest_bad_transport_cannot_resurrect_an_older_good_capture",
+      "test_bad_latest_payload_is_retained_as_abstention",
+      "test_later_inactive_parent_blocks_earlier_active_children",
+      "test_frozen_identity_and_kickoff_are_required_even_with_matching_hash",
+      "test_future_capture_is_excluded_before_parsing_and_cannot_invalidate_known_past",
+      "test_unorderable_receipt_blocks_the_batch_instead_of_cherry_picking",
+      "test_equal_timestamps_do_not_choose_a_canonical_revision_by_hash_or_file_order",
+      "test_no_capture_and_stale_capture_have_explicit_denominators",
+      "test_invalid_or_incomplete_assumptions_are_not_replaced_by_defaults",
+      "test_inputs_are_not_mutated",
+      "test_cli_hashes_inputs_emits_abstention_and_refuses_overwrite",
+      "test_cli_preserves_later_failed_attempt_without_a_payload_file",
+      "test_cli_refuses_an_incomplete_saved_capture_universe"
+    ],
+    "notes": "Payload/receipt fake SHA gerado prova par condicional EV.08 nunca execution/PnL; latestbad não ressuscita older, NaN/dupJSON/clockties/identity/status recusa, futurereceipt excluída antesparse. CLI artifact tmp e overwrite/incomplete-universe reject. Hash comprova bytes transportados declarados, não origem externa ou preço executável."
+  },
+  {
+    "path": "tests/test_capture_sofascore_event.py",
+    "sha256_utf8": "fc3cb731985c8dc13fa1b8694171d7eaaaeb087a211584f754968f22a2c5a871",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_build_capture_uses_aware_clock_and_strict_pre_match_boundary",
+      "test_build_capture_rejects_naive_timestamp",
+      "test_append_capture_is_append_only_and_deduplicates",
+      "test_post_kickoff_capture_never_enters_pre_match_odds",
+      "test_wait_until_confirmed_has_injectable_clock_and_sleep",
+      "test_wait_until_confirmed_refuses_at_kickoff_without_fetching_lineup"
+    ],
+    "notes": "FakeSofascore/clock injetado comprova boundary anteskickoff estrita, naive rejeita, captureJSONL dedup e post-kickoff não entra odds SQLite. wait jáconfirmed não dorme e kickoff false; semHTTP/lineup verdadeiro."
+  },
+  {
+    "path": "tests/test_ci_current_elo_containment.py",
+    "sha256_utf8": "e245b88458d3a46de7aa6fd52bee795b47b4c7961ef4eb7106ae049f7c0b675e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_audited_h14_prospective_capture_is_allowed",
+      "test_new_research_or_similarly_named_script_still_fails"
+    ],
+    "notes": "Guard temp root permite script H14 copiado auditado, rejeita db.load_elo em research/backtest/similarname. Prova scanner destes padrões, não ausência de outras formas de leakage."
+  },
+  {
+    "path": "tests/test_ci_dependency_pins.py",
+    "sha256_utf8": "757d3b67a5719f0fe41fb51d22dbc28b5427d436e12cd5ae198c1ad004246678",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_ci_shared_downloads_match_locked_sources"
+    ],
+    "notes": "RegexURLs workflow igual uv sources e filenames no checksum. Não calcula hash download ou observaCI remota."
+  },
+  {
+    "path": "tests/test_ci_nao_suja_a_arvore.py",
+    "sha256_utf8": "8abc999694da08cad1665f6c760d5a95d42424c2b35d30200e6bd3d37e8121ab",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_todo_diretorio_de_artefato_do_ci_esta_ignorado",
+      "test_a_lista_cobre_todo_destino_de_download_do_workflow"
+    ],
+    "notes": "git check-ignore esperado em quatro artifactdirs; regex --output destinos cobertos. Não executaCI nem cobre todos caminhos de escrita possíveis."
+  },
+  {
+    "path": "tests/test_closeout_coverage.py",
+    "sha256_utf8": "b614fb4d43b888788a9bbce2395037a158d036f5826717040a0d65ebbe87b972",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_coverage_uses_event_intersections_and_handles_empty_universe"
+    ],
+    "notes": "SQLite fixture intersectioneventids impede300%, emptyN/A e nãoInf. Sem cobertura realprovider."
+  },
+  {
+    "path": "tests/test_closeout_integrity.py",
+    "sha256_utf8": "823ffad04e5538744e494128923da53f78a1da545d3b31be7da5f94c623eb005",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_score_cannot_be_truncated_or_boolean",
+      "test_half_time_requires_two_integer_counts",
+      "test_summary_rejects_duplicate_settlement",
+      "test_summary_rejects_orphan_and_changed_amount",
+      "test_imported_duplicate_bet_id_is_rejected",
+      "test_malformed_json_journal_refused",
+      "test_last_unusable_state_must_not_resurrect_price",
+      "test_closing_conflicting_latest_tie_abstains",
+      "test_closing_cannot_mix_event_source_or_contract",
+      "test_curated_clock_cannot_follow_receipt",
+      "test_readiness_rejects_coerced_or_blank_input",
+      "test_declarations_do_not_certify_prospective_evidence",
+      "test_inconsistent_chronology_blocks_contract"
+    ],
+    "notes": "Bad scores bool/fraction/inf sem mutate; JSONL duplicate/orphan/changedprofit/dupkeys rejeitados. Latestquote unusable/tie abstains, origem/evento/contrato misturados erro; chronologypublished/receipt e readiness types/blank fail. Declarations ready mas pre_match_evidence_eligibleFalse explícito."
+  },
+  {
+    "path": "tests/test_closeout_research_inputs.py",
+    "sha256_utf8": "dcd198d921a7d90cd8f543c6d4b6756f56dbd5a237ff6d8f49a5058a9adf4d58",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_shadow_policy_rejects_nonfinite_or_negative_stake",
+      "test_shadow_probability_requires_ordered_finite_bounds",
+      "test_coordinates_require_physical_bounds",
+      "test_surface_false_string_is_not_true",
+      "test_coach_counts_and_publication_must_match_vintage",
+      "test_pre_match_evidence_cannot_be_received_after_kickoff"
+    ],
+    "notes": "Shadowstake nonfinite/bounds erro; travel coordinates limites, bool strictsurface, coach integer/vintage e recebimento pósKO rejeitados. Conteúdo geográfico/team causal é fixture, não fonte autenticada."
+  },
+  {
+    "path": "tests/test_closeout_status.py",
+    "sha256_utf8": "671e02bde674919509e7cbb7ac188093b8aa5379f7a29f2f8d4339f9a9adc8bf",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_status_opens_read_only_and_closes_connection"
+    ],
+    "notes": "Tracked SQLite monkeypatch exige read_only=True e closeconnection. Emit_event e loaders mocked, não verifica filesystempermissions ou modo URI real."
+  },
+  {
+    "path": "tests/test_closing_scenario.py",
+    "sha256_utf8": "f0c87febcf1a4469df655fcd5e589597f08c5c0d31cb4e5781323dffbaf94767",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_price_stage_refuses_outcome_fields",
+      "test_self_odds_do_not_create_edge",
+      "test_missing_price_preserves_universe",
+      "test_win_returns_principal_but_does_not_count_it_as_profit",
+      "test_loss_reconciles_stake_and_separate_cost",
+      "test_no_result_keeps_money_locked_and_roi_undefined",
+      "test_conflicting_score_does_not_become_void_or_loss",
+      "test_cannot_recycle_same_day_winnings_to_fund_second_pick",
+      "test_next_day_can_use_previous_days_settled_balance",
+      "test_dates_order_and_duplicate_identity",
+      "test_protected_years_are_excluded",
+      "test_consistent_result_codes"
+    ],
+    "notes": "Decimal cenário congela escolha sem labels/protected2026 e duplicatas; selfodds nenhumedge, badprices mantémABSTAIN. Principal não luc ro, win1.38/loss-1.02 e unresolvedlockROIundefined. Mesmo dia ganhos não financiam2ª, dia seguinte sim. Liquidação condicional por labels fixtures, não execution/recebimento real."
+  },
+  {
+    "path": "tests/test_collection_only_archive.py",
+    "sha256_utf8": "98fe53a44537237dacb7420724aa78e09fd4b70c45283e9d24f97087916d5590",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_collection_only_dry_run_has_no_archive_write",
+      "test_collection_only_is_idempotent_and_never_uses_shadow_state",
+      "test_retry_resumes_event_started_without_lifecycle_regression"
+    ],
+    "notes": "SQLite fixture collection dry_run não grava apesar transitions_written>0 nome count potencialmente confuso; execução idem/no PROSPECTIVE_ELIGIBLE e retry event started sem regressão. Resultados históricos mantêm collection only."
+  },
+  {
+    "path": "tests/test_collector_contract.py",
+    "sha256_utf8": "48d713fee2c5e3b596f1cf718c01ef7b81aabf33c285f3a6954f04cda33af4ca",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_01_key_absent_fails_closed",
+      "test_02_historical_endpoint_is_not_exposed",
+      "test_03_fuzzy_only_suggests",
+      "test_04_unknown_alias_quarantines",
+      "test_05_event_id_is_deterministic",
+      "test_06_naive_timestamp_rejected",
+      "test_07_equal_kickoff_rejected",
+      "test_08_all_snapshots_are_unhomologated",
+      "test_totals_parser_does_not_collapse_other_lines_into_ou25",
+      "test_09_schema_rejects_additional_property",
+      "test_10_schema_rejects_sofascore_source",
+      "test_11_invalid_odds_go_to_quarantine",
+      "test_12_hash_chain_detects_tampering",
+      "test_13_identical_snapshot_is_deduplicated",
+      "test_14_same_identity_different_value_is_conflict",
+      "test_15_collector_exposes_no_financial_execution_api",
+      "test_invalid_middle_row_does_not_poison_valid_batch_tail",
+      "test_batch_retry_is_deduplicated",
+      "test_operational_mirror_is_bitemporal_and_versions_reschedules",
+      "test_json_duplicate_repairs_missing_operational_mirror",
+      "test_capture_window_is_not_closed_after_partial_batch_failure",
+      "test_16_economic_mode_is_rehearsal_only",
+      "test_17_full_mode_failure_restarts_clock",
+      "test_cli_reports_only_sanitized_runtime_detail",
+      "test_cli_hides_arbitrary_exception_text",
+      "test_quota_status_accepts_nested_account_and_rejects_invalid",
+      "test_quota_guard_reserves_budget_limits_attempts_and_backs_off"
+    ],
+    "notes": "Clientkey missing bloqueia, sem methods historical; aliasfuzzy só sugere, schema source/extra/odds rejeita e snapshots homologatedFalse. JSONLhash detecta edit sem rehash, conflicts/dedup/batchtail válido, SQLite mirror reschedule v2 e duplicate repara mirror deletado. Capturecomplete partialfailFalse. Economic7dias rehearsal; full7dias sem rotationatt FAIL. FakeCLIdetailsredaction/quota reserve20 attempt2/backoff30. Nenhuma API real ou anchor externa de cadeia."
+  },
+  {
+    "path": "tests/test_compare_hypothesis_errors.py",
+    "sha256_utf8": "cd44bd74ec1d2eba9406d6cbeece6a938c081dafba736b1c9fb965977c728b7b",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_moving_block_pairing_uses_time_not_event_id"
+    ],
+    "notes": "Pairing keys ordena datas em vez eventid em três fixtures, não bootstrapa causalidade."
+  },
+  {
+    "path": "tests/test_completion_anchor.py",
+    "sha256_utf8": "2329ca5dddfa703adc3c1ec5dd250e4a98c27b47c4ccb28a37a7c81637311219",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_reference_excludes_offering_book",
+      "test_reference_does_not_pool_different_capture_vintages",
+      "test_reference_rejects_conflicting_duplicate_selection"
+    ],
+    "notes": "Consensus exclui offeredbook da fairprob .5/.5 mas bestodds2.05, rejeita mixed capturevintage e conflictingduplicate. Odds inteiramente sintéticas."
+  },
+  {
+    "path": "tests/test_completion_compose_init.py",
+    "sha256_utf8": "0082de91d08c09aeab6c365bcb60111fdbd3f6edc71f8e8195123e1369e6fbf0",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_initializer_cannot_reset_an_existing_volume",
+      "test_initializer_requires_distinct_databases",
+      "test_initializer_creates_only_new_demo_storage"
+    ],
+    "notes": "Initializer tmp não sobrescreveDB, exige sports/marketdistinct, cria apenas demo integrity_ok/matches0. Não inicia Compose/Redis/produção."
+  },
+  {
+    "path": "tests/test_completion_event_inputs.py",
+    "sha256_utf8": "6546595a60e3e5ee3d243620a9bbc6cfc468b9cb108f4b87501381743452bfaa",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_count_target_requires_finite_nonnegative_integer",
+      "test_empty_training_set_is_not_a_fitted_model",
+      "test_missing_training_feature_is_not_observed_zero",
+      "test_missing_prediction_feature_is_not_observed_zero",
+      "test_poisson_override_has_correct_distribution_contract",
+      "test_unknown_distribution_is_rejected"
+    ],
+    "notes": "Target countfinite integer/missingfeatures/emptytraining/distributionunknown erro; overdispersionFalse forçaPoisson. Fixtures repetidas8 não calibram countmodel."
+  },
+  {
+    "path": "tests/test_completion_ledger.py",
+    "sha256_utf8": "ef216d7e2951e6bed18d552eec74de0ffc6bca55090443893016bc5d51886535",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_invalid_bet_cannot_enter_journal",
+      "test_stable_bet_id_survives_line_reordering_in_list_and_bank",
+      "test_duplicate_bet_id_is_rejected_before_append",
+      "test_invalid_half_time_each_side_rejected_before_any_settlement"
+    ],
+    "notes": "Bad bet oddsNaN/Inf/stakebool/selection/prob impedem arquivo; stableid após reordenações no list/bank, duplicateid beforeappend e HTlado>FT rejects antes settlement. Não torna JSONL inviolável."
+  },
+  {
+    "path": "tests/test_completion_math_consumer.py",
+    "sha256_utf8": "b1da1dfbd7cd659aeb3668d4a33b202b712db7c021ebe31386821fae5f0e4894",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_total_negative_binomial_is_sum_of_two_team_distributions",
+      "test_market_pricer_rejects_invalid_probability_measures",
+      "test_handicap_rejects_unsupported_or_invalid_lines",
+      "test_prediction_protocol_rejects_negative_live_score",
+      "test_full_prediction_cli_cannot_succeed_after_audit_log_failure"
+    ],
+    "notes": "NB total zero é produto de distribuições2times; pricerbadmeasures/handicap e negativoslive rejeitados. CLIprever fakebuild/SQLite e diskfull log injection exige RuntimeError auditlog em full/period. Não prova persistência em sucesso ou timing de dados."
+  },
+  {
+    "path": "tests/test_completion_pit_contracts.py",
+    "sha256_utf8": "6c2ab418d91eda8b39d5f3ef7cc46e09e32b36b4d263f8424ab6668ab0e99e0c",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_charter_is_part_of_observation_identity",
+      "test_same_payload_changed_event_clock_is_a_conflict",
+      "test_legacy_schema_is_refused_without_modifying_its_bytes",
+      "test_sql_decision_uses_utc_not_lexical_offset",
+      "test_club_concentration_uses_club_appearances_denominator",
+      "test_bootstrap_rejects_nonfinite_and_boolean_results",
+      "test_ou_rejects_unimplemented_line_contract"
+    ],
+    "notes": "Charter integra identidade, mixedcharter sem filtro recusa, mesmo clock diferenteevent conflict, schema legado recusa sem alterarhash; UTCoffset SQLdecision correto e strict prekickoff; HHI denomclub appearances=.5. BootstrapInf/bool e OUs unsupportedquarter reject."
+  },
+  {
+    "path": "tests/test_completion_regressions.py",
+    "sha256_utf8": "6e08819c51d6ce7c9b30d0cdeff83752cf2eb984155dd25e0ea7544cc0c51183",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_show_logs_and_displays_one_calculation_and_one_dated_quote",
+      "test_bitemporal_conflicting_versions_have_no_arbitrary_hash_winner",
+      "test_sportmonks_partial_page_cannot_claim_absent_league",
+      "test_display_does_not_certify_economic_confidence_from_config_only"
+    ],
+    "notes": "Spy comprova show calcula1x e mesma previsão/date enviada ao log; bitemporal conflitotie sem hashwinner. Sportmonks fake partialpage não afirma league absent e orçamento1request. Confidence nãoALTA por configedge apenas."
+  },
+  {
+    "path": "tests/test_completion_serving_storage.py",
+    "sha256_utf8": "61632c2979b9af661b56dab5aa726771241c38de85dedd016c948952d97ad06f",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_prediction_database_is_physically_read_only",
+      "test_extended_model_parameters_can_be_audited_without_loss"
+    ],
+    "notes": "SQLite temp serving conexão efetivamente readonlyDELETE falha; thetaextra dict/tuple preservada no predictionJSONL. Sem servinglive ou terceiros."
+  },
+  {
+    "path": "tests/test_completion_source_budget.py",
+    "sha256_utf8": "622b834f49ae1055d369e899706affff3fe28e3071c80dca94824da61f57f52b",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_missing_pagination_does_not_prove_complete_coverage",
+      "test_cursor_is_encoded_and_does_not_follow_external_next_page",
+      "test_budget_is_enforced_without_an_extra_request",
+      "test_provider_error_cannot_echo_credentials"
+    ],
+    "notes": "Sportmonksfake paginationmissing rejeita, cursorencoded não segue arbitrarynextURL, budget evitaextra1; ApiFootballerrors não eco fakecredential. Não atesta subscription atual."
+  },
+  {
+    "path": "tests/test_contextual_ensemble.py",
+    "sha256_utf8": "dab2fc502caa1015a4d80828bb2975a9ab374f67b60b9c9b37f0efaf0a8c3789",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_contextual_trial_is_expanding_and_never_changes_serving",
+      "test_contextual_trial_blocks_insufficient_data",
+      "test_contextual_trial_rejects_post_kickoff_evidence"
+    ],
+    "notes": "80 registros sintéticos expandingdates PASS/servingFalse,10 BLOCKED e available_at==KO erro. PASS é execução experimentalde fixtures, não lucro ou predictivegainreal."
+  },
+  {
+    "path": "tests/test_core3_harness_contract.py",
+    "sha256_utf8": "3056bf0f163d3aed462a6edc9634fdb81b574773d19bbe395457356ec0582825",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_committed_harness_is_real_core3_execution_with_both_controls",
+      "test_o_atestado_committado_aponta_para_codigo_identificavel"
+    ],
+    "notes": "Lê committedattestation verifica coremetadata/controls/verdictstrings/executed==passed/fingerprintprefix e gitSHA40nãozero/sem dirty. Não reexecuta controles ou verifica commit existe/hashdataset/expiração neste arquivo."
+  },
+  {
+    "path": "tests/test_core_integrity.py",
+    "sha256_utf8": "8cb967902c8c791932d066a0d3518ac6e157a19f4a80b23f2c9b42aa645f9f8f",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_shared_packages_are_supported_versions",
+      "test_vendor_does_not_return",
+      "test_ci_does_not_depend_on_workspace_imports"
+    ],
+    "notes": "Installedversions core3.2/ops4.2.1/no vendor e workflow sem PYTHONPATH/symlink/ignorefail tokens. Não observaCI remoto ou ausência de toda dependênciaworkspace."
+  },
+  {
+    "path": "tests/test_db.py",
+    "sha256_utf8": "30d43061c1a5edb770ae9c0dfab12f3c7f6dfb3f77465cafd5adbd855cf4830e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_coalesce_preserva_abertura",
+      "test_close_sempre_sobrescreve",
+      "test_upsert_resolve_placeholder_de_bracket_para_nome_real",
+      "test_snapshots_idempotentes",
+      "test_snapshots_acumulam_no_tempo",
+      "test_ht_goal_fraction_calibra_e_respeita_minimo",
+      "test_update_ht_scores_grava_e_none_e_noop",
+      "test_update_kickoff_grava_utc_e_none_e_noop",
+      "test_update_kickoff_versions_reschedule",
+      "test_completed_matches_propagates_best_known_kickoff"
+    ],
+    "notes": "Inmemory fixtures openingwriteonce COALESCE/closeoverwrites/placeholderteamsupdate, snapshotsdedup e longitudinal, HTconstant60frac1/3, kickoffUTC e v2reschedule. CompletedbestknownKOjoin porid. Dados fixtures inclusiveWC genérico não resultsreal."
+  },
+  {
+    "path": "tests/test_db_extended_odds.py",
+    "sha256_utf8": "cf33efd062ee58ae70a1716aae004d7c20a135af18d21efd96c16775c752c52e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_migration_adds_flat_columns_to_old_db",
+      "test_migration_is_idempotent",
+      "test_backfill_ou_2_5_into_odds_lines",
+      "test_backfill_skips_when_no_legacy_ou",
+      "test_update_flat_markets_close_and_open",
+      "test_flat_open_is_write_once",
+      "test_flat_open_null_when_absent",
+      "test_lines_rows_from_parsed_pure",
+      "test_lines_rows_open_null_when_absent",
+      "test_upsert_odds_lines_close_overwrites_open_write_once",
+      "test_odds_lines_multiple_lines_coexist"
+    ],
+    "notes": "Inmemory legacy migrateaddflatcols preservelegacy/idem/backfillOU somente se existe, flatopeningwriteonce/missingNULL/closeoverwrites e váriosOU/AH coexistem. Odds1.0 armazenada em linha6.5 mostra storage não é admissiongate."
+  },
+  {
+    "path": "tests/test_db_readonly.py",
+    "sha256_utf8": "6e81d2da57877882b2bbd774a946ee80f365f174b6d54d683673294948a224b4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_read_only_allows_reads",
+      "test_read_only_rejects_writes"
+    ],
+    "notes": "TempDBseed e checkpoint: readonlySELECT permite eINSERTOperationalError. Não cobre toda função customSQLite/WAL."
+  },
+  {
+    "path": "tests/test_dixon_coles.py",
+    "sha256_utf8": "ed8139b2f87be41c1911daa3af2633a4b846c13d746678f96974882426881d3d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_tau_is_one_outside_thin_cells",
+      "test_tau_negative_rho_inflates_draws_deflates_one_zero",
+      "test_tau_zero_rho_is_identity",
+      "test_tau_out_of_range_rho_raises",
+      "test_decay_today_is_one_and_monotone",
+      "test_decay_halflife",
+      "test_decay_zero_xi_is_flat",
+      "test_decay_rejects_future_match_and_negative_xi",
+      "test_grid_sums_to_one",
+      "test_outcome_probs_sum_to_one_and_favor_home",
+      "test_negative_rho_raises_draw_prob_vs_independent",
+      "test_rho_bounds_enforced_at_construction",
+      "test_score_prob_matches_grid_and_validates_range",
+      "test_invalid_means_raise"
+    ],
+    "notes": "Equações tau thin cells/rhonegdraws/correctbounds, exponentialhalf life120, gridnormalização e scoresrange. Não estima validade distribuição esportiva."
+  },
+  {
+    "path": "tests/test_dixon_coles_fit.py",
+    "sha256_utf8": "a0ebc8ec3dbb16f66617a13175a7e950b5d593bdf56b679924287ee5bda3009f",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_fit_recovers_strength_ordering",
+      "test_fit_identification_mean_attack_near_one",
+      "test_fit_rejects_empty_and_single_team",
+      "test_evaluator_xi_from_half_life",
+      "test_walkforward_returns_prediction_points",
+      "test_walkforward_prediction_never_uses_future_kickoff"
+    ],
+    "notes": "Poissonseeded30rounds recupera plantedstrengthorder/meanlogattack≈0/homeadv/rhobounds; walkforward retorna PredictionPoints normalizados/timeordered. Nome never uses future kickoff sóassert predicted<matures: não altera futuro nem observa subset de fit. Nome empty-and-single-team só exercita empty."
+  },
+  {
+    "path": "tests/test_draw_diagnostics.py",
+    "sha256_utf8": "92b93baaa56c06e0fa160860f89dd4825f9b9216cea47eb5a08441804d457727",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_display_exposes_draw_hypotheses_in_structured_and_human_output"
+    ],
+    "notes": "Display modelode times iguais expõe empate/gap0 e robustchoiceNone em JSON/humano, CLVmock. Não escolhe robustamente estratégia."
+  },
+  {
+    "path": "tests/test_dynamic_strength.py",
+    "sha256_utf8": "3f90e0a02acb24f6e7ffdbcc5ac579f210b37a3e6baec4ea7c47f215bab91792",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_fit_rejects_invalid_alphas",
+      "test_balanced_observations_keep_corrections_near_zero",
+      "test_attack_and_defence_are_directional_and_unseen_team_is_neutral"
+    ],
+    "notes": "EWMAfixtures iguais neutral e4x0 dá correctionsdirecionais, unknownteams0; alpha inválido erro. Não holdoutperformance."
+  },
+  {
+    "path": "tests/test_economic_search.py",
+    "sha256_utf8": "8f4d3b71108d6477f2d255a6c8f4b0a9a6b019ac2c61dc7eab4249fba2b14ccb",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_arbitrage_all_outcomes_and_partial_risk",
+      "test_poisson_probability_mass_and_symmetry",
+      "test_forecast_excludes_target_future_and_recent_results_and_all_odds",
+      "test_season_filter_precedes_all_other_fields",
+      "test_duplicate_identity_rejected_and_bad_label_preserved",
+      "test_same_day_winnings_cannot_fund_later_fills",
+      "test_unsettled_never_becomes_void_or_zero_return",
+      "test_normalizing_own_book_does_not_manufacture_edge"
+    ],
+    "notes": "Fractionarbitragem três odds/custo.02/commission.01 e seis partialcasesworst<0; forecastpermutafuture/recentlabels/allodds ignora, season2026 excluí antesparse, invalidlabelunsettled. Ledger same-dayreservedstakes98 e missingresultROIunknown, selfbooknormnone. Economia condicional depreçosfixtures e receipt/fillausentes."
+  },
+  {
+    "path": "tests/test_ecosystem_plugin.py",
+    "sha256_utf8": "ba3175a66b85af65806f22686d210cf60fc8989aa5e3d0d5958783f03835c6a4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_ecosystem_plugin_contract_shape"
+    ],
+    "notes": "Pluginshape domains/statusenum/capssupportprediction/NOT_VALIDATED/FORBIDDEN; não executa pipelines ou afere upstreamreal."
+  },
+  {
+    "path": "tests/test_elo_baseline.py",
+    "sha256_utf8": "703820717fe92ea872d570a242f2af8b42f0c2c4d393175445373d89dce99723",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_predictions_are_proper_distributions",
+      "test_strong_team_is_favored",
+      "test_deterministic_across_runs",
+      "test_draw_rate_comes_from_training_history"
+    ],
+    "notes": "40 jogos planted forte/fraco: properdistributions/strengthfavored/determinismo/drawrateinterior. Não marketaccuracy; drawrateassert não verifica valor do truncamento."
+  },
+  {
+    "path": "tests/test_elo_baseline_block_guard.py",
+    "sha256_utf8": "86afedf01bf6d1162850c589e20048cc48ddca958403645c55d81f870734a979",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_predicted_at_e_estritamente_anterior_ao_matures_at",
+      "test_bloco_simultaneo_e_descartado_do_treino",
+      "test_kickoffs_distintos_nao_descartam_nada",
+      "test_taxa_de_empate_sai_do_historico_truncado",
+      "test_primeiro_ajuste_sem_historico_utilizavel_falha_alto",
+      "test_probabilidades_somam_um"
+    ],
+    "notes": "40blocks fixtures simultâneos contabilizam blocked>0, horáriosdistintos0; semhistoryusable lançaerro, predicted<matures e normalização. Nome drawrate from truncated só bounds0..1, não contraprova futuro."
+  },
+  {
+    "path": "tests/test_emit_h9_shadow.py",
+    "sha256_utf8": "0c8fa4e3e0e63095a28cb2a131d9e822cecc75abbe589ee6228e8f4776556aa0",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_emits_pick_when_fixture_is_in_decision_window",
+      "test_ignores_fixture_outside_decision_window",
+      "test_fixture_in_window_without_market_observation_is_audited",
+      "test_missing_elo_team_is_audited",
+      "test_stale_model_cache_fails_before_emission",
+      "test_second_run_in_window_is_idempotent",
+      "test_uses_frozen_model_params_not_arbitrary_values",
+      "test_no_stable_bookmaker_blocks_emission",
+      "test_wrong_bookmaker_quote_is_not_matched_to_a_different_approved_book",
+      "test_audit_trail_records_blocked_evaluations_not_just_emitted",
+      "test_audit_trail_computes_slippage_against_best_available_book",
+      "test_audit_trail_has_zero_slippage_when_only_the_approved_book_quoted"
+    ],
+    "notes": "SQLite Elo/cache e trials modelo fixtures, approved_bookmaker monkeypatch permite shadowwindow; emitscapitalFalse/currentElo/fingerprint16, frozenparams usados, cacheold fail e idempotência. Missingquote/team/wrongbook/block são auditados. Campo executed_odds é odd da cotação shadow e slippagevsbest meradiferença preçosfake, não execução real."
+  },
+  {
+    "path": "tests/test_evaluate_h14_prospective.py",
+    "sha256_utf8": "d0049a4ec9d452b39c08f9ce4f709de66072e52d595e7bbf23182ee0a02de246",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_abaixo_do_n_minimo_nao_calcula_nada",
+      "test_no_n_minimo_calcula_e_reporta_veredito",
+      "test_main_recusa_sobrescrever_relatorio_existente",
+      "test_ignora_previsoes_sem_resultado_ainda"
+    ],
+    "notes": "3 vs21 eventos com probabilidades fabricadas: mínimo antes métricas, n21 gera verdictenum/capitalFalse, unknownoutcomeexcluído e CLI refuseoverwrite. Não comprova timestamps prospectivos nos fixtures (ledger mínimo sem predicted_at) nem autenticidade."
+  },
+  {
+    "path": "tests/test_evaluate_h15_prospective.py",
+    "sha256_utf8": "0271867d0837f2af9b35da5837e7ee2bb69fdbeeadfa01aaaefe385a093c3782",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_abaixo_do_n_minimo_nao_calcula_nada",
+      "test_no_n_minimo_calcula_e_reporta_veredito",
+      "test_main_recusa_sobrescrever_relatorio_existente",
+      "test_ignora_previsoes_sem_resultado_ainda"
+    ],
+    "notes": "Mesma estrutura mínimo21/refit10 vs100 declarados, n3 espera, n21 calcula, missingoutcomeexclui e overwritefailure. Não reestima modelos ou afirma beneficio refit real."
+  },
+  {
+    "path": "tests/test_exp001_coverage_audit.py",
+    "sha256_utf8": "8ab150142146e495c75ee0b70adc80532ded1509ae752960a1efecbe6a897b94",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_summary_keeps_missing_fixtures_in_denominator"
+    ],
+    "notes": "Dois eventos porhorizonte um missing mantém denominatorcoverage.5; não coverage observada."
+  },
+  {
+    "path": "tests/test_exp001_cutoff_state_regression.py",
+    "sha256_utf8": "b3edf4a557b2282c7415f527e86f084c898fec3fe03628457b0eed3f9d271ab9",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_latest_inactive_state_does_not_resurrect_older_quote",
+      "test_future_reactivation_cannot_undo_suspension_at_cutoff",
+      "test_future_suspension_does_not_erase_current_quote",
+      "test_future_price_is_never_selected",
+      "test_future_only_has_no_eligible_quote",
+      "test_equal_timestamp_conflict_fails_closed_independent_of_order",
+      "test_equal_timestamp_identical_states_are_accepted",
+      "test_missing_active_flag_is_not_proof_of_an_active_state",
+      "test_suspension_of_one_leg_rejects_whole_1x2_quote",
+      "test_missing_leg_fails_closed",
+      "test_reactivation_before_cutoff_is_accepted",
+      "test_transport_exception_never_exposes_key_or_url_in_traceback"
+    ],
+    "notes": "Timelinefake latestinactive/partialleg/unknownactive/tieconflicts impedemressuscitação, futurestateignored e reactivation antescutoff aceita. Transporterrorsrequests monkeypatch traceback sem keyURL. Sem请求 API real ou sourcevintage autenticada."
+  },
+  {
+    "path": "tests/test_exp001_data_pilot.py",
+    "sha256_utf8": "1b5b81f7d8bc89239dd874b838d3f507daf3ce157dffc7bba3c237ac7deff961",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_pilot_rejects_snapshots_after_cutoff",
+      "test_pilot_fails_closed_when_one_1x2_leg_is_missing"
+    ],
+    "notes": "1x2 timelinefixture futuroprice99 excluído e missinglegs failclosed; não ingestreal."
+  },
+  {
+    "path": "tests/test_feature_builder.py",
+    "sha256_utf8": "02a98d9bc5e000d5c0933b0264b716eda2961df353eba905a3af64c0c21cf5f1",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_build_features",
+      "test_build_features_empty",
+      "test_delta_xg_so_existe_quando_os_dois_lados_tem_historico",
+      "test_build_features_filtra_pelo_lado_do_time",
+      "test_build_features_ignora_periodos_parciais"
+    ],
+    "notes": "SQLite sintético médias2.25xG/56.5possession antesalvo; ausênciaNone/count0 nãozero, deltaapenasduaslados, side/ALLperiod filtre98/99contaminação. Não verifica published/ingested nesta baselegacy."
+  },
+  {
+    "path": "tests/test_find_odds.py",
+    "sha256_utf8": "697286afc9c2c2773c881a82ab5f5e18d8085944e9a3244c49a93e37629ce7d2",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_sem_swap_quando_armazenado_bate_com_mando",
+      "test_swap_quando_armazenado_invertido_vs_mando",
+      "test_home_recebe_sempre_a_propria_odd_independente_da_orientacao",
+      "test_over_under_independe_da_orientacao",
+      "test_data_dentro_da_tolerancia_de_3_dias_casa",
+      "test_data_fora_da_tolerancia_nao_casa",
+      "test_escolhe_candidato_de_data_mais_proxima",
+      "test_par_inexistente_devolve_none",
+      "test_data_malformada_no_candidato_e_ignorada_sem_estourar",
+      "test_canon_aplica_alias",
+      "test_canon_reconcilia_bosnia_e_comercial",
+      "test_canon_normaliza_caixa_e_espaco",
+      "test_canon_passthrough_sem_alias"
+    ],
+    "notes": "Lookupcanon/countryaliases e mandoswap1x2/OUinvariant, closestdate±3dias/malformedignore. Matching aproximado aceita cotação até3dias depois da dataalvo; teste não prova PIT ou identidadeeventid exata."
+  },
+  {
+    "path": "tests/test_followup_capture_contract.py",
+    "sha256_utf8": "7661b7670c2c812397fa8506a6d445edb1626271148424859542cd16c6df63a1",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_whole_capture_keeps_one_metered_call_and_is_idempotent",
+      "test_outside_window_does_not_read_credentials_or_call_api",
+      "test_quota_reserve_and_paid_plan_block_before_odds",
+      "test_http_failure_is_not_retried_and_does_not_expose_key",
+      "test_invalid_json_response_is_preserved_and_audited_as_rejected",
+      "test_credential_failure_still_leaves_sanitized_receipt",
+      "test_missing_kickoff_produces_rejection_instead_of_crashing",
+      "test_partial_audit_directory_does_not_prevent_recovery",
+      "test_relabelled_provider_endpoint_cannot_be_admitted",
+      "test_late_or_timezone_free_receipt_cannot_pass_price_gate",
+      "test_rescheduled_fixture_does_not_move_frozen_decision"
+    ],
+    "notes": "Collector/auditor docsreprodução com clock/opener/helper fake: account/odds/account só1metered/idempotente, janelaantescredencial/quota20/paidplanblock, HTTP429semretry/redaction, rawJSONbadpreservado e offlineauditreject. Fixture/hashendpoint/timestamps/admissionprospectivefalseexec. Auditor adda udithook patchdesliga isolamento durante teste, não prova sandbox real. Sem rede/charge efetivo."
+  },
+  {
+    "path": "tests/test_formal_prediction.py",
+    "sha256_utf8": "a632ec78a7d937e93b0428d0aa93bc960cc38f740d3b480d48518d17ca87aaf6",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_formal_context_refuses_unknown_identity_or_wrong_date",
+      "test_quote_cannot_be_borrowed_from_another_event",
+      "test_gate_blocks_before_model_is_called",
+      "test_formal_settlement_selects_exact_prediction_among_repeated_matches"
+    ],
+    "notes": "Aliases fixtures identidade/data/quoteeventwrong reject, model spy blockedbeforecall capitalTrue; formalpredictionid desambigua repeatedmatches e missingref não gravaresultado. Context ready declarativo não atestavintage."
+  },
+  {
+    "path": "tests/test_h10_fadiga_walkforward.py",
+    "sha256_utf8": "2ec2f1df89d8c75d2175607e92a2aadbdd434f51e08bb3dad1ba359316625ec3",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_rest_days_diff_debut_and_cap_and_sign",
+      "test_outcome_index",
+      "test_run_walkforward_produces_paired_series_of_equal_length",
+      "test_run_walkforward_exits_when_base_too_small",
+      "test_paired_bootstrap_gain_tight_ci_around_constant_gain",
+      "test_main_registers_a_new_trial_with_attestation"
+    ],
+    "notes": "Seeded rows60, restcap/sign/debut/outcomes, WFA paired30/games2blocks e constantsbootstrapgain.1. CLItrials tmp reg/attestation viarealhelpers e idempotente, mincal reduzido10; não proves fatigueedge real ou valida parâmetrosserving."
+  },
+  {
+    "path": "tests/test_h9_missed_window_exit.py",
+    "sha256_utf8": "8c310cb4762f7d1e191ac918c0a7fcbb65ee58240deb2d760a224f654f7ffb64",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_missed_window_alert_is_not_reported_as_task_failure"
+    ],
+    "notes": "Reportmock missed2risk1 emits stderralert mas exit0. Consequência: schedulerSUCCEEDED não significa ausência de missedwindows."
+  },
+  {
+    "path": "tests/test_h9_shadow.py",
+    "sha256_utf8": "3d12dde0ed7c3da8c58a8d545457967d5c6eeaa4a66b56ab36befffe05d40d25",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_emission_is_blocked_without_approved_bookmaker",
+      "test_emit_and_same_book_settlement_are_idempotent",
+      "test_rejects_early_result_and_other_book_closing"
+    ],
+    "notes": "Shadowapprovedbook none bloqueia; quote1.9fake emit idem, resultados2x1 settlementPnl.9/CLV vs1.8 e settledidem. Nome rejects early-result-and-other-book só exercita earlyresult, nenhum bookmakerdivergente neste corpo. Sem aposta externa."
+  },
+  {
+    "path": "tests/test_historical_admission.py",
+    "sha256_utf8": "c4fb0052e72678cb387174c17f44b4f70a94e4bc7d3c549c6d95f54ff9a69337",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_suspension_cannot_resurrect_previous_active_price",
+      "test_future_state_does_not_change_past_selection",
+      "test_conflicting_latest_state_fails_closed",
+      "test_invalid_price_never_uses_older_good_quote",
+      "test_active_must_be_literal_boolean",
+      "test_unknown_clock_cannot_be_silently_ignored",
+      "test_timezone_offset_and_cutoff_inclusion",
+      "test_input_order_and_identical_duplicates_do_not_change_quote",
+      "test_limit_does_not_prove_fill_and_ambiguous_limit_remains_unknown",
+      "test_retrospective_data_never_passes_execution_gate_even_with_positive_proxy",
+      "test_mismatched_identity_is_rejected",
+      "test_other_market_cannot_fill_missing_1x2",
+      "test_stale_selection_and_skew_are_separate_diagnostics",
+      "test_no_mutation_or_use_of_result_fields",
+      "test_protected_time_window_cannot_enter_the_audit"
+    ],
+    "notes": "Timeline sintético latestactive literalbool/pricefinitefloat/clockordered/ties failclosed; futureignored/permutationinvariant. Ambiguouslimitunknown e nãofill; retrospective receivedSept paraMay nuncaexecution apesarconditionalpositiveEV. Identity/market/skew30/age120diagnostics/resultignored/protectedwindow. Sem fonte externa ou execução."
+  },
+  {
+    "path": "tests/test_historical_expansion.py",
+    "sha256_utf8": "33fb5c67465c035dcfec23e33dac95019b1129055bc0dafbeae13c7c3c777206",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_reconciles_observed_alias_and_ingest_is_idempotent",
+      "test_unknown_team_fails_closed",
+      "test_report_detects_duplicates_new_rows_and_score_conflicts"
+    ],
+    "notes": "ShadowSQLite aliasraw/canonical/idem, scoreconflicts1/new1 contra productioninmemory impedepromotion. Returncount1 no rerun é processados, databasecount1. Não muda produção."
+  },
+  {
+    "path": "tests/test_historical_numeric_boundary.py",
+    "sha256_utf8": "c9ed13a176a155c4910ccb136bcaf710f50daad1317071966ed24679b27dd2a4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_huge_integer_rejected_and_negative_limit_not_admitted"
+    ],
+    "notes": "Huge10**500price erro, limit0 preservado e negativo minúsculo unknown. Zero limite não filladmitted."
+  },
+  {
+    "path": "tests/test_hostil_2026_07_18.py",
+    "sha256_utf8": "f8722c21753dcdaa87fb77ecd44e93ec1cedaa83c9f1b2a0c28b422d59368f32",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_shin_rejeita_odd_invalida_com_erro_claro",
+      "test_shin_continua_correto_para_odds_validas",
+      "test_market_probs_ignora_placeholder_1x2_todo_em_1",
+      "test_market_probs_escolhe_a_linha_valida_e_pula_a_placeholder",
+      "test_settle_nao_liquida_pick_duplicado_duas_vezes",
+      "test_settle_rerun_continua_idempotente",
+      "test_settle_com_fechamento_invalido_liquida_sem_clv",
+      "test_settle_recusa_linha_inteira",
+      "test_capture_recusa_linha_inteira",
+      "test_record_result_rejeita_placar_negativo",
+      "test_banco_truncado_falha_claramente",
+      "test_leitor_read_only_ve_dado_commitado_durante_escrita"
+    ],
+    "notes": "Shin inválidos rejeita; legacy_marketplaceholder1x2todo1 omitido, validlinha selecionada. Sombra duplicate/rerunsettles1 e closeinvalidCLVNone com PnLsimulado, linhasinteiras recusadas. TruncatedSQLitequeryerror, readonlyconcurrentread n>=1 fraco (não exige novo commit2), writeerro. Não comprova relato de apostas real."
+  },
+  {
+    "path": "tests/test_hotpath_cold_start.py",
+    "sha256_utf8": "4916405ad46ec559ca918488bf1fc7a2c0a3219cba5a1128ee5f66094fe6d57d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_verification_has_no_cold_numeric_import_inside_the_result_lifetime",
+      "test_ambiguous_duplicate_protocol_field_cannot_be_a_valid_request"
+    ],
+    "notes": "Importhook impede numeric/kernelcoldimport durante verifyregisteredFakeRedis, dupJSONinvoke rejeita. Sem medir latency deadline5s real."
+  },
+  {
+    "path": "tests/test_hotpath_smoke.py",
+    "sha256_utf8": "a7fa0b957db56029041180edcebba79bd85aa0e656aeaaf0acfe644b3f0c457e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_smoke_wakes_only_the_exact_registered_v2_request",
+      "test_smoke_cannot_create_a_missing_registration",
+      "test_smoke_rejects_noncurrent_results",
+      "test_smoke_requires_result_correlation",
+      "test_smoke_requires_idempotency_identity_correlation",
+      "test_smoke_rejects_incomplete_registered_payload_before_wakeup",
+      "test_smoke_times_out_without_creating_a_replacement_request",
+      "test_cli_does_not_echo_a_connection_error_or_redis_credentials",
+      "test_synthetic_smoke_sends_lineups_to_worker_without_registering_itself"
+    ],
+    "notes": "FakeRedis current/request exact registeredv2, missing/invalidpayload no wake, correlationrun/identity e noncurrent/timeoutreject. FakeCLIredaction/close e syntheticlineups11 enqueue sem autorregistro. ScriptLua não executado por fakeeval; não atesta .NETconsumer/kernelreal."
+  },
+  {
+    "path": "tests/test_identity.py",
+    "sha256_utf8": "b113c576ffabd27c9862c0aa40c6c73ebfbac3adc85ba710c336a8153e466b7a",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_resolves_canonical_name_id_and_normalized_alias",
+      "test_unknown_only_suggests_and_never_resolves",
+      "test_rejects_unknown_target_and_normalized_collision"
+    ],
+    "notes": "Catalogtemp canonicalid/name/normalizedalias, fuzzyunknownonlysuggestion, targetunknown/normalcollision reject. Não autentica catálogo de equipes."
+  },
+  {
+    "path": "tests/test_info_stake_cap.py",
+    "sha256_utf8": "c80fbb86dcd31a9be796686ac15ada5a0cb9dc1d263d35815747eff5dcf30340",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_sem_env_var_nada_muda",
+      "test_teto_bloqueia_informativa_acima",
+      "test_teto_permite_informativa_dentro",
+      "test_mercado_validado_ignora_teto"
+    ],
+    "notes": "BETLOG_MAX_INFO_STAKE optional: absent aceita2uinformativo, configured.5caps, ou25 legacyvalidated ignora teto. Não universalcapitalgate; apenas manualjournalpolicy."
+  },
+  {
+    "path": "tests/test_ingest_typing_boundaries.py",
+    "sha256_utf8": "b97404be720212ed0578966d6bddb96db031ab67a96b796bea5df5df602334e3",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_load_config_honors_explicit_runtime_path",
+      "test_normalize_keeps_dataframe_shape_and_nullable_scores",
+      "test_parse_player_stats_preserves_fbref_numeric_semantics"
+    ],
+    "notes": "Runtimeconfigpath, pandasnullable score/stringfalse neutral0, HTMLFBref sintético Min1,234 ->1234/xAG--None. Sem scraping real."
+  },
+  {
+    "path": "tests/test_integral_review_admission.py",
+    "sha256_utf8": "e8fb5f57b0300c9ea3d8696688a1bbd63b905ef3d796005cceb2cf990323223d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_contradictory_fixture_state_cannot_admit_pre_game_prices",
+      "test_missing_required_change_clock_is_not_verified_state",
+      "test_duplicate_conflicting_active_keys_are_rejected",
+      "test_duplicate_receipt_keys_are_rejected",
+      "test_nonfinite_payload_metadata_cannot_be_admitted",
+      "test_hash_integrity_does_not_authorize_swapped_participants",
+      "test_concurrent_publisher_cannot_overwrite_completed_audit"
+    ],
+    "notes": "Payloadstate trueStart/End/hasOddsfalse/missingclock impedem preço; rawduplicatekeys/receiptkeys/nonfinite e swappedparticipants com SHA válido recusados. Injetor competingaudit publica durante tmpwrite e nãooverwrite. Concorrência simulada determinística, não dois processos reais."
+  },
+  {
+    "path": "tests/test_integral_review_domain.py",
+    "sha256_utf8": "b0a0c2eed695ce8e1837da110e7dcce969f4b2056f30bbeb006bb2543a731258",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_league_simulator_rejects_before_database_connection"
+    ],
+    "notes": "Simulatorliga unsupported SystemExit antes dbconnect spy; não simulatorimplementado."
+  },
+  {
+    "path": "tests/test_integral_review_event_backtest.py",
+    "sha256_utf8": "da6acd880515db5744d736c82c0aa385c3713b4103e83c1de64e566d9aeb0c2a",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_split_cannot_train_on_any_outcome_from_first_test_day",
+      "test_multiple_price_lines_do_not_reweight_training_targets",
+      "test_unsupported_line_or_missing_probability_abstains",
+      "test_one_day_cannot_supply_both_training_and_evaluation",
+      "test_conflicting_targets_for_one_event_are_rejected",
+      "test_invalid_odds_cannot_be_settled_as_a_trade"
+    ],
+    "notes": "Fakefit/predict/loaders observam splitantes1ºtestday, multi-lines deduptrain e conflictingtargetsreject; unsupported/missingprob/invalidoddABSTAIN. Allsame day nofit. Não avalia eventmodelreal."
+  },
+  {
+    "path": "tests/test_inventario_dados.py",
+    "sha256_utf8": "e006f6f753cbf95c750a84943041816754956cf2fa1e4df3ca5b8ed0f6ea2ac4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_conta_jogos_e_cobertura_por_ano",
+      "test_espelho_matches_entra_separado",
+      "test_detecta_abertura_identica_ao_flat",
+      "test_detecta_movimento_de_linha",
+      "test_somente_leitura",
+      "test_queries_f_string_tambem_sao_leitura",
+      "test_banco_ausente_falha_limpo",
+      "test_saida_json",
+      "test_ano_do_holdout_aparece_como_qualquer_outro"
+    ],
+    "notes": "DBsynthetic2021/2025coverage/xG/openflatcounts e JSON/missingclean. ASTconstexecute queriesSELECT/PRAGMA e substringmode_ro; f-stringregex procura só SELECT/PRAGMA portanto não prova inexistência de writes escondidos/dinâmicos. Holdout aparececontagem apenas."
+  },
+  {
+    "path": "tests/test_kernel_cli_redis.py",
+    "sha256_utf8": "b069bf5c10fe045e570437e907e74a569520d413f56486d629c5e19df40d49d5",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_healthcheck_module_process_returns_status"
+    ],
+    "notes": "Integration fixture skip sem URL/runid explícitos; loopback porta não6379 DB14 vazia identidaderealrunid e cleanup onlyhealthkey/sameinstance, semFLUSHDB. Subprocess healthcheck missing/healthy/expired sem criar absentDB; heartbeatrenew no numericmodel. Nenhuma execução neste estudo."
+  },
+  {
+    "path": "tests/test_kernel_protocol.py",
+    "sha256_utf8": "93816017c8be005643c038b4cf97864623201b8431e86d096040f752bc155c31",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_invalid_json_and_unknown_version_are_rejected",
+      "test_missing_identifier_is_rejected",
+      "test_duplicate_idempotency_claim_is_safe",
+      "test_valid_payload_writes_versioned_ttl_response",
+      "test_each_required_field_is_rejected_when_missing",
+      "test_invalid_identifier_is_rejected_without_coercion",
+      "test_invalid_number_is_rejected_before_claim",
+      "test_invalid_timestamp_is_rejected_before_claim",
+      "test_non_object_or_malformed_payload_is_rejected",
+      "test_additional_properties_are_rejected",
+      "test_non_string_protocol_version_is_rejected",
+      "test_unrepresentable_rates_are_rejected_before_claim",
+      "test_invalid_message_does_not_poison_valid_retry",
+      "test_schema_valid_numeric_representations_are_accepted",
+      "test_state_version_requires_canonical_positive_redis_integer",
+      "test_version_above_lua_double_precision_is_preserved_as_string",
+      "test_legacy_v1_cannot_bypass_registered_v2_lifecycle"
+    ],
+    "notes": "Fakeeval claim/completion verifica keys/lease5000 e correlation6fields TTL5; parser strictrequired/type/NaNInf/huge/additional, finite-rateoverflowbeforeclaim, invalid não poisonretry. Version decimalstringmaxint64 preservado; legacyV1recusado. Schema timestamps1e20 aceitos não chronologicalfreshness; Lua atomicity real não provada pelo fake."
+  },
+  {
+    "path": "tests/test_kernel_runtime.py",
+    "sha256_utf8": "5d0ad4c1f233712a02e9b783f8178925cf8d08f4c165b0a6c48376f6c8ad81d1",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_grid_is_normalized_non_negative_and_dixon_coles_changes_low_scores",
+      "test_numba_python_implementation_is_directly_verifiable",
+      "test_fair_odds_cover_complete_probability_grid",
+      "test_fair_odds_represents_zero_probability_as_none",
+      "test_load_params_closes_sports_db_and_applies_config",
+      "test_load_params_closes_sports_db_when_cache_is_empty",
+      "test_load_params_rejects_stale_versioned_cache",
+      "test_warmup_invokes_grid_twice",
+      "test_main_rejects_missing_runtime_configuration",
+      "test_main_healthcheck_reports_redis_state",
+      "test_main_healthcheck_fails_when_kernel_is_not_ready",
+      "test_main_starts_daemon_with_explicit_absolute_configuration",
+      "test_daemon_sets_health_and_cleans_up_on_shutdown"
+    ],
+    "notes": "JIT/py_func matemáticagridnormalização/DC/fairod dsrounded/zeroprobNone. Paramscacheclose/missing/stale/configtheta; warmup2calls; CLI missing/healthfake/coroutinehandoff. DaemonFakeRedis/pubsub/signalshutdown verificaheartbeatstartrelease/cleanup. Sem latency real ou RedisLua."
+  },
+  {
+    "path": "tests/test_kernel_v2_runtime.py",
+    "sha256_utf8": "7451491eff38814550d63d3de889dba6f8ff7aec4970a491c80a9de7af553a56",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_uncertain_completion_releases_only_its_attempt",
+      "test_computation_failure_releases_claim_and_never_completes",
+      "test_poller_recovers_registered_payloads_without_pubsub",
+      "test_windows_signal_fallback_schedules_stop_and_restores_handlers",
+      "test_session_keeps_client_open_until_inflight_handler_cleans_up"
+    ],
+    "notes": "Fakeeval injeta ConnectionError/CancelledError completion: release apenasattemptmatching e cancelreraises; computefailno complete. Poller fake recupera2semPubSub, Windowsfallbacksignalsrestored; in-flight async cancelfinallycleanup beforeclientclose. Não dura networkrestart ou comprova atomicLua."
+  },
+  {
+    "path": "tests/test_kickoff_block_guard.py",
+    "sha256_utf8": "fc196c195808e301924d68e3524c8b68f091d148951b3fea9b90317e1491178d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_treino_nunca_alcanca_o_kickoff_do_alvo",
+      "test_bloco_simultaneo_e_efetivamente_descartado",
+      "test_kickoffs_distintos_nao_descartam_nada",
+      "test_predicted_at_e_estritamente_anterior_ao_matures_at",
+      "test_cadencia_de_refit_continua_valendo",
+      "test_primeiro_ajuste_sem_historico_utilizavel_falha_alto"
+    ],
+    "notes": "Spy actual_fit trained_at<horizon emcadences1/4/9, simultaneousblocked>0/ distinct0, rarecadencefewerfits, emptyusablefail. Boa observação de modeltreino nos fixtures; não vintagepublication de resultadoprovider."
+  },
+  {
+    "path": "tests/test_ledger_consistency.py",
+    "sha256_utf8": "37f8cb81d6785d7984135729a034e64be6efff3a62f94abdbfc3d0a7ddf1d5c3",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_concurrent_writers_cannot_duplicate_identity",
+      "test_append_preserves_unterminated_valid_record",
+      "test_bank_uses_one_snapshot_for_profit_and_exposure",
+      "test_imported_invalid_bank_record_is_rejected",
+      "test_bank_duplicate_json_key_is_rejected",
+      "test_invalid_imported_contract_cannot_be_settled",
+      "test_reversed_team_input_keeps_score_in_recorded_home_order",
+      "test_invalid_configured_stake_cap_is_rejected",
+      "test_stable_id_does_not_require_legacy_line_number",
+      "test_cli_does_not_promote_legacy_market_flag",
+      "test_failed_append_releases_writer_lock"
+    ],
+    "notes": "Thread pause leitura soblock: contendingadd/settle lançaOSError e não dup, appendnewlinepreserve/lockreleaseafterfail; bank lê único snapshot profit/exposure. Importedbank/contract/dupkeys/scores/invalidcap rejeitados e scoreorientation corrected. CLI relatosmanuaisbrutos semCLVcomprovado; locks process/threadfixture não immutableauthledger."
+  },
+  {
+    "path": "tests/test_lineup_archive.py",
+    "sha256_utf8": "a3144e3f552dad34ae675e4891018bfdf092d6b38b0ee770bdf627b2a4c8e68d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_lineup_archive_is_append_only_and_idempotent_by_vintage"
+    ],
+    "notes": "JSONL idem porcontenthash e mudança rolehash registra2vintages. Hasha/b declarados, não recomputados sourcepayload neste teste."
+  },
+  {
+    "path": "tests/test_lineup_inbox.py",
+    "sha256_utf8": "1121762f1821a29df450947e1099798dd0af02e558839760d2e6bed9d3e06d9a",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_enqueue_preserves_event_for_idempotent_retry_and_does_not_trim",
+      "test_invalid_serialization_is_not_sent_to_redis"
+    ],
+    "notes": "FakeLuaevalcapacity10000 semMAXLEN/XTRIM e rawpayloadpreserved; oversized65k/NaN antes Redis rejeita. Não exige eventfullschema aqui."
+  },
+  {
+    "path": "tests/test_lineup_inbox_redis.py",
+    "sha256_utf8": "cd8c49ea3d6ad38c337315aabb3b2cbb2c20a3b5d152d4056544d82d537f1dc7",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_capacity_10000_refuses_10001_without_trimming_pending_entries",
+      "test_identical_retry_preserves_payload_and_capture_without_mutating_event",
+      "test_invalid_inbox_type_is_rejected_without_replacing_its_value"
+    ],
+    "notes": "Conditionalintegration loopbacknon6379DB14empty/runidguard/cleanupownedkey. 10000 entries+pending7 recusa10001 semtrim; identicalretry gera2streamids preservapayloadclock; wrongkeytype nãooverwrite. Importredisrequired e fixture skips sem dedicatedservice; nãoexecutado."
+  },
+  {
+    "path": "tests/test_live_capture_admission.py",
+    "sha256_utf8": "dfc6c03b0501bb84a68c5185acce761de8e5a4a8ba1403476f4aaf57d9c62cd8",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_active_children_cannot_override_inactive_parent",
+      "test_suspension_and_missing_flags_reject",
+      "test_network_receipt_is_not_bookmaker_change_or_execution",
+      "test_generic_bet365_cannot_substitute_regional_book",
+      "test_postkickoff_or_foreign_identity_cannot_be_admitted",
+      "test_payload_is_not_modified",
+      "test_boolean_status_cannot_masquerade_as_numeric_pre_game"
+    ],
+    "notes": "Nested APIflagsparents/market/selection/missing strict, statusFalse nãozero, regionalbooknotgeneric, identity/preKO, inputsimmutable. Freshnetworkreceipt1sec separado changeold/limitunknown e executionFalse. Allpayloadfixture semAPIreal."
+  },
+  {
+    "path": "tests/test_logic_registry.py",
+    "sha256_utf8": "d425d0d1a760f1a565551a73b4a9bc119c057564e56efbff467de02acc2f7813",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_project_logic_registry_preserves_all_hypothesis_families",
+      "test_draw_catalog_preserves_distinct_draw_hypotheses_and_controls"
+    ],
+    "notes": "Assertstrings físicos9famílias e drawcatalog métricas/uncertainty/notvalidated. Prova documentação contémtermos, não implementação/evidência econômica."
+  },
+  {
+    "path": "tests/test_market_0b_resolution.py",
+    "sha256_utf8": "d47c4c751affe6589445877e934a47694bdc5d0b907932ea4a916f1250f6403c",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_odds_invalidas_nao_contam_como_cobertura",
+      "test_probabilidade_quase_constante_falha_resolucao",
+      "test_histograma_range_e_threshold_ficam_no_relatorio",
+      "test_um_mercado_sem_variancia_produz_no_go_global",
+      "test_variacao_e_cobertura_suficientes_liberam_protocolo_completo",
+      "test_resolucao_sem_odds_nao_e_confundida_com_no_go_estrutural",
+      "test_protocolo_completo_declara_os_dois_lados_e_dez_celulas",
+      "test_evaluate_reports_lambda_total_distribution"
+    ],
+    "notes": "Fixtures probvar/cobertura e invalidodds separamNO_GO_LOW_RESOLUTION/noGOcoverage; variance sufficient apenas PROCEED_FULL0B,10cells/2sides/2permutations fixture e lambda distribution. Não poder estimado suficiente nem lucro."
+  },
+  {
+    "path": "tests/test_market_anchor.py",
+    "sha256_utf8": "255e0d564628e53fe7ce3d3f948228adb14ca36f10d7fe71c6ec460868eb1c2e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_remove_overround_returns_complete_distribution",
+      "test_remove_overround_rejects_incomplete_or_invalid_market",
+      "test_consensus_uses_complete_books_and_best_observed_price",
+      "test_research_persistence_marks_collection_only"
+    ],
+    "notes": "Proportionaldevig/completeness e medianconsensus sócompletebooks ignora incomplete9odd; bestobserved separado fair; persistence COLLECTION_ONLY. Não sourceauth/executability."
+  },
+  {
+    "path": "tests/test_market_edge_ordering.py",
+    "sha256_utf8": "703ae7476ec5022868368134f8a41ef211fff619ba588ce630be0ecac750928e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_grade_declara_sessenta_tentativas",
+      "test_devig_rejeita_placeholder_e_preserva_ordem_away_draw_home",
+      "test_bins_tem_fronteiras_deterministicas",
+      "test_permutacao_preserva_resultados_dentro_de_cada_estrato",
+      "test_permutacao_nao_altera_previsoes_odds_ou_elo",
+      "test_power_cresce_com_variancia_e_recusa_amostra_inutil",
+      "test_celula_pequena_serializa_psr_e_dsr_indefinidos_como_none",
+      "test_validacao_pode_usar_referencia_de_poder_do_desenvolvimento",
+      "test_draw_ordering_exige_tres_faixas_e_monotonicidade",
+      "test_paired_records_nao_aceita_linha_sem_elo_pit"
+    ],
+    "notes": "Declared60cells/devig/bin deterministic e permutations porstratum preservam outcomes enquanto predictorsfixed; requiredNvariance cresce, smallPSRDSRNone. Developmentpowerreference reused, plantedthreebands monotonicROItrue; missingEloPITexclui. Duas permutações nosfixtures não fullpower/economic evidence."
+  },
+  {
+    "path": "tests/test_market_pricer.py",
+    "sha256_utf8": "417a492bda98c752807efeef562f9e150cf60321c3947ada4e2774e613599afb",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_grid_sums_to_one",
+      "test_result_1x2",
+      "test_double_chance",
+      "test_btts",
+      "test_over_under_half_line_no_push",
+      "test_over_under_other_half_line",
+      "test_over_under_integer_line_has_push",
+      "test_exact_score",
+      "test_exact_score_out_of_range",
+      "test_draw_no_bet_push_is_draw",
+      "test_asian_handicap_level",
+      "test_asian_handicap_minus_one_integer_push",
+      "test_asian_handicap_half_line_no_push",
+      "test_asian_handicap_plus_half",
+      "test_asian_handicap_quarter_line_splits",
+      "test_non_square_grid_raises"
+    ],
+    "notes": "Gridmanual normalizado exact sums 1x2/DC/BTTS/OUintegerpush/DNB/AHquarterhalfstakes e non-squareerro. quarterwin/push/lose prob de stakeparts, não payoff completo de execução."
+  },
+  {
+    "path": "tests/test_market_probs_date.py",
+    "sha256_utf8": "5c3f814bb5b57e6afd841804c30ebff440e3045d45b8b8497946c3d0401f6486",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_com_data_escolhe_a_edicao_certa",
+      "test_tolerancia_de_3_dias",
+      "test_sem_data_fica_com_o_mais_recente",
+      "test_orientacao_preservada",
+      "test_data_ilegivel_nao_seleciona_outro_jogo",
+      "test_confronto_inexistente"
+    ],
+    "notes": "SQLitefixtures editions/date±3d/currentlatest/mandoinverse e invaliddateerror. Aceita July15quote paraJuly13target, matchingaproximado não comprovaPIT."
+  },
+  {
+    "path": "tests/test_market_research_jobs_manifest.py",
+    "sha256_utf8": "5753408ddf4c10a8be58ae546f00e379059443e1fcd7f81f8679f4408c62ef2b",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_every_market_research_job_resolves_to_an_existing_script"
+    ],
+    "notes": "Eachjob scriptrelative existentes underbrasileirao_scripts. Não schedulerconfiguration effectsexternos."
+  },
+  {
+    "path": "tests/test_market_residual.py",
+    "sha256_utf8": "2aa3a70204a18e165b76b674708934d6997ec00ccee03eb01f9f94504dc527d2",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_residual_model_learns_signal_around_market_offset",
+      "test_residual_model_rejects_small_sample",
+      "test_shadow_decision_uses_lower_confidence_bound_and_never_enables_capital",
+      "test_shadow_decision_subtracts_friction_and_can_choose_under",
+      "test_friction_can_turn_apparent_edge_into_no_bet",
+      "test_fractional_kelly_uses_post_friction_win_and_loss_payoffs",
+      "test_residual_artifact_roundtrip_is_shadow_only",
+      "test_multinomial_residual_learns_sports_signal_around_market",
+      "test_multinomial_residual_rejects_market_probabilities_not_normalized",
+      "test_multinomial_residual_rejects_invalid_prediction_market"
+    ],
+    "notes": "Seeded200logitbinary/600multinomial planted signal learns probabilityorder/bounds, smallsamplefail e artifactsroundtripcapitalTrue reject. ShadowlowerCI/Kellypostfriction, frictionturnNoBet e undercomplement. Só treino sintético/in-sample; não calibrainterval outofsample/performance real."
+  },
+  {
+    "path": "tests/test_math.py",
+    "sha256_utf8": "aa0021274c09653565200d5ac50afc141f135b3f6c734cab5ed483d79342efc8",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_shin_probs_somam_um",
+      "test_shin_sem_margem_recai_na_normalizacao",
+      "test_shin_overround_positivo_quando_ha_vig",
+      "test_shin_penaliza_longshot_bias",
+      "test_shin_duas_saidas_over_under",
+      "test_clv_mede_contra_shin_do_fechamento",
+      "test_pnl_liquida_no_preco_pactuado",
+      "test_bet_at_open_quando_ha_abertura",
+      "test_bet_at_close_no_fallback",
+      "test_settle_rejeita_fora_da_janela_de_edge",
+      "test_pre_match_quando_apito_no_futuro",
+      "test_nao_pre_match_durante_o_jogo",
+      "test_nao_pre_match_no_apito_exato",
+      "test_sem_timestamp_assume_nao_pre_match"
+    ],
+    "notes": "Shinnormalização/vig/longshot bias matemático; _settle synthetic PnLofferedodd/CLVdevigclose e fallback openingmissing usa close. Time preKO estrito. Fallbackclose não prova cotação disponível antes decisão."
+  },
+  {
+    "path": "tests/test_missingness_audit.py",
+    "sha256_utf8": "cadbd3db94c919542c0aa980de42a151191700a8f30db5b45695ee21ee3a75c5",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_xg_coverage_separates_paired_observation_from_legacy_fallback"
+    ],
+    "notes": "3played/1pairedxGvalid contra fixtures, distingue realizedgoals legacyfallback, unmatchedforecastnotplayedexcluído. Sem fonteexterna/qualityreal."
+  },
+  {
+    "path": "tests/test_model.py",
+    "sha256_utf8": "28a19ea7fe2e354479afa0878ebead5fba1493970987171736351edef905c2f0",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_nb_colapsa_em_poisson_quando_alpha_zero",
+      "test_probabilidades_1x2_somam_um",
+      "test_nb_dixon_coles_expoe_normalizador_nao_trivial",
+      "test_rho_que_gera_celula_negativa_falha_em_vez_de_clipar",
+      "test_parametros_invalidos_falham_alto",
+      "test_draw_diagnostics_expose_all_discussed_hypotheses_without_decision_rule",
+      "test_mando_favorece_o_mandante",
+      "test_predict_remaining_fraction_1_bate_com_predict_match",
+      "test_predict_remaining_fraction_meio_escala_lambda_pela_metade",
+      "test_predict_remaining_grid_soma_um",
+      "test_predict_remaining_fraction_zero_is_exactly_no_more_goals",
+      "test_predict_remaining_rejeita_fracao_invalida"
+    ],
+    "notes": "NBalpha~0 coincide PoissonSciPy, gridprob1/DCnormalizer .97958/rhonegcellrejeita, drawdiagnosticargmaxonlyno robustchoice. Remainingfraction scaleslambda/0 degenerate/rejectoutside. Matemática não validaforecastlive."
+  },
+  {
+    "path": "tests/test_model_xg.py",
+    "sha256_utf8": "9ce3e97444c3ca304d7b9de1fb888fca24778077a775f00aae9ee7d0dadbcf3b",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_fit_without_xg",
+      "test_fit_with_xg",
+      "test_fit_with_unit_weights_preserves_legacy_result",
+      "test_recent_matches_receive_more_influence",
+      "test_invalid_sample_weights_fail_closed",
+      "test_invalid_goal_history_fails_closed",
+      "test_invalid_delta_xg_fails_closed",
+      "test_empty_history_preserves_explicit_cold_start",
+      "test_optimizer_failure_is_typed_and_never_returns_fallback",
+      "test_exponential_recency_weights_obey_half_life_exactly",
+      "test_exponential_recency_weights_support_explicit_uniform_policy",
+      "test_exponential_recency_weights_reject_invalid_half_life",
+      "test_exponential_recency_weights_reject_future_match",
+      "test_predict_with_xg",
+      "test_predict_without_xg"
+    ],
+    "notes": "Cincofixtures fit4/5params xGtheta!=0, unitweightslegacyparity e recentweightsinfluence. Badcounts/weights/xG failclosed; empty permitecoldstartconstants enquanto optimizerfailtypednofallback; half-life360exact e futureexcluded. Não demonstra xG predictivegain ou fontehistorical."
+  },
+  {
+    "path": "tests/test_odds_api_snapshot.py",
+    "sha256_utf8": "b341da145a79643744a87cca5e30f8c780b1a3adfa4ee0bc30562a346890c5c9",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_named_complete_quote_remains_observation_with_distinct_clocks",
+      "test_old_change_received_after_kickoff_is_not_prospective",
+      "test_invalid_latest_response_is_preserved_as_invalid_without_salvaged_events",
+      "test_missing_legs_and_empty_receipts_are_not_discarded",
+      "test_event_endpoint_must_match_requested_identity",
+      "test_hash_duplicate_json_and_nonfinite_number_guards",
+      "test_legacy_false_eligibility_is_reproduced_without_changing_protected_adapter"
+    ],
+    "notes": "Rawhash/strictJSON/identity/league/completelegs/marketupdateclock gates, late receipt nuncaprospective apesar oldchange, ABSTAIN/econFalse. Contraprova explícita adapter legado TheOddsApiProvider marca PROSPECTIVE_ELIGIBLE recebimento pósKO; novo decoder não promove. Não modifica adaptador protegido neste estudo."
+  },
+  {
+    "path": "tests/test_odds_shop_stale.py",
+    "sha256_utf8": "d55837e8352bdafb01ca86097922ef5b4a39bc5cf49de445b7f4a06a5206ec99",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_filtro_descarta_feed_morto",
+      "test_none_desliga_o_filtro",
+      "test_last_update_ilegivel_nao_trava"
+    ],
+    "notes": "Fixture fresh2min/stale3h/nodate max15min exclui, maxNone desliga e aceita3books/morto melhorodd. Illegibledateempty. Não observa feedreal."
+  },
+  {
+    "path": "tests/test_odds_source_smoke.py",
+    "sha256_utf8": "218ebd1bfa848b42968589d5d9d277dcca824c5664fb873da4f6ca72e0e773c9",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_smoke_lists_only_sanitized_bookmaker_metadata"
+    ],
+    "notes": "Report rowsfake countsquotes/events/sanitizedmetadata/HUMAN_DECISION_REQUIRED/persistencenone. Não executa smokeHTTP."
+  },
+  {
+    "path": "tests/test_operational_provenance.py",
+    "sha256_utf8": "998542f860d2807fb0aea33e1d5c3ea475d99f58d4a26ab4a8ee4cbb94c40259",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_shadow_consumer_provenance_identifies_turn_and_inputs",
+      "test_entrypoint_propagates_capture_turn"
+    ],
+    "notes": "Tempfiles inputSHA64 envelopemorning sem toolsmetadata, subprocessfake lê jobconfig e envnightcapturedturn. Não predictor_ops execução ou dados reais."
+  },
+  {
+    "path": "tests/test_operational_readiness.py",
+    "sha256_utf8": "579da506289cd672d52d266666ed8609684ac3e0e7271521d40042df84a5f574",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_readiness_fails_closed_and_never_enables_capital",
+      "test_all_local_evidence_reaches_human_review_only",
+      "test_stale_heartbeat_blocks_readiness"
+    ],
+    "notes": "FaltacredencialBLOCKED; arquivos minimalfixtures snapshotsid1/dbtablesid/PASSreport+heartbeat reaches sóREADY_FOR_HUMAN_REVIEW/capitalFalse. Não valida autenticidade/processo de coletasevendias via esses minimalbody; staleheartbeatblock."
+  },
+  {
+    "path": "tests/test_ou25_annual.py",
+    "sha256_utf8": "de786e591a39c118eac82218150f49546a3cca1b19db2f36ecb4ef6d1c9cfddd",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_price_quality_gate_rejects_placeholder_pair",
+      "test_annual_baseline_settles_one_unit_and_devigged_clv",
+      "test_annual_baseline_drops_invalid_prices"
+    ],
+    "notes": "Prices51/1.002placeholderrejected, oneunitfixture win1/CLVdevig e badprice dropsn0. Não elapsed2026economicdata."
+  },
+  {
+    "path": "tests/test_ou25_certainty.py",
+    "sha256_utf8": "d7bbfaccfcb58f4cc047223abbdfff9eb7de2e9e6b7a3e8cd7b9247e6874dcdc",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_wilson_lower_is_conservative_and_tightens_with_sample",
+      "test_higher_confidence_has_lower_bound"
+    ],
+    "notes": "Wilson8/10vs80/100tightens e confidence99 lower bound menor. Coverage estatística não repetida."
+  },
+  {
+    "path": "tests/test_ou25_market_anchor.py",
+    "sha256_utf8": "80019f806e2461b2914f8bd1e96d312628a6ad3dbdd17c7e3681ac97e4b7afa6",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_anchor_selects_market_when_model_is_worse",
+      "test_anchor_does_not_split_simultaneous_kickoff_group",
+      "test_anchor_excludes_invalid_price_pairs",
+      "test_future_labels_do_not_change_first_anchor_weight"
+    ],
+    "notes": "40synthetic fixedpoorprob.8 alternatingoutcomes selectsmarketweight0, groupingkickoffsplittrain18/test10, invalidpricesexcluem39/denom19. Futurelabels mutation firstweightinvariant. Exclusão invalidprice altera universo, não proofallfixtures economicprofit."
+  },
+  {
+    "path": "tests/test_ou25_nested_replay.py",
+    "sha256_utf8": "dcf854486d08b1c0969a638dbef540eea60e2a4edc4e4ea445813486e6127b87",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_holm_is_monotone_and_not_below_raw",
+      "test_outer_fold_has_strict_temporal_boundary_and_operational_caps",
+      "test_simultaneous_kickoff_group_is_never_split_across_outer_boundary",
+      "test_score_row_rejects_placeholder_price_pair",
+      "test_future_labels_cannot_change_past_fold_selection",
+      "test_replay_is_deterministic_across_repeated_simulations",
+      "test_freeze_candidate_requires_stability_and_minimum_cells",
+      "test_empty_and_singleton_metrics_do_not_claim_estimable_interval",
+      "test_clv_uses_devigged_closing_pair",
+      "test_runner_requires_explicit_point_in_time_price_source"
+    ],
+    "notes": "Seeded520prob Bernoulli/nine configs: train/teststrict/SameKOgroup/co ntaminated2024..26 declared/capitalFalse/strengthcap40; futurelabels pastconfig/selectionstable e repeatdeterministic. Holm/rawp, singletonCINone, CLVdevig, runnerPITbackfillrequired. Freezecandidate accepts handcrafted metrics200positive and source_hash string source, não revalida evidencia externa nesse teste."
+  },
+  {
+    "path": "tests/test_parse_all_odds.py",
+    "sha256_utf8": "f701299970f604fec12ee832fa51da32bfe852ca74d636851e45ec63f2c6ceac",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_1x2",
+      "test_double_chance",
+      "test_draw_no_bet",
+      "test_btts",
+      "test_ou_multi_line",
+      "test_asian_handicap_oriented_to_home",
+      "test_asian_handicap_orientation_flips_with_home",
+      "test_out_of_scope_markets_ignored",
+      "test_none_and_empty_safe",
+      "test_ah_without_team_names_is_skipped",
+      "test_initial_reads_opening_odds"
+    ],
+    "notes": "Sofascorefixtures fractionaltoDecimal flatmarkets/multilineOU/AHmandoflip, missingnamesAHskip, openingseparate/no fallback. No providerlive ou capturetime."
+  },
+  {
+    "path": "tests/test_parse_ou_scope_regression.py",
+    "sha256_utf8": "2bcfa9c6c4c78d687235d236ab35da4c6d5d14bdcae4538f2c3ce2969ee1922c",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_other_market_cannot_replace_goal_prices",
+      "test_explicit_unrecognized_period_is_not_full_time",
+      "test_explicit_full_time_preserved",
+      "test_documented_market_id_without_name_preserved",
+      "test_legacy_goal_name_without_id_preserved",
+      "test_opening_and_current_do_not_mix",
+      "test_conflicting_full_time_market_versions_fail_closed_in_any_order",
+      "test_identical_market_duplicates_are_not_conflicts",
+      "test_duplicate_side_with_conflicting_price_fails_closed",
+      "test_conflicting_group_and_choice_handicap_fails_closed",
+      "test_nonfinite_or_nonbettable_quote_cannot_pass",
+      "test_unrecognized_choice_cannot_contribute_a_goal_side",
+      "test_normalized_line_table_uses_identical_scope_and_conflict_rules"
+    ],
+    "notes": "OU excludescards/corners/partial/teamtotals/conflictingperiod/line/dupprices; allowFTaliases/knownid/noname/legacygoalname; validduplicatesaccepted and open/current separate. Strong parser scope fixtures, não fonteauth."
+  },
+  {
+    "path": "tests/test_parsers_sofascore.py",
+    "sha256_utf8": "6bfdd32881b9e3279d23c91b277bc6f3d7a882406787d2bed4b12636c3e98336",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_fracao_valida",
+      "test_fracao_menor_que_um",
+      "test_divisao_por_zero_vira_none",
+      "test_fracao_malformada_vira_none",
+      "test_fracao_com_tres_termos_vira_none",
+      "test_fallback_para_decimal_value",
+      "test_sem_valor_nenhum_vira_none",
+      "test_decimal_zero_vira_none",
+      "test_fracao_nao_string_nao_estoura",
+      "test_decimal_malformado_nao_estoura",
+      "test_frac_to_decimal_key_abertura",
+      "test_frac_to_decimal_initial_ausente_vira_none_sem_fallback",
+      "test_parse_odds_initial_le_abertura",
+      "test_payload_vazio_devolve_nones",
+      "test_market_id_1_sem_nome_e_aceito",
+      "test_choice_sem_nome_nao_estoura",
+      "test_mercado_parcial_e_aceito_sem_aviso",
+      "test_ou_linha_inexistente_vira_none",
+      "test_ou_sem_under_vira_none",
+      "test_ou_via_choice_group",
+      "test_ou_payload_vazio",
+      "test_linha_2_5_nao_pega_odd_da_12_5",
+      "test_jogo_de_2022_visto_em_2026_nao_e_pre",
+      "test_timestamp_em_ms_nao_e_pre_match",
+      "test_parse_match_normaliza_timestamp_em_ms",
+      "test_parse_match_data_em_utc",
+      "test_parse_match_extrai_placar_do_intervalo",
+      "test_parse_match_ht_nulo_se_nao_terminou"
+    ],
+    "notes": "Fractioninvalid/zero/3termsNone, initialmissingnãofallback, partial1x2retorna(2,None,4) semaviso enquantoOUincompleteNone; exactline não substring12.5. PreKO rejectsms, parse_matchnormalizesmsUTC/HTonlyfinished. Parsing não homologação."
+  },
+  {
+    "path": "tests/test_permutation_test.py",
+    "sha256_utf8": "e98e36a3c9044da7c7b9dcc54462bcd37116e294e1743eda03ee043c69cc5308",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_permutacao_preserva_as_marginais_da_liga",
+      "test_permutacao_mantem_o_placar_inteiro_junto",
+      "test_permutacao_desassocia_time_de_desfecho",
+      "test_permutacao_nao_altera_a_ordem_temporal",
+      "test_permutacao_e_deterministica_por_seed",
+      "test_permutacao_nao_muta_a_entrada",
+      "test_modelo_igual_a_climatologia_nao_bate_a_climatologia",
+      "test_modelo_com_sinal_real_bate_a_climatologia",
+      "test_recusa_periodo_que_alcanca_o_holdout",
+      "test_recusa_zero_permutacoes"
+    ],
+    "notes": "Synthetic200permutation preserva scorepairs/marginals/time/determinismo e não muta, perfectprobabilities construídas doslabels batem climatologia; semsignal0. ProtegedholdoutCLIperiods e zeroPermreject. Controle planted não forecastreal."
+  },
+  {
+    "path": "tests/test_persist_h14_prospective.py",
+    "sha256_utf8": "5a64e35467d7d7ca1267c71ddf21121fd3e687c6b5ffa4280eb7485b663280d6",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_persiste_dentro_da_janela_pre_kickoff",
+      "test_fora_da_janela_nao_persiste",
+      "test_apos_kickoff_nao_persiste",
+      "test_idempotente_nao_duplica",
+      "test_climatologia_ignora_jogo_com_kickoff_posterior",
+      "test_fingerprint_muda_com_algorithm_version",
+      "test_sem_cache_de_modelo_falha_alto"
+    ],
+    "notes": "TempDBcacheElo/params/1prior: clock2027prefixture windowpersistsnorm/idempotência/outside38h/postKO omit; futurematch não climatology, versionfingerprintchanges/missingcacheerror. Não autentica source/published clocks dospriorresults ou execução schedulerreal."
+  }
+]

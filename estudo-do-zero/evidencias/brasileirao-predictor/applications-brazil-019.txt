@@ -1,0 +1,376 @@
+### brasileirao_predictor/ratings.py
+1: from collections import defaultdict
+2: from datetime import UTC, date, datetime, timedelta
+3: from itertools import groupby
+6: def _parse(d: str) -> date:
+7:     return date.fromisoformat(d)
+10: def k_factor(tournament: str, k_factors: dict) -> float:
+11:     if tournament in k_factors:
+12:         return k_factors[tournament]
+13:     t = (tournament or "").lower()
+14:     if "qualification" in t:
+15:         return k_factors.get("FIFA World Cup qualification", 40)
+16:     return k_factors["default"]
+19: def margin_multiplier(goal_diff: int) -> float:
+20:     d = abs(goal_diff)
+21:     if d <= 1:
+22:         return 1.0
+23:     if d == 2:
+24:         return 1.5
+25:     return 1.75 + (d - 3) / 8.0
+28: def expected_score(rating_diff: float) -> float:
+29:     return 1.0 / (1.0 + 10 ** (-rating_diff / 400.0))
+32: def temporal_keys(matches) -> list[str]:
+34:     materialized = list(matches)
+35:     dates_with_missing = {str(match[0])[:10] for match in materialized if len(match) < 8 or not match[7]}
+36:     keys: list[str] = []
+37:     for match in materialized:
+38:         day = str(match[0])[:10]
+39:         if day in dates_with_missing:
+40:             keys.append(f"{day}T00:00:00+00:00|date")
+41:             continue
+42:         parsed = datetime.fromisoformat(str(match[7]).replace("Z", "+00:00"))
+43:         if parsed.tzinfo is None or parsed.utcoffset() is None:
+44:             raise ValueError("kickoff_at must be timezone-aware")
+45:         keys.append(f"{parsed.astimezone(UTC).isoformat()}|kickoff")
+46:     return keys
+49: def compute_ratings(matches, cfg_elo: dict, *, asof: str | date | None = None):
+56:     base = float(cfg_elo["initial_rating"])
+57:     ratings = defaultdict(lambda: base)
+58:     home_adv = float(cfg_elo["home_advantage"])
+59:     half_life = cfg_elo.get("form_half_life_years")
+60:     last_seen = {}
+61:     history = []
+63:     def decay(team, today):
+64:         if not half_life or team not in last_seen:
+65:             return
+66:         years = (today - last_seen[team]).days / 365.25
+67:         factor = 0.5 ** (years / half_life)
+68:         ratings[team] = base + (ratings[team] - base) * factor
+70:     materialized = list(matches)
+72:     keyed = list(zip(temporal_keys(materialized), materialized, strict=True))
+73:     keyed.sort(key=lambda item: item[0])
+74:     for _key, batch_iter in groupby(keyed, key=lambda item: item[0]):
+75:         batch = [item[1] for item in batch_iter]
+76:         batch_date = _parse(str(batch[0][0])[:10])
+77:         teams = {str(team) for match in batch for team in match[1:3]}
+78:         for team in teams:
+79:             decay(team, batch_date)
+81:         deltas: dict[str, float] = defaultdict(float)
+82:         for match in batch:
+83:             d, home, away, hs, as_, tournament, neutral = match[:7]
+84:             adv = 0.0 if neutral else home_adv
+85:             diff = ratings[home] + adv - ratings[away]
+86:             history.append((diff, hs, as_))
+87:             we_home = expected_score(diff)
+88:             result = 1.0 if hs > as_ else (0.5 if hs == as_ else 0.0)
+89:             k = k_factor(tournament, cfg_elo["k_factors"]) * margin_multiplier(hs - as_)
+90:             delta = k * (result - we_home)
+91:             deltas[home] += delta
+92:             deltas[away] -= delta
+93:         for team, delta in deltas.items():
+94:             ratings[team] += delta
+95:             last_seen[team] = batch_date
+97:     if asof is not None and last_seen:
+98:         horizon = asof if isinstance(asof, date) else _parse(str(asof)[:10])
+99:         if horizon < max(last_seen.values()):
+100:             raise ValueError("asof cannot be earlier than the latest match")
+101:         for team in list(last_seen):
+102:             decay(team, horizon)
+104:     return dict(ratings), history
+107: def ratings_asof(matches, cfg_elo: dict, dates) -> dict:
+120:     ms = list(matches)
+121:     window = cfg_elo.get("window_years")
+122:     out = {}
+123:     for d in sorted(set(dates)):
+124:         prefix = [m for m in ms if m[0] < d]
+125:         if window:
+126:             cut = (_parse(d) - timedelta(days=int(window * 365.25))).isoformat()
+127:             prefix = [m for m in prefix if m[0] >= cut]
+128:         out[d], _ = compute_ratings(prefix, cfg_elo, asof=d)
+129:     return out
+### brasileirao_predictor/research/__init__.py
+### brasileirao_predictor/research/contextual_ensemble.py
+3: from __future__ import annotations
+5: import math
+6: from dataclasses import dataclass
+7: from datetime import datetime
+8: from typing import Any
+10: import numpy as np
+11: from predictor_core.measurement.metrics import brier, log_loss, rps
+13: CONTEXT_FEATURES = (
+14:     "rest_days_delta",
+15:     "away_travel_km",
+16:     "synthetic_surface",
+17:     "surface_familiarity_delta",
+18:     "coach_tenure_delta",
+19: )
+22: def _timestamp(value: object) -> datetime:
+23:     parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+24:     if parsed.tzinfo is None or parsed.utcoffset() is None:
+25:         raise ValueError("contextual timestamps must be timezone-aware")
+26:     return parsed
+29: def _softmax(logits: np.ndarray) -> np.ndarray:
+30:     shifted = logits - logits.max(axis=1, keepdims=True)
+31:     exp = np.exp(shifted)
+32:     return exp / exp.sum(axis=1, keepdims=True)
+35: @dataclass(frozen=True)
+36: class _Stump:
+37:     feature: int
+38:     threshold: float
+39:     left: np.ndarray
+40:     right: np.ndarray
+43: class ContextualBooster:
+46:     def __init__(self, *, iterations: int = 40, learning_rate: float = 0.08) -> None:
+47:         self.iterations = iterations
+48:         self.learning_rate = learning_rate
+49:         self.stumps: list[_Stump] = []
+51:     def fit(self, x: np.ndarray, y: np.ndarray, baseline: np.ndarray) -> ContextualBooster:
+52:         logits = np.log(np.clip(baseline, 1e-12, 1.0))
+53:         target = np.eye(3)[y]
+54:         self.stumps = []
+55:         for _ in range(self.iterations):
+56:             residual = target - _softmax(logits)
+57:             best: tuple[float, _Stump] | None = None
+58:             for feature in range(x.shape[1]):
+59:                 threshold = float(np.median(x[:, feature]))
+60:                 left_mask = x[:, feature] <= threshold
+61:                 if left_mask.all() or (~left_mask).all():
+62:                     continue
+63:                 left = residual[left_mask].mean(axis=0)
+64:                 right = residual[~left_mask].mean(axis=0)
+65:                 gain = float(left_mask.sum() * np.square(left).sum() + (~left_mask).sum() * np.square(right).sum())
+66:                 stump = _Stump(feature, threshold, left, right)
+67:                 if best is None or gain > best[0]:
+68:                     best = (gain, stump)
+69:             if best is None:
+70:                 break
+71:             stump = best[1]
+72:             logits += self.learning_rate * np.where(
+73:                 (x[:, stump.feature] <= stump.threshold)[:, None], stump.left, stump.right
+74:             )
+75:             self.stumps.append(stump)
+76:         return self
+78:     def predict_proba(self, x: np.ndarray, baseline: np.ndarray) -> np.ndarray:
+79:         logits = np.log(np.clip(baseline, 1e-12, 1.0))
+80:         for stump in self.stumps:
+81:             logits += self.learning_rate * np.where(
+82:                 (x[:, stump.feature] <= stump.threshold)[:, None], stump.left, stump.right
+83:             )
+84:         return _softmax(logits)
+87: def _prepare(train: list[dict[str, Any]], test: list[dict[str, Any]]) -> tuple[np.ndarray, np.ndarray]:
+88:     medians = []
+89:     for name in CONTEXT_FEATURES:
+90:         values = [float(row["context"][name]) for row in train if row["context"].get(name) is not None]
+91:         medians.append(float(np.median(values)) if values else 0.0)
+93:     def matrix(rows: list[dict[str, Any]]) -> np.ndarray:
+94:         result = []
+95:         for row in rows:
+96:             values, missing = [], []
+97:             for name, median in zip(CONTEXT_FEATURES, medians, strict=True):
+98:                 raw = row["context"].get(name)
+99:                 values.append(median if raw is None else float(raw))
+100:                 missing.append(float(raw is None))
+101:             result.append(values + missing)
+102:         return np.asarray(result, dtype=float)
+104:     return matrix(train), matrix(test)
+107: def evaluate_contextual_ensemble(
+108:     rows: list[dict[str, Any]],
+109:     *,
+110:     minimum_train: int = 100,
+111:     minimum_test: int = 30,
+112:     minimum_context_coverage: float = 0.6,
+113: ) -> dict[str, Any]:
+115:     valid = []
+116:     for row in rows:
+117:         kickoff = _timestamp(row["kickoff_at"])
+118:         available = _timestamp(row["context_available_at"])
+119:         probabilities = [float(value) for value in row["baseline_probs"]]
+120:         if available >= kickoff:
+121:             raise ValueError("context must be available strictly before kickoff")
+122:         if len(probabilities) != 3 or any(not math.isfinite(value) or value <= 0 for value in probabilities):
+123:             raise ValueError("baseline_probs must contain three positive finite values")
+124:         total = sum(probabilities)
+125:         normalized = [value / total for value in probabilities]
+126:         valid.append({**row, "baseline_probs": normalized, "_kickoff": kickoff})
+127:     valid.sort(key=lambda row: (row["_kickoff"], str(row.get("event_id", ""))))
+128:     coverage = (
+129:         sum(any(row["context"].get(name) is not None for name in CONTEXT_FEATURES) for row in valid) / len(valid)
+130:         if valid
+131:         else 0.0
+132:     )
+133:     if coverage < minimum_context_coverage or len(valid) < minimum_train + minimum_test:
+134:         return {"status": "BLOCKED_DATA", "n": len(valid), "context_coverage": coverage, "serving_changed": False}
+136:     groups = sorted({row["_kickoff"].date() for row in valid})
+137:     treated: list[list[float]] = []
+138:     controls: list[list[float]] = []
+139:     outcomes: list[int] = []
+140:     for day in groups:
+141:         train = [row for row in valid if row["_kickoff"].date() < day]
+142:         test = [row for row in valid if row["_kickoff"].date() == day]
+143:         if len(train) < minimum_train:
+144:             continue
+145:         x_train, x_test = _prepare(train, test)
+146:         baseline_train = np.asarray([row["baseline_probs"] for row in train], dtype=float)
+147:         baseline_test = np.asarray([row["baseline_probs"] for row in test], dtype=float)
+148:         y_train = np.asarray([int(row["outcome"]) for row in train], dtype=int)
+149:         prediction = ContextualBooster().fit(x_train, y_train, baseline_train).predict_proba(x_test, baseline_test)
+150:         treated.extend(prediction.tolist())
+151:         controls.extend(baseline_test.tolist())
+152:         outcomes.extend(int(row["outcome"]) for row in test)
+153:     if len(outcomes) < minimum_test:
+154:         return {"status": "BLOCKED_DATA", "n": len(outcomes), "context_coverage": coverage, "serving_changed": False}
+155:     metrics = {
+156:         "rps_delta": rps(treated, outcomes) - rps(controls, outcomes),
+157:         "brier_delta": brier(treated, outcomes) - brier(controls, outcomes),
+158:         "log_loss_delta": log_loss(treated, outcomes) - log_loss(controls, outcomes),
+159:     }
+160:     finite = all(math.isfinite(value) for value in metrics.values())
+161:     return {
+162:         "status": "PASS" if finite else "FAIL_NUMERIC",
+163:         "verdict": "GO_CANDIDATE" if finite and all(value < 0 for value in metrics.values()) else "NO_GO",
+164:         "n": len(outcomes),
+165:         "context_coverage": coverage,
+166:         "metrics": metrics,
+167:         "validation": "expanding_window_by_kickoff_date",
+168:         "serving_changed": False,
+169:     }
+### brasileirao_predictor/research/h9_shadow.py
+3: from __future__ import annotations
+5: import json
+6: import uuid
+7: from datetime import UTC, datetime, timedelta
+8: from pathlib import Path
+9: from typing import Any
+11: TRIAL = "h9-ou25-prospective-replication"
+12: MIN_EDGE = 0.02
+13: MAX_EDGE = 0.15
+14: HORIZON = timedelta(minutes=90)
+17: def _time(value: str) -> datetime:
+18:     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+19:     if parsed.tzinfo is None:
+20:         raise ValueError("timestamp must be timezone-aware")
+21:     return parsed.astimezone(UTC)
+24: def _read(path: Path) -> list[dict[str, Any]]:
+25:     if not path.exists():
+26:         return []
+27:     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+30: def _append(path: Path, row: dict[str, Any]) -> None:
+31:     path.parent.mkdir(parents=True, exist_ok=True)
+32:     with path.open("a", encoding="utf-8") as handle:
+33:         handle.write(json.dumps(row, ensure_ascii=False, allow_nan=False, sort_keys=True) + "\n")
+36: def emit(
+37:     *,
+38:     prediction: dict[str, Any],
+39:     quotes: list[dict[str, Any]],
+40:     approved_bookmaker: str | None,
+41:     ledger: Path,
+42: ) -> dict[str, Any]:
+44:     if not approved_bookmaker:
+45:         return {"status": "BLOCKED_NO_STABLE_BOOKMAKER", "capital_enabled": False}
+46:     event_id = str(prediction["event_id"])
+47:     kickoff = _time(prediction["kickoff_at"])
+48:     predicted = _time(prediction["predicted_at"])
+49:     if predicted >= kickoff or predicted < kickoff - HORIZON - timedelta(minutes=15):
+50:         raise ValueError("H9 prediction must be emitted in the H-1.5 decision window")
+51:     existing = _read(ledger)
+52:     if any(row.get("kind") == "decision" and row.get("event_id") == event_id for row in existing):
+53:         return {"status": "ALREADY_EMITTED", "capital_enabled": False}
+54:     eligible = []
+55:     for quote in quotes:
+56:         if (
+57:             str(quote.get("source_event_id")) != event_id
+58:             or quote.get("bookmaker") != approved_bookmaker
+59:             or quote.get("market") != "ou2.5"
+60:             or quote.get("selection") not in {"over", "under"}
+61:         ):
+62:             continue
+63:         captured, ingested = _time(quote["odds_captured_at"]), _time(quote["retrieved_at"])
+64:         if captured <= predicted and ingested <= predicted:
+65:             eligible.append((quote["selection"], float(quote["decimal_odds"]), captured, quote))
+66:     probabilities = {"over": float(prediction["p_over"]), "under": 1.0 - float(prediction["p_over"])}
+67:     candidates = [
+68:         (probabilities[selection] * odds - 1.0, selection, odds, captured, quote)
+69:         for selection, odds, captured, quote in eligible
+70:     ]
+71:     if not candidates:
+72:         return {"status": "NO_EXECUTABLE_QUOTE", "capital_enabled": False}
+73:     edge, selection, odds, captured, quote = max(candidates, key=lambda item: item[0])
+74:     if not MIN_EDGE < edge <= MAX_EDGE:
+75:         return {"status": "NO_SELECTION", "edge": edge, "capital_enabled": False}
+76:     row = {
+77:         "kind": "decision",
+78:         "decision_id": str(uuid.uuid4()),
+79:         "trial": TRIAL,
+80:         "event_id": event_id,
+81:         "kickoff_at": kickoff.isoformat(),
+82:         "predicted_at": predicted.isoformat(),
+83:         "selection": selection,
+84:         "model_probability": probabilities[selection],
+85:         "edge": edge,
+86:         "executed_odds": odds,
+87:         "bookmaker": approved_bookmaker,
+88:         "quote_published_at": captured.isoformat(),
+89:         "quote_ingested_at": _time(quote["retrieved_at"]).isoformat(),
+90:         "stake_units": 1.0,
+91:         "scientific_state": "SHADOW",
+92:         "capital_enabled": False,
+93:         "policy_fingerprint": prediction.get("policy_fingerprint"),
+94:         "elo_policy": prediction.get("elo_policy"),
+95:     }
+96:     _append(ledger, row)
+97:     return {"status": "EMITTED", **row}
+100: def settle(
+101:     *,
+102:     event_id: str,
+103:     home_goals: int,
+104:     away_goals: int,
+105:     result_published_at: str,
+106:     closing_quotes: list[dict[str, Any]],
+107:     ledger: Path,
+108:     recorded_at: str | None = None,
+109: ) -> dict[str, Any]:
+110:     rows = _read(ledger)
+111:     decisions = [row for row in rows if row.get("kind") == "decision" and row.get("event_id") == str(event_id)]
+112:     if len(decisions) != 1:
+113:         raise ValueError("exactly one H9 decision is required")
+114:     decision = decisions[0]
+115:     if any(row.get("kind") == "settlement" and row.get("decision_id") == decision["decision_id"] for row in rows):
+116:         return {"status": "ALREADY_SETTLED", "capital_enabled": False}
+117:     kickoff = _time(decision["kickoff_at"])
+118:     published = _time(result_published_at)
+119:     if published < kickoff + timedelta(hours=2):
+120:         raise ValueError("result is not stable for H9 settlement")
+121:     candidates = []
+122:     for quote in closing_quotes:
+123:         if (
+124:             str(quote.get("source_event_id")) == str(event_id)
+125:             and quote.get("bookmaker") == decision["bookmaker"]
+126:             and quote.get("market") == "ou2.5"
+127:             and quote.get("selection") == decision["selection"]
+128:         ):
+129:             captured = _time(quote["odds_captured_at"])
+130:             if captured < kickoff:
+131:                 candidates.append((captured, float(quote["decimal_odds"])))
+132:     if not candidates:
+133:         raise ValueError("same-book pre-kickoff closing quote is unavailable")
+134:     _, closing_odds = max(candidates, key=lambda item: item[0])
+135:     total = int(home_goals) + int(away_goals)
+136:     won = total > 2.5 if decision["selection"] == "over" else total < 2.5
+137:     pnl = decision["executed_odds"] - 1.0 if won else -1.0
+138:     row = {
+139:         "kind": "settlement",
+140:         "decision_id": decision["decision_id"],
+141:         "trial": TRIAL,
+142:         "event_id": str(event_id),
+143:         "recorded_at": recorded_at or datetime.now(UTC).isoformat(),
+144:         "result_published_at": published.isoformat(),
+145:         "score": f"{int(home_goals)}-{int(away_goals)}",
+146:         "won": won,
+147:         "pnl_units": pnl,
+148:         "closing_odds_same_book": closing_odds,
+149:         "clv": (decision["executed_odds"] - closing_odds) / closing_odds,
+150:         "capital_enabled": False,
+151:     }
+152:     _append(ledger, row)
+153:     return {"status": "SETTLED", **row}

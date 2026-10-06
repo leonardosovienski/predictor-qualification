@@ -1,0 +1,498 @@
+### tests/test_historical_admission.py
+1: from copy import deepcopy
+2: from datetime import UTC, datetime
+4: import pytest
+6: from brasileirao_predictor.research.price_strength.historical_admission import audit_history, latest_state
+8: CUT = datetime(2026, 5, 1, 20, tzinfo=UTC)
+11: def state(at="2026-05-01T19:59:50Z", price=2.0, active=True, limit=10):
+12:     return {"createdAt": at, "price": price, "active": active, "limit": limit}
+15: def payload():
+16:     return {
+17:         "fixtureId": "id123",
+18:         "bookmakers": {
+19:             book: {
+20:                 "markets": {
+21:                     "101": {
+22:                         "outcomes": {
+23:                             outcome: {"players": {"0": [state(price=price)]}}
+24:                             for outcome, price in zip(("101", "102", "103"), prices, strict=True)
+25:                         }
+26:                     }
+27:                 }
+28:             }
+29:             for book, prices in (("pinnacle", (2.0, 3.2, 4.0)), ("bet365", (2.4, 3.0, 3.0)))
+30:         },
+31:     }
+34: def audit(value=None):
+35:     return audit_history(
+36:         value if value is not None else payload(),
+37:         {"fixture_id": "id123", "kickoff_at": "2026-05-01T21:00:00Z"},
+38:         "2026-09-09T20:00:00Z",
+39:     )
+42: def test_suspension_cannot_resurrect_previous_active_price():
+43:     out = latest_state([state(), state(at="2026-05-01T20:00:00Z", active=False)], CUT)
+44:     assert not out["valid"] and out["reason"] == "inactive_latest_state"
+47: def test_future_state_does_not_change_past_selection():
+48:     before = latest_state([state()], CUT)
+49:     after = latest_state([state(), state(at="2026-05-01T20:00:01Z", price=999, active=False)], CUT)
+50:     assert before == after
+53: @pytest.mark.parametrize("change", [{"active": False}, {"price": 3.0}, {"active": 1}])
+54: def test_conflicting_latest_state_fails_closed(change):
+55:     other = {**state(), **change}
+56:     assert latest_state([state(), other], CUT)["reason"] == "conflicting_latest_state"
+59: @pytest.mark.parametrize("price", [True, None, "2", 1.0, -1, float("inf"), float("nan")])
+60: def test_invalid_price_never_uses_older_good_quote(price):
+61:     out = latest_state([state(at="2026-05-01T19:00:00Z"), state(price=price)], CUT)
+62:     assert out["reason"] == "invalid_latest_price"
+65: @pytest.mark.parametrize("active", [None, "true", 1])
+66: def test_active_must_be_literal_boolean(active):
+67:     assert latest_state([state(active=active)], CUT)["reason"] == "unverified_latest_active"
+70: @pytest.mark.parametrize("at", [None, "bad", "2026-05-01T19:59:00"])
+71: def test_unknown_clock_cannot_be_silently_ignored(at):
+72:     assert latest_state([state(), state(at=at)], CUT)["reason"] == "unorderable_state_timestamp"
+75: def test_timezone_offset_and_cutoff_inclusion():
+76:     out = latest_state([state(at="2026-05-01T17:00:00-03:00")], CUT)
+77:     assert out["valid"] and out["state_age_seconds"] == 0
+80: def test_input_order_and_identical_duplicates_do_not_change_quote():
+81:     rows = [state(), state(at="2026-05-01T19:00:00Z", price=3)]
+82:     assert latest_state(rows, CUT) == latest_state(list(reversed(rows)) + [state()], CUT)
+85: def test_limit_does_not_prove_fill_and_ambiguous_limit_remains_unknown():
+86:     out = latest_state([state(), state(limit=20)], CUT)
+87:     assert out["valid"] and out["reported_limit"] is None
+88:     assert out["limit_currency"] is None and out["limit_is_accepted_fill"] is False
+91: def test_retrospective_data_never_passes_execution_gate_even_with_positive_proxy():
+92:     out = audit()
+93:     assert out["conditional_selection"] == "home"
+94:     assert out["conditional_net_ev"] == pytest.approx((1 / 2) / (1 / 2 + 1 / 3.2 + 1 / 4) * 2.4 - 1.02)
+95:     assert out["archive_received_after_decision"]
+96:     assert not out["execution_admitted"]
+97:     assert "historical_received_at" in out["missing_execution_evidence"]
+100: def test_mismatched_identity_is_rejected():
+101:     obj = payload()
+102:     obj["fixtureId"] = "id124"
+103:     assert audit(obj)["reason"] == "payload_fixture_identity_mismatch"
+106: def test_other_market_cannot_fill_missing_1x2():
+107:     obj = payload()
+108:     obj["bookmakers"]["bet365"]["markets"]["102"] = obj["bookmakers"]["bet365"]["markets"].pop("101")
+109:     assert audit(obj)["reason"] == "incomplete_active_pair"
+112: def test_stale_selection_and_skew_are_separate_diagnostics():
+113:     obj = payload()
+114:     leg = obj["bookmakers"]["bet365"]["markets"]["101"]["outcomes"]["101"]["players"]["0"][0]
+115:     leg["createdAt"] = "2026-05-01T19:59:00Z"
+116:     assert audit(obj)["reason"] == "state_change_skew_over_30s"
+117:     leg["createdAt"] = "2026-05-01T19:57:59Z"
+118:     assert audit(obj)["reason"] == "last_change_age_over_120s_not_network_freshness"
+121: def test_no_mutation_or_use_of_result_fields():
+122:     obj = payload()
+123:     before = deepcopy(obj)
+124:     expected = audit(obj)
+125:     assert obj == before
+126:     obj["result"] = {"home_goals": 99}
+127:     assert audit(obj) == expected
+130: def test_protected_time_window_cannot_enter_the_audit():
+131:     with pytest.raises(ValueError, match="outside_allowlisted"):
+132:         audit_history(payload(), {"fixture_id": "id123", "kickoff_at": "2026-09-09T22:00:00Z"}, "2026-09-09T20:00:00Z")
+### tests/test_historical_expansion.py
+1: import sqlite3
+3: import pytest
+4: from predictor_core.data.contracts import DataUnavailableError
+6: from brasileirao_predictor.data.historical_expansion import (
+7:     canonical_team,
+8:     connect_shadow,
+9:     coverage_report,
+10:     ingest_api_football,
+11: )
+14: def _row(event="1", home="Sao Paulo", away="Flamengo", hg=2, ag=1):
+15:     return {
+16:         "source": "api_football",
+17:         "source_event_id": event,
+18:         "season": 2024,
+19:         "scheduled_at": "2024-05-01T20:00:00+00:00",
+20:         "home_team": home,
+21:         "away_team": away,
+22:         "home_goals": hg,
+23:         "away_goals": ag,
+24:         "status": "FT",
+25:         "shadow_only": True,
+26:     }
+29: def test_reconciles_observed_alias_and_ingest_is_idempotent(tmp_path):
+30:     conn = connect_shadow(tmp_path / "shadow.db")
+31:     known = {"São Paulo", "Flamengo"}
+32:     assert ingest_api_football(conn, [_row()], known_teams=known) == 1
+33:     assert ingest_api_football(conn, [_row()], known_teams=known) == 1
+34:     assert conn.execute("select raw_home_team,home_team,count(*) from shadow_matches").fetchone() == (
+35:         "Sao Paulo",
+36:         "São Paulo",
+37:         1,
+38:     )
+41: def test_unknown_team_fails_closed():
+42:     with pytest.raises(DataUnavailableError, match="sem mapeamento"):
+43:         canonical_team("Inventado FC", {"Flamengo"})
+46: def test_report_detects_duplicates_new_rows_and_score_conflicts(tmp_path):
+47:     shadow = connect_shadow(tmp_path / "shadow.db")
+48:     known = {"São Paulo", "Flamengo", "Bahia"}
+49:     ingest_api_football(
+50:         shadow,
+51:         [
+52:             _row("1"),
+53:             {**_row("2", "Bahia", "Flamengo", 0, 0), "scheduled_at": "2024-05-02T20:00:00+00:00"},
+54:         ],
+55:         known_teams=known,
+56:     )
+57:     production = sqlite3.connect(":memory:")
+58:     production.execute("create table matches(date,home_team,away_team,home_score,away_score)")
+59:     production.execute("insert into matches values('2024-05-01','São Paulo','Flamengo',2,0)")
+60:     report = coverage_report(shadow, production)
+61:     assert report["score_conflicts"] == 1
+62:     assert report["new_matches"] == 1
+63:     assert report["promotion_safe"] is False
+### tests/test_historical_numeric_boundary.py
+1: from datetime import UTC, datetime
+3: from brasileirao_predictor.research.price_strength.historical_admission import latest_state
+6: def test_huge_integer_rejected_and_negative_limit_not_admitted():
+7:     at = "2026-05-01T20:00:00Z"
+8:     cut = datetime(2026, 5, 1, 20, tzinfo=UTC)
+9:     state = {"createdAt": at, "active": True, "price": 10**500, "limit": 0}
+10:     assert latest_state([state], cut)["reason"] == "invalid_latest_price"
+11:     state["price"] = 2
+12:     assert latest_state([state], cut)["reported_limit"] == 0
+13:     state["limit"] = -1e-301
+14:     assert latest_state([state], cut)["reported_limit"] is None
+### tests/test_hostil_2026_07_18.py
+12: import importlib.util
+13: import json
+14: import math
+15: import sqlite3
+16: import sys
+17: from pathlib import Path
+19: import pytest
+21: ROOT = Path(__file__).resolve().parent.parent
+23: from brasileirao_predictor import db  # noqa: E402
+24: from brasileirao_predictor.math_utils import shin_probabilities  # noqa: E402
+25: from brasileirao_predictor.predict import _market_probs  # noqa: E402
+26: from brasileirao_predictor.settle import record_result  # noqa: E402
+28: spec = importlib.util.spec_from_file_location("sombra_hostil", ROOT / "brasileirao_scripts" / "sombra.py")
+29: sombra = importlib.util.module_from_spec(spec)
+30: sys.modules["sombra_hostil"] = sombra
+31: spec.loader.exec_module(sombra)
+37: @pytest.mark.parametrize(
+38:     "odds",
+39:     [
+40:         [0.0, 2.0],  # zero: antes ZeroDivisionError cru
+41:         [-1.5, 2.0],  # negativa: antes prob negativa calada
+42:         [float("nan"), 2.0],  # NaN: antes contaminava tudo em silêncio
+43:         [float("inf"), 2.0],  # Inf: pi=0 distorcia a normalização
+44:         [2.0, None],  # ausente dentro da lista
+45:     ],
+46: )
+47: def test_shin_rejeita_odd_invalida_com_erro_claro(odds):
+48:     with pytest.raises(ValueError, match="odd inválida"):
+49:         shin_probabilities(odds)
+52: def test_shin_continua_correto_para_odds_validas():
+53:     p, z, over = shin_probabilities([1.9, 1.9])
+54:     assert p[0] == pytest.approx(0.5, abs=1e-9)
+55:     assert math.isfinite(z) and math.isfinite(over)
+56:     assert p.sum() == pytest.approx(1.0)
+62: def _conn_com_placeholder(tmp_path, com_valida=False):
+63:     conn = db.connect(str(tmp_path / "t.db"))
+64:     conn.execute(
+65:         "INSERT INTO sofascore_matches (event_id, date, home_team, away_team, "
+66:         "odds_home, odds_draw, odds_away, odds_over, odds_under) "
+67:         "VALUES (1, '2026-02-25', 'Bahia', 'Chapecoense', 1.0, 1.0, 1.0, 2.0, 1.8)"
+68:     )
+69:     if com_valida:
+70:         conn.execute(
+71:             "INSERT INTO sofascore_matches (event_id, date, home_team, away_team, "
+72:             "odds_home, odds_draw, odds_away, odds_over, odds_under) "
+73:             "VALUES (2, '2026-07-17', 'Bahia', 'Chapecoense', 2.1, 3.3, 3.6, 2.35, 1.6)"
+74:         )
+75:     conn.commit()
+76:     return conn
+79: def test_market_probs_ignora_placeholder_1x2_todo_em_1(tmp_path):
+80:     conn = _conn_com_placeholder(tmp_path)
+82:     assert _market_probs(conn, "Bahia", "Chapecoense") is None
+85: def test_market_probs_escolhe_a_linha_valida_e_pula_a_placeholder(tmp_path):
+86:     conn = _conn_com_placeholder(tmp_path, com_valida=True)
+87:     mk = _market_probs(conn, "Bahia", "Chapecoense")
+88:     assert mk is not None
+89:     assert mk["odds_home"] == 2.1  # a linha real, não a placeholder
+90:     assert 0 < mk["p_home"] < 1 and math.isfinite(mk["p_over"])
+96: def _cfg():
+97:     return {
+98:         "backtest": {"min_edge": 0.02, "max_edge": 0.15, "over_under_line": 2.5},
+99:         "model": {"max_goals": 12},
+100:         "elo": {"home_advantage": 100},
+101:     }
+104: def _banco_com_jogo_encerrado(tmp_path, c_over=1.9, c_under=1.9):
+105:     conn = db.connect(str(tmp_path / "s.db"))
+106:     conn.execute(
+107:         "INSERT INTO sofascore_matches (event_id, date, home_team, away_team, "
+108:         "home_score, away_score, odds_over, odds_under) "
+109:         "VALUES (10, '2026-07-16', 'Casa', 'Fora', 2, 1, ?, ?)",
+110:         (c_over, c_under),
+111:     )
+112:     conn.commit()
+113:     return conn
+116: def _pick(**kw):
+117:     base = {
+118:         "captured_at": "2026-07-10T00:00:00+00:00",
+119:         "event_id": 10,
+120:         "date": "2026-07-16",
+121:         "home": "Casa",
+122:         "away": "Fora",
+123:         "market": "ou2.5",
+124:         "selection": "under",
+125:         "odd": 1.95,
+126:         "edge": 0.03,
+127:         "model_prob": 0.55,
+128:         "trial": "h3-ou25-sombra-2026",
+129:     }
+130:     base.update(kw)
+131:     return base
+134: def test_settle_nao_liquida_pick_duplicado_duas_vezes(tmp_path):
+135:     conn = _banco_com_jogo_encerrado(tmp_path)
+136:     picks = tmp_path / "p.jsonl"
+137:     results = tmp_path / "r.jsonl"
+139:     with open(picks, "w", encoding="utf-8") as f:
+140:         f.write(json.dumps(_pick()) + "\n")
+141:         f.write(json.dumps(_pick()) + "\n")
+142:     n = sombra.settle(_cfg(), conn, picks, results, "h3-ou25-sombra-2026")
+143:     res = sombra._load_jsonl(results)
+144:     assert n == 1 and len(res) == 1  # antes: 2 settlements, PNL dobrado
+147: def test_settle_rerun_continua_idempotente(tmp_path):
+148:     conn = _banco_com_jogo_encerrado(tmp_path)
+149:     picks = tmp_path / "p.jsonl"
+150:     results = tmp_path / "r.jsonl"
+151:     with open(picks, "w", encoding="utf-8") as f:
+152:         f.write(json.dumps(_pick()) + "\n")
+153:     assert sombra.settle(_cfg(), conn, picks, results, "t") == 1
+154:     assert sombra.settle(_cfg(), conn, picks, results, "t") == 0
+155:     assert len(sombra._load_jsonl(results)) == 1
+161: @pytest.mark.parametrize(
+162:     "c_over,c_under",
+163:     [
+164:         (float("nan"), 1.9),  # NaN: antes CLV=NaN entrava no ledger
+165:         (-2.0, 1.9),  # negativa: antes CLV absurdo calado
+166:         (1.0, 1.0),  # placeholder do Sofascore
+167:     ],
+168: )
+169: def test_settle_com_fechamento_invalido_liquida_sem_clv(tmp_path, c_over, c_under):
+170:     conn = _banco_com_jogo_encerrado(tmp_path, c_over, c_under)
+171:     picks = tmp_path / "p.jsonl"
+172:     results = tmp_path / "r.jsonl"
+173:     with open(picks, "w", encoding="utf-8") as f:
+174:         f.write(json.dumps(_pick()) + "\n")
+175:     n = sombra.settle(_cfg(), conn, picks, results, "t")
+176:     res = sombra._load_jsonl(results)
+177:     assert n == 1 and len(res) == 1
+178:     assert res[0]["clv"] is None  # indisponível ≠ inventado
+179:     assert res[0]["won"] in (0, 1) and math.isfinite(res[0]["pnl"])
+185: def test_settle_recusa_linha_inteira(tmp_path):
+186:     conn = _banco_com_jogo_encerrado(tmp_path)
+187:     cfg = _cfg()
+188:     cfg["backtest"]["over_under_line"] = 3.0
+189:     with pytest.raises(SystemExit, match="linha INTEIRA"):
+190:         sombra.settle(cfg, conn, tmp_path / "p.jsonl", tmp_path / "r.jsonl", "t")
+193: def test_capture_recusa_linha_inteira(tmp_path):
+194:     conn = _banco_com_jogo_encerrado(tmp_path)
+195:     cfg = _cfg()
+196:     cfg["backtest"]["over_under_line"] = 3.0
+197:     with pytest.raises(SystemExit, match="linha INTEIRA"):
+198:         sombra._capture_funil(cfg, conn, lambda h, a: None, tmp_path / "p.jsonl", "t")
+204: def test_record_result_rejeita_placar_negativo(tmp_path):
+205:     with pytest.raises(ValueError, match="negativo"):
+206:         record_result("Casa", "Fora", -1, 2, path=tmp_path / "res.jsonl", pred_path=tmp_path / "none.jsonl")
+207:     assert not (tmp_path / "res.jsonl").exists()  # nada foi gravado
+213: def test_banco_truncado_falha_claramente(tmp_path):
+214:     corrupto = tmp_path / "corrupto.db"
+215:     corrupto.write_bytes(b"SQLite format 3\x00" + b"\x00" * 64)  # header cortado
+216:     conn = db.connect(str(corrupto), read_only=True)
+217:     with pytest.raises(sqlite3.DatabaseError):
+218:         conn.execute("SELECT * FROM sofascore_matches").fetchall()
+224: def test_leitor_read_only_ve_dado_commitado_durante_escrita(tmp_path):
+225:     caminho = str(tmp_path / "conc.db")
+226:     escritor = db.connect(caminho)
+227:     escritor.execute(
+228:         "INSERT INTO sofascore_matches (event_id, date, home_team, away_team) VALUES (1, '2026-01-01', 'A', 'B')"
+229:     )
+230:     escritor.commit()
+231:     leitor = db.connect(caminho, read_only=True)
+233:     escritor.execute(
+234:         "INSERT INTO sofascore_matches (event_id, date, home_team, away_team) VALUES (2, '2026-01-02', 'C', 'D')"
+235:     )
+236:     escritor.commit()
+237:     n = leitor.execute("SELECT COUNT(*) FROM sofascore_matches").fetchone()[0]
+238:     assert n >= 1  # nunca 'database is locked'
+239:     with pytest.raises(sqlite3.OperationalError):
+240:         leitor.execute("INSERT INTO current_elo (team, elo) VALUES ('X', 1500)")
+### tests/test_hotpath_cold_start.py
+3: import builtins
+5: import pytest
+6: from test_hotpath_smoke import RegisteredRedis
+8: from brasileirao_scripts import hotpath_smoke
+11: def test_verification_has_no_cold_numeric_import_inside_the_result_lifetime(monkeypatch):
+12:     original = builtins.__import__
+14:     def no_numeric_startup(name, *args, **kwargs):
+15:         if name == "brasileirao_predictor.kernel_daemon" or name.split(".")[0] in {"numpy", "numba", "scipy"}:
+16:             raise AssertionError("verification must use a pure protocol parser")
+17:         return original(name, *args, **kwargs)
+19:     monkeypatch.setattr(builtins, "__import__", no_numeric_startup)
+20:     assert (
+21:         hotpath_smoke.verify_registered_request(RegisteredRedis(), "synthetic")["status"] == "VERIFIED_CURRENT_RESULT"
+22:     )
+25: def test_ambiguous_duplicate_protocol_field_cannot_be_a_valid_request():
+26:     from brasileirao_predictor.kernel_daemon import _parse_invoke
+28:     raw = RegisteredRedis().request.replace('"elo_a": 1600', '"elo_a": 900, "elo_a": 1600')
+29:     with pytest.raises(ValueError):
+30:         _parse_invoke(raw.encode())
+### tests/test_hotpath_smoke.py
+3: import json
+5: import pytest
+6: import redis
+8: from brasileirao_scripts import hotpath_smoke
+11: class RegisteredRedis:
+12:     def __init__(self, *, registered=True, status="ready", response_run="run", response_identity="identity"):
+13:         self.request = json.dumps(
+14:             {
+15:                 "protocol_version": "brasileirao.redis/2",
+16:                 "job_id": "job",
+17:                 "run_id": "run",
+18:                 "match_id": "synthetic",
+19:                 "state_version": "9007199254740993",
+20:                 "idempotency_key": "identity",
+21:                 "elo_a": 1600,
+22:                 "elo_b": 1500,
+23:                 "dvorp_a": 0,
+24:                 "dvorp_b": 0,
+25:                 "timestamp_t3": 1,
+26:             }
+27:         )
+28:         self.registered = registered
+29:         self.status = status
+30:         self.response_run = response_run
+31:         self.response_identity = response_identity
+32:         self.publications = []
+34:     def get(self, key):
+35:         assert key == "kernel:v2:current:synthetic"
+36:         return self.request
+38:     def hget(self, key, field):
+39:         assert (key, field) == ("kernel:v2:request:run", "payload")
+40:         return self.request if self.registered else None
+42:     def publish(self, channel, payload):
+43:         self.publications.append((channel, payload))
+45:     def eval(self, script, count, *args):
+46:         assert count == 4
+47:         request = json.loads(self.request)
+48:         fair = {
+49:             **{
+50:                 key: request[key]
+51:                 for key in ("protocol_version", "job_id", "run_id", "match_id", "state_version", "idempotency_key")
+52:             },
+53:             "run_id": self.response_run,
+54:             "idempotency_key": self.response_identity,
+55:             "1": None,
+56:             "X": 1.0,
+57:             "2": None,
+58:             "o25": None,
+59:             "u25": 1.0,
+60:         }
+61:         return [self.status, json.dumps(fair)]
+64: def test_smoke_wakes_only_the_exact_registered_v2_request():
+65:     client = RegisteredRedis()
+66:     result = hotpath_smoke.verify_registered_request(client, "synthetic")
+67:     assert result["status"] == "VERIFIED_CURRENT_RESULT"
+68:     assert client.publications == [("system:invoke_kernel:v2", client.request)]
+71: def test_smoke_cannot_create_a_missing_registration():
+72:     client = RegisteredRedis(registered=False)
+73:     with pytest.raises(ValueError, match="registration"):
+74:         hotpath_smoke.verify_registered_request(client, "synthetic")
+75:     assert not client.publications
+78: @pytest.mark.parametrize("status", ["superseded", "expired", "inconsistent", "unregistered"])
+79: def test_smoke_rejects_noncurrent_results(status):
+80:     with pytest.raises(ValueError, match="superseded, expired or inconsistent"):
+81:         hotpath_smoke.verify_registered_request(RegisteredRedis(status=status), "synthetic")
+84: def test_smoke_requires_result_correlation():
+85:     with pytest.raises(ValueError, match="does not match"):
+86:         hotpath_smoke.verify_registered_request(RegisteredRedis(response_run="other"), "synthetic")
+89: def test_smoke_requires_idempotency_identity_correlation():
+90:     with pytest.raises(ValueError, match="does not match"):
+91:         hotpath_smoke.verify_registered_request(RegisteredRedis(response_identity="other"), "synthetic")
+94: def test_smoke_rejects_incomplete_registered_payload_before_wakeup():
+95:     client = RegisteredRedis()
+96:     fields = json.loads(client.request)
+97:     fields.pop("elo_a")
+98:     client.request = json.dumps(fields)
+99:     with pytest.raises(ValueError, match="contrato"):
+100:         hotpath_smoke.verify_registered_request(client, "synthetic")
+101:     assert not client.publications
+104: def test_smoke_times_out_without_creating_a_replacement_request():
+105:     client = RegisteredRedis(status="pending")
+106:     with pytest.raises(TimeoutError):
+107:         hotpath_smoke.verify_registered_request(client, "synthetic", timeout=0)
+108:     assert len(client.publications) == 1
+111: def test_cli_does_not_echo_a_connection_error_or_redis_credentials(monkeypatch, capsys):
+112:     class Connection:
+113:         closed = False
+115:         def ping(self):
+116:             raise redis.ConnectionError("SYNTHETIC_SECRET_MARKER")
+118:         def close(self):
+119:             self.closed = True
+121:     client = Connection()
+122:     monkeypatch.setattr(hotpath_smoke.redis, "from_url", lambda *args, **kwargs: client)
+123:     assert (
+124:         hotpath_smoke.main(["--match-id", "synthetic", "--redis", "redis://user:SYNTHETIC_SECRET_MARKER@localhost"])
+125:         == 1
+126:     )
+127:     assert "SYNTHETIC_SECRET_MARKER" not in capsys.readouterr().out
+128:     assert client.closed
+131: def test_synthetic_smoke_sends_lineups_to_worker_without_registering_itself():
+132:     class WorkerFixture:
+133:         events = []
+135:         def eval(self, script, count, key, capacity, raw):
+136:             assert (count, key, capacity) == (1, "lineup:v2:inbox", 10000)
+137:             self.events.append(json.loads(raw))
+138:             return "1-" + str(len(self.events))
+140:         def get(self, key):
+141:             assert key == "kernel:v2:current:" + self.events[0]["MatchId"]
+142:             return json.dumps({"run_id": "worker-registered-run"})
+144:         def hget(self, key, field):
+145:             assert (key, field) == ("kernel:v2:request:worker-registered-run", "lineup_state")
+146:             return json.dumps({"HomeLineupComplete": True, "AwayLineupComplete": True})
+148:     client = WorkerFixture()
+149:     match = hotpath_smoke.register_synthetic_lineup(client)
+150:     assert match.startswith("synthetic-smoke-")
+151:     assert [event["Side"] for event in client.events] == ["home", "away"]
+152:     assert all(len(event["Starters"]) == 11 and event["MatchId"] == match for event in client.events)
+### tests/test_identity.py
+1: import json
+3: import pytest
+5: from brasileirao_predictor.identity import CanonicalTeamResolver
+8: def _catalogs(tmp_path, aliases):
+9:     teams = tmp_path / "teams.json"
+10:     mapping = tmp_path / "aliases.json"
+11:     teams.write_text(
+12:         json.dumps({"teams": {"São Paulo": {"slug": "sao-paulo"}, "Flamengo": {"slug": "flamengo"}}}), encoding="utf-8"
+13:     )
+14:     mapping.write_text(json.dumps({"mapping_version": "v1", "aliases": aliases}), encoding="utf-8")
+15:     return mapping, teams
+18: def test_resolves_canonical_name_id_and_normalized_alias(tmp_path):
+19:     aliases, teams = _catalogs(tmp_path, {"CR Flamengo RJ": "flamengo"})
+20:     resolver = CanonicalTeamResolver(aliases, teams)
+21:     assert resolver.resolve("São Paulo").canonical == "sao-paulo"
+22:     assert resolver.resolve("sao-paulo").match_method == "canonical_id"
+23:     result = resolver.resolve("  cr flâmengo rj ")
+24:     assert result.canonical == "flamengo"
+25:     assert result.status == "ALIASED"
+28: def test_unknown_only_suggests_and_never_resolves(tmp_path):
+29:     aliases, teams = _catalogs(tmp_path, {"CR Flamengo RJ": "flamengo"})
+30:     result = CanonicalTeamResolver(aliases, teams).resolve("CR Flameng RJ")
+31:     assert result.canonical is None
+32:     assert result.status == "UNKNOWN"
+33:     assert result.suggestion == "CR Flamengo RJ"
+36: def test_rejects_unknown_target_and_normalized_collision(tmp_path):
+37:     aliases, teams = _catalogs(tmp_path, {"Unknown": "missing"})
+38:     with pytest.raises(ValueError, match="unknown canonical"):
+39:         CanonicalTeamResolver(aliases, teams)
+40:     aliases, teams = _catalogs(tmp_path, {"Clube Á": "flamengo", "clube a": "sao-paulo"})
+41:     with pytest.raises(ValueError, match="normalization collision"):
+42:         CanonicalTeamResolver(aliases, teams)

@@ -1,0 +1,432 @@
+### brasileirao_predictor/simulator.py
+28: import math
+29: import random
+30: import sys
+31: from collections import defaultdict
+33: import numpy as np
+34: from scipy.stats import nbinom
+36: INCENTIVE_CUT = 0.35  # corte de lambda quando o empate convém aos dois
+37: RED_RATE = 0.22  # vermelhos por time por jogo (taxa-base agregada)
+38: RED_LAMBDA_PENALTY = 0.45  # queda máxima de lambda do time com um a menos
+40: STAGES = ["grupos", "mata-mata", "oitavas", "quartas", "semi", "final", "campeão"]
+41: _NEXT = {32: "oitavas", 16: "quartas", 8: "semi", 4: "final", 2: "campeão"}
+44: def derive_groups(conn, tournament: str = "FIFA World Cup"):
+45:     fx = conn.execute(
+46:         "SELECT home_team, away_team FROM matches WHERE home_score IS NULL AND tournament=?",
+47:         (tournament,),
+48:     ).fetchall()
+49:     adj = defaultdict(set)
+50:     for h, a in fx:
+51:         adj[h].add(a)
+52:         adj[a].add(h)
+53:     seen, groups = set(), []
+54:     for t in adj:
+55:         if t in seen:
+56:             continue
+57:         stack, comp = [t], []
+58:         while stack:
+59:             x = stack.pop()
+60:             if x in seen:
+61:                 continue
+62:             seen.add(x)
+63:             comp.append(x)
+64:             stack.extend(adj[x] - seen)
+65:         if len(comp) == 4:
+66:             groups.append(comp)
+67:     return groups
+70: def _lambdas(ta, tb, elo, params, vorp: dict | None = None):
+73:     a, b = params[0], params[1]
+74:     theta = params[4] if len(params) > 4 else 0.0
+75:     diff = (elo.get(ta, 1500) - elo.get(tb, 1500)) / 400.0
+76:     dv_a = vorp.get(ta, 0.0) if vorp else 0.0
+77:     dv_b = vorp.get(tb, 0.0) if vorp else 0.0
+78:     return (math.exp(a + b * diff + theta * dv_a), math.exp(a - b * diff + theta * dv_b))
+81: def _red_factor():
+82:     if random.random() < RED_RATE:
+83:         frac_remaining = (90.0 - random.uniform(0, 90)) / 90.0
+84:         return 1.0 - RED_LAMBDA_PENALTY * frac_remaining
+85:     return 1.0
+88: def _sample_score(lam_a, lam_b, alpha, rho, max_goals=12):
+92:     k = np.arange(max_goals + 1)
+93:     r = 1.0 / max(alpha, 1e-9)
+94:     pa = nbinom.pmf(k, r, r / (r + lam_a))
+95:     pb = nbinom.pmf(k, r, r / (r + lam_b))
+96:     grid = np.outer(pa, pb)
+97:     grid[0, 0] *= 1.0 - lam_a * lam_b * rho
+98:     grid[0, 1] *= 1.0 + lam_a * rho
+99:     grid[1, 0] *= 1.0 + lam_b * rho
+100:     grid[1, 1] *= 1.0 - rho
+101:     grid = np.clip(grid, 0.0, None)
+102:     grid /= grid.sum()
+103:     idx = int(np.random.choice(grid.size, p=grid.ravel()))
+104:     return idx // grid.shape[1], idx % grid.shape[1]
+107: def _play(ta, tb, elo, params, cut=1.0, vorp: dict | None = None):
+108:     alpha, rho = params[2], params[3]
+109:     lam_a, lam_b = _lambdas(ta, tb, elo, params, vorp)
+110:     lam_a *= cut * _red_factor()
+111:     lam_b *= cut * _red_factor()
+112:     return _sample_score(lam_a, lam_b, alpha, rho)
+115: def _empate_classifica_ambos(ti, tj, pts, teams):
+118:     others = [t for t in teams if t not in (ti, tj)]
+119:     best_chaser = max(pts[t] for t in others) + 3
+120:     return min(pts[ti], pts[tj]) + 1 > best_chaser
+123: def _simulate_group(teams, elo, params, vorp=None):
+124:     pts = defaultdict(int)
+125:     gf = defaultdict(int)
+126:     ga = defaultdict(int)
+127:     schedule = [[(0, 1), (2, 3)], [(0, 2), (1, 3)], [(0, 3), (1, 2)]]
+128:     for rnd, games in enumerate(schedule):
+129:         for i, j in games:
+130:             ti, tj = teams[i], teams[j]
+131:             cut = 1.0
+132:             if rnd == 2 and _empate_classifica_ambos(ti, tj, pts, teams):
+133:                 cut = 1.0 - INCENTIVE_CUT
+134:             gi, gj = _play(ti, tj, elo, params, cut, vorp)
+135:             gf[ti] += gi
+136:             ga[ti] += gj
+137:             gf[tj] += gj
+138:             ga[tj] += gi
+139:             if gi > gj:
+140:                 pts[ti] += 3
+141:             elif gi < gj:
+142:                 pts[tj] += 3
+143:             else:
+144:                 pts[ti] += 1
+145:                 pts[tj] += 1
+146:     ranked = sorted(teams, key=lambda t: (pts[t], gf[t] - ga[t], gf[t]), reverse=True)
+147:     table = {t: (pts[t], gf[t] - ga[t], gf[t]) for t in teams}
+148:     return ranked, table
+151: def _knockout_winner(ta, tb, elo, params, vorp=None):
+152:     ga, gb = _play(ta, tb, elo, params, vorp=vorp)
+153:     if ga != gb:
+154:         return ta if ga > gb else tb
+155:     pa = 1.0 / (1.0 + 10 ** (-(elo.get(ta, 1500) - elo.get(tb, 1500)) / 400.0))
+156:     return ta if random.random() < pa else tb  # pênaltis, leve peso à força
+159: def run_tournament(groups, elo, params, vorp=None):
+160:     reached = {}
+161:     qualifiers, thirds = [], []
+162:     for teams in groups:
+163:         ranked, table = _simulate_group(teams, elo, params, vorp)
+164:         for t in teams:
+165:             reached[t] = "grupos"
+166:         qualifiers += ranked[:2]
+167:         thirds.append((ranked[2], table[ranked[2]]))
+168:     thirds.sort(key=lambda x: x[1], reverse=True)
+169:     qualifiers += [t for t, _ in thirds[:8]]
+170:     for t in qualifiers:
+171:         reached[t] = "mata-mata"
+173:     bracket = qualifiers[:]
+174:     random.shuffle(bracket)
+175:     while len(bracket) > 1:
+176:         winners = [_knockout_winner(bracket[i], bracket[i + 1], elo, params, vorp) for i in range(0, len(bracket), 2)]
+177:         stage = _NEXT[len(bracket)]
+178:         for t in winners:
+179:             reached[t] = stage
+180:         bracket = winners
+181:     return reached
+184: def simulate_batch(groups, elo, params, n, seed=None, vorp=None):
+187:     if seed is not None:
+188:         random.seed(seed)
+189:         np.random.seed(seed)
+190:     rank = {s: i for i, s in enumerate(STAGES)}
+191:     best = defaultdict(lambda: defaultdict(int))
+192:     for _ in range(n):
+193:         for t, s in run_tournament(groups, elo, params, vorp).items():
+194:             best[t][s] += 1
+195:     rows = []
+196:     for t, dist in best.items():
+197:         cum = {}
+198:         for s in STAGES:
+199:             cum[s] = sum(c for st, c in dist.items() if rank[st] >= rank[s]) / n
+200:         rows.append((t, cum))
+201:     rows.sort(key=lambda r: r[1]["campeão"], reverse=True)
+202:     return rows
+205: def monte_carlo(n=10000, seed=None, vorp=None):
+209:     from . import db as _db
+210:     from .ingest import ROOT as _ROOT
+211:     from .ingest import load_config as _load_config
+213:     cfg = _load_config()
+214:     if cfg.get("tournament_name") != "FIFA World Cup":
+215:         sys.exit("simulação de liga não implementada; o simulador legado suporta somente a Copa com 12 grupos")
+216:     conn = _db.connect(str(_ROOT / cfg["database"]))
+217:     elo = _db.load_elo(conn)
+218:     prow = _db.load_params(conn)
+219:     if not elo or not prow:
+220:         sys.exit("cache vazio — rode `python -m brasileirao_predictor.cron_update_models` primeiro")
+221:     params = (prow[0], prow[1], prow[2], prow[3])
+225:     groups = derive_groups(conn, cfg.get("tournament_name", "FIFA World Cup"))
+226:     if len(groups) != 12:
+227:         sys.exit(
+228:             f"esperava 12 grupos, derivei {len(groups)} — fixtures incompletas? "
+229:             f"(em liga de pontos corridos o simulador de bracket não se aplica)"
+230:         )
+231:     return simulate_batch(groups, elo, params, n, seed=seed, vorp=vorp)
+234: def main():
+235:     n = int(sys.argv[1]) if len(sys.argv) > 1 else 10000
+236:     print(f"simulando a Copa {n} vezes...\n")
+237:     rows = monte_carlo(n)
+238:     print(f"{'seleção':<22}{'avança':>8}{'quartas':>9}{'semi':>7}{'final':>7}{'título':>8}")
+239:     print("-" * 61)
+240:     for t, c in rows[:16]:
+241:         print(f"{t:<22}{c['oitavas']:>8.1%}{c['quartas']:>9.1%}{c['semi']:>7.1%}{c['final']:>7.1%}{c['campeão']:>8.1%}")
+244: if __name__ == "__main__":
+245:     main()
+### brasileirao_predictor/sofascore.py
+14: import atexit
+15: import json
+16: import os
+17: import ssl
+18: import sys
+19: import tempfile
+20: import time
+21: from pathlib import Path
+22: from typing import Any, cast
+24: from curl_cffi import requests as creq
+26: from .net import retry
+32: BASE = "https://www.sofascore.com/api/v1"
+35: def _windows_ca_bundle():
+36:     if sys.platform != "win32":
+37:         return None
+38:     pems = []
+39:     for store in ("ROOT", "CA"):
+40:         try:
+41:             for cert, _enc, _trust in ssl.enum_certificates(store):
+42:                 pems.append(ssl.DER_cert_to_PEM_cert(cert))
+43:         except Exception:
+44:             pass
+45:     if not pems:
+46:         return None
+47:     tmp = tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False)
+48:     tmp.write("\n".join(pems))
+49:     tmp.close()
+50:     atexit.register(lambda: Path(tmp.name).unlink(missing_ok=True))
+51:     return tmp.name
+58: _HEADERS = {
+59:     "Accept": "*/*",
+60:     "Accept-Language": "en-US,en;q=0.9",
+61:     "Referer": "https://www.sofascore.com/",
+62:     "x-requested-with": "brasileirao-predictor",
+63:     "sec-fetch-dest": "empty",
+64:     "sec-fetch-mode": "cors",
+65:     "sec-fetch-site": "same-origin",
+66: }
+69: class Sofascore:
+70:     def __init__(self, rate_limit: float = 1.5, cache_dir: str | None = None, impersonate: str = "chrome146"):
+71:         self.rate = rate_limit
+75:         self.session = creq.Session(impersonate=cast(Any, impersonate))
+76:         self.session.headers.update(_HEADERS)
+77:         self.cache = Path(cache_dir) if cache_dir else None
+78:         if self.cache:
+79:             self.cache.mkdir(parents=True, exist_ok=True)
+81:         if os.environ.get("SOFASCORE_INSECURE") == "1":
+82:             self.verify = False
+83:         else:
+84:             self.verify = _windows_ca_bundle() or True
+86:     @retry(attempts=4, base_delay=2.0)
+87:     def _fetch(self, path: str):
+90:         r = self.session.get(f"{BASE}/{path}", timeout=30, verify=cast(Any, self.verify))
+91:         time.sleep(self.rate)
+92:         if r.status_code == 404:
+93:             return None
+94:         r.raise_for_status()
+95:         return r.json()
+97:     def _get(self, path: str, cache: bool = True):
+102:         if cache and self.cache:
+103:             f = self.cache / (path.replace("/", "_") + ".json")
+104:             if f.exists():
+105:                 try:
+106:                     return json.loads(f.read_text(encoding="utf-8"))
+107:                 except (OSError, json.JSONDecodeError):
+111:                     pass
+112:         data = self._fetch(path)
+113:         if cache and self.cache and data is not None:
+114:             f = self.cache / (path.replace("/", "_") + ".json")
+115:             fd, temporary = tempfile.mkstemp(prefix=f".{f.name}.", suffix=".tmp", dir=f.parent)
+116:             try:
+117:                 with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+118:                     json.dump(data, handle, ensure_ascii=False)
+119:                     handle.flush()
+120:                     os.fsync(handle.fileno())
+121:                 os.replace(temporary, f)
+122:             except BaseException:
+123:                 try:
+124:                     os.close(fd)
+125:                 except OSError:
+126:                     pass
+127:                 try:
+128:                     Path(temporary).unlink(missing_ok=True)
+129:                 except OSError:
+130:                     pass
+131:                 raise
+132:         return data
+134:     def list_seasons(self, ut_id: int):
+135:         d = self._get(f"unique-tournament/{ut_id}/seasons")
+136:         return [(s["id"], s.get("year")) for s in (d or {}).get("seasons", [])]
+138:     def season_events(self, ut_id: int, season_id: int, upcoming: bool = False):
+151:         events = []
+152:         for kind in ["last", "next"] if upcoming else ["last"]:
+153:             page = 0
+154:             while page <= 20:
+155:                 d = self._get(
+156:                     f"unique-tournament/{ut_id}/season/{season_id}/events/{kind}/{page}",
+157:                     cache=(kind == "last" and not upcoming),
+158:                 )
+159:                 batch = (d or {}).get("events", [])
+160:                 if not batch:
+161:                     break
+162:                 events.extend(batch)
+163:                 page += 1
+164:         return events
+166:     def event_odds(self, event_id: int, finished: bool = False):
+168:         return self._get(f"event/{event_id}/odds/1/all", cache=finished)
+170:     def event_statistics(self, event_id: int):
+171:         return self._get(f"event/{event_id}/statistics")
+173:     def event_lineups(self, event_id: int):
+174:         return self._get(f"event/{event_id}/lineups")
+### brasileirao_predictor/status.py
+3: import sqlite3
+5: from predictor_core.kernel.obs import emit_event
+7: from . import db
+8: from .ingest import ROOT, load_config
+10: _DOMAIN = "brasileirao"
+13: def _count(conn, sql, params=()):
+14:     try:
+15:         return conn.execute(sql, params).fetchone()[0]
+16:     except sqlite3.OperationalError:
+17:         return None
+20: def run():
+21:     cfg = load_config()
+22:     conn = db.connect(str(ROOT / cfg["database"]), read_only=True)
+23:     try:
+24:         _render(conn, cfg)
+25:     finally:
+26:         conn.close()
+29: def _render(conn, cfg):
+30:     line = "=" * 58
+32:     print(line)
+33:     print("ESTADO DO BANCO")
+34:     print(line)
+36:     played = _count(conn, "SELECT COUNT(*) FROM matches WHERE home_score IS NOT NULL")
+37:     if played is not None:
+38:         rng = conn.execute("SELECT MIN(date), MAX(date) FROM matches WHERE home_score IS NOT NULL").fetchone()
+39:         fixtures = _count(conn, "SELECT COUNT(*) FROM matches WHERE home_score IS NULL")
+40:         print("\n[resultados de selecoes]  -> ALIMENTA o modelo")
+41:         print(f"  {played} jogos ({rng[0]} a {rng[1]}), {fixtures} fixtures futuros")
+43:     fb = _count(conn, "SELECT COUNT(*) FROM player_comp_stats")
+44:     if fb:
+45:         comps = conn.execute("SELECT competition, COUNT(*) FROM player_comp_stats GROUP BY competition").fetchall()
+46:         print("\n[stats de jogador agregadas]  -> coletado, NAO conectado")
+47:         print(f"  {fb} linhas: " + ", ".join(f"{c} ({n})" for c, n in comps))
+49:     ss = _count(conn, "SELECT COUNT(*) FROM sofascore_matches")
+50:     if ss:
+51:         xg = _count(conn, "SELECT COUNT(*) FROM sofascore_matches WHERE home_xg IS NOT NULL")
+52:         od = _count(conn, "SELECT COUNT(*) FROM sofascore_matches WHERE odds_home IS NOT NULL")
+53:         rt = _count(conn, "SELECT COUNT(*) FROM sofascore_player_ratings")
+54:         print("\n[Sofascore]  -> xG/notas a conectar; odds usadas via Shin")
+55:         print(f"  {ss} jogos ({xg} com xG, {od} com odds), {rt} notas de jogador")
+58:     from .cron_update_models import cache_is_current
+60:     elo = db.load_elo(conn)
+61:     prow = db.load_params(conn)
+62:     cache_status = "empty"
+63:     print("\n[cache do modelo]  -> serve a CLI e o simulador")
+64:     if not elo or not prow:
+65:         print("  vazio — rode `python -m brasileirao_predictor.cron_update_models`")
+66:     else:
+67:         a, b, alpha, rho, n_cached, cfg_hash, computed_at = prow
+68:         fresh = cache_is_current(cfg, conn, prow)
+69:         cache_status = "fresh" if fresh else "stale"
+70:         print(f"  {len(elo)} times | a={a:.3f} b={b:.3f} alpha={alpha:.4f} rho={rho:.4f}")
+71:         print(f"  calculado em {computed_at} sobre {n_cached} jogos")
+72:         print(f"  estado: {'atualizado' if fresh else 'DESATUALIZADO — rode o cron'}")
+74:     bt = _count(conn, "SELECT COUNT(*) FROM backtest_bets")
+75:     if bt:
+76:         pnl = conn.execute("SELECT SUM(pnl), SUM(stake) FROM backtest_bets").fetchone()
+77:         print("\n[backtest]  -> relato bruto; procedência e custos não certificados")
+78:         roi = f"{pnl[0] / pnl[1]:+.1%}" if pnl[0] is not None and pnl[1] is not None and pnl[1] > 0 else "N/A"
+79:         print(f"  {bt} apostas liquidadas | P&L {pnl[0]}u | ROI {roi}")
+81:     emit_event(
+82:         _DOMAIN,
+83:         "status_check",
+84:         metrics={
+85:             "played": float(played or 0),
+86:             "fbref_rows": float(fb or 0),
+87:             "sofascore_matches": float(ss or 0),
+88:             "backtest_bets": float(bt or 0),
+89:         },
+90:         metadata={
+91:             "model_cache": cache_status,
+92:             "db_path": str(ROOT / cfg["database"]),
+93:         },
+94:     )
+96:     print("\n" + "-" * 58)
+97:     print("modelo: Binomial Negativa + Dixon-Coles (Elo com decay)")
+98:     print("mercado: odds purificadas por Shin no painel do predict")
+99:     print("a conectar: FBref e notas do Sofascore")
+100:     print("-" * 58)
+103: if __name__ == "__main__":
+104:     run()
+### brasileirao_predictor/temporal_policy.py
+3: import hashlib
+4: import json
+5: from collections.abc import Iterable
+6: from dataclasses import dataclass
+7: from datetime import UTC, date, datetime
+8: from typing import Any, Literal
+10: FallbackPolicy = Literal["group_by_date", "reject"]
+13: @dataclass(frozen=True)
+14: class TemporalGroup:
+15:     key: str
+16:     precision: Literal["kickoff", "date"]
+17:     rows: tuple[dict[str, Any], ...]
+20: @dataclass(frozen=True)
+21: class TemporalPolicy:
+22:     version: str = "temporal-groups/v2"
+23:     fallback: FallbackPolicy = "group_by_date"
+25:     def __post_init__(self) -> None:
+26:         if self.version != "temporal-groups/v2" or self.fallback not in {"group_by_date", "reject"}:
+27:             raise ValueError("unsupported temporal policy version or fallback")
+29:     @property
+30:     def fingerprint(self) -> str:
+31:         payload = json.dumps({"version": self.version, "fallback": self.fallback}, sort_keys=True).encode()
+32:         return hashlib.sha256(payload).hexdigest()[:16]
+34:     def group(self, rows: Iterable[dict[str, Any]]) -> list[TemporalGroup]:
+41:         grouped: dict[tuple[str, Literal["kickoff", "date"]], list[dict[str, Any]]] = {}
+42:         normalized: list[tuple[str, Literal["kickoff", "date"], dict[str, Any]]] = []
+43:         incomplete_days: set[str] = set()
+44:         for row in rows:
+45:             kickoff = row.get("kickoff_at")
+46:             precision: Literal["kickoff", "date"]
+47:             if kickoff:
+48:                 parsed = datetime.fromisoformat(str(kickoff).replace("Z", "+00:00"))
+49:                 if parsed.tzinfo is None or parsed.utcoffset() is None:
+50:                     raise ValueError("kickoff_at must be timezone-aware")
+51:                 key = parsed.astimezone(UTC).isoformat()
+52:                 precision = "kickoff"
+53:             else:
+54:                 if self.fallback == "reject":
+55:                     raise ValueError("kickoff_at missing under reject policy")
+56:                 date_value = str(row.get("date") or "")
+57:                 try:
+58:                     if date.fromisoformat(date_value).isoformat() != date_value:
+59:                         raise ValueError("noncanonical_date")
+60:                 except ValueError as exc:
+61:                     raise ValueError("row requires ISO UTC date when kickoff_at is missing") from exc
+62:                 key, precision = date_value, "date"
+63:                 incomplete_days.add(date_value)
+64:             normalized.append((key, precision, row))
+65:         for key, precision, row in normalized:
+66:             if key[:10] in incomplete_days:
+67:                 key, precision = key[:10], "date"
+68:             grouped.setdefault((key, precision), []).append(row)
+69:         groups = [TemporalGroup(key, precision, tuple(items)) for (key, precision), items in grouped.items()]
+70:         return sorted(groups, key=lambda group: (group.key, group.precision))
+73: def assert_unique_teams(group: TemporalGroup) -> None:
+74:     seen: set[str] = set()
+75:     for row in group.rows:
+76:         for field in ("home_team", "away_team"):
+77:             team = str(row.get(field) or "")
+78:             if not team:
+79:                 raise ValueError(f"temporal group {group.key} has missing {field}")
+80:             if team in seen:
+81:                 raise ValueError(f"team {team!r} appears more than once in temporal group {group.key}")
+82:             seen.add(team)

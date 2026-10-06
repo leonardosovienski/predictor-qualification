@@ -1,0 +1,14 @@
+stateDiagram-v2
+ [*] --> SNAPSHOT_CHECK: analyze
+ SNAPSHOT_CHECK --> SOURCE_UNAVAILABLE: sem snapshot recente/identificado
+ SNAPSHOT_CHECK --> PREFILTER: snapshot válido
+ PREFILTER --> EXCLUDED: prefilter exclui ativo
+ PREFILTER --> GUARD: elegível
+ GUARD --> BUDGET_BLOCKED: api_guard nega (limite finito esgotado)
+ GUARD --> LLM_CALL: permitido (default limite 0 = sem teto, CR-BUDGET-001)
+ LLM_CALL --> SCORED: score finito 0..100
+ LLM_CALL --> FALLBACK_50: falha/cota (llm_fallback=True, não cacheado)
+ SCORED --> PERSISTED: append_history
+ FALLBACK_50 --> PERSISTED
+ PERSISTED --> [*]: export; capital_enabled False
+ note right of SCORED: DESCRIPTIVE_SIGNAL / DESCRIPTIVE_REPLAY (V3); nenhum estado autoriza capital

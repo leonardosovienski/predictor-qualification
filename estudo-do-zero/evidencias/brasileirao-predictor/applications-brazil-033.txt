@@ -1,0 +1,380 @@
+### brasileirao_predictor/research/residual_walkforward.py
+3: from __future__ import annotations
+5: import math
+6: import statistics as st
+7: from numbers import Integral
+8: from typing import Any
+10: import numpy as np
+12: from brasileirao_predictor.research.economic_decision import choose_shadow_side, decide_shadow
+13: from brasileirao_predictor.research.market_residual import MarketResidualModel
+14: from brasileirao_predictor.research.residual_features import FEATURE_NAMES
+15: from brasileirao_predictor.research.shadow_portfolio import binary_outcome, finite, replay_shadow_portfolio, utc
+18: def _validate(row):
+19:     if not isinstance(row, dict):
+20:         raise ValueError("walk-forward rows must be objects")
+21:     event = row.get("event_id")
+22:     if isinstance(event, bool) or not isinstance(event, (str, int)) or not str(event).strip():
+23:         raise ValueError("event_id must be a nonblank string or integer")
+24:     prediction, kickoff = utc(row["predicted_at"]), utc(row["kickoff_at"])
+25:     outcome = binary_outcome(row.get("outcome"))
+26:     settled = utc(row["settled_at"]) if row.get("settled_at") is not None else None
+27:     if (
+28:         prediction >= kickoff
+29:         or (settled is not None and settled <= kickoff)
+30:         or ((settled is None) != (outcome is None))
+31:     ):
+32:         raise ValueError("invalid prediction/kickoff/settlement chronology")
+33:     label_available = utc(row["label_available_at"]) if row.get("label_available_at") is not None else settled
+34:     if label_available is not None and (settled is None or label_available < settled):
+35:         raise ValueError("invalid label availability chronology")
+36:     if row.get("data_status") == "ABSTAIN_DATA":
+37:         if not isinstance(row.get("abstention_reason"), str) or not row["abstention_reason"].strip():
+38:             raise ValueError("data abstention requires a reason")
+39:         if any(
+40:             row.get(field) is not None
+41:             for field in ("features", "market_probability", "best_odds", "best_odds_by_selection")
+42:         ):
+43:             raise ValueError("data abstention cannot carry admitted model or price inputs")
+44:         return {**row, "event_id": str(event), "_prediction": prediction, "_label_available": None}
+45:     probability = finite(row["market_probability"], "market_probability")
+46:     if not 0 < probability < 1:
+47:         raise ValueError("market_probability must be strictly between 0 and 1")
+48:     features = row["features"]
+49:     if not isinstance(features, (list, tuple)) or len(features) != len(FEATURE_NAMES):
+50:         raise ValueError("features must match FEATURE_NAMES")
+51:     features = [finite(value, "features") for value in features]
+52:     for field in ("features_available_at", "quote_available_at", "quote_received_at", "quote_observed_at"):
+53:         if row.get(field) is not None and utc(row[field]) > prediction:
+54:             raise ValueError(f"{field} is not available by prediction")
+55:     quotes = row.get("best_odds_by_selection")
+56:     if quotes is not None:
+57:         if not isinstance(quotes, dict) or set(quotes) != {"over", "under"}:
+58:             raise ValueError("quotes must contain exactly over and under")
+59:         quotes = {side: finite(price, "odds") for side, price in quotes.items()}
+60:         if any(price <= 1 for price in quotes.values()):
+61:             raise ValueError("odds must exceed 1")
+62:     single = finite(row["best_odds"], "odds") if row.get("best_odds") is not None else None
+63:     if single is not None and single <= 1:
+64:         raise ValueError("odds must exceed 1")
+65:     return {
+66:         **row,
+67:         "event_id": str(event),
+68:         "outcome": outcome,
+69:         "features": features,
+70:         "market_probability": probability,
+71:         "best_odds_by_selection": quotes,
+72:         "best_odds": single,
+73:         "_prediction": prediction,
+74:         "_label_available": label_available,
+75:     }
+78: def evaluate_walkforward(
+79:     records: list[dict[str, Any]],
+80:     *,
+81:     minimum_train: int = 100,
+82:     block_size: int = 50,
+83:     l2: float = 5.0,
+84:     friction_rate: float = 0.0,
+85:     minimum_conservative_edge: float = 0.02,
+86:     reference_bankroll: float = 100.0,
+87: ) -> dict[str, Any]:
+94:     for name, value, minimum in (("minimum_train", minimum_train, 20), ("block_size", block_size, 1)):
+95:         if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
+96:             raise ValueError(f"{name} must be an integer >= {minimum}")
+97:     if not isinstance(records, list) or len(records) <= minimum_train:
+98:         raise ValueError("insufficient walk-forward records")
+99:     friction_rate = finite(friction_rate, "friction_rate")
+100:     minimum_conservative_edge = finite(minimum_conservative_edge, "minimum_conservative_edge")
+101:     if not 0 <= friction_rate < 1 or not 0 <= minimum_conservative_edge < 1 or finite(l2, "l2") < 0:
+102:         raise ValueError("invalid walk-forward policy")
+103:     ordered = sorted((_validate(row) for row in records), key=lambda row: (row["_prediction"], row["event_id"]))
+104:     if len({row["event_id"] for row in ordered}) != len(ordered):
+105:         raise ValueError("duplicate event_id in walk-forward universe")
+106:     universe = [
+107:         {
+108:             "event_id": row["event_id"],
+109:             "predicted_at": row["predicted_at"],
+110:             "action": "ABSTAIN_DATA" if row.get("data_status") == "ABSTAIN_DATA" else "WARMUP",
+111:             "abstention_reason": row.get("abstention_reason"),
+112:         }
+113:         for row in ordered
+114:     ]
+115:     predictions, anchors, outcomes, orders = [], [], [], []
+116:     unsettled_predictions = 0
+117:     for start in range(minimum_train, len(ordered), block_size):
+118:         test = ordered[start : start + block_size]
+119:         cutoff = test[0]["_prediction"]
+120:         train = [
+121:             row for row in ordered[:start] if row["_label_available"] is not None and row["_label_available"] <= cutoff
+122:         ]
+123:         if len(train) < minimum_train:
+124:             for index in range(start, start + len(test)):
+125:                 if universe[index]["action"] != "ABSTAIN_DATA":
+126:                     universe[index]["action"] = "TRAINING_NOT_MATURE"
+127:             continue
+128:         model = MarketResidualModel(l2=l2).fit(
+129:             np.asarray([row["features"] for row in train]),
+130:             np.asarray([row["outcome"] for row in train]),
+131:             np.asarray([row["market_probability"] for row in train]),
+132:             feature_names=FEATURE_NAMES,
+133:         )
+134:         for index, row in enumerate(test, start):
+135:             if row.get("data_status") == "ABSTAIN_DATA":
+136:                 continue
+137:             prediction = model.predict(np.asarray(row["features"]), row["market_probability"])
+138:             if row["outcome"] is not None:
+139:                 predictions.append(prediction.probability)
+140:                 anchors.append(row["market_probability"])
+141:                 outcomes.append(row["outcome"])
+142:             else:
+143:                 unsettled_predictions += 1
+144:             universe[index].update(train_n=len(train), training_cutoff=cutoff.isoformat())
+145:             quotes = row["best_odds_by_selection"]
+146:             if quotes is None and row["best_odds"] is None:
+147:                 universe[index]["action"] = "NO_QUOTE"
+148:                 continue
+149:             if quotes is not None:
+150:                 decision = choose_shadow_side(
+151:                     prediction,
+152:                     odds_over=quotes["over"],
+153:                     odds_under=quotes["under"],
+154:                     friction_rate=friction_rate,
+155:                     minimum_conservative_edge=minimum_conservative_edge,
+156:                 )
+157:             else:
+158:                 decision = decide_shadow(
+159:                     prediction,
+160:                     best_odds=row["best_odds"],
+161:                     friction_rate=friction_rate,
+162:                     minimum_conservative_edge=minimum_conservative_edge,
+163:                 )
+164:             universe[index]["action"] = decision.action
+165:             if decision.action == "SHADOW_BET":
+166:                 orders.append(
+167:                     {
+168:                         "event_id": row["event_id"],
+169:                         "predicted_at": row["predicted_at"],
+170:                         "settled_at": row["_label_available"].isoformat()
+171:                         if row["_label_available"] is not None
+172:                         else None,
+173:                         "outcome": row["outcome"],
+174:                         "selection": decision.selection,
+175:                         "stake_fraction": decision.stake_units,
+176:                         "odds": decision.best_odds,
+177:                         "friction_rate": decision.friction_rate,
+178:                     }
+179:                 )
+180:     portfolio = replay_shadow_portfolio(orders, reference_bankroll=reference_bankroll)
+181:     actions = {r["event_id"]: r["action"] for r in portfolio["receipts"] if r["action"] != "SETTLED"}
+182:     for row in universe:
+183:         row["action"] = actions.get(row["event_id"], row["action"])
+184:     result = {
+185:         "schema_version": "residual-walkforward/v3",
+186:         "status": "SHADOW" if outcomes else "PENDING_SAMPLE",
+187:         "n": len(outcomes),
+188:         "n_input": len(ordered),
+189:         "n_unsettled_predictions": unsettled_predictions,
+190:         "selected": sum(action == "SIMULATED_FILL" for action in actions.values()),
+191:         "universe": universe,
+192:         "portfolio": portfolio,
+193:         "roi": portfolio["roi"],
+194:         "friction_rate": friction_rate,
+195:         "minimum_conservative_edge": minimum_conservative_edge,
+196:         "input_scope": "caller_supplied_conditional_diagnostics",
+197:         "n_missing_feature_clock": sum(row.get("features_available_at") is None for row in ordered),
+198:         "n_missing_label_clock": sum(row.get("label_available_at") is None for row in ordered),
+199:         "economic_evidence": False,
+200:         "capital_enabled": False,
+201:     }
+202:     if outcomes:
+204:         def brier(p):
+205:             return st.mean((value - y) ** 2 for value, y in zip(p, outcomes))
+207:         def logloss(p):
+208:             return st.mean(
+209:                 -(y * math.log(max(1e-12, value)) + (1 - y) * math.log(max(1e-12, 1 - value)))
+210:                 for value, y in zip(p, outcomes)
+211:             )
+213:         result.update(
+214:             model_brier=brier(predictions),
+215:             market_brier=brier(anchors),
+216:             delta_brier=brier(predictions) - brier(anchors),
+217:             model_logloss=logloss(predictions),
+218:             market_logloss=logloss(anchors),
+219:             delta_logloss=logloss(predictions) - logloss(anchors),
+220:         )
+221:     return result
+### brasileirao_predictor/research/rho_stability.py
+3: import math
+4: from typing import Any
+6: import numpy as np
+7: from predictor_core.measurement.metrics import log_loss, rps
+9: from brasileirao_predictor import model
+12: def _moving_block_ci(
+13:     values: list[float],
+14:     *,
+15:     group_keys: list[str],
+16:     seed: int = 42,
+17:     n_boot: int = 2000,
+18: ) -> list[float]:
+19:     array = np.asarray(values, dtype=float)
+20:     if len(group_keys) != len(values):
+21:         raise ValueError("group_keys must align one-to-one with values")
+22:     ordered_groups: list[list[int]] = []
+23:     for index, key in enumerate(group_keys):
+24:         if not ordered_groups or group_keys[ordered_groups[-1][0]] != key:
+25:             ordered_groups.append([])
+26:         ordered_groups[-1].append(index)
+27:     block = min(max(2, round(len(ordered_groups) ** 0.5)), len(ordered_groups))
+28:     starts = np.arange(len(ordered_groups) - block + 1)
+29:     blocks_needed = math.ceil(len(ordered_groups) / block)
+30:     rng = np.random.default_rng(seed)
+31:     samples = np.empty(n_boot)
+32:     for index in range(n_boot):
+33:         chosen = rng.choice(starts, size=blocks_needed, replace=True)
+34:         sampled_indices = [
+35:             item for start in chosen for group in ordered_groups[start : start + block] for item in group
+36:         ]
+37:         sample = array[sampled_indices[: len(array)]]
+38:         samples[index] = sample.mean()
+39:     return [float(value) for value in np.quantile(samples, [0.025, 0.975])]
+42: def evaluate_rho(
+43:     history: list[tuple[float, int, int]],
+44:     *,
+45:     group_keys: list[str] | None = None,
+46:     minimum_matches: int = 100,
+47: ) -> dict[str, Any]:
+48:     if group_keys is None:
+49:         group_keys = [str(index) for index in range(len(history))]
+50:     if len(group_keys) != len(history):
+51:         raise ValueError("group_keys must align one-to-one with history")
+52:     if len(history) < minimum_matches:
+53:         return {"status": "BLOCKED_DATA", "n": len(history), "serving_changed": False}
+54:     split = max(1, int(len(history) * 0.8))
+55:     train, test = history[:split], history[split:]
+56:     test_groups = group_keys[split:]
+57:     params = model.fit_goal_model(train)
+58:     neutral = (*params[:3], 0.0)
+59:     probs_rho: list[list[float]] = []
+60:     probs_neutral: list[list[float]] = []
+61:     outcomes: list[int] = []
+62:     for diff, home_goals, away_goals in test:
+63:         fitted = model.predict_match(diff, 0.0, params)
+64:         control = model.predict_match(diff, 0.0, neutral)
+65:         probs_rho.append([fitted["p_loss"], fitted["p_draw"], fitted["p_win"]])
+66:         probs_neutral.append([control["p_loss"], control["p_draw"], control["p_win"]])
+67:         outcomes.append(2 if home_goals > away_goals else 1 if home_goals == away_goals else 0)
+68:     rps_deltas = [
+69:         rps([treated], [outcome]) - rps([control], [outcome])
+70:         for treated, control, outcome in zip(probs_rho, probs_neutral, outcomes, strict=True)
+71:     ]
+72:     log_deltas = [
+73:         log_loss([treated], [outcome]) - log_loss([control], [outcome])
+74:         for treated, control, outcome in zip(probs_rho, probs_neutral, outcomes, strict=True)
+75:     ]
+76:     metrics = {
+77:         "rps_delta": float(np.mean(rps_deltas)),
+78:         "rps_delta_ci95": _moving_block_ci(rps_deltas, group_keys=test_groups),
+79:         "log_loss_delta": float(np.mean(log_deltas)),
+80:         "log_loss_delta_ci95": _moving_block_ci(log_deltas, group_keys=test_groups),
+81:     }
+82:     finite = all(
+83:         math.isfinite(item) for value in metrics.values() for item in (value if isinstance(value, list) else [value])
+84:     )
+85:     return {
+86:         "status": "PASS_STABLE" if finite else "FAIL_NUMERIC",
+87:         "verdict": "GO_CANDIDATE" if finite and metrics["rps_delta_ci95"][1] < 0 else "NO_GO",
+88:         "n": len(test),
+89:         "rho": params[3],
+90:         "near_boundary": abs(params[3]) >= 0.399,
+91:         "bootstrap_unit": "consecutive_kickoff_group",
+92:         "metrics": metrics,
+93:         "serving_changed": False,
+94:     }
+### brasileirao_predictor/research/score_metrics.py
+11: import numpy as np
+20: def log_loss_matrix(P: np.ndarray, Y: np.ndarray, eps: float = 1e-12) -> float:
+23:     return float(-np.sum(Y * np.log(np.clip(P, eps, 1.0))) / P.shape[0])
+26: def brier_score_multiclass(P: np.ndarray, Y: np.ndarray) -> float:
+29:     return float(np.mean(np.sum((P - Y) ** 2, axis=(1, 2))))
+32: def brier_skill_score(P_model: np.ndarray, P_base: np.ndarray, Y: np.ndarray) -> float:
+35:     bs_model = brier_score_multiclass(P_model, Y)
+36:     bs_base = brier_score_multiclass(P_base, Y)
+37:     return float("nan") if bs_base == 0.0 else 1.0 - bs_model / bs_base
+40: def _autocovariances_fft(d_c: np.ndarray, max_lag: int) -> np.ndarray:
+42:     n = d_c.shape[0]
+43:     fft_len = 1 << int(np.ceil(np.log2(2 * n)))  # próxima pot. de 2 evita aliasing
+44:     D = np.fft.rfft(d_c, n=fft_len)
+45:     acf_raw = np.fft.irfft(D * np.conj(D)).real[:max_lag]
+46:     lags = np.arange(max_lag, dtype=float)
+47:     return acf_raw / np.maximum(n - lags, 1.0)  # normalização não-viesada por lag
+50: def diebold_mariano_hln(e1: np.ndarray, e2: np.ndarray, h: int = 1) -> tuple[float, float]:
+62:     from scipy.stats import t as t_dist
+64:     n = e1.shape[0]
+65:     d = e1**2 - e2**2  # diferencial de perda quadrática
+66:     d_bar = d.mean()
+67:     d_c = d - d_bar
+69:     gamma = _autocovariances_fft(d_c, max(h, 1))
+71:     s2 = (gamma[0] + 2.0 * gamma[1:].sum()) / n
+73:     if s2 <= 0.0:
+74:         return float("nan"), float("nan")
+76:     dm = d_bar / np.sqrt(s2)
+79:     hln = np.sqrt((n + 1.0 - 2.0 * h + h * (h - 1.0) / n) / n)
+80:     dm_hln = float(dm * hln)
+82:     p_value = float(2.0 * t_dist.sf(abs(dm_hln), df=n - 1))
+83:     return dm_hln, p_value
+### brasileirao_predictor/research/season_2026_split.py
+8: from __future__ import annotations
+10: from datetime import UTC, datetime, timedelta
+12: DECISION_LEAD_HOURS = 1
+14: ROLES = frozenset({"train", "calibration", "test_exploratory", "paper_betting", "out_of_scope"})
+17: def role_for(season: int, round_number: int | None) -> str:
+24:     if type(season) is not int:
+25:         raise TypeError("season must be an integer year")
+26:     if 2021 <= season <= 2024:
+27:         return "train"
+28:     if season == 2025:
+29:         return "calibration"
+30:     if season != 2026:
+31:         return "out_of_scope"
+32:     if type(round_number) is not int or not 1 <= round_number <= 38:
+33:         raise ValueError("2026 requires an official integer round from 1 to 38")
+34:     return "test_exploratory" if round_number <= 19 else "paper_betting"
+37: def _aware_utc(value: datetime | str, field: str) -> datetime:
+38:     if isinstance(value, str):
+39:         try:
+40:             value = datetime.fromisoformat(value)
+41:         except ValueError as exc:
+42:             raise ValueError(f"{field} must be an ISO timestamp with timezone") from exc
+43:     if not isinstance(value, datetime):
+44:         raise TypeError(f"{field} must be a datetime or ISO timestamp")
+45:     if value.tzinfo is None or value.utcoffset() is None:
+46:         raise ValueError(f"{field} must include a timezone")
+47:     return value.astimezone(UTC)
+50: def eligibility_for_paper(
+51:     role: str,
+52:     kickoff_at: datetime | str | None,
+53:     freeze_at: datetime | str,
+54:     model_frozen: bool,
+55:     price_available: bool,
+56:     criterion_passed: bool,
+57: ) -> str:
+73:     if not isinstance(role, str) or role not in ROLES:
+74:         raise ValueError("unknown research role")
+75:     for field, value in (
+76:         ("model_frozen", model_frozen),
+77:         ("price_available", price_available),
+78:         ("criterion_passed", criterion_passed),
+79:     ):
+80:         if type(value) is not bool:
+81:             raise TypeError(f"{field} must be an explicit boolean")
+82:     if role != "paper_betting":
+83:         return "OUT_OF_SCOPE"
+85:     freeze = _aware_utc(freeze_at, "freeze_at")
+86:     if kickoff_at is None:
+87:         return "PENDING_KICKOFF"
+88:     kickoff = _aware_utc(kickoff_at, "kickoff_at")
+89:     decision = kickoff - timedelta(hours=DECISION_LEAD_HOURS)
+90:     if decision <= freeze:
+91:         return "REPLAY_ONLY"
+92:     if not (model_frozen and price_available and criterion_passed):
+93:         return "NO_BET"
+94:     return "PAPER_SIGNAL"

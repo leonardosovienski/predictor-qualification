@@ -1,0 +1,411 @@
+### tests/test_parsers_sofascore.py
+8: from brasileirao_predictor.ingest_sofascore import frac_to_decimal, is_pre_match, parse_match, parse_odds, parse_ou
+12: def test_fracao_valida():
+13:     assert frac_to_decimal({"fractionalValue": "5/2"}) == 3.5
+16: def test_fracao_menor_que_um():
+17:     assert frac_to_decimal({"fractionalValue": "1/2"}) == 1.5
+20: def test_divisao_por_zero_vira_none():
+21:     assert frac_to_decimal({"fractionalValue": "5/0"}) is None
+24: def test_fracao_malformada_vira_none():
+25:     assert frac_to_decimal({"fractionalValue": "abc"}) is None
+28: def test_fracao_com_tres_termos_vira_none():
+29:     assert frac_to_decimal({"fractionalValue": "5/2/3"}) is None
+32: def test_fallback_para_decimal_value():
+33:     assert frac_to_decimal({"decimalValue": "2.75"}) == 2.75
+36: def test_sem_valor_nenhum_vira_none():
+37:     assert frac_to_decimal({}) is None
+40: def test_decimal_zero_vira_none():
+42:     assert frac_to_decimal({"decimalValue": 0}) is None
+45: def test_fracao_nao_string_nao_estoura():
+47:     assert frac_to_decimal({"fractionalValue": 2.5}) is None
+50: def test_decimal_malformado_nao_estoura():
+51:     assert frac_to_decimal({"decimalValue": "abc"}) is None
+54: def test_frac_to_decimal_key_abertura():
+56:     c = {"fractionalValue": "4/5", "initialFractionalValue": "73/100"}
+57:     assert frac_to_decimal(c) == 1.8  # default = fechamento
+58:     assert frac_to_decimal(c, "initialFractionalValue") == 1.73  # abertura
+61: def test_frac_to_decimal_initial_ausente_vira_none_sem_fallback():
+63:     assert frac_to_decimal({"decimalValue": "2.0"}, "initialFractionalValue") is None
+66: def test_parse_odds_initial_le_abertura():
+67:     odds = {
+68:         "markets": [
+69:             {
+70:                 "marketId": 1,
+71:                 "choices": [
+72:                     {"name": "1", "fractionalValue": "1/1", "initialFractionalValue": "9/10"},
+73:                     {"name": "X", "fractionalValue": "2/1", "initialFractionalValue": "21/10"},
+74:                     {"name": "2", "fractionalValue": "3/1", "initialFractionalValue": "5/2"},
+75:                 ],
+76:             }
+77:         ]
+78:     }
+79:     assert parse_odds(odds) == (2.0, 3.0, 4.0)  # fechamento
+80:     assert parse_odds(odds, initial=True) == (1.9, 3.1, 3.5)  # abertura
+84: def test_payload_vazio_devolve_nones():
+85:     assert parse_odds(None) == (None, None, None)
+86:     assert parse_odds({}) == (None, None, None)
+87:     assert parse_odds({"markets": []}) == (None, None, None)
+90: def test_market_id_1_sem_nome_e_aceito():
+91:     odds = {
+92:         "markets": [
+93:             {
+94:                 "marketId": 1,
+95:                 "choices": [
+96:                     {"name": "1", "fractionalValue": "1/1"},
+97:                     {"name": "X", "fractionalValue": "2/1"},
+98:                     {"name": "2", "fractionalValue": "3/1"},
+99:                 ],
+100:             }
+101:         ]
+102:     }
+103:     assert parse_odds(odds) == (2.0, 3.0, 4.0)
+106: def test_choice_sem_nome_nao_estoura():
+107:     odds = {"markets": [{"marketId": 1, "choices": [{"fractionalValue": "1/1"}]}]}
+108:     assert parse_odds(odds) == (None, None, None)
+111: def test_mercado_parcial_e_aceito_sem_aviso():
+115:     odds = {
+116:         "markets": [
+117:             {
+118:                 "marketName": "Full time",
+119:                 "choices": [
+120:                     {"name": "1", "fractionalValue": "1/1"},
+121:                     {"name": "X", "fractionalValue": "lixo"},
+122:                     {"name": "2", "fractionalValue": "3/1"},
+123:                 ],
+124:             }
+125:         ]
+126:     }
+127:     assert parse_odds(odds) == (2.0, None, 4.0)
+131: def test_ou_linha_inexistente_vira_none():
+132:     odds = {
+133:         "markets": [
+134:             {
+135:                 "marketName": "Total goals",
+136:                 "choices": [
+137:                     {"name": "Over 1.5", "fractionalValue": "1/2"},
+138:                     {"name": "Under 1.5", "fractionalValue": "2/1"},
+139:                 ],
+140:             }
+141:         ]
+142:     }
+143:     assert parse_ou(odds, 2.5) == (None, None)
+146: def test_ou_sem_under_vira_none():
+147:     odds = {
+148:         "markets": [
+149:             {
+150:                 "marketName": "Total goals",
+151:                 "choices": [{"name": "Over 2.5", "fractionalValue": "4/5"}],
+152:             }
+153:         ]
+154:     }
+155:     assert parse_ou(odds, 2.5) == (None, None)
+158: def test_ou_via_choice_group():
+160:     odds = {
+161:         "markets": [
+162:             {
+163:                 "marketName": "Total goals",
+164:                 "choiceGroup": "2.5",
+165:                 "choices": [
+166:                     {"name": "Over", "fractionalValue": "4/5"},
+167:                     {"name": "Under", "fractionalValue": "1/1"},
+168:                 ],
+169:             }
+170:         ]
+171:     }
+172:     assert parse_ou(odds, 2.5) == (1.8, 2.0)
+175: def test_ou_payload_vazio():
+176:     assert parse_ou(None, 2.5) == (None, None)
+179: def test_linha_2_5_nao_pega_odd_da_12_5():
+182:     odds = {
+183:         "markets": [
+184:             {
+185:                 "marketName": "Total goals",
+186:                 "choices": [
+187:                     {"name": "Over 2.5", "fractionalValue": "4/5"},  # 1.8 — a certa
+188:                     {"name": "Under 2.5", "fractionalValue": "1/1"},  # 2.0 — a certa
+189:                     {"name": "Over 12.5", "fractionalValue": "100/1"},  # 101.0
+190:                     {"name": "Under 12.5", "fractionalValue": "1/100"},
+191:                 ],
+192:             }
+193:         ]
+194:     }
+195:     assert parse_ou(odds, 2.5) == (1.8, 2.0)
+203: NOW = 1_750_000_000  # ~jun/2025, epoch em segundos (10 dígitos)
+206: def test_jogo_de_2022_visto_em_2026_nao_e_pre():
+208:     assert is_pre_match(1_671_375_600, now=1_780_000_000) is False
+211: def test_timestamp_em_ms_nao_e_pre_match():
+215:     started_1h_atras_em_ms = (NOW - 3600) * 1000
+216:     assert is_pre_match(started_1h_atras_em_ms, now=NOW) is False
+218:     assert is_pre_match((NOW + 3600) * 1000, now=NOW) is False
+221: def test_parse_match_normaliza_timestamp_em_ms():
+225:     ev = {
+226:         "id": 99,
+227:         "startTimestamp": 1_671_375_600_000,  # 2022-12-18 em ms
+228:         "status": {"type": "notstarted"},
+229:         "homeTeam": {"name": "A"},
+230:         "awayTeam": {"name": "B"},
+231:         "homeScore": {},
+232:         "awayScore": {},
+233:     }
+234:     m = parse_match(ev)
+235:     assert m["date"] == "2022-12-18"
+236:     assert m["start_ts"] == 1_671_375_600
+239: def test_parse_match_data_em_utc():
+241:     ev = {
+242:         "id": 1,
+243:         "startTimestamp": 1_671_375_600,  # 2022-12-18 15:00 UTC
+244:         "status": {"type": "finished"},
+245:         "homeTeam": {"name": "Argentina"},
+246:         "awayTeam": {"name": "France"},
+247:         "homeScore": {"current": 3},
+248:         "awayScore": {"current": 3},
+249:     }
+250:     m = parse_match(ev)
+251:     assert m["date"] == "2022-12-18"
+252:     assert m["home_score"] == 3
+255: def test_parse_match_extrai_placar_do_intervalo():
+258:     ev = {
+259:         "id": 2,
+260:         "startTimestamp": 1_671_375_600,
+261:         "status": {"type": "finished"},
+262:         "homeTeam": {"name": "Mexico"},
+263:         "awayTeam": {"name": "South Africa"},
+264:         "homeScore": {"current": 2, "period1": 1},
+265:         "awayScore": {"current": 0, "period1": 0},
+266:     }
+267:     m = parse_match(ev)
+268:     assert m["home_score_ht"] == 1
+269:     assert m["away_score_ht"] == 0
+272: def test_parse_match_ht_nulo_se_nao_terminou():
+275:     ev = {
+276:         "id": 3,
+277:         "startTimestamp": 1_671_375_600,
+278:         "status": {"type": "inprogress"},
+279:         "homeTeam": {"name": "A"},
+280:         "awayTeam": {"name": "B"},
+281:         "homeScore": {"current": 1, "period1": 1},
+282:         "awayScore": {"current": 0, "period1": 0},
+283:     }
+284:     m = parse_match(ev)
+285:     assert m["home_score_ht"] is None
+286:     assert m["away_score_ht"] is None
+### tests/test_permutation_test.py
+9: from __future__ import annotations
+11: import sys
+12: from collections import Counter
+13: from datetime import UTC, datetime, timedelta
+15: import pytest
+17: from brasileirao_scripts import permutation_test as pt
+19: TIMES = ["flamengo", "palmeiras", "gremio", "santos"]
+22: def _obs(n: int = 200) -> list[dict]:
+23:     t0 = datetime(2021, 4, 3, 16, 0, tzinfo=UTC)
+24:     out = []
+25:     for i in range(n):
+26:         kickoff = t0 + timedelta(days=3 * i)
+27:         out.append(
+28:             {
+29:                 "home": TIMES[i % 4],
+30:                 "away": TIMES[(i + 1) % 4],
+31:                 "kickoff": kickoff,
+32:                 "date": kickoff.strftime("%Y-%m-%d"),
+33:                 "result": {"home_goals": i % 4, "away_goals": (i * 3) % 3},
+34:             }
+35:         )
+36:     return out
+42: def test_permutacao_preserva_as_marginais_da_liga() -> None:
+46:     obs = _obs()
+47:     perm = pt._permute(obs, seed=1)
+48:     original = Counter((o["result"]["home_goals"], o["result"]["away_goals"]) for o in obs)
+49:     embaralhado = Counter((o["result"]["home_goals"], o["result"]["away_goals"]) for o in perm)
+50:     assert original == embaralhado
+53: def test_permutacao_mantem_o_placar_inteiro_junto() -> None:
+56:     obs = _obs()
+57:     perm = pt._permute(obs, seed=2)
+58:     pares_orig = {id(o["result"]) for o in obs}
+59:     assert all(id(o["result"]) in pares_orig for o in perm)
+62: def test_permutacao_desassocia_time_de_desfecho() -> None:
+63:     obs = _obs()
+64:     perm = pt._permute(obs, seed=3)
+65:     assert [o["home"] for o in obs] == [o["home"] for o in perm], "a ordem das partidas não muda"
+66:     assert [o["result"] for o in obs] != [o["result"] for o in perm], "os desfechos têm que se mover"
+69: def test_permutacao_nao_altera_a_ordem_temporal() -> None:
+71:     obs = _obs()
+72:     perm = pt._permute(obs, seed=4)
+73:     assert [o["kickoff"] for o in obs] == [o["kickoff"] for o in perm]
+76: def test_permutacao_e_deterministica_por_seed() -> None:
+77:     obs = _obs()
+78:     assert pt._permute(obs, 7) == pt._permute(obs, 7)
+79:     assert pt._permute(obs, 7) != pt._permute(obs, 8)
+82: def test_permutacao_nao_muta_a_entrada() -> None:
+83:     obs = _obs()
+84:     antes = [o["result"] for o in obs]
+85:     pt._permute(obs, seed=9)
+86:     assert [o["result"] for o in obs] == antes
+92: def _rows(probs_por_jogo, desfechos) -> list[dict]:
+93:     return [
+94:         {"date": str(i), "p_loss": p[0], "p_draw": p[1], "p_win": p[2], "actual_1x2": y}
+95:         for i, (p, y) in enumerate(zip(probs_por_jogo, desfechos))
+96:     ]
+99: def test_modelo_igual_a_climatologia_nao_bate_a_climatologia() -> None:
+101:     desfechos = [2] * 120 + [1] * 60 + [0] * 120
+102:     seed_rows = _rows([[1 / 3, 1 / 3, 1 / 3]] * 300, desfechos)
+103:     baseline = pt._climatology_probs(seed_rows)
+104:     out = pt._skill_vs_climatology(_rows(baseline, desfechos))
+105:     assert out["skill_score"] == pytest.approx(0.0, abs=1e-9)
+106:     assert out["beats_climatology"] is False
+109: def test_modelo_com_sinal_real_bate_a_climatologia() -> None:
+111:     desfechos = [2 if i % 2 else 0 for i in range(300)]
+112:     probs = [[0.05, 0.05, 0.90] if y == 2 else [0.90, 0.05, 0.05] for y in desfechos]
+113:     out = pt._skill_vs_climatology(_rows(probs, desfechos))
+114:     assert out["skill_score"] > 0.5
+115:     assert out["beats_climatology"] is True
+121: @pytest.mark.parametrize("period", ["2021-01-01,2025-06-30", "2021-01-01,2026-12-31", "2021-01-01,"])
+122: def test_recusa_periodo_que_alcanca_o_holdout(period, monkeypatch) -> None:
+124:     monkeypatch.setattr(sys, "argv", ["permutation_test", "--period", period])
+125:     assert pt.main() == 1
+128: def test_recusa_zero_permutacoes(monkeypatch) -> None:
+129:     monkeypatch.setattr(sys, "argv", ["permutation_test", "--permutations", "0"])
+130:     with pytest.raises(SystemExit):
+131:         pt.main()
+### tests/test_persist_h14_prospective.py
+4: import json
+5: from datetime import UTC, datetime, timedelta
+6: from pathlib import Path
+8: import pytest
+10: from brasileirao_predictor import db
+11: from brasileirao_scripts import persist_h14_prospective as job
+13: KICKOFF = datetime(2027, 3, 1, 19, 0, tzinfo=UTC)
+14: ELO_HOME, ELO_AWAY, HOME_ADV = 1550, 1450, 100.0
+15: PARAMS = (0.2, 0.7, 1e-4, 0.0)
+17: TRIAL_PARAMS = {
+18:     "algorithm_version": "nbdc-normalized-elo-horizon-v2",
+19:     "ensemble_xg_enabled": False,
+20:     "retrain_every": 100,
+21: }
+24: def _trials_json(path: Path) -> None:
+25:     path.write_text(json.dumps([{"name": job.TRIAL, "params": TRIAL_PARAMS}]), encoding="utf-8")
+28: @pytest.fixture
+29: def ambiente(tmp_path, monkeypatch):
+30:     dbpath = tmp_path / "t.db"
+31:     conn = db.connect(str(dbpath))
+32:     db.save_elo(conn, [("Casa", ELO_HOME), ("Fora", ELO_AWAY)])
+33:     db.save_params(
+34:         conn,
+35:         *PARAMS,
+36:         0,
+37:         "test-config",
+38:         (KICKOFF - timedelta(hours=7)).isoformat(timespec="seconds"),
+39:     )
+40:     conn.execute(
+41:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+42:         "VALUES (1, 'T', '2027', ?, 'Casa', 'Fora', ?)",
+43:         (KICKOFF.date().isoformat(), KICKOFF.isoformat(timespec="seconds")),
+44:     )
+48:     prior_kickoff = KICKOFF - timedelta(days=7)
+49:     conn.execute(
+50:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, "
+51:         "home_score, away_score, kickoff_at) VALUES (2, 'T', '2027', ?, 'X', 'Y', 2, 0, ?)",
+52:         (prior_kickoff.date().isoformat(), prior_kickoff.isoformat(timespec="seconds")),
+53:     )
+54:     conn.execute(
+55:         "INSERT INTO matches (event_id, date, home_team, away_team, home_score, away_score, tournament, neutral) "
+56:         "VALUES (2, ?, 'X', 'Y', 2, 0, 'T', 0)",
+57:         (prior_kickoff.date().isoformat(),),
+58:     )
+59:     conn.commit()
+60:     conn.close()
+62:     trials_path = tmp_path / "trials.json"
+63:     _trials_json(trials_path)
+64:     ledger_path = tmp_path / "h14.jsonl"
+66:     monkeypatch.setattr(job, "load_config", lambda: {"database": str(dbpath), "elo": {"home_advantage": HOME_ADV}})
+68:     return {"db_path": dbpath, "trials_path": trials_path, "ledger_path": ledger_path}
+71: def test_persiste_dentro_da_janela_pre_kickoff(ambiente):
+72:     now = KICKOFF - timedelta(hours=1)
+73:     outcomes = job.run(
+74:         now=now, trials_path=ambiente["trials_path"], ledger_path=ambiente["ledger_path"], db_path=ambiente["db_path"]
+75:     )
+76:     assert outcomes == [{"event_id": 1, "home": "Casa", "away": "Fora", "status": "PERSISTED"}]
+77:     rows = [json.loads(line) for line in ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()]
+78:     assert len(rows) == 1
+79:     row = rows[0]
+80:     assert row["event_id"] == 1
+81:     assert row["serving_v2"]["p_home"] + row["serving_v2"]["p_draw"] + row["serving_v2"]["p_away"] == pytest.approx(
+82:         1.0, abs=1e-6
+83:     )
+84:     assert row["climatology"]["n_prior"] == 1  # só o jogo com kickoff anterior
+87: def test_fora_da_janela_nao_persiste(tmp_path, monkeypatch):
+91:     dbpath = tmp_path / "t.db"
+92:     conn = db.connect(str(dbpath))
+93:     db.save_elo(conn, [("Casa", ELO_HOME), ("Fora", ELO_AWAY)])
+94:     db.save_params(conn, *PARAMS, 0, "test-config", (KICKOFF - timedelta(hours=40)).isoformat(timespec="seconds"))
+95:     conn.execute(
+96:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+97:         "VALUES (1, 'T', '2027', ?, 'Casa', 'Fora', ?)",
+98:         (KICKOFF.date().isoformat(), KICKOFF.isoformat(timespec="seconds")),
+99:     )
+100:     conn.commit()
+101:     conn.close()
+102:     trials_path = tmp_path / "trials.json"
+103:     _trials_json(trials_path)
+104:     ledger_path = tmp_path / "h14.jsonl"
+105:     monkeypatch.setattr(job, "load_config", lambda: {"database": str(dbpath), "elo": {"home_advantage": HOME_ADV}})
+107:     now = KICKOFF - timedelta(hours=38)  # fora de HORIZON=24h; cache com 2h de idade
+108:     outcomes = job.run(now=now, trials_path=trials_path, ledger_path=ledger_path, db_path=dbpath)
+109:     assert outcomes == []
+110:     assert not ledger_path.exists() or ledger_path.read_text(encoding="utf-8") == ""
+113: def test_apos_kickoff_nao_persiste(ambiente):
+114:     now = KICKOFF + timedelta(minutes=1)
+115:     outcomes = job.run(
+116:         now=now, trials_path=ambiente["trials_path"], ledger_path=ambiente["ledger_path"], db_path=ambiente["db_path"]
+117:     )
+118:     assert outcomes == []
+121: def test_idempotente_nao_duplica(ambiente):
+122:     now = KICKOFF - timedelta(hours=1)
+123:     job.run(
+124:         now=now, trials_path=ambiente["trials_path"], ledger_path=ambiente["ledger_path"], db_path=ambiente["db_path"]
+125:     )
+126:     outcomes = job.run(
+127:         now=now, trials_path=ambiente["trials_path"], ledger_path=ambiente["ledger_path"], db_path=ambiente["db_path"]
+128:     )
+129:     assert outcomes == []
+130:     rows = ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()
+131:     assert len(rows) == 1
+134: def test_climatologia_ignora_jogo_com_kickoff_posterior(ambiente, monkeypatch):
+137:     conn = db.connect(str(ambiente["db_path"]))
+138:     future_kickoff = KICKOFF + timedelta(days=1)
+139:     conn.execute(
+140:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, "
+141:         "home_score, away_score, kickoff_at) VALUES (3, 'T', '2027', ?, 'X', 'Y', 5, 0, ?)",
+142:         (future_kickoff.date().isoformat(), future_kickoff.isoformat(timespec="seconds")),
+143:     )
+144:     conn.execute(
+145:         "INSERT INTO matches (event_id, date, home_team, away_team, home_score, away_score, tournament, neutral) "
+146:         "VALUES (3, ?, 'X', 'Y', 5, 0, 'T', 0)",
+147:         (future_kickoff.date().isoformat(),),
+148:     )
+149:     conn.commit()
+150:     conn.close()
+152:     now = KICKOFF - timedelta(hours=1)
+153:     job.run(
+154:         now=now, trials_path=ambiente["trials_path"], ledger_path=ambiente["ledger_path"], db_path=ambiente["db_path"]
+155:     )
+156:     row = json.loads(ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()[0])
+157:     assert row["climatology"]["n_prior"] == 1  # não os 2 disponíveis no banco
+160: def test_fingerprint_muda_com_algorithm_version(ambiente):
+161:     fp1 = job.code_fingerprint(TRIAL_PARAMS, "cfg-a", HOME_ADV)
+162:     fp2 = job.code_fingerprint({**TRIAL_PARAMS, "algorithm_version": "outro"}, "cfg-a", HOME_ADV)
+163:     assert fp1 != fp2
+166: def test_sem_cache_de_modelo_falha_alto(ambiente):
+167:     empty_db = ambiente["db_path"].parent / "empty.db"
+168:     conn = db.connect(str(empty_db))
+169:     db.save_elo(conn, [("Casa", ELO_HOME), ("Fora", ELO_AWAY)])
+170:     conn.execute(
+171:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+172:         "VALUES (1, 'T', '2027', ?, 'Casa', 'Fora', ?)",
+173:         (KICKOFF.date().isoformat(), KICKOFF.isoformat(timespec="seconds")),
+174:     )
+175:     conn.commit()
+176:     conn.close()
+177:     now = KICKOFF - timedelta(hours=1)
+178:     with pytest.raises(RuntimeError, match="cache de modelo ausente"):
+179:         job.run(now=now, trials_path=ambiente["trials_path"], ledger_path=ambiente["ledger_path"], db_path=empty_db)

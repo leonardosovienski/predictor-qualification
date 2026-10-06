@@ -1,0 +1,490 @@
+### tests/test_build_data_archive.py
+3: from __future__ import annotations
+5: import hashlib
+6: import io
+7: import json
+8: import tempfile
+9: import unittest
+10: import zipfile
+11: from pathlib import Path
+13: from scripts.migration import build_data_archive as builder
+14: from scripts.migration.verify_archive import verify
+16: COMMIT = "abc12345" * 5
+17: REMOTE = "https://github.com/example/project.git"
+20: def zipped(files: dict[str, bytes]) -> bytes:
+21:     output = io.BytesIO()
+22:     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+23:         for name, content in files.items():
+24:             archive.writestr(name, content)
+25:     return output.getvalue()
+28: class DataArchiveTests(unittest.TestCase):
+29:     def setUp(self):
+30:         self.temp = tempfile.TemporaryDirectory(prefix="data-archive-test-")
+31:         self.addCleanup(self.temp.cleanup)
+32:         self.root = Path(self.temp.name)
+33:         self.source = self.root / "source.zip"
+34:         self.plan_path = self.root / "plan.json"
+35:         self.output = self.root / "new" / "data.zip"
+37:     def fixture(self, payloads=None, selected=None, *, maps=None, corrupt=None):
+38:         self.payloads = (
+39:             payloads if payloads is not None else {"data.csv": b"n,v\n1,2\n", "code.py": b"print('never run')"}
+40:         )
+41:         entries = [builder._metadata_entry(name, content) for name, content in self.payloads.items()]
+42:         if corrupt:
+43:             next(entry for entry in entries if entry["path"] == corrupt)["sha256"] = "0" * 64
+44:         self.manifest = {
+45:             "files": entries,
+46:             "snapshot_restore_map": maps or [],
+47:             "omissions": [{"path": "original-unreadable", "reason": "synthetic"}],
+48:         }
+49:         manifest_bytes = builder._json_bytes(self.manifest)
+50:         self.source.write_bytes(zipped({**self.payloads, builder.MANIFEST: manifest_bytes}))
+51:         selected = selected if selected is not None else [name for name in self.payloads if not name.endswith(".py")]
+52:         self.plan = {
+53:             "schema_version": 1,
+54:             "source_sha256": builder._hash_file(self.source),
+55:             "source_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+56:             "include_names": selected,
+57:             "excluded": [{**entry, "reason": "source code"} for entry in entries if entry["path"] not in selected],
+58:             "extras": [],
+59:         }
+60:         self.save_plan()
+62:     def save_plan(self):
+63:         self.plan_path.write_bytes(builder._json_bytes(self.plan))
+65:     def build(self):
+66:         return builder.build_archive(self.source, self.plan_path, self.output, code_commit=COMMIT, code_remote=REMOTE)
+68:     def rejects(self, pattern):
+69:         source_hash = builder._hash_file(self.source)
+70:         with self.assertRaisesRegex(ValueError, pattern):
+71:             self.build()
+72:         self.assertFalse(self.output.exists())
+73:         self.assertEqual(source_hash, builder._hash_file(self.source))
+75:     def test_end_to_end_preserves_bytes_maps_exclusions_and_standalone_verification(self):
+76:         snapshot = b"synthetic opaque sqlite bytes, never queried"
+77:         snapshot_hash = hashlib.sha256(snapshot).hexdigest()
+78:         receipt = {
+79:             "receipt_path": "C:/old/snapshot.receipt.json",
+80:             "snapshot_sha256": snapshot_hash,
+81:             "status": "ok",
+82:             "integrity_ok": True,
+83:         }
+84:         maps = [
+85:             {
+86:                 "source_archive_path": "db/source.db",
+87:                 "snapshot_archive_path": "snapshots/snapshot.sqlite3",
+88:                 "snapshot_sha256": snapshot_hash,
+89:                 "receipt": receipt,
+90:             }
+91:         ]
+92:         self.fixture(
+93:             {
+94:                 "db/source.db": b"opaque original",
+95:                 "db/source.db-wal": b"opaque WAL",
+96:                 "snapshots/snapshot.sqlite3": snapshot,
+97:                 "snapshots/snapshot.receipt.json": builder._json_bytes(receipt),
+98:                 "cache/a.zip": zipped({"data/a.csv": b"a,b\n1,2\n"}),
+99:                 "config/.env": b"SYNTHETIC_ONLY=value\n",
+100:                 "code.py": b"raise RuntimeError('must never run')",
+101:             },
+102:             maps=maps,
+103:         )
+104:         guide = self.root / "guide.md"
+105:         guide.write_bytes(b"# Synthetic restoration instructions\n")
+106:         self.plan["extras"] = [
+107:             {
+108:                 "source_path": str(guide),
+109:                 "archive_path": "RESTORE.md",
+110:                 "bytes": guide.stat().st_size,
+111:                 "sha256": builder._hash_file(guide),
+112:                 "provenance": {"kind": "synthetic guide", "original_name": "guide.md"},
+113:             }
+114:         ]
+115:         self.save_plan()
+116:         original_hash = builder._hash_file(self.source)
+117:         result = self.build()
+118:         self.assertEqual("PASS", result["status"])
+119:         self.assertEqual(1, result["snapshot_restore_maps_preserved"])
+120:         self.assertEqual(original_hash, builder._hash_file(self.source))
+121:         with zipfile.ZipFile(self.output) as archive:
+122:             self.assertNotIn("code.py", archive.namelist())
+123:             for name in self.plan["include_names"]:
+124:                 self.assertEqual(self.payloads[name], archive.read(name))
+125:             manifest = json.loads(archive.read(builder.MANIFEST))
+126:             self.assertEqual(maps, manifest["snapshot_restore_map"])
+127:             self.assertEqual(COMMIT, manifest["code"]["commit"])
+128:             self.assertEqual(self.manifest["omissions"], manifest["omissions"])
+129:             self.assertEqual(self.plan, json.loads(archive.read(builder.PLAN_ENTRY)))
+130:         target = self.root / "restored"
+131:         self.assertEqual("PASS", verify(self.output, target)["status"])
+132:         self.assertEqual(snapshot, (target / "snapshots/snapshot.sqlite3").read_bytes())
+133:         for path in result["artifacts"].values():
+134:             self.assertTrue(Path(path).is_file())
+136:     def test_source_hash_mismatch_is_rejected_before_creating_output(self):
+137:         self.fixture()
+138:         self.plan["source_sha256"] = "0" * 64
+139:         self.save_plan()
+140:         self.rejects("Source ZIP does not match")
+142:     def test_manifest_hash_mismatch_is_rejected(self):
+143:         self.fixture()
+144:         self.plan["source_manifest_sha256"] = "0" * 64
+145:         self.save_plan()
+146:         self.rejects("Source manifest")
+148:     def test_corrupt_included_hash_removes_own_partial_output(self):
+149:         self.fixture(corrupt="data.csv")
+150:         self.rejects("Entry SHA-256")
+151:         self.assertEqual([], list(self.output.parent.iterdir()))
+153:     def test_exclusions_cannot_hide_unaccounted_files(self):
+154:         self.fixture()
+155:         self.plan["excluded"] = []
+156:         self.save_plan()
+157:         self.rejects("Exclusions must account")
+159:     def test_existing_output_is_preserved(self):
+160:         self.fixture()
+161:         self.output.parent.mkdir()
+162:         self.output.write_bytes(b"preexisting archive")
+163:         with self.assertRaisesRegex(ValueError, "overwrite"):
+164:             self.build()
+165:         self.assertEqual(b"preexisting archive", self.output.read_bytes())
+167:     def test_extra_cannot_sneak_in_source_or_mismatched_bytes(self):
+168:         self.fixture()
+169:         extra = self.root / "extra.json"
+170:         extra.write_bytes(b"{}")
+171:         self.plan["extras"] = [
+172:             {
+173:                 "source_path": str(extra),
+174:                 "archive_path": "extra.json",
+175:                 "bytes": 2,
+176:                 "sha256": "0" * 64,
+177:                 "provenance": "synthetic",
+178:             }
+179:         ]
+180:         self.save_plan()
+181:         self.rejects("Entry SHA-256")
+182:         renamed = self.root / "program.py"
+183:         renamed.write_bytes(b"{}")
+184:         self.plan["extras"][0]["source_path"] = str(renamed)
+185:         self.save_plan()
+186:         self.rejects("suffix is forbidden")
+188:     def test_snapshot_components_cannot_be_omitted(self):
+189:         receipt = {
+190:             "receipt_path": "C:/snapshot.receipt.json",
+191:             "snapshot_sha256": "0" * 64,
+192:             "status": "ok",
+193:             "integrity_ok": True,
+194:         }
+195:         maps = [
+196:             {
+197:                 "source_archive_path": "original.db",
+198:                 "snapshot_archive_path": "snapshot.sqlite3",
+199:                 "snapshot_sha256": "0" * 64,
+200:                 "receipt": receipt,
+201:             }
+202:         ]
+203:         self.fixture(
+204:             {"original.db": b"x", "snapshot.sqlite3": b"x", "snapshot.receipt.json": b"{}"},
+205:             selected=["original.db", "snapshot.sqlite3"],
+206:             maps=maps,
+207:         )
+208:         self.rejects("source/snapshot/receipt")
+210:     def test_nested_zip_is_recursive_and_never_accepts_code(self):
+211:         self.fixture({"cache.zip": zipped({"child.zip": zipped({"data.csv": b"x,y\n"})})})
+212:         self.assertEqual("PASS", self.build()["status"])
+213:         with self.assertRaisesRegex(ValueError, "suffix is forbidden"):
+214:             builder._nested_zip(io.BytesIO(zipped({"child.zip": zipped({"hidden.py.bak": b"x"})})))
+215:         with self.assertRaisesRegex(ValueError, "unapproved data type"):
+216:             builder._nested_zip(io.BytesIO(zipped({"script.txt": b"ambiguous"})))
+217:         with self.assertRaisesRegex(ValueError, "path is forbidden"):
+218:             builder._nested_zip(io.BytesIO(zipped({"cache/.git/": b""})))
+220:     def test_nested_zip_rejects_traversal_collisions_depth_and_size_budget(self):
+221:         for files in ({"../x.csv": b"x"}, {"A.csv": b"x", "a.csv": b"y"}):
+222:             with self.subTest(files=list(files)), self.assertRaises(ValueError):
+223:                 builder._nested_zip(io.BytesIO(zipped(files)))
+224:         nested = zipped({"data.csv": b"data"})
+225:         for _ in range(builder.MAX_NESTED_DEPTH):
+226:             nested = zipped({"child.zip": nested})
+227:         with self.assertRaisesRegex(ValueError, "depth"):
+228:             builder._nested_zip(io.BytesIO(nested))
+229:         with self.assertRaisesRegex(ValueError, "budget"):
+230:             builder._nested_zip(
+231:                 io.BytesIO(zipped({"data.csv": b"x"})),
+232:                 budget={"entries": builder.MAX_NESTED_ENTRIES, "expanded_bytes": 0, "archives": 0},
+233:             )
+235:     def test_windows_name_policy_and_source_suffix_chains(self):
+236:         forbidden = [
+237:             "app.py.bak",
+238:             "Worker.cs.snapshot",
+239:             "test.ipynb",
+240:             "change.patch",
+241:             "change.diff",
+242:             "x.csproj",
+243:             "Directory.Build.props",
+244:             "x.targets",
+245:             "x.exe",
+246:             "x.dll",
+247:             "data.tar.gz",
+248:             "old/.GIT/config",
+249:             "copy/.venv/data.json",
+250:             "__pycache__/x.json",
+251:             "x/bin/data.json",
+252:             "x/obj/data.json",
+253:             "package-lock.json",
+254:             "pyproject.toml",
+255:             "requirements-dev.txt",
+256:             "../x.csv",
+257:             "x//y.csv",
+258:             "/absolute.csv",
+259:             "a\\b.csv",
+260:             "CON.txt",
+261:             "data.json:stream",
+262:             "x?.csv",
+263:         ]
+264:         for name in forbidden:
+265:             with self.subTest(name=name), self.assertRaises(ValueError):
+266:                 builder._check_payload_name(name)
+267:         for name in ("config.yaml", ".env", "data.db-wal", "old/run.lock", "model.pkl"):
+268:             builder._check_payload_name(name)
+270:     def test_source_or_extra_windows_collisions_fail(self):
+271:         self.fixture({"A.csv": b"x", "a.csv": b"y"})
+272:         self.rejects("colliding ZIP")
+273:         self.fixture({"data": b"x", "data/file.csv": b"y"})
+274:         self.rejects("parent directory")
+275:         self.fixture({"caf\u00e9.csv": b"x", "cafe\u0301.csv": b"y"})
+276:         self.rejects("colliding ZIP")
+278:     def test_references_are_full_and_do_not_embed_credentials(self):
+279:         for commit, remote in (("abcdef", REMOTE), (COMMIT, "<REDACTED_CREDENTIAL_URL>example.com/repo.git")):
+280:             with self.subTest(commit=commit), self.assertRaises(ValueError):
+281:                 builder._validate_code_reference(commit, remote)
+282:         builder._validate_code_reference(COMMIT, "ssh://<REDACTED_EMAIL>/example/repo.git")
+285: if __name__ == "__main__":
+286:     unittest.main()
+### tests/test_bundle_h9_evidence.py
+1: import hashlib
+2: from datetime import UTC, datetime
+4: from brasileirao_scripts.bundle_h9_evidence import build_manifest
+7: def test_bundle_manifest_records_hash_rows_commit_and_capital_lock(tmp_path):
+8:     ledger = tmp_path / "h9.jsonl"
+9:     content = '{"id":1}\n{"id":2}\n'
+10:     ledger.write_text(content, encoding="utf-8")
+12:     manifest = build_manifest((ledger,), generated_at=datetime(2026, 8, 24, tzinfo=UTC), commit="abc123")
+14:     assert manifest["schema_version"] == "h9-evidence-bundle/1"
+15:     assert manifest["source_commit"] == "abc123"
+16:     assert manifest["capital_enabled"] is False
+17:     assert manifest["missing_historical_windows_recoverable"] is False
+18:     assert manifest["files"][0]["rows"] == 2
+19:     assert manifest["files"][0]["sha256"] == hashlib.sha256(ledger.read_bytes()).hexdigest()
+### tests/test_calibration_gate.py
+1: import json
+2: from pathlib import Path
+4: import numpy as np
+6: from brasileirao_predictor.research.calibration_gate import assess_a10
+7: from brasileirao_scripts.trial_draw_calibration_a10 import _losses, _moving_ci
+9: ROOT = Path(__file__).resolve().parent.parent
+12: def test_existing_a10_report_is_formally_no_go():
+13:     report = json.loads((ROOT / "reports" / "trial_draw_calibration_a10_2024.json").read_text(encoding="utf-8"))
+14:     gate = assess_a10(report)
+15:     assert gate["verdict"] == "NO_GO_ARCHIVE_A10"
+16:     assert gate["primary_improved"] is False
+17:     assert gate["serving_changed"] is False
+20: def test_gate_requires_primary_and_every_guardrail():
+21:     metrics = {
+22:         name: {"delta_treatment_minus_control": delta}
+23:         for name, delta in {"rps": -0.1, "brier": -0.1, "log_loss": 0.01, "brier_draw": -0.1}.items()
+24:     }
+25:     assert assess_a10({"metrics": metrics})["verdict"] == "NO_GO_ARCHIVE_A10"
+28: def test_gate_requires_material_rps_gain_and_home_win_guardrail():
+29:     metrics = {
+30:         name: {"delta_treatment_minus_control": delta}
+31:         for name, delta in {
+32:             "rps": -0.0021,
+33:             "brier": -0.001,
+34:             "log_loss": -0.001,
+35:             "brier_draw": -0.001,
+36:             "log_loss_home_win": 0.0,
+37:         }.items()
+38:     }
+39:     gate = assess_a10({"metrics": metrics})
+40:     assert gate["verdict"] == "GO_CANDIDATE_FOR_NEW_PROSPECTIVE_PROTOCOL"
+41:     metrics["rps"]["delta_treatment_minus_control"] = -0.0019
+42:     assert assess_a10({"metrics": metrics})["verdict"] == "NO_GO_ARCHIVE_A10"
+45: def test_a10_producer_can_compute_home_win_guardrail() -> None:
+46:     probabilities = np.array([[0.1, 0.2, 0.7], [0.6, 0.3, 0.1]])
+47:     outcomes = np.array([2, 0])
+48:     losses = _losses(probabilities, outcomes)
+49:     home_losses = losses["log_loss"][outcomes == 2]
+50:     assert len(home_losses) == 1
+51:     assert len(_moving_ci(home_losses, n_boot=20)) == 2
+### tests/test_capture_decision.py
+3: import hashlib
+4: import json
+5: from copy import deepcopy
+7: import pytest
+8: from test_live_capture_admission import payload
+10: from brasileirao_predictor.research.price_strength.capture_decision import decide_captures, main
+13: def contract():
+14:     return {
+15:         "schema_version": "api-capture-decision/1",
+16:         "fixture_id": "id1",
+17:         "identity": {"participant1Id": 1, "participant2Id": 2, "sportId": 10, "tournamentId": 325, "seasonId": 77},
+18:         "kickoff_at": "2026-09-12T00:00:00Z",
+19:         "decision_at": "2026-09-09T20:00:02Z",
+20:         "initial_bankroll_units": 100,
+21:         "policy": {
+22:             "reference_books": ["pinnacle"],
+23:             "max_age_seconds": 120,
+24:             "max_skew_seconds": 15,
+25:             "cost_per_unit": 0.02,
+26:             "commission_on_profit": 0.0,
+27:         },
+28:     }
+31: def capture(*, obj=None, at="2026-09-09T20:00:01Z", raw=None):
+32:     if obj is None:
+33:         obj = payload()
+34:         obj.update(contract()["identity"])
+35:         for outcome in obj["bookmakerOdds"]["pinnacle"]["markets"]["101"]["outcomes"].values():
+36:             outcome["players"]["0"]["price"] = 2.7
+37:         obj["bookmakerOdds"]["bet365.bet.br"]["markets"]["101"]["outcomes"]["101"]["players"]["0"]["price"] = 3.3
+38:     raw = raw if raw is not None else json.dumps(obj).encode("utf-8")
+39:     receipt = {
+40:         "endpoint": "https://api.oddspapi.io/v4/odds",
+41:         "status": "SAVED",
+42:         "http_status": 200,
+43:         "requested_at": at,
+44:         "received_at": at,
+45:         "parameters": {"fixtureId": "id1", "bookmakers": "pinnacle,bet365.bet.br", "oddsFormat": "decimal"},
+46:         "sha256": hashlib.sha256(raw).hexdigest(),
+47:         "bytes": len(raw),
+48:         "file": "capture.json",
+49:     }
+50:     return raw, receipt
+53: def run(rows=None, cfg=None):
+54:     return decide_captures(rows if rows is not None else [capture()], contract=cfg or contract())
+57: def test_positive_conditional_price_is_never_promoted_to_an_execution_or_profit():
+58:     result = run()
+59:     selected = result["conditional_scan"]["selected_candidates"]
+60:     assert len(selected) == 1 and selected[0]["net_ev"] == pytest.approx(0.08)
+61:     assert selected[0]["bookmaker"] == "bet365.bet.br"
+62:     assert selected[0]["reference_books_used"] == ["pinnacle"]
+63:     assert result["action"] == "ABSTAIN" and not result["execution_admitted"]
+64:     assert result["portfolio"]["stakes_units"] == 0 and result["portfolio"]["bets"] == 0
+65:     assert result["portfolio"]["roi_on_stakes"] is None
+66:     assert result["portfolio"]["total_net_pnl_units"] is None  # Fixed costs remain unknown.
+67:     assert not result["profitability_established"] and not result["labels_accessed"]
+70: @pytest.mark.parametrize(
+71:     "field,value",
+72:     [
+73:         ("http_status", 503),
+74:         ("http_status", True),
+75:         ("status", "FAILED"),
+76:         ("sha256", "0" * 64),
+77:         ("bytes", 1),
+78:         ("bytes", True),
+79:         ("endpoint", "https://example.invalid/odds"),
+80:         ("parameters", {"fixtureId": "foreign"}),
+81:     ],
+82: )
+83: def test_latest_bad_transport_cannot_resurrect_an_older_good_capture(field, value):
+84:     bad = capture(at="2026-09-09T20:00:02Z")
+85:     bad[1][field] = value
+86:     result = run([capture(), bad])
+87:     assert result["reason"] == "LATEST_TRANSPORT_OR_INTEGRITY_REJECTED"
+88:     assert result["conditional_scan"] is None
+91: @pytest.mark.parametrize("raw", [b'{"hasOdds":false,"hasOdds":true}', b'{"p":NaN}', b'{"p":1e9999}', b"[]", b"broken"])
+92: def test_bad_latest_payload_is_retained_as_abstention(raw):
+93:     assert run([capture(), capture(raw=raw, at="2026-09-09T20:00:02Z")])["conditional_scan"] is None
+96: def test_later_inactive_parent_blocks_earlier_active_children():
+97:     original, _ = capture()
+98:     obj = json.loads(original)
+99:     obj["bookmakerOdds"]["bet365.bet.br"]["bookmakerIsActive"] = False
+100:     result = run([capture(), capture(obj=obj, at="2026-09-09T20:00:02Z")])
+101:     assert result["reason"] == "LATEST_API_PAIR_REJECTED"
+102:     assert not result["api_audit"]["pair_api_state_admitted"]
+105: @pytest.mark.parametrize("mutation", ["kickoff", "home", "competition"])
+106: def test_frozen_identity_and_kickoff_are_required_even_with_matching_hash(mutation):
+107:     raw, _ = capture()
+108:     obj = json.loads(raw)
+109:     key, value = {
+110:         "kickoff": ("startTime", "2026-09-13T00:00:00Z"),
+111:         "home": ("participant1Id", 2),
+112:         "competition": ("tournamentId", 999),
+113:     }[mutation]
+114:     obj[key] = value
+115:     result = run([capture(obj=obj)])
+116:     assert result["conditional_scan"] is None and result["action"] == "ABSTAIN"
+119: def test_future_capture_is_excluded_before_parsing_and_cannot_invalidate_known_past():
+120:     result = run([capture(), capture(raw=b"not-yet-available", at="2026-09-09T20:00:03Z")])
+121:     assert result["conditional_scan"] is not None
+122:     assert result["capture_reviews"][1]["reason"] == "not_received_by_cutoff"
+125: def test_unorderable_receipt_blocks_the_batch_instead_of_cherry_picking():
+126:     bad = capture()
+127:     bad[1]["received_at"] = "unknown"
+128:     assert run([capture(), bad])["reason"] == "AMBIGUOUS_RECEIPT_CLOCK_NO_FALLBACK"
+131: def test_equal_timestamps_do_not_choose_a_canonical_revision_by_hash_or_file_order():
+132:     good, bad = capture(), capture()
+133:     bad[1]["http_status"] = 503
+134:     assert run([good, bad])["reason"] == "AMBIGUOUS_LATEST_CAPTURE_NO_FALLBACK"
+135:     assert run([bad, good])["reason"] == "AMBIGUOUS_LATEST_CAPTURE_NO_FALLBACK"
+138: def test_no_capture_and_stale_capture_have_explicit_denominators():
+139:     assert run([])["reason"] == "NO_CAPTURE_RECEIVED_BY_CUTOFF"
+140:     cfg = contract()
+141:     cfg["decision_at"] = "2026-09-09T20:03:00Z"
+142:     result = run(cfg=cfg)
+143:     assert result["reason"] == "LATEST_API_RESPONSE_STALE"
+144:     assert result["portfolio"]["abstentions"] == 1
+147: @pytest.mark.parametrize(
+148:     "mutation", ["cost_missing", "cost_nan", "unknown_field", "bool_bank", "after_kickoff", "same_team"]
+149: )
+150: def test_invalid_or_incomplete_assumptions_are_not_replaced_by_defaults(mutation):
+151:     cfg = contract()
+152:     if mutation == "cost_missing":
+153:         del cfg["policy"]["cost_per_unit"]
+154:     elif mutation == "cost_nan":
+155:         cfg["policy"]["cost_per_unit"] = float("nan")
+156:     elif mutation == "unknown_field":
+157:         cfg["allow_execution"] = True
+158:     elif mutation == "bool_bank":
+159:         cfg["initial_bankroll_units"] = True
+160:     elif mutation == "same_team":
+161:         cfg["identity"]["participant2Id"] = 1
+162:     else:
+163:         cfg["decision_at"] = cfg["kickoff_at"]
+164:     with pytest.raises((TypeError, ValueError)):
+165:         run(cfg=cfg)
+168: def test_inputs_are_not_mutated():
+169:     rows, cfg = [capture()], contract()
+170:     before = deepcopy((rows, cfg))
+171:     run(rows, cfg)
+172:     assert (rows, cfg) == before
+175: def test_cli_hashes_inputs_emits_abstention_and_refuses_overwrite(tmp_path):
+176:     raw, receipt = capture()
+177:     c, r, p, out = [tmp_path / name for name in ("contract.json", "receipt.json", "capture.json", "run")]
+178:     c.write_text(json.dumps(contract()), encoding="utf-8")
+179:     r.write_text(json.dumps({"requests": [receipt]}), encoding="utf-8")
+180:     p.write_bytes(raw)
+181:     args = ["--contract", str(c), "--receipt", str(r), "--capture", str(p), "--output-dir", str(out)]
+182:     assert main(args) == 0
+183:     manifest = (out / "manifest.json").read_bytes()
+184:     assert json.loads((out / "decision.json").read_text(encoding="utf-8"))["action"] == "ABSTAIN"
+185:     assert main(args) == 2
+186:     assert (out / "manifest.json").read_bytes() == manifest
+189: def test_cli_preserves_later_failed_attempt_without_a_payload_file(tmp_path):
+190:     raw, receipt = capture()
+191:     failed = {**receipt, "status": "FAILED", "http_status": 503, "received_at": "2026-09-09T20:00:02Z"}
+192:     for key in ("file", "sha256", "bytes"):
+193:         del failed[key]
+194:     c, r, p, out = [tmp_path / name for name in ("contract.json", "receipt.json", "capture.json", "run")]
+195:     c.write_text(json.dumps(contract()), encoding="utf-8")
+196:     r.write_text(json.dumps({"requests": [receipt, failed]}), encoding="utf-8")
+197:     p.write_bytes(raw)
+198:     assert main(["--contract", str(c), "--receipt", str(r), "--capture", str(p), "--output-dir", str(out)]) == 0
+199:     result = json.loads((out / "decision.json").read_text(encoding="utf-8"))
+200:     assert result["reason"] == "LATEST_TRANSPORT_OR_INTEGRITY_REJECTED"
+201:     assert result["conditional_scan"] is None
+204: def test_cli_refuses_an_incomplete_saved_capture_universe(tmp_path):
+205:     raw, receipt = capture()
+206:     c, r, p, out = [tmp_path / name for name in ("contract.json", "receipt.json", "capture.json", "run")]
+207:     c.write_text(json.dumps(contract()), encoding="utf-8")
+208:     missing = {**receipt, "file": "another_saved_capture.json", "received_at": "2026-09-09T20:00:02Z"}
+209:     r.write_text(json.dumps({"requests": [receipt, missing]}), encoding="utf-8")
+210:     p.write_bytes(raw)
+211:     assert main(["--contract", str(c), "--receipt", str(r), "--capture", str(p), "--output-dir", str(out)]) == 2
+212:     assert not out.exists()

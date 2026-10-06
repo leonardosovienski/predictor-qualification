@@ -1,0 +1,374 @@
+### brasileirao_predictor/data/sportmonks_provider.py
+7: from __future__ import annotations
+9: import json
+10: import os
+11: import urllib.request
+12: from collections.abc import Callable
+13: from datetime import UTC, date, datetime
+14: from typing import Any
+15: from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+17: from predictor_core.data.contracts import DataUnavailableError
+19: BASE = "https://api.sportmonks.com/v3/football"
+22: class SportmonksProvider:
+23:     def __init__(
+24:         self,
+25:         *,
+26:         token: str | None = None,
+27:         timeout: float = 30.0,
+28:         get_json: Callable[[str, dict[str, str]], Any] | None = None,
+29:         max_pages: int = 1,
+30:     ):
+31:         self.token = token or os.environ.get("SPORTMONKS_API_TOKEN")
+32:         self.timeout = timeout
+33:         self._get_json = get_json or self._http_get_json
+34:         if type(max_pages) is not int or max_pages < 1:
+35:             raise ValueError("max_pages must be a positive request budget")
+36:         self.max_pages = max_pages
+38:     def _headers(self) -> dict[str, str]:
+39:         if not self.token:
+40:             raise DataUnavailableError("SPORTMONKS_API_TOKEN ausente")
+42:         return {"Authorization": self.token, "User-Agent": "brasileirao-predictor-source-audit/1.0"}
+44:     def _http_get_json(self, url: str, headers: dict[str, str]) -> Any:
+45:         try:
+46:             request = urllib.request.Request(url, headers=headers)
+47:             with urllib.request.urlopen(request, timeout=self.timeout) as response:
+48:                 return json.loads(response.read())
+49:         except (OSError, ValueError):
+50:             raise DataUnavailableError("Sportmonks indisponível; transporte ou JSON inválido") from None
+52:     def _pages(self, url: str) -> list[dict[str, Any]]:
+54:         rows = []
+55:         parts = urlsplit(url)
+56:         original_query = dict(parse_qsl(parts.query))
+57:         cursor = None
+58:         seen_cursors = set()
+59:         for page in range(1, self.max_pages + 1):
+60:             query = dict(original_query)
+61:             if cursor is not None:
+62:                 query.pop("per_page", None)
+63:                 query["cursor"] = cursor
+64:             else:
+65:                 query["page"] = str(page)
+66:             request_url = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))
+67:             payload = self._get_json(request_url, self._headers())
+68:             data = payload.get("data") if isinstance(payload, dict) else None
+69:             if not isinstance(data, list) or any(not isinstance(row, dict) for row in data):
+70:                 raise DataUnavailableError("Sportmonks retornou dados inválidos")
+71:             rows.extend(data)
+72:             pagination = payload.get("pagination")
+73:             if pagination is None:
+74:                 raise DataUnavailableError("Sportmonks: paginação ausente; completude desconhecida")
+75:             if (
+76:                 not isinstance(pagination, dict)
+77:                 or type(pagination.get("has_more")) is not bool
+78:                 or pagination.get("current_page") != (1 if cursor is not None else page)
+79:             ):
+80:                 raise DataUnavailableError("Sportmonks retornou paginação inválida")
+81:             if not pagination["has_more"]:
+82:                 return rows
+83:             if "next_cursor" in pagination:
+84:                 cursor = pagination["next_cursor"]
+85:                 if not isinstance(cursor, str) or not cursor or cursor in seen_cursors:
+86:                     raise DataUnavailableError("Sportmonks retornou cursor inválido ou repetido")
+87:                 seen_cursors.add(cursor)
+88:         raise DataUnavailableError("Sportmonks: cobertura incompleta; orçamento de paginação atingido")
+90:     def accessible_leagues(self) -> list[dict[str, Any]]:
+91:         rows = self._pages(f"{BASE}/leagues?include=country&per_page=50")
+92:         return [
+93:             {
+94:                 "source_league_id": int(row["id"]),
+95:                 "name": row.get("name"),
+96:                 "country": (row.get("country") or {}).get("name"),
+97:             }
+98:             for row in rows
+99:             if row.get("id") is not None
+100:         ]
+102:     def require_league(self, name: str, country: str) -> int:
+103:         matches = [row for row in self.accessible_leagues() if row["name"] == name and row["country"] == country]
+104:         if len(matches) != 1:
+105:             raise DataUnavailableError(f"liga não coberta pelo plano Sportmonks: {name} ({country})")
+106:         return matches[0]["source_league_id"]
+108:     def list_fixtures(
+109:         self, *, league_id: int, from_date: date, to_date: date, observed_at: datetime | None = None
+110:     ) -> list[dict[str, Any]]:
+111:         observed = observed_at or datetime.now(UTC)
+112:         if observed.tzinfo is None or observed.utcoffset() is None:
+113:             raise ValueError("observed_at deve conter timezone")
+114:         observed = observed.astimezone(UTC)
+115:         url = (
+116:             f"{BASE}/fixtures/between/{from_date.isoformat()}/{to_date.isoformat()}"
+117:             f"?filters=fixtureLeagues:{int(league_id)}&include=participants&timezone=UTC"
+118:         )
+119:         raw_rows = self._pages(url)
+120:         observed = (observed_at or datetime.now(UTC)).astimezone(UTC)
+121:         rows = []
+122:         for fixture in raw_rows:
+123:             participants = fixture.get("participants") or []
+124:             home = next((p for p in participants if (p.get("meta") or {}).get("location") == "home"), None)
+125:             away = next((p for p in participants if (p.get("meta") or {}).get("location") == "away"), None)
+126:             try:
+127:                 scheduled = datetime.fromisoformat(str(fixture["starting_at"]).replace("Z", "+00:00"))
+128:                 if scheduled.tzinfo is None:
+131:                     scheduled = scheduled.replace(tzinfo=UTC)
+132:                 if (
+133:                     home is None
+134:                     or away is None
+135:                     or not home.get("name")
+136:                     or not away.get("name")
+137:                     or fixture.get("league_id", league_id) != league_id
+138:                 ):
+139:                     raise ValueError
+140:             except (KeyError, TypeError, ValueError):
+141:                 continue
+142:             rows.append(
+143:                 {
+144:                     "source": "sportmonks",
+145:                     "source_event_id": str(fixture["id"]),
+146:                     "source_league_id": int(league_id),
+147:                     "scheduled_at": scheduled.astimezone(UTC).isoformat(timespec="seconds"),
+148:                     "observed_at": observed.isoformat(timespec="seconds"),
+149:                     "home_team": home.get("name"),
+150:                     "away_team": away.get("name"),
+151:                     "state_id": fixture.get("state_id"),
+152:                     "shadow_only": True,
+153:                 }
+154:             )
+155:         return sorted(rows, key=lambda row: (row["scheduled_at"], row["source_event_id"]))
+### brasileirao_predictor/data/the_odds_api_provider.py
+3: from __future__ import annotations
+5: import hashlib
+6: import json
+7: import math
+8: import os
+9: import urllib.request
+10: from collections.abc import Callable
+11: from datetime import UTC, datetime
+12: from typing import Any
+13: from urllib.parse import urlencode
+15: from predictor_core.data.contracts import DataUnavailableError
+17: BASE = "https://api.the-odds-api.com/v4"
+18: SOURCE = "the_odds_api"
+19: ADAPTER_VERSION = "the-odds-api/1"
+20: SPORT = "soccer_brazil_campeonato"
+23: def _utc(value: Any) -> datetime | None:
+24:     if not isinstance(value, str):
+25:         return None
+26:     try:
+27:         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+28:     except ValueError:
+29:         return None
+30:     return parsed.astimezone(UTC) if parsed.tzinfo else None
+33: class TheOddsApiProvider:
+34:     def __init__(
+35:         self,
+36:         *,
+37:         api_key: str | None = None,
+38:         regions: str = "eu",
+39:         timeout: float = 30.0,
+40:         get_json: Callable[[str], Any] | None = None,
+41:     ):
+42:         self.api_key, self.regions, self.timeout = (
+43:             api_key or os.environ.get("ODDS_API_KEY"),
+44:             regions,
+45:             timeout,
+46:         )
+47:         self._get_json = get_json or self._http_get_json
+49:     def _http_get_json(self, url: str) -> Any:
+50:         try:
+51:             with urllib.request.urlopen(
+52:                 urllib.request.Request(url, headers={"User-Agent": "brasileirao-predictor/1.0"}),
+53:                 timeout=self.timeout,
+54:             ) as response:
+55:                 return json.loads(response.read())
+56:         except (OSError, ValueError) as exc:
+58:             raise DataUnavailableError("The Odds API indisponível ou recusou a consulta") from exc
+60:     def fetch_markets(
+61:         self,
+62:         *,
+63:         markets: tuple[str, ...] = ("h2h", "totals"),
+64:         retrieved_at: datetime | None = None,
+65:     ) -> list[dict[str, Any]]:
+71:         if not self.api_key:
+72:             raise DataUnavailableError("ODDS_API_KEY ausente")
+73:         if not markets or any(market not in {"h2h", "totals"} for market in markets):
+74:             raise ValueError("markets deve conter apenas h2h/totals")
+75:         now = retrieved_at or datetime.now(UTC)
+76:         if now.tzinfo is None:
+77:             raise ValueError("retrieved_at deve conter timezone")
+78:         query = urlencode(
+79:             {
+80:                 "apiKey": self.api_key,
+81:                 "regions": self.regions,
+82:                 "markets": ",".join(markets),
+83:                 "oddsFormat": "decimal",
+84:             }
+85:         )
+86:         payload = self._get_json(f"{BASE}/sports/{SPORT}/odds?{query}")
+87:         if not isinstance(payload, list):
+88:             raise DataUnavailableError("The Odds API retornou payload inválido")
+89:         raw_hash = hashlib.sha256(
+90:             json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+91:         ).hexdigest()
+92:         rows: list[dict[str, Any]] = []
+93:         for event in payload:
+94:             kickoff = _utc(event.get("commence_time"))
+95:             event_id = event.get("id")
+96:             if not kickoff or not isinstance(event_id, str):
+97:                 continue
+98:             for book in event.get("bookmakers", []):
+99:                 bookmaker, captured = book.get("key"), _utc(book.get("last_update"))
+100:                 if not isinstance(bookmaker, str) or not bookmaker or not captured or captured >= kickoff:
+101:                     continue
+102:                 for market in book.get("markets", []):
+103:                     market_key = market.get("key")
+104:                     if market_key not in markets:
+105:                         continue
+106:                     for outcome in market.get("outcomes", []):
+107:                         price = outcome.get("price")
+108:                         if not isinstance(price, (int, float)) or not math.isfinite(price) or price <= 1:
+109:                             continue
+110:                         name = outcome.get("name")
+111:                         point = outcome.get("point")
+112:                         if market_key == "totals":
+113:                             if name not in ("Over", "Under") or not isinstance(point, (int, float)):
+114:                                 continue
+115:                             canonical_market = f"ou{float(point):g}"
+116:                             selection = name.lower()
+117:                         else:
+118:                             if name == event.get("home_team"):
+119:                                 selection = "home"
+120:                             elif name == event.get("away_team"):
+121:                                 selection = "away"
+122:                             elif name == "Draw":
+123:                                 selection = "draw"
+124:                             else:
+125:                                 continue
+126:                             canonical_market = "1x2"
+127:                         rows.append(
+128:                             {
+129:                                 "source": SOURCE,
+130:                                 "source_event_id": event_id,
+131:                                 "bookmaker": bookmaker,
+132:                                 "market": canonical_market,
+133:                                 "selection": selection,
+134:                                 "line": float(point) if isinstance(point, (int, float)) else None,
+135:                                 "decimal_odds": float(price),
+136:                                 "odds_captured_at": captured.isoformat(timespec="seconds"),
+137:                                 "retrieved_at": now.astimezone(UTC).isoformat(timespec="seconds"),
+138:                                 "canonical_match_id": f"{SOURCE}:{event_id}",
+139:                                 "raw_payload_hash": raw_hash,
+140:                                 "adapter_version": ADAPTER_VERSION,
+141:                                 "data_quality_status": "PROSPECTIVE_ELIGIBLE",
+142:                                 "kickoff_at": kickoff.isoformat(timespec="seconds"),
+143:                                 "home_team": event.get("home_team"),
+144:                                 "away_team": event.get("away_team"),
+145:                             }
+146:                         )
+147:         return rows
+149:     def fetch_event_markets(
+150:         self,
+151:         event_id: str,
+152:         *,
+153:         markets: tuple[str, ...] = ("totals_h1",),
+154:         retrieved_at: datetime | None = None,
+155:     ) -> list[dict[str, Any]]:
+157:         if not isinstance(event_id, str) or not event_id.strip():
+158:             raise ValueError("event_id obrigatorio")
+159:         if not markets or any(market not in {"totals_h1", "h2h_3_way_h1"} for market in markets):
+160:             raise ValueError("mercado adicional nao suportado")
+162:         if not self.api_key:
+163:             raise DataUnavailableError("ODDS_API_KEY ausente")
+164:         now = retrieved_at or datetime.now(UTC)
+165:         if now.tzinfo is None:
+166:             raise ValueError("retrieved_at deve conter timezone")
+167:         query = urlencode(
+168:             {
+169:                 "apiKey": self.api_key,
+170:                 "regions": self.regions,
+171:                 "markets": ",".join(markets),
+172:                 "oddsFormat": "decimal",
+173:             }
+174:         )
+175:         payload = self._get_json(f"{BASE}/sports/{SPORT}/events/{event_id}/odds?{query}")
+176:         if not isinstance(payload, dict):
+177:             raise DataUnavailableError("The Odds API retornou payload de evento invalido")
+178:         return self._normalize_additional_event(payload, now=now, markets=markets)
+180:     def _normalize_additional_event(
+181:         self, event: dict[str, Any], *, now: datetime, markets: tuple[str, ...]
+182:     ) -> list[dict[str, Any]]:
+183:         kickoff = _utc(event.get("commence_time"))
+184:         event_id = event.get("id")
+185:         if not kickoff or not isinstance(event_id, str):
+186:             return []
+187:         raw_hash = hashlib.sha256(
+188:             json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+189:         ).hexdigest()
+190:         rows = []
+191:         for book in event.get("bookmakers", []):
+192:             bookmaker = book.get("key")
+193:             for market in book.get("markets", []):
+194:                 market_key = market.get("key")
+195:                 if market_key not in markets:
+196:                     continue
+197:                 captured = _utc(market.get("last_update") or book.get("last_update"))
+198:                 if not isinstance(bookmaker, str) or not captured or captured >= kickoff:
+199:                     continue
+200:                 for outcome in market.get("outcomes", []):
+201:                     price, name, point = outcome.get("price"), outcome.get("name"), outcome.get("point")
+202:                     if not isinstance(price, (int, float)) or not math.isfinite(price) or price <= 1:
+203:                         continue
+204:                     if market_key == "totals_h1":
+205:                         if name not in ("Over", "Under") or not isinstance(point, (int, float)):
+206:                             continue
+207:                         canonical_market, selection = f"ou{float(point):g}_1h", name.lower()
+208:                     else:
+209:                         mapping = {event.get("home_team"): "home", "Draw": "draw", event.get("away_team"): "away"}
+210:                         selection = mapping.get(name)
+211:                         if selection is None:
+212:                             continue
+213:                         canonical_market = "1x2_1h"
+214:                     rows.append(
+215:                         {
+216:                             "source": SOURCE,
+217:                             "source_event_id": event_id,
+218:                             "bookmaker": bookmaker,
+219:                             "market": canonical_market,
+220:                             "selection": selection,
+221:                             "line": float(point) if isinstance(point, (int, float)) else None,
+222:                             "decimal_odds": float(price),
+223:                             "odds_captured_at": captured.isoformat(timespec="seconds"),
+224:                             "retrieved_at": now.astimezone(UTC).isoformat(timespec="seconds"),
+225:                             "canonical_match_id": f"{SOURCE}:{event_id}",
+226:                             "raw_payload_hash": raw_hash,
+227:                             "adapter_version": ADAPTER_VERSION,
+228:                             "data_quality_status": "PROSPECTIVE_ELIGIBLE",
+229:                             "kickoff_at": kickoff.isoformat(timespec="seconds"),
+230:                             "home_team": event.get("home_team"),
+231:                             "away_team": event.get("away_team"),
+232:                         }
+233:                     )
+234:         return rows
+236:     def fetch_ou25(self, *, retrieved_at: datetime | None = None) -> list[dict[str, Any]]:
+238:         return [
+239:             row
+240:             for row in self.fetch_markets(markets=("totals",), retrieved_at=retrieved_at)
+241:             if row["market"] == "ou2.5"
+242:         ]
+### brasileirao_predictor/data/xg_quality.py
+3: import math
+6: def is_numeric_xg(value: object) -> bool:
+8:     if isinstance(value, bool) or not isinstance(value, (int, float)):
+9:         return False
+10:     try:
+11:         return math.isfinite(value) and value >= 0
+12:     except OverflowError:
+13:         return False
+16: def classify_xg_pair(home: object, away: object) -> str:
+23:     if home is None and away is None:
+24:         return "MISSING_PAIR"
+25:     if home is None or away is None:
+26:         return "PARTIAL_PAIR"
+27:     if not is_numeric_xg(home) or not is_numeric_xg(away):
+28:         return "INVALID_PAIR"
+29:     if home == 0 and away == 0:
+30:         return "ZERO_PAIR_UNATTESTED"
+31:     return "NUMERIC_PAIR"

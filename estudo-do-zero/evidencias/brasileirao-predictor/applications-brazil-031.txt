@@ -1,0 +1,431 @@
+### brasileirao_predictor/research/promoted_cold_start.py
+3: import math
+4: from dataclasses import dataclass
+5: from statistics import mean
+7: import numpy as np
+8: from predictor_core.measurement.metrics import brier, log_loss, rps
+10: from brasileirao_predictor.data.promotions import Promotion
+13: @dataclass(frozen=True)
+14: class PromotedEntry:
+15:     season: int
+16:     team_id: str
+17:     prior_seasons_absent: int
+18:     entry_rating_estimate: float
+19:     provenance: str
+22: def build_entries(
+23:     promotions: list[Promotion],
+24:     entry_ratings: dict[tuple[int, str], float],
+25:     *,
+26:     as_of_season: int,
+27:     participation_seasons: dict[str, set[int]] | None = None,
+28: ) -> list[PromotedEntry]:
+30:     prior_seasons: dict[str, list[int]] = {}
+31:     entries: list[PromotedEntry] = []
+32:     for promotion in sorted(promotions, key=lambda item: (item.serie_a_season, item.position)):
+33:         if promotion.serie_a_season > as_of_season:
+34:             continue
+35:         key = (promotion.serie_a_season, promotion.team_id)
+36:         if key not in entry_ratings:
+37:             raise ValueError(f"missing point-in-time entry rating: {key}")
+38:         if participation_seasons is None or promotion.team_id not in participation_seasons:
+39:             raise ValueError(f"missing Serie A participation history: {promotion.team_id}")
+40:         past = [season for season in participation_seasons[promotion.team_id] if season < promotion.serie_a_season]
+41:         absent = promotion.serie_a_season - max(past) - 1 if past else promotion.serie_a_season - 2017
+42:         entries.append(
+43:             PromotedEntry(
+44:                 season=promotion.serie_a_season,
+45:                 team_id=promotion.team_id,
+46:                 prior_seasons_absent=max(0, absent),
+47:                 entry_rating_estimate=float(entry_ratings[key]),
+48:                 provenance=f"{promotion.source_url}#point-in-time-rating",
+49:             )
+50:         )
+51:         prior_seasons.setdefault(promotion.team_id, []).append(promotion.serie_a_season)
+52:     validate_entries(entries)
+53:     return entries
+56: def validate_entries(entries: list[PromotedEntry], *, minimum_training_seasons: int = 3) -> None:
+57:     if not entries:
+58:         raise ValueError("promoted cold-start trial requires explicit promotion metadata")
+59:     seasons = {entry.season for entry in entries}
+60:     if len(seasons) < minimum_training_seasons:
+61:         raise ValueError(f"promoted cold-start trial requires at least {minimum_training_seasons} historical seasons")
+62:     seen: set[tuple[int, str]] = set()
+63:     for entry in entries:
+64:         key = (entry.season, entry.team_id)
+65:         if key in seen:
+66:             raise ValueError(f"duplicate promoted entry: {key}")
+67:         seen.add(key)
+68:         if not entry.team_id or not entry.provenance:
+69:             raise ValueError("promoted entries require canonical team_id and provenance")
+70:         if entry.prior_seasons_absent < 0 or not 500 <= entry.entry_rating_estimate <= 2500:
+71:             raise ValueError(f"invalid promoted entry: {key}")
+74: def leave_one_season_out_priors(entries: list[PromotedEntry]) -> dict[int, float]:
+76:     validate_entries(entries)
+77:     out: dict[int, float] = {}
+78:     for season in sorted({entry.season for entry in entries}):
+79:         training = [entry.entry_rating_estimate for entry in entries if entry.season < season]
+80:         if training:
+81:             out[season] = mean(training)
+82:     if not out:
+83:         raise ValueError("no season has strictly earlier promoted-team training data")
+84:     return out
+87: def protocol_status(entries: list[PromotedEntry]) -> dict[str, object]:
+88:     try:
+89:         priors = leave_one_season_out_priors(entries)
+90:     except ValueError as exc:
+91:         return {"status": "BLOCKED_MISSING_PROMOTION_METADATA", "reason": str(exc), "serving_changed": False}
+92:     return {"status": "READY_FOR_PREQUENTIAL_BACKTEST", "season_priors": priors, "serving_changed": False}
+95: def evaluate_empirical_prior(entries: list[PromotedEntry], *, baseline_rating: float = 1500.0) -> dict[str, object]:
+97:     priors = leave_one_season_out_priors(entries)
+98:     paired: list[tuple[float, float]] = []
+99:     for entry in entries:
+100:         if entry.season not in priors:
+101:             continue
+102:         empirical_error = abs(priors[entry.season] - entry.entry_rating_estimate)
+103:         baseline_error = abs(baseline_rating - entry.entry_rating_estimate)
+104:         paired.append((empirical_error, baseline_error))
+105:     if len(paired) < 8:
+106:         return {"status": "BLOCKED_DATA", "n": len(paired), "serving_changed": False}
+107:     empirical_mae = mean(item[0] for item in paired)
+108:     baseline_mae = mean(item[1] for item in paired)
+109:     return {
+110:         "status": "GO_CANDIDATE" if empirical_mae < baseline_mae else "NO_GO",
+111:         "n": len(paired),
+112:         "empirical_mae": empirical_mae,
+113:         "baseline_mae": baseline_mae,
+114:         "mae_gain": baseline_mae - empirical_mae,
+115:         "serving_changed": False,
+116:     }
+119: @dataclass(frozen=True)
+120: class ColdStartMatch:
+121:     season: int
+122:     team_id: str
+123:     match_number: int
+124:     opponent_rating: float
+125:     home: bool
+126:     goals_for: int
+127:     goals_against: int
+130: def evaluate_goal_priors(
+131:     matches: list[ColdStartMatch],
+132:     priors: dict[int, tuple[float, float]],
+133:     *,
+134:     baseline_goals_for: float,
+135:     baseline_goals_against: float,
+136:     bootstrap_seed: int,
+137:     bootstrap_iterations: int,
+138: ) -> dict[str, object]:
+140:     losses: list[tuple[int, float]] = []
+141:     for match in matches:
+142:         if match.season not in priors:
+143:             continue
+144:         attack, defense = priors[match.season]
+145:         if min(attack, defense, baseline_goals_for, baseline_goals_against) <= 0:
+146:             raise ValueError("goal priors and baseline rates must be positive")
+148:         def nll(goals: int, rate: float) -> float:
+149:             return rate - goals * math.log(rate) + math.lgamma(goals + 1)
+151:         treatment = nll(match.goals_for, baseline_goals_for * attack) + nll(
+152:             match.goals_against, baseline_goals_against * defense
+153:         )
+154:         control = nll(match.goals_for, baseline_goals_for) + nll(match.goals_against, baseline_goals_against)
+155:         losses.append((match.season, treatment - control))
+156:     if len(losses) < 30:
+157:         return {"status": "BLOCKED_DATA", "n": len(losses), "serving_changed": False}
+158:     delta = mean(value for _season, value in losses)
+159:     seasons = sorted({season for season, _value in losses})
+160:     by_season = {season: [value for item_season, value in losses if item_season == season] for season in seasons}
+161:     rng = np.random.default_rng(bootstrap_seed)
+162:     samples = np.empty(bootstrap_iterations)
+163:     for index in range(bootstrap_iterations):
+164:         chosen = rng.choice(seasons, size=len(seasons), replace=True)
+165:         samples[index] = mean(value for season in chosen for value in by_season[int(season)])
+166:     ci = [float(value) for value in np.quantile(samples, [0.025, 0.975])]
+167:     return {
+168:         "status": "GO_CANDIDATE" if ci[1] < 0 else "NO_GO",
+169:         "n": len(losses),
+170:         "goal_log_loss_delta": delta,
+171:         "goal_log_loss_delta_ci95": ci,
+172:         "bootstrap": {"scheme": "season_cluster", "iterations": bootstrap_iterations, "seed": bootstrap_seed},
+173:         "serving_changed": False,
+174:     }
+177: def _probabilities(rating: float, match: ColdStartMatch, *, home_advantage: float, draw_rate: float) -> list[float]:
+178:     advantage = home_advantage if match.home else -home_advantage
+179:     win_share = 1.0 / (1.0 + 10 ** (-((rating + advantage) - match.opponent_rating) / 400.0))
+180:     decisive = 1.0 - draw_rate
+181:     return [decisive * (1.0 - win_share), draw_rate, decisive * win_share]
+184: def evaluate_first_matches(
+185:     entries: list[PromotedEntry],
+186:     matches: list[ColdStartMatch],
+187:     *,
+188:     first_n: int,
+189:     baseline_rating: float,
+190:     home_advantage: float,
+191:     draw_rate: float,
+192:     base_k: float,
+193:     bootstrap_seed: int,
+194:     bootstrap_iterations: int,
+195: ) -> dict[str, object]:
+197:     priors = leave_one_season_out_priors(entries)
+198:     entry_keys = {(entry.season, entry.team_id) for entry in entries}
+199:     selected = sorted(
+200:         [match for match in matches if (match.season, match.team_id) in entry_keys and match.match_number <= first_n],
+201:         key=lambda match: (match.season, match.match_number, match.team_id),
+202:     )
+203:     if len(selected) < 30:
+204:         return {"status": "BLOCKED_DATA", "n": len(selected), "serving_changed": False}
+205:     control_ratings: dict[tuple[int, str], float] = {}
+206:     treatment_ratings: dict[tuple[int, str], float] = {}
+207:     control_probs: list[list[float]] = []
+208:     treatment_probs: list[list[float]] = []
+209:     outcomes: list[int] = []
+210:     evaluated_matches: list[ColdStartMatch] = []
+211:     for match in selected:
+212:         key = (match.season, match.team_id)
+213:         if match.season not in priors:
+214:             continue
+215:         control = control_ratings.setdefault(key, baseline_rating)
+216:         treatment = treatment_ratings.setdefault(key, priors[match.season])
+217:         control_probs.append(_probabilities(control, match, home_advantage=home_advantage, draw_rate=draw_rate))
+218:         treatment_probs.append(_probabilities(treatment, match, home_advantage=home_advantage, draw_rate=draw_rate))
+219:         outcome = 2 if match.goals_for > match.goals_against else 1 if match.goals_for == match.goals_against else 0
+220:         outcomes.append(outcome)
+221:         evaluated_matches.append(match)
+222:         score = 1.0 if outcome == 2 else 0.5 if outcome == 1 else 0.0
+223:         control_expectation = control_probs[-1][2] + 0.5 * control_probs[-1][1]
+224:         treatment_expectation = treatment_probs[-1][2] + 0.5 * treatment_probs[-1][1]
+225:         control_ratings[key] += base_k * (score - control_expectation)
+226:         dynamic_k = base_k * (1.0 + max(0, first_n - match.match_number) / first_n)
+227:         treatment_ratings[key] += dynamic_k * (score - treatment_expectation)
+228:     if len(outcomes) < 30:
+229:         return {"status": "BLOCKED_DATA", "n": len(outcomes), "serving_changed": False}
+230:     per_match = []
+231:     for match, treatment, control, outcome in zip(
+232:         evaluated_matches, treatment_probs, control_probs, outcomes, strict=True
+233:     ):
+234:         per_match.append(
+235:             (
+236:                 match.season,
+237:                 rps([treatment], [outcome]) - rps([control], [outcome]),
+238:                 brier([treatment], [outcome]) - brier([control], [outcome]),
+239:                 log_loss([treatment], [outcome]) - log_loss([control], [outcome]),
+240:             )
+241:         )
+242:     seasons = sorted({row[0] for row in per_match})
+243:     rng = np.random.default_rng(bootstrap_seed)
+244:     samples = np.empty((bootstrap_iterations, 3))
+245:     by_season = {season: [row[1:] for row in per_match if row[0] == season] for season in seasons}
+246:     for index in range(bootstrap_iterations):
+247:         chosen = rng.choice(seasons, size=len(seasons), replace=True)
+248:         sample = [values for season in chosen for values in by_season[int(season)]]
+249:         samples[index] = np.mean(np.asarray(sample, dtype=float), axis=0)
+250:     means = np.mean(np.asarray([row[1:] for row in per_match], dtype=float), axis=0)
+251:     names = ("rps", "brier", "log_loss")
+252:     metrics = {f"{name}_delta": float(means[position]) for position, name in enumerate(names)}
+253:     for position, name in enumerate(names):
+254:         metrics[f"{name}_delta_ci95"] = [float(value) for value in np.quantile(samples[:, position], [0.025, 0.975])]
+255:     finite = all(
+256:         bool(np.isfinite(item))
+257:         for value in metrics.values()
+258:         for item in (value if isinstance(value, list) else [value])
+259:     )
+260:     candidate = (
+261:         finite and metrics["rps_delta_ci95"][1] < 0 and metrics["brier_delta"] <= 0 and metrics["log_loss_delta"] <= 0
+262:     )
+263:     return {
+264:         "status": "GO_CANDIDATE" if candidate else "NO_GO",
+265:         "n": len(outcomes),
+266:         "first_n": first_n,
+267:         "bootstrap": {"scheme": "season_cluster", "iterations": bootstrap_iterations, "seed": bootstrap_seed},
+268:         "metrics": metrics,
+269:         "serving_changed": False,
+270:     }
+### brasileirao_predictor/research/prospective_validation/__init__.py
+3: from brasileirao_predictor.research.prospective_validation.contracts import PaperPick, PaperSettlement
+4: from brasileirao_predictor.research.prospective_validation.metrics import (
+5:     CohortPolicy,
+6:     evaluate_cohort,
+7:     required_sample_size,
+8: )
+10: __all__ = ["CohortPolicy", "PaperPick", "PaperSettlement", "evaluate_cohort", "required_sample_size"]
+### brasileirao_predictor/research/prospective_validation/contracts.py
+3: from __future__ import annotations
+5: import hashlib
+6: import json
+7: from datetime import UTC, datetime
+8: from typing import Literal
+10: from pydantic import BaseModel, ConfigDict, Field, model_validator
+13: def _aware_utc(value: datetime, name: str) -> datetime:
+14:     if value.tzinfo is None or value.utcoffset() is None:
+15:         raise ValueError(f"{name} must be timezone-aware")
+16:     return value.astimezone(UTC)
+19: class PaperPick(BaseModel):
+20:     model_config = ConfigDict(extra="forbid", frozen=True)
+22:     pick_id: str = Field(min_length=1)
+23:     cohort_id: str = Field(min_length=1)
+24:     event_id: str = Field(min_length=1)
+25:     market: str = Field(min_length=1)
+26:     selection: str = Field(min_length=1)
+27:     model_probability: float = Field(gt=0, lt=1)
+28:     predicted_at: datetime
+29:     kickoff_at: datetime
+30:     odds_captured_at: datetime
+31:     captured_odds: float = Field(gt=1)
+32:     bookmaker: str = Field(min_length=1)
+33:     stake_units: Literal[1.0] = 1.0
+34:     scientific_state: Literal["PAPER_TRADING"] = "PAPER_TRADING"
+36:     @model_validator(mode="after")
+37:     def validate_clocks(self) -> PaperPick:
+38:         for name in ("predicted_at", "kickoff_at", "odds_captured_at"):
+39:             object.__setattr__(self, name, _aware_utc(getattr(self, name), name))
+40:         if self.predicted_at >= self.kickoff_at or self.odds_captured_at > self.predicted_at:
+41:             raise ValueError("pick and captured odds must be known before kickoff and prediction freeze")
+42:         return self
+44:     @property
+45:     def record_hash(self) -> str:
+46:         payload = self.model_dump(mode="json")
+47:         return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+50: class PaperSettlement(BaseModel):
+51:     model_config = ConfigDict(extra="forbid", frozen=True)
+53:     pick_id: str = Field(min_length=1)
+54:     settled_at: datetime
+55:     closing_odds: float = Field(gt=1)
+56:     closing_captured_at: datetime
+57:     won: bool
+58:     result_source: str = Field(min_length=1)
+60:     @model_validator(mode="after")
+61:     def validate_clocks(self) -> PaperSettlement:
+62:         for name in ("settled_at", "closing_captured_at"):
+63:             object.__setattr__(self, name, _aware_utc(getattr(self, name), name))
+64:         return self
+66:     def assert_matches(self, pick: PaperPick) -> None:
+67:         if self.pick_id != pick.pick_id:
+68:             raise ValueError("settlement pick_id mismatch")
+69:         if self.closing_captured_at >= pick.kickoff_at:
+70:             raise ValueError("closing odds must be captured strictly before kickoff")
+71:         if self.settled_at < pick.kickoff_at:
+72:             raise ValueError("settlement cannot precede kickoff")
+### brasileirao_predictor/research/prospective_validation/ledger.py
+3: from __future__ import annotations
+5: import json
+6: from pathlib import Path
+7: from typing import Any
+9: from brasileirao_predictor.research.prospective_validation.contracts import PaperPick, PaperSettlement
+12: def _rows(path: Path) -> list[dict[str, Any]]:
+13:     if not path.exists():
+14:         return []
+15:     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+18: def _append(path: Path, row: dict[str, Any]) -> None:
+19:     path.parent.mkdir(parents=True, exist_ok=True)
+20:     with path.open("a", encoding="utf-8") as handle:
+21:         handle.write(json.dumps(row, ensure_ascii=False, allow_nan=False, sort_keys=True) + "\n")
+24: def append_pick(path: Path, pick: PaperPick) -> None:
+25:     if any(row.get("pick_id") == pick.pick_id for row in _rows(path)):
+26:         raise ValueError("duplicate pick_id")
+27:     _append(path, {"kind": "pick", **pick.model_dump(mode="json"), "record_hash": pick.record_hash})
+30: def append_settlement(path: Path, settlement: PaperSettlement, pick: PaperPick) -> None:
+31:     settlement.assert_matches(pick)
+32:     if any(row.get("kind") == "settlement" and row.get("pick_id") == pick.pick_id for row in _rows(path)):
+33:         raise ValueError("duplicate settlement")
+34:     _append(path, {"kind": "settlement", **settlement.model_dump(mode="json")})
+### brasileirao_predictor/research/prospective_validation/metrics.py
+3: from __future__ import annotations
+5: import math
+6: import random
+7: import statistics as st
+8: from dataclasses import dataclass
+9: from statistics import NormalDist
+10: from typing import Literal
+12: from predictor_core.contracts import registry as registry_module
+13: from predictor_core.measurement.stats import probabilistic_sharpe_ratio
+15: from brasileirao_predictor.research.prospective_validation.contracts import PaperPick, PaperSettlement
+17: CapitalGate = Literal["CAPITAL_GATE: LOCKED", "CAPITAL_GATE: ELIGIBLE_FOR_REVIEW"]
+20: @dataclass(frozen=True)
+21: class CohortPolicy:
+22:     min_matured: int
+23:     declared_trials: int
+24:     historical_trial_sharpes: tuple[float | None, ...] = ()
+25:     dsr_gate: float = 0.95
+26:     bootstrap_iterations: int = 2000
+27:     bootstrap_seed: int = 20260824
+29:     def __post_init__(self) -> None:
+30:         if self.min_matured < 1 or self.declared_trials < 1 or not 0 < self.dsr_gate <= 1:
+31:             raise ValueError("invalid cohort policy")
+32:         if self.bootstrap_iterations < 100:
+33:             raise ValueError("bootstrap_iterations must be >= 100")
+36: def required_sample_size(
+37:     mean_odds: float, *, target_roi: float = 0.05, power: float = 0.80, alpha: float = 0.05
+38: ) -> int:
+40:     if mean_odds <= 1 + target_roi or target_roi <= 0 or not 0 < power < 1 or not 0 < alpha < 1:
+41:         raise ValueError("invalid power-analysis parameters")
+42:     win_probability = (1 + target_roi) / mean_odds
+43:     win_return, loss_return = mean_odds - 1, -1.0
+44:     variance = win_probability * (win_return - target_roi) ** 2
+45:     variance += (1 - win_probability) * (loss_return - target_roi) ** 2
+46:     z = NormalDist().inv_cdf(1 - alpha / 2) + NormalDist().inv_cdf(power)
+47:     return math.ceil(z * z * variance / (target_roi * target_roi))
+50: def _bootstrap_mean(values: list[float], iterations: int, seed: int) -> list[float] | None:
+51:     if len(values) < 2:
+52:         return None
+53:     rng = random.Random(seed)
+54:     estimates = sorted(st.mean(rng.choices(values, k=len(values))) for _ in range(iterations))
+55:     return [estimates[int(0.025 * iterations)], estimates[min(iterations - 1, int(0.975 * iterations))]]
+58: def _calibration(rows: list[tuple[PaperPick, PaperSettlement]]) -> dict[str, float | int | None]:
+59:     if not rows:
+60:         return {"n": 0, "brier": None, "mean_predicted": None, "actual_rate": None}
+61:     probabilities = [pick.model_probability for pick, _ in rows]
+62:     outcomes = [float(settlement.won) for _, settlement in rows]
+63:     return {
+64:         "n": len(rows),
+65:         "brier": st.mean((probability - outcome) ** 2 for probability, outcome in zip(probabilities, outcomes)),
+66:         "mean_predicted": st.mean(probabilities),
+67:         "actual_rate": st.mean(outcomes),
+68:     }
+71: def evaluate_cohort(
+72:     picks: list[PaperPick], settlements: list[PaperSettlement], policy: CohortPolicy
+73: ) -> dict[str, object]:
+74:     if len({pick.pick_id for pick in picks}) != len(picks):
+75:         raise ValueError("duplicate pick_id in cohort")
+76:     by_pick = {settlement.pick_id: settlement for settlement in settlements}
+77:     matured = []
+78:     for pick in picks:
+79:         settlement = by_pick.get(pick.pick_id)
+80:         if settlement is not None:
+81:             settlement.assert_matches(pick)
+82:             matured.append((pick, settlement))
+83:     pnl = [pick.captured_odds - 1 if settlement.won else -1.0 for pick, settlement in matured]
+84:     clv = [math.log(pick.captured_odds / settlement.closing_odds) for pick, settlement in matured]
+85:     roi = st.mean(pnl) if pnl else None
+86:     psr = probabilistic_sharpe_ratio(pnl, 0.0) if len(pnl) >= 2 else None
+87:     denominator = list(policy.historical_trial_sharpes) + [None] * policy.declared_trials
+93:     dsr_result = None
+94:     deflation_error = None
+95:     if len(pnl) >= 2:
+96:         try:
+97:             dsr_result = registry_module.deflated_sharpe_ratio(pnl, denominator, strict=True)
+98:         except registry_module.DeflationNotEstimableError as exc:
+99:             deflation_error = str(exc)
+100:     dsr = float(dsr_result["dsr"]) if dsr_result and math.isfinite(float(dsr_result["dsr"])) else None
+101:     eligible = len(matured) >= policy.min_matured and dsr is not None and dsr >= policy.dsr_gate
+102:     gate: CapitalGate = "CAPITAL_GATE: ELIGIBLE_FOR_REVIEW" if eligible else "CAPITAL_GATE: LOCKED"
+103:     mean_odds = st.mean(pick.captured_odds for pick, _ in matured) if matured else None
+104:     return {
+105:         "schema_version": "prospective-validation/1",
+106:         "scientific_state": "PAPER_TRADING_ONLY",
+107:         "counts": {"emitted": len(picks), "matured": len(matured)},
+108:         "coverage": len(matured) / len(picks) if picks else 0.0,
+109:         "flat_stake_units": 1.0,
+110:         "mean_log_clv": st.mean(clv) if clv else None,
+111:         "roi": roi,
+112:         "roi_bootstrap_ci95": _bootstrap_mean(pnl, policy.bootstrap_iterations, policy.bootstrap_seed),
+113:         "calibration": _calibration(matured),
+114:         "psr": float(psr) if psr is not None and math.isfinite(float(psr)) else None,
+115:         "dsr": dsr,
+116:         "dsr_gate": policy.dsr_gate,
+117:         "dsr_deflation_applied": bool(dsr_result["deflation_applied"]) if dsr_result else False,
+118:         "dsr_sr0_estimable": bool(dsr_result["sr0_estimable"]) if dsr_result else False,
+119:         "dsr_sharpe_coverage": float(dsr_result["sharpe_coverage"]) if dsr_result else None,
+120:         "dsr_not_estimable_reason": deflation_error,
+121:         "mean_odds": mean_odds,
+122:         "power_required_n": required_sample_size(mean_odds) if mean_odds and mean_odds > 1.05 else None,
+123:         "capital_gate": gate,
+124:         "capital_decision_authority": "HUMAN_REVIEW_OUTSIDE_CODE",
+125:     }

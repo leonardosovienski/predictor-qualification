@@ -1,0 +1,15 @@
+sequenceDiagram
+ participant CLI
+ participant Gates as GATES e FINDINGS
+ participant Attest as attest.py
+ participant Evidencias
+ participant JSON
+ CLI->>Attest: partial ou final
+ Attest->>Gates: ler estados e findings
+ Attest->>Evidencias: verificar existencia e calcular hashes
+ Attest->>Attest: schema e check parcial
+ alt arquivo novo e check OK
+ Attest->>JSON: gravar atestado
+ else conflito ou problema
+ Attest-->>CLI: erro e recusa escrita
+ end

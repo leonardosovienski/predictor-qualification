@@ -1,0 +1,23 @@
+sequenceDiagram
+ participant U as CLI ou API
+ participant W as WorkspaceStore
+ participant C as Cain.run
+ participant I as IdentityService
+ participant A as Agent escolhido
+ participant P as LLM opcional
+ participant D as DecisionLog
+ U->>W: validar projeto e sessao; claim_run na API
+ U->>C: payload e ids
+ C->>I: observe e context_for
+ I-->>C: identidade e contexto autorizado
+ C->>A: Message por rota
+ opt Geracao necessaria
+ A->>P: prompt e contexto
+ P-->>A: response ou erro
+ end
+ A-->>C: texto
+ C->>D: mediated com response_hash
+ C->>I: persistir interacao
+ C->>D: completed e outcome na API
+ D-->>W: run_receipt ready
+ W-->>U: resposta; restore_turn sem nova geracao

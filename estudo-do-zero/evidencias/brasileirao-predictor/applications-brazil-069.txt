@@ -1,0 +1,483 @@
+### tests/test_report_h9_execution_quality.py
+5: import json
+6: from pathlib import Path
+8: from brasileirao_scripts.report_h9_execution_quality import report
+11: def _write(path: Path, rows: list[dict]) -> None:
+12:     path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+15: def test_empty_ledger_reports_none_rates(tmp_path):
+16:     out = report(tmp_path / "nao_existe.jsonl")
+17:     assert out["total_raw_evaluations"] == 0
+18:     assert out["total_games"] == 0
+19:     assert out["emission_rate"] is None
+20:     assert out["slippage_vs_best_price"]["n"] == 0
+23: def test_rates_reflect_one_game_each(tmp_path):
+24:     path = tmp_path / "attempts.jsonl"
+25:     _write(
+26:         path,
+27:         [
+28:             {"event_id": "e1", "status": "EMITTED", "slippage_vs_best": 0.0},
+29:             {"event_id": "e2", "status": "EMITTED", "slippage_vs_best": -0.1},
+30:             {"event_id": "e3", "status": "BLOCKED_NO_STABLE_BOOKMAKER"},
+31:             {"event_id": "e4", "status": "NO_EXECUTABLE_QUOTE"},
+32:         ],
+33:     )
+34:     out = report(path)
+35:     assert out["total_raw_evaluations"] == 4
+36:     assert out["total_games"] == 4
+37:     assert out["emission_rate"] == 0.5
+38:     assert out["blocked_no_stable_bookmaker_rate"] == 0.25
+39:     assert out["no_executable_quote_rate"] == 0.25
+40:     assert out["slippage_vs_best_price"]["n"] == 2
+41:     assert out["slippage_vs_best_price"]["mean"] == -0.05
+42:     assert out["slippage_vs_best_price"]["matched_or_beat_best_rate"] == 0.5
+45: def test_non_emitted_rows_never_pollute_slippage_stats(tmp_path):
+46:     path = tmp_path / "attempts.jsonl"
+47:     _write(
+48:         path,
+49:         [
+50:             {"event_id": "e1", "status": "BLOCKED_NO_STABLE_BOOKMAKER"},
+51:             {"event_id": "e2", "status": "NO_EXECUTABLE_QUOTE"},
+52:         ],
+53:     )
+54:     out = report(path)
+55:     assert out["slippage_vs_best_price"] == {"n": 0, "mean": None, "median": None, "matched_or_beat_best_rate": None}
+58: def test_repeated_ticks_of_the_same_game_count_once_as_emitted(tmp_path):
+64:     path = tmp_path / "attempts.jsonl"
+65:     _write(
+66:         path,
+67:         [
+68:             {"event_id": "e1", "status": "NO_EXECUTABLE_QUOTE"},
+69:             {"event_id": "e1", "status": "NO_EXECUTABLE_QUOTE"},
+70:             {"event_id": "e1", "status": "EMITTED", "slippage_vs_best": 0.02},
+71:             {"event_id": "e1", "status": "ALREADY_EMITTED"},
+72:             {"event_id": "e1", "status": "ALREADY_EMITTED"},
+73:         ],
+74:     )
+75:     out = report(path)
+76:     assert out["total_raw_evaluations"] == 5
+77:     assert out["total_games"] == 1
+78:     assert out["status_counts"] == {"EMITTED": 1}
+79:     assert out["emission_rate"] == 1.0
+80:     assert out["slippage_vs_best_price"]["n"] == 1
+83: def test_game_that_never_gets_a_quote_counts_its_last_seen_status(tmp_path):
+84:     path = tmp_path / "attempts.jsonl"
+85:     _write(
+86:         path,
+87:         [
+88:             {"event_id": "e1", "status": "BLOCKED_NO_STABLE_BOOKMAKER"},
+89:             {"event_id": "e1", "status": "NO_EXECUTABLE_QUOTE"},
+90:         ],
+91:     )
+92:     out = report(path)
+93:     assert out["total_raw_evaluations"] == 2
+94:     assert out["total_games"] == 1
+95:     assert out["status_counts"] == {"NO_EXECUTABLE_QUOTE": 1}
+98: def test_rows_without_event_id_are_ignored(tmp_path):
+99:     path = tmp_path / "attempts.jsonl"
+100:     _write(path, [{"status": "EMITTED", "slippage_vs_best": 0.0}])
+101:     out = report(path)
+102:     assert out["total_games"] == 0
+### tests/test_report_shadow_mode.py
+1: from __future__ import annotations
+3: import importlib.util
+4: import json
+5: from pathlib import Path
+7: ROOT = Path(__file__).resolve().parents[1]
+10: def load_reporter():
+11:     spec = importlib.util.spec_from_file_location(
+12:         "shadow_report_test", ROOT / "brasileirao_scripts" / "report_shadow_mode.py"
+13:     )
+14:     assert spec and spec.loader
+15:     module = importlib.util.module_from_spec(spec)
+16:     spec.loader.exec_module(module)
+17:     return module
+20: def write_jsonl(path: Path, rows: list[dict]) -> None:
+21:     path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+24: def pick(event_id: int = 1, selection: str = "under", captured_at: str = "2026-07-10T10:00:00+00:00") -> dict:
+25:     return {
+26:         "event_id": event_id,
+27:         "selection": selection,
+28:         "captured_at": captured_at,
+29:         "date": "2026-07-12",
+30:         "market": "ou2.5",
+31:         "odd": 2.0,
+32:         "edge": 0.05,
+33:         "model_prob": 0.55,
+34:     }
+37: def result(event_id: int = 1, selection: str = "under", won: int = 1) -> dict:
+38:     return {
+39:         "event_id": event_id,
+40:         "selection": selection,
+41:         "settled_at": "2026-07-12T23:00:00+00:00",
+42:         "won": won,
+43:         "pnl": 1.0 if won else -1.0,
+44:         "clv": 0.04,
+45:     }
+48: def test_empty_ledger_is_insufficient(tmp_path: Path) -> None:
+49:     reporter = load_reporter()
+50:     report = reporter.build_report(tmp_path / "picks.jsonl", tmp_path / "results.jsonl")
+51:     assert report["classification"] == "DADOS INSUFICIENTES"
+52:     assert report["counts"] == {
+53:         "pick_records": 0,
+54:         "unique_picks": 0,
+55:         "matured": 0,
+56:         "open": 0,
+57:         "result_records": 0,
+58:     }
+61: def test_open_pick_is_reported_without_metrics(tmp_path: Path) -> None:
+62:     reporter = load_reporter()
+63:     picks, results = tmp_path / "picks.jsonl", tmp_path / "results.jsonl"
+64:     write_jsonl(picks, [pick()])
+65:     report = reporter.build_report(picks, results)
+66:     assert report["counts"]["open"] == 1 and report["metrics"]["roi_gross"] is None
+69: def test_matured_pick_computes_clv_roi_rps_and_calibration(tmp_path: Path) -> None:
+70:     reporter = load_reporter()
+71:     picks, results = tmp_path / "picks.jsonl", tmp_path / "results.jsonl"
+72:     write_jsonl(picks, [pick()])
+73:     write_jsonl(results, [result()])
+74:     report = reporter.build_report(picks, results)
+75:     assert report["counts"]["matured"] == 1
+76:     assert report["metrics"]["roi_gross"] == 1.0 and report["metrics"]["clv_mean"] == 0.04
+77:     assert report["metrics"]["rps_binary"] == report["metrics"]["brier"]
+78:     assert report["calibration"][0]["count"] == 1
+81: def test_duplicates_and_invalid_temporal_order_are_excluded(tmp_path: Path) -> None:
+82:     reporter = load_reporter()
+83:     picks, results = tmp_path / "picks.jsonl", tmp_path / "results.jsonl"
+84:     write_jsonl(picks, [pick(), pick(), pick(2, captured_at="2026-07-13T10:00:00+00:00")])
+85:     write_jsonl(results, [result(), result()])
+86:     report = reporter.build_report(picks, results)
+87:     assert report["exclusions"]["duplicate_pick"] == 1
+88:     assert report["exclusions"]["duplicate_result"] == 1
+89:     assert report["exclusions"]["capture_after_event_date"] == 1
+90:     assert report["counts"]["matured"] == 1
+93: def test_missing_closing_and_turn_are_explicitly_unavailable(tmp_path: Path) -> None:
+94:     reporter = load_reporter()
+95:     picks, results = tmp_path / "picks.jsonl", tmp_path / "results.jsonl"
+96:     write_jsonl(picks, [pick()])
+97:     write_jsonl(results, [result()])
+98:     report = reporter.build_report(picks, results)
+99:     assert report["capturability"]["close_odds_available"] == 0
+100:     assert report["segments"]["capture_turn"].startswith("NÃO DISPONÍVEL")
+101:     assert report["schema_version"] == "shadow-report/v2"
+102:     assert any("legados" in item for item in report["limitations"])
+105: def test_enriched_ledger_proves_temporality_odds_turn_and_costs(tmp_path: Path) -> None:
+106:     reporter = load_reporter()
+107:     picks, results = tmp_path / "picks.jsonl", tmp_path / "results.jsonl"
+108:     enriched_pick = {
+109:         **pick(),
+110:         "predicted_at": "2026-07-10T10:00:00+00:00",
+111:         "kickoff_at": "2026-07-12T20:00:00+00:00",
+112:         "capture_turn": "morning",
+113:         "odds_open": 1.9,
+114:         "odds_captured": 2.0,
+115:         "odds_source": "sofascore",
+116:     }
+117:     enriched_result = {
+118:         **result(),
+119:         "odds_close": 2.1,
+120:         "costs": {"status": "not_applicable_shadow_no_execution", "amount_units": 0.0},
+121:     }
+122:     write_jsonl(picks, [enriched_pick])
+123:     write_jsonl(results, [enriched_result])
+124:     report = reporter.build_report(picks, results)
+125:     assert report["temporal_validation"] == {"valid_pre_event_timestamp": 1}
+126:     assert report["capturability"]["exact_pre_event_timestamps"] == 1
+127:     assert report["capturability"]["open_odds_available"] == 1
+128:     assert report["capturability"]["close_odds_available"] == 1
+129:     assert report["segments"]["capture_turn"]["morning"]["matured"] == 1
+130:     assert report["metrics"]["roi_costs"] == report["metrics"]["roi_gross"]
+131:     assert report["limitations"] == []
+134: def test_json_is_deterministic_and_report_is_read_only(tmp_path: Path, monkeypatch, capsys) -> None:
+135:     reporter = load_reporter()
+136:     data = tmp_path / "data"
+137:     data.mkdir()
+138:     picks, results = data / "sombra_picks.jsonl", data / "sombra_results.jsonl"
+139:     write_jsonl(picks, [pick()])
+140:     write_jsonl(results, [result()])
+141:     before = picks.read_bytes(), results.read_bytes()
+142:     monkeypatch.setattr(reporter, "ROOT", tmp_path)
+143:     assert reporter.main(["--json"]) == 0
+144:     first = capsys.readouterr().out
+145:     assert reporter.main(["--json"]) == 0
+146:     second = capsys.readouterr().out
+147:     assert first == second and before == (picks.read_bytes(), results.read_bytes())
+### tests/test_research_01a_refit_cadence.py
+8: from __future__ import annotations
+10: import json
+11: import pathlib
+12: import sys
+13: import tempfile
+14: from datetime import UTC, datetime, timedelta
+16: import pytest
+18: from brasileirao_predictor import db
+19: from brasileirao_scripts import benchmark_predictor as bp
+20: from brasileirao_scripts import research_01a_refit_cadence as r01a
+21: from brasileirao_scripts.benchmark_predictor import _kickoff, _load_observations
+23: TIMES = ["flamengo", "palmeiras", "gremio", "santos"]
+26: def _tmp_db_com_liga_sintetica(monkeypatch, rodadas: int = 60) -> pathlib.Path:
+30:     path = pathlib.Path(tempfile.mkdtemp()) / "m.db"
+31:     conn = db.connect(str(path))  # DDL REAL — schema escrito à mão no teste diverge
+32:     eid = 0
+33:     for rodada in range(rodadas):
+34:         dia = datetime(2021, 4, 3, tzinfo=UTC) + timedelta(days=7 * rodada)
+35:         pares = [(TIMES[0], TIMES[1]), (TIMES[2], TIMES[3])]
+36:         if rodada % 2:
+37:             pares = [(a, h) for h, a in pares]
+38:         for j, (casa, fora) in enumerate(pares):
+39:             d = dia.strftime("%Y-%m-%d")
+40:             kickoff = (dia + timedelta(hours=16 + 2 * j)).isoformat(timespec="seconds")
+41:             conn.execute(
+42:                 "INSERT INTO matches (date, home_team, away_team, home_score, away_score, tournament, neutral)"
+43:                 " VALUES (?,?,?,?,?,?,0)",
+44:                 (d, casa, fora, (rodada + j) % 3, rodada % 3, "Brasileirão Série A"),
+45:             )
+46:             conn.execute(
+47:                 "INSERT INTO sofascore_matches (event_id, date, kickoff_at, home_team, away_team,"
+48:                 " home_score, away_score, home_xg, away_xg) VALUES (?,?,?,?,?,?,?,?,?)",
+49:                 (eid, d, kickoff, casa, fora, (rodada + j) % 3, rodada % 3, 1.4, 0.9),
+50:             )
+51:             eid += 1
+52:     conn.commit()
+53:     conn.close()
+54:     monkeypatch.setattr(bp, "DB", path)
+55:     return path
+61: def test_kickoff_usa_o_horario_real_quando_existe() -> None:
+62:     got = _kickoff("2026-08-20", "2026-08-20T22:30:00+00:00")
+63:     assert got == datetime(2026, 8, 20, 22, 30, tzinfo=UTC)
+66: def test_kickoff_cai_para_meia_noite_utc_sem_horario() -> None:
+69:     assert _kickoff("2026-08-20", None) == datetime(2026, 8, 20, 0, 0, tzinfo=UTC)
+72: def test_kickoff_normaliza_sufixo_z() -> None:
+73:     assert _kickoff("2026-08-20", "2026-08-20T22:30:00Z") == datetime(2026, 8, 20, 22, 30, tzinfo=UTC)
+79: def _seed_db(path, *, com_kickoff: bool) -> None:
+80:     conn = db.connect(str(path))  # DDL REAL, não uma cópia que envelhece
+83:     jogos = [
+84:         ("2021-04-03", "flamengo", "palmeiras", "2021-04-03T21:00:00+00:00"),
+85:         ("2021-04-03", "gremio", "santos", "2021-04-03T18:00:00+00:00"),
+86:         ("2021-04-03", "bahia", "vasco", "2021-04-03T16:00:00+00:00"),
+87:     ]
+88:     for i, (d, h, a, k) in enumerate(jogos):
+89:         conn.execute(
+90:             "INSERT INTO matches (date, home_team, away_team, home_score, away_score, tournament, neutral)"
+91:             " VALUES (?,?,?,?,?,?,0)",
+92:             (d, h, a, 1, 0, "Brasileirão Série A"),
+93:         )
+94:         if com_kickoff:
+95:             conn.execute(
+96:                 "INSERT INTO sofascore_matches (event_id, date, kickoff_at, home_team, away_team) VALUES (?,?,?,?,?)",
+97:                 (i, d, k, h, a),
+98:             )
+99:     conn.commit()
+100:     conn.close()
+103: def test_observacoes_saem_ordenadas_pelo_relogio(tmp_path, monkeypatch) -> None:
+104:     db = tmp_path / "m.db"
+105:     _seed_db(db, com_kickoff=True)
+106:     monkeypatch.setattr("brasileirao_scripts.benchmark_predictor.DB", db)
+107:     obs = _load_observations("")
+108:     assert [o["kickoff"].hour for o in obs] == [16, 18, 21]
+109:     assert all(o["has_real_kickoff"] for o in obs)
+112: def test_sem_kickoff_marca_o_fallback(tmp_path, monkeypatch) -> None:
+115:     db = tmp_path / "m.db"
+116:     _seed_db(db, com_kickoff=False)
+117:     monkeypatch.setattr("brasileirao_scripts.benchmark_predictor.DB", db)
+118:     obs = _load_observations("")
+119:     assert not any(o["has_real_kickoff"] for o in obs)
+120:     assert {o["kickoff"] for o in obs} == {datetime(2021, 4, 3, tzinfo=UTC)}
+126: def test_ganho_pareado_tem_sinal_de_melhora_do_tratamento() -> None:
+129:     control = [0.30] * 200
+130:     treatment = [0.20] * 200
+131:     out = r01a._paired_gain(control, treatment)
+132:     assert out["mean_gain"] == pytest.approx(0.10)
+133:     assert out["ci95"][0] > 0
+136: def test_paired_losses_consome_as_linhas_reais_do_painel(monkeypatch) -> None:
+145:     db = _tmp_db_com_liga_sintetica(monkeypatch)
+146:     assert db  # o monkeypatch já apontou benchmark_predictor.DB pra base sintética
+147:     observations = _load_observations("")
+148:     monkeypatch.setattr(bp, "MIN_HISTORY", 20)
+149:     rows, _ev = bp._run_walkforward(observations, half_life=120.0, retrain_every=10)
+150:     assert rows, "walk-forward não produziu linhas — teste não exercita nada"
+152:     losses = r01a._paired_losses(rows)
+153:     assert set(losses) == {"rps", "brier_1x2", "log_loss", "brier_ou25"}
+154:     assert all(len(v) == len(rows) for v in losses.values())
+157: def test_contrato_de_linha_declara_tudo_que_o_script_consome(monkeypatch) -> None:
+160:     _tmp_db_com_liga_sintetica(monkeypatch)
+161:     observations = _load_observations("")
+162:     monkeypatch.setattr(bp, "MIN_HISTORY", 20)
+163:     rows, _ev = bp._run_walkforward(observations, half_life=120.0, retrain_every=10)
+164:     assert r01a.REQUIRED_ROW_KEYS <= set(rows[0])
+165:     r01a._check_row_contract(rows)  # não levanta
+168: def test_contrato_de_linha_falha_alto_quando_campo_some() -> None:
+169:     incompleta = [{"p_win": 0.5, "p_draw": 0.3, "p_loss": 0.2}]
+170:     with pytest.raises(KeyError, match="actual_over"):
+171:         r01a._check_row_contract(incompleta)
+174: def test_veredito_refuta_quando_ic95_cruza_zero() -> None:
+175:     primary = {"ci95": [-0.001, 0.002]}
+176:     status, detail = r01a._verdict(primary, {})
+177:     assert status == "refutada"
+178:     assert "cruza zero" in detail
+181: def test_veredito_refuta_quando_guardrail_piora_materialmente() -> None:
+184:     primary = {"ci95": [0.001, 0.004]}
+185:     guardrails = {"log_loss": {"ci95": [-0.02, -0.005]}}
+186:     status, detail = r01a._verdict(primary, guardrails)
+187:     assert status == "refutada"
+188:     assert "guardrail" in detail
+191: def test_veredito_comprova_com_primaria_positiva_e_guardrails_intactos() -> None:
+192:     primary = {"ci95": [0.001, 0.004]}
+193:     guardrails = {"log_loss": {"ci95": [-0.001, 0.003]}}
+194:     status, _ = r01a._verdict(primary, guardrails)
+195:     assert status == "comprovada"
+198: def test_guardrail_apenas_ruidoso_nao_veta() -> None:
+201:     primary = {"ci95": [0.001, 0.004]}
+202:     guardrails = {"brier_1x2": {"ci95": [-0.004, 0.006]}}
+203:     status, _ = r01a._verdict(primary, guardrails)
+204:     assert status == "comprovada"
+210: @pytest.mark.parametrize("period", ["2021-01-01,2025-06-30", "2021-01-01,2026-12-31", "2021-01-01,"])
+211: def test_recusa_periodo_que_alcanca_o_holdout_selado(period, monkeypatch) -> None:
+214:     import sys
+216:     monkeypatch.setattr(sys, "argv", ["research_01a", "--period", period])
+217:     assert r01a.main() == 1
+220: def test_periodo_dentro_do_desenvolvimento_passa_da_trava(monkeypatch) -> None:
+222:     import sys
+224:     monkeypatch.setattr(sys, "argv", ["research_01a", "--period", "2021-01-01,2024-12-31", "--pre-register-only"])
+225:     chamou: dict = {}
+226:     monkeypatch.setattr(r01a, "load_config", lambda: {})
+227:     monkeypatch.setattr(r01a, "attest_rps_power", lambda: {"pipeline_fingerprint": "deadbeef"})
+229:     class _FakeRegistry:
+230:         def __init__(self, *a, **kw) -> None: ...
+232:         def register(self, name, **kw):
+233:             chamou["name"] = name
+234:             chamou["status"] = kw.get("status")
+235:             return []
+237:     monkeypatch.setattr(r01a, "TrialRegistry", _FakeRegistry)
+238:     assert r01a.main() == 0
+239:     assert chamou["name"] == r01a.TRIAL_NAME
+240:     assert chamou["status"] == "pre-registrada"
+246: def test_params_carregam_a_variavel_manipulada() -> None:
+250:     params = r01a._trial_params("2021-01-01", "2024-12-31")
+251:     assert params["variable"] == "retrain_every"
+252:     assert params["control"] == r01a.CONTROL_RETRAIN
+253:     assert params["treatment"] == r01a.TREATMENT_RETRAIN
+254:     assert params["control"] != params["treatment"]
+260: def test_experimento_completo_roda_e_grava_relatorio(tmp_path, monkeypatch) -> None:
+268:     _tmp_db_com_liga_sintetica(monkeypatch)
+269:     monkeypatch.setattr(bp, "MIN_HISTORY", 20)
+270:     monkeypatch.setattr(r01a, "MIN_HISTORY", 20)
+271:     monkeypatch.setattr(r01a, "CONTROL_RETRAIN", 20)
+272:     monkeypatch.setattr(r01a, "TREATMENT_RETRAIN", 5)
+273:     monkeypatch.setattr(r01a, "N_BOOT", 50)  # o IC não interessa aqui, só o caminho
+274:     monkeypatch.setattr(r01a, "load_config", lambda: {})
+275:     monkeypatch.setattr(r01a, "attest_rps_power", lambda: {"pipeline_fingerprint": "deadbeef"})
+276:     monkeypatch.setattr(r01a, "_half_life_for", lambda _tag: 120.0)
+278:     registradas: list[dict] = []
+280:     class _FakeRegistry:
+281:         def __init__(self, *a, **kw) -> None: ...
+283:         def register(self, name, **kw):
+284:             registradas.append({"name": name, "status": kw.get("status")})
+285:             return []
+287:     monkeypatch.setattr(r01a, "TrialRegistry", _FakeRegistry)
+289:     saida = tmp_path / "r01a.json"
+290:     monkeypatch.setattr(sys, "argv", ["research_01a", "--period", "2021-01-01,2024-12-31", "--output", str(saida)])
+291:     assert r01a.main() == 0
+293:     relatorio = json.loads(saida.read_text(encoding="utf-8"))
+294:     assert relatorio["primary"]["metric"] == "rps"
+295:     assert relatorio["primary"]["n"] > 0
+296:     assert set(relatorio["guardrails"]) == set(r01a.GUARDRAIL_METRICS)
+297:     assert relatorio["verdict"]["status"] in {"comprovada", "refutada", "inconclusiva"}
+298:     assert relatorio["diagnostic"]["blocked_observations_treatment"] >= 0
+301:     assert [r["status"] for r in registradas][0] == "pre-registrada"
+302:     assert len(registradas) == 2
+303:     assert {r["name"] for r in registradas} == {r01a.TRIAL_NAME}
+### tests/test_research_xg_ensemble.py
+8: from __future__ import annotations
+10: import pathlib
+11: import sys
+12: import tempfile
+13: from datetime import UTC, datetime, timedelta
+15: import pytest
+17: from brasileirao_predictor import db
+18: from brasileirao_scripts import benchmark_predictor as bp
+19: from brasileirao_scripts import research_xg_ensemble as rxg
+21: TIMES = ["flamengo", "palmeiras", "gremio", "santos", "corinthians", "bahia"]
+24: def _tmp_db(monkeypatch, rodadas: int = 90) -> None:
+26:     path = pathlib.Path(tempfile.mkdtemp()) / "m.db"
+27:     conn = db.connect(str(path))
+28:     eid = 0
+29:     for rodada in range(rodadas):
+30:         dia = datetime(2021, 4, 3, tzinfo=UTC) + timedelta(days=7 * rodada)
+31:         pares = [(TIMES[0], TIMES[1]), (TIMES[2], TIMES[3]), (TIMES[4], TIMES[5])]
+32:         if rodada % 2:
+33:             pares = [(a, h) for h, a in pares]
+34:         for j, (casa, fora) in enumerate(pares):
+35:             d = dia.strftime("%Y-%m-%d")
+36:             kickoff = (dia + timedelta(hours=16 + 2 * (j // 2))).isoformat(timespec="seconds")
+37:             gc, gf = (rodada + j) % 4, (rodada + 2 * j) % 3
+38:             conn.execute(
+39:                 "INSERT INTO matches (date, home_team, away_team, home_score, away_score, tournament, neutral)"
+40:                 " VALUES (?,?,?,?,?,?,0)",
+41:                 (d, casa, fora, gc, gf, "Brasileirão Série A"),
+42:             )
+43:             conn.execute(
+44:                 "INSERT INTO sofascore_matches (event_id, date, kickoff_at, home_team, away_team,"
+45:                 " home_score, away_score, home_xg, away_xg) VALUES (?,?,?,?,?,?,?,?,?)",
+46:                 (eid, d, kickoff, casa, fora, gc, gf, gc + 0.3, gf + 0.2),
+47:             )
+48:             eid += 1
+49:     conn.commit()
+50:     conn.close()
+51:     monkeypatch.setattr(bp, "DB", path)
+57: def test_cfg_com_ensemble_forca_a_flag() -> None:
+58:     cfg = {"ensemble_xg": {"enabled": False, "blend_weight": 0.5}}
+59:     assert rxg._cfg_with_ensemble(cfg, True)["ensemble_xg"]["enabled"] is True
+60:     assert rxg._cfg_with_ensemble(cfg, False)["ensemble_xg"]["enabled"] is False
+63: def test_cfg_com_ensemble_nao_vaza_entre_bracos() -> None:
+67:     original = {"ensemble_xg": {"enabled": True, "blend_weight": 0.5}}
+68:     ligado = rxg._cfg_with_ensemble(original, True)
+69:     desligado = rxg._cfg_with_ensemble(original, False)
+70:     assert ligado["ensemble_xg"]["enabled"] is True
+71:     assert desligado["ensemble_xg"]["enabled"] is False
+72:     assert original["ensemble_xg"]["enabled"] is True, "a config original foi mutada"
+75: def test_cfg_com_ensemble_aceita_config_sem_a_secao() -> None:
+76:     assert rxg._cfg_with_ensemble({}, True)["ensemble_xg"]["enabled"] is True
+82: def _g(lo, hi):
+83:     return {"ci95": [lo, hi]}
+86: def test_veredito_refuta_quando_ic95_cruza_zero() -> None:
+87:     status, detail = rxg._verdict(_g(-0.001, 0.004), {})
+88:     assert status == "refutada"
+89:     assert "indistinguível de sorte" in detail
+92: def test_veredito_refuta_quando_desligar_piora() -> None:
+93:     status, detail = rxg._verdict(_g(-0.009, -0.002), {})
+94:     assert status == "refutada"
+95:     assert "PIORA" in detail
+98: def test_veredito_comprova_com_ic95_acima_de_zero() -> None:
+99:     status, _ = rxg._verdict(_g(0.002, 0.007), {m: _g(0.001, 0.006) for m in rxg.GUARDRAIL_METRICS})
+100:     assert status == "comprovada"
+103: def test_veredito_refuta_quando_guardrail_piora_materialmente() -> None:
+106:     status, detail = rxg._verdict(_g(0.002, 0.007), {"log_loss": _g(-0.009, -0.002)})
+107:     assert status == "refutada"
+108:     assert "log_loss" in detail
+111: def test_veredito_inconclusivo_sem_ic() -> None:
+112:     assert rxg._verdict(_g(None, None), {})[0] == "inconclusiva"
+118: def test_bracos_produzem_previsoes_diferentes(monkeypatch) -> None:
+122:     _tmp_db(monkeypatch)
+123:     monkeypatch.setattr(bp, "MIN_HISTORY", 30)
+124:     cfg = bp.load_config()
+125:     obs = bp._load_observations("")
+127:     on_rows, on_ev = rxg._arm(obs, 120.0, rxg._cfg_with_ensemble(cfg, True), "", "", "CONTROL")
+128:     off_rows, off_ev = rxg._arm(obs, 120.0, rxg._cfg_with_ensemble(cfg, False), "", "", "TREATMENT")
+130:     assert on_rows and len(on_rows) == len(off_rows)
+131:     assert on_ev.ensemble_enabled is True
+132:     assert off_ev.ensemble_enabled is False
+133:     identicas = sum(1 for a, b in zip(on_rows, off_rows) if a["p_win"] == b["p_win"])
+134:     assert identicas < len(on_rows), "os dois braços deram previsões idênticas — a flag não teve efeito"
+137: def test_bracos_pareiam_jogo_a_jogo(monkeypatch) -> None:
+139:     _tmp_db(monkeypatch)
+140:     monkeypatch.setattr(bp, "MIN_HISTORY", 30)
+141:     cfg = bp.load_config()
+142:     obs = bp._load_observations("")
+143:     on_rows, _ = rxg._arm(obs, 120.0, rxg._cfg_with_ensemble(cfg, True), "", "", "CONTROL")
+144:     off_rows, _ = rxg._arm(obs, 120.0, rxg._cfg_with_ensemble(cfg, False), "", "", "TREATMENT")
+145:     chave = lambda r: (r["date"], r["home"], r["away"])  # noqa: E731
+146:     assert [chave(r) for r in on_rows] == [chave(r) for r in off_rows]
+152: @pytest.mark.parametrize("period", ["2021-01-01,2025-12-31", "2021-01-01,2026-06-30", "2021-01-01,"])
+153: def test_recusa_periodo_que_alcanca_o_holdout_selado(period, monkeypatch) -> None:
+154:     monkeypatch.setattr(sys, "argv", ["research_xg", "--period", period])
+155:     assert rxg.main() == 1

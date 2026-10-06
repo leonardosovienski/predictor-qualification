@@ -1,0 +1,187 @@
+[
+  {
+    "index": 40,
+    "path": "tests/test_dpl_aggregation.py",
+    "sha256_utf8": "c28e9ac020592ac9f3aa80c13430a41cc055c597f0f0e9235de5d1eac04d942d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_consensus_median_funde_por_timestamp",
+      "test_consensus_median_published_at_eh_o_maximo",
+      "test_twap_serie_uniforme_eh_media",
+      "test_aggregation_router_funde_sobreviventes",
+      "test_aggregation_router_tolera_falha_parcial",
+      "test_aggregation_router_todas_falham_levanta",
+      "test_aggregation_router_rejeita_politica_invalida",
+      "test_breaker_abre_apos_limiar",
+      "test_breaker_meio_aberto_apos_timeout_e_fecha_no_sucesso",
+      "test_breaker_reabre_se_sondagem_falha"
+    ],
+    "notes": "Fakeproviders consensusmediana por timestamp e publishedmax; TWAP sérieuniforme200, parcial mantém sobrevivente, allfail/invalidpolicy rejeitados e eventoaggregated. Breakerthreshold abre, clockmock timeout HALF_OPEN sucesso fecha/falha reabre. Não prova quorum independente, disponibilidade real ou TWAP irregular."
+  },
+  {
+    "index": 41,
+    "path": "tests/test_dpl_business_days.py",
+    "sha256_utf8": "49423c311c4c35f212aaa3cef3276c55343328152bd53a588986897fe4d6e46d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_dxy_provider_usa_o_helper_canonico",
+      "test_lag_zero_e_identidade",
+      "test_sexta_mais_um_dia_util_e_segunda",
+      "test_dia_util_comum_avanca_um_dia",
+      "test_atravessa_fim_de_semana_acumulando",
+      "test_partindo_de_sabado_cai_na_segunda",
+      "test_preserva_o_tipo_datetime",
+      "test_n_negativo_e_erro",
+      "test_close_de_sexta_so_publica_na_segunda",
+      "test_predicado_de_disponibilidade_barra_o_fim_de_semana",
+      "test_lag_zero_publica_no_proprio_dia"
+    ],
+    "notes": "Calendário businessdays conta apenas weekdays, sexta+1segunda (inclusive7set feriado brasileiro não excluído), quinta+3terça, preservesdatetime, nnegativo rejeitado. published_atwrapper e helpercanônico identidade. Não é calendário completo de feriados."
+  },
+  {
+    "index": 42,
+    "path": "tests/test_dpl_dxy.py",
+    "sha256_utf8": "b72603095da0767b75e32390194a4eeb4ad283e80899f0d3f34db88677be8a96",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_dxy_parses_csv_into_signal_points",
+      "test_dxy_availability_is_the_observed_vintage",
+      "test_dxy_respects_limit",
+      "test_dxy_skips_missing_value_rows_without_interpolating",
+      "test_dxy_empty_response_raises",
+      "test_dxy_unexpected_format_raises",
+      "test_dxy_custom_series_is_passed_through",
+      "test_dxy_custom_publish_lag",
+      "test_dxy_parses_real_fred_response_snippet",
+      "test_dxy_does_not_invent_monday_publication_for_friday",
+      "test_dxy_publish_lag_two_business_days_from_friday",
+      "test_add_business_days_rejects_negative_n",
+      "test_add_business_days_zero_is_noop"
+    ],
+    "notes": "ClientfakeFRED CSV parsers3/4valores, limit2, missingdot não interpolado, empty/HTML inválido rejeitados, customseries passado. published/vintage receiptcurrent e available_at_receipt mesmo lag0, sexta não inventa publicação segunda; helperweekday2=>terça e negativoerro. Snippet descrito real é literal fixture, sem fetch nem autenticação vintagehistórico."
+  },
+  {
+    "index": 43,
+    "path": "tests/test_dpl_feature_store.py",
+    "sha256_utf8": "68ad002ff97573abc51289b37e2e9b9773db017376db1348b6b241876e04cb0e",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_align_forward_fill_basico",
+      "test_align_nao_usa_sinal_publicado_no_futuro",
+      "test_align_injeta_nan_quando_stale",
+      "test_align_sem_sinais_so_preco",
+      "test_feature_store_write_read_raw",
+      "test_feature_store_write_raw_idempotente",
+      "test_feature_store_features_nan_roundtrip",
+      "test_ingest_materializa_e_serve"
+    ],
+    "notes": "Fixtures forwardfill disponível, publicationfuture mantémNaN atédia3, stale2dias NaN, semsignal sópreço. SQLitetmp rawroundtrip/replayidempotent e featureNaNroundtrip; fakeprice/feargreed ingest materializa versão diária e forwardfill40 emduasdatas. Sem rede."
+  },
+  {
+    "index": 44,
+    "path": "tests/test_dpl_features.py",
+    "sha256_utf8": "56e64ae343837b9c3c994315011b17a202ece89f3c1e3d13d6139b51ba51a50b",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_derive_change_24h",
+      "test_derive_inclui_indicadores_com_serie_longa",
+      "test_derive_serie_curta_sem_indicadores_longos",
+      "test_to_hard_data_separa_indicadores",
+      "test_to_hard_data_descarta_nan",
+      "test_derive_handles_zero_prices_without_division_by_zero",
+      "test_ccxt_base_volume_is_converted_but_coingecko_usd_is_not"
+    ],
+    "notes": "Sériessintéticas change24h10%, indicadores longos apenas comhistorysuficiente, harddata separa indicadores/descarta ts/feargreed/NaN, zeros evitamdivzero. CCXTvolumeBTC2*50000=USD100000 marcadoestimado, CoingeckoUSD100000nãoestimado. Não valida precisão de fonte."
+  },
+  {
+    "index": 45,
+    "path": "tests/test_dpl_football.py",
+    "sha256_utf8": "11135eadba3e963d11f13cfae6cc861ff4d6c8c1baa69f7183a6eb46cc346511",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_normalize_remove_acento_e_caixa",
+      "test_entity_mapper_resolve_e_unmapped",
+      "test_entity_mapper_suggest_nao_aplica",
+      "test_martj42_parse_canonicaliza",
+      "test_martj42_pula_nao_mapeado",
+      "test_event_align_so_usa_info_antes_do_kickoff",
+      "test_event_align_nan_se_nada_publicado_antes"
+    ],
+    "notes": "MapperSQLite normalizeaccentcase, alias explícitoresolve/unknownNone, sugestão fuzzy não autoaplica. CSVliteral football canonicaliza times/escores e unmappedNarnia pula/registra. Events alignment usa somente ranking disponível antes kickoff, NaN sempassado. Teste é DPLgenérico dentroCrypto, sem integraçãoBrasil real nem downloadMartj42."
+  },
+  {
+    "index": 46,
+    "path": "tests/test_dpl_macro_calendar.py",
+    "sha256_utf8": "7c52b25c671393c71e7f0e8c3f8a6ae77465c2780bf75a2b42d9670c61343adf",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_shipped_calendar_has_complete_sourced_2026_dates",
+      "test_load_macro_calendar_parses_valid_events",
+      "test_load_macro_calendar_rejects_unknown_schema",
+      "test_load_macro_calendar_rejects_malformed_date",
+      "test_load_macro_calendar_rejects_missing_event_type",
+      "test_dummy_is_one_inside_window_and_zero_outside",
+      "test_one_signal_name_per_event_type_present",
+      "test_no_events_produces_no_points",
+      "test_published_at_equals_observed_vintage",
+      "test_negative_window_days_rejected",
+      "test_persist_macro_signals_writes_and_reads_back"
+    ],
+    "notes": "Calendáriolocal exige33datas2026/8FOMC12CPI13PPIuniqueordenadas; schema/date/typeinválidos rejeitados. Fixtures dummy±1dia, signalnames por tipo, emptynone, published_at=ingestedat, negativewindowrejeitado e SQLite3sinaisroundtrip. Contagem não autentica fontes nem calendário futuro."
+  },
+  {
+    "index": 47,
+    "path": "tests/test_dpl_migrations.py",
+    "sha256_utf8": "a56b1d4982ad6493c4eb881ff478537401cbb2189b1ed6c233911c0fc286811d",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_raw_signals_pk_inclui_vintage",
+      "test_migracao_idempotente_ao_reabrir",
+      "test_revisoes_coexistem_apos_migracao",
+      "test_schema_version_exposto",
+      "test_migration_0005_preserva_dados_existentes",
+      "test_migration_0007_preserva_features_existentes_como_v1"
+    ],
+    "notes": "SQLite PK inclui source/name/ts/vintage, reabertura preserva dados e duas revisõescoexistem; schema11. ExecutaSQLisolado migração0005 legacyvintage vazio e0007feature_versionv1 preservando valor/PK. Não percorre todos caminhos de atualização histórica."
+  },
+  {
+    "index": 48,
+    "path": "tests/test_dpl_stocks.py",
+    "sha256_utf8": "0fef984d55313d5c4460fc73052584264eee1564c6a9168b2d149481881a6d9a",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_cotahist_parse_basico",
+      "test_cotahist_published_at_apos_fechamento",
+      "test_cotahist_filtra_bdi_e_mercado",
+      "test_cotahist_linha_invalida_nao_aborta_lote",
+      "test_cotahist_provider_fetch",
+      "test_alignment_point_in_time_nao_usa_revisao_futura",
+      "test_feature_store_vintages_coexistem",
+      "test_bcb_provider_parse_e_published_at",
+      "test_ingest_stocks_materializa_e_registra_proveniencia"
+    ],
+    "notes": "COTAHIST245chars sintetizado decodifica preços/volume, publicationlag18h declarado, filtraBDI/mercado e callbackinvalidzero não aborta lote. Arquivolatin1tmp providerlimit e PITrevisõesIPCA/SQLitevintages. FakeBCBpublished/vintagecollectedat12Abrnão referência31Mar; ingeststocksfakeSelic guarda provenance. Módulo dentroCrypto testa adapters genéricos, sem coletarB3/BCBnem alterarStock."
+  },
+  {
+    "index": 49,
+    "path": "tests/test_dsr_provenance.py",
+    "sha256_utf8": "953377c2f075c102f20ce37be12d0d41e34231bebe6e1e2341db73597a409188",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_ledger_historico_nao_produz_dsr_com_unidades_misturadas",
+      "test_bases_compativeis_preservam_tentativas_sem_sharpe_no_n",
+      "test_update_recusa_atestado_expirado_sem_tocar_trial"
+    ],
+    "notes": "Ledgerhistóricounidadesmisturadas impedeDSR; fixturescompatíveis contam3tentativasmesmoSharpeNone(nsharpes2). Registryattestationfixture registra, alteraexpire2000 e updatefalha preservandobytes. Não valida poder real do atestado nem estimativa robusta fora amostra."
+  }
+]

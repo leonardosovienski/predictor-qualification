@@ -1,0 +1,512 @@
+### brasileirao_predictor/research/price_strength/economic_search.py
+8: from __future__ import annotations
+10: import argparse
+11: import csv
+12: import hashlib
+13: import io
+14: import itertools
+15: import json
+16: import math
+17: import random
+18: from collections import Counter
+19: from dataclasses import asdict, dataclass
+20: from datetime import UTC, date, datetime
+21: from pathlib import Path
+22: from typing import Any
+24: SOURCE_SHA = "ba3e9ea79ab4091b117a901f3914940cea07f1fe06de0deb57af5076f664ccb6"
+25: PROTOCOL_SHA = "8a6f89c216d5d29c2719f3144b3221e60eaf50ce27a794108ffb5e23b64d4d43"
+26: SIDES = ("H", "D", "A")
+27: COST = 0.02
+30: @dataclass(frozen=True)
+31: class Match:
+32:     season: int
+33:     day: date
+34:     home: str
+35:     away: str
+36:     goals: tuple[int, int] | None
+37:     result: str | None
+38:     pinnacle: tuple[float, float, float] | None
+39:     maximum: tuple[float, float, float] | None
+40:     label_issue: str | None = None
+42:     @property
+43:     def key(self) -> str:
+44:         return f"{self.season}|{self.home}|{self.away}"
+47: def odds(raw: dict[str, str], prefix: str) -> tuple[float, float, float] | None:
+48:     try:
+49:         values = tuple(float(raw[prefix + side]) for side in SIDES)
+50:     except (KeyError, ValueError, TypeError):
+51:         return None
+52:     if len(values) != 3 or not all(math.isfinite(x) and x > 1 for x in values):
+53:         return None
+54:     return values[0], values[1], values[2]
+57: def read_matches(raw: bytes) -> tuple[list[Match], dict[str, Any]]:
+58:     reader = csv.DictReader(io.StringIO(raw.decode("utf-8-sig"), newline=""))
+59:     expected = {"Season", "Date", "Home", "Away", "HG", "AG", "Res"}
+60:     if not expected.issubset(reader.fieldnames or []):
+61:         raise ValueError("missing source schema")
+62:     if len(reader.fieldnames or []) != len(set(reader.fieldnames or [])):
+63:         raise ValueError("duplicate column")
+64:     output = []
+65:     keys: set[str] = set()
+66:     skipped = 0
+67:     for row in reader:
+69:         if row.get("Season") not in {str(year) for year in range(2012, 2025)}:
+70:             skipped += 1
+71:             continue
+72:         season = int(row["Season"])
+73:         day = datetime.strptime(row["Date"], "%d/%m/%Y").date()
+74:         home, away = row["Home"].strip(), row["Away"].strip()
+75:         if not home or not away or home == away:
+76:             raise ValueError("invalid identity")
+77:         goals, result, issue = None, None, None
+78:         try:
+79:             hg, ag = int(row["HG"]), int(row["AG"])
+80:             derived = "H" if hg > ag else "A" if hg < ag else "D"
+81:             if hg < 0 or ag < 0 or row["Res"] != derived:
+82:                 raise ValueError("inconsistent goals/result")
+83:             goals, result = (hg, ag), derived
+84:         except (ValueError, TypeError):
+85:             issue = "missing_or_inconsistent_label"
+86:         match = Match(season, day, home, away, goals, result, odds(row, "PSC"), odds(row, "MaxC"), issue)
+87:         if match.key in keys:
+88:             raise ValueError(f"duplicate event: {match.key}")
+89:         keys.add(match.key)
+90:         output.append(match)
+91:     output.sort(key=lambda m: (m.day, m.home, m.away))
+92:     per_year = {}
+93:     for season in range(2012, 2025):
+94:         group = [m for m in output if m.season == season]
+95:         teams = Counter(t for m in group for t in (m.home, m.away))
+96:         per_year[str(season)] = {
+97:             "matches": len(group),
+98:             "teams": len(teams),
+99:             "team_matches_min": min(teams.values(), default=0),
+100:             "team_matches_max": max(teams.values(), default=0),
+101:             "missing_pinnacle": sum(m.pinnacle is None for m in group),
+102:             "missing_maximum": sum(m.maximum is None for m in group),
+103:             "label_issues": sum(m.label_issue is not None for m in group),
+104:         }
+105:     return output, {"rows": len(output), "excluded_before_field_interpretation": skipped, "by_season": per_year}
+108: def arbitrage(prices: tuple[float, float, float], cost: float = COST, deterioration: float = 0.01) -> dict[str, Any]:
+109:     if not all(math.isfinite(o) and o > 1 for o in prices):
+110:         raise ValueError("invalid odds")
+111:     if not 0 <= deterioration < 1 or not math.isfinite(cost) or cost < 0:
+112:         raise ValueError("invalid friction")
+113:     adjusted = tuple(1 + (o - 1) * (1 - deterioration) for o in prices)
+114:     inverse_sum = sum(1 / o for o in adjusted)
+115:     stakes = tuple((1 / o) / inverse_sum for o in adjusted)
+116:     returns = [s * o for s, o in zip(stakes, adjusted, strict=True)]
+117:     net = min(returns) - 1 - cost
+118:     failures = []
+119:     for count in (1, 2):
+120:         for subset in itertools.combinations(range(3), count):
+121:             exposure = sum(stakes[i] for i in subset)
+122:             outcomes = [returns[i] if i in subset else 0 for i in range(3)]
+123:             failures.append(
+124:                 {
+125:                     "filled_sides": [SIDES[i] for i in subset],
+126:                     "stake": exposure,
+127:                     "worst_net": min(outcomes) - exposure * (1 + cost),
+128:                 }
+129:             )
+130:     low, high = 0.0, 1.0
+131:     if 1 / sum(1 / o for o in prices) - 1 - cost <= 0:
+132:         break_even = 0.0
+133:     else:
+134:         for _ in range(60):
+135:             middle = (low + high) / 2
+136:             s = sum(1 / (1 + (o - 1) * (1 - middle)) for o in prices)
+137:             if 1 / s - 1 - cost >= 0:
+138:                 low = middle
+139:             else:
+140:                 high = middle
+141:         break_even = low
+142:     return {
+143:         "prices": prices,
+144:         "adjusted_prices": adjusted,
+145:         "inverse_sum": inverse_sum,
+146:         "raw_inverse_sum": sum(1 / o for o in prices),
+147:         "stakes": stakes,
+148:         "returns_by_outcome": returns,
+149:         "net": net,
+150:         "candidate": net >= 0.005,
+151:         "cost": cost,
+152:         "partial_fill_cases": failures,
+153:         "break_even_prize_deterioration": break_even,
+154:     }
+157: def probabilities(lh: float, la: float) -> tuple[float, float, float]:
+158:     if not all(math.isfinite(x) and 0 < x <= 10 for x in (lh, la)):
+159:         raise ValueError("invalid goal intensity")
+160:     masses = []
+161:     for rate in (lh, la):
+162:         values = [math.exp(-rate)]
+163:         for k in range(1, 41):
+164:             values.append(values[-1] * rate / k)
+165:         masses.append(values)
+166:     mass = sum(masses[0]) * sum(masses[1])
+167:     if 1 - mass >= 1e-8:
+168:         raise ValueError("excess truncated probability")
+169:     p = [0.0, 0.0, 0.0]
+170:     for h, ph in enumerate(masses[0]):
+171:         for a, pa in enumerate(masses[1]):
+172:             p[0 if h > a else 2 if h < a else 1] += ph * pa / mass
+173:     return p[0], p[1], p[2]
+176: def predict(history: list[Match], target: Match) -> dict[str, Any] | None:
+177:     available = [
+178:         (m, (target.day - m.day).days) for m in history if m.goals is not None and 7 <= (target.day - m.day).days <= 730
+179:     ]
+180:     if len(available) < 300:
+181:         return None
+182:     weights = [(m, math.exp(-math.log(2) * age / 365)) for m, age in available]
+183:     mass = sum(w for _, w in weights)
+184:     mh = sum(m.goals[0] * w for m, w in weights if m.goals is not None) / mass
+185:     ma = sum(m.goals[1] * w for m, w in weights if m.goals is not None) / mass
+186:     if min(mh, ma) <= 0:
+187:         return None
+188:     prior = 10 * (mh + ma) / 2
+189:     rates = {}
+190:     for team in (target.home, target.away):
+191:         scored = conceded = expected_scored = expected_conceded = prior
+192:         for m, w in weights:
+193:             assert m.goals is not None
+194:             if m.home == team:
+195:                 scored += w * m.goals[0]
+196:                 conceded += w * m.goals[1]
+197:                 expected_scored += w * mh
+198:                 expected_conceded += w * ma
+199:             elif m.away == team:
+200:                 scored += w * m.goals[1]
+201:                 conceded += w * m.goals[0]
+202:                 expected_scored += w * ma
+203:                 expected_conceded += w * mh
+204:         rates[team] = (scored / expected_scored, conceded / expected_conceded)
+205:     lh = mh * rates[target.home][0] * rates[target.away][1]
+206:     la = ma * rates[target.away][0] * rates[target.home][1]
+207:     try:
+208:         return {
+209:             "model": probabilities(lh, la),
+210:             "league": probabilities(mh, ma),
+211:             "lambda_home": lh,
+212:             "lambda_away": la,
+213:             "training_matches": len(available),
+214:             "latest_training_day": max(m.day for m, _ in available).isoformat(),
+215:             "earliest_training_day": min(m.day for m, _ in available).isoformat(),
+216:         }
+217:     except ValueError:
+218:         return None
+221: def select(p: tuple[float, float, float], prices: tuple[float, float, float]) -> int | None:
+222:     if not all(math.isfinite(x) and 0 <= x <= 1 for x in p) or abs(sum(p) - 1) > 1e-8:
+223:         raise ValueError("invalid probability")
+224:     ev = [q * o - 1 - COST for q, o in zip(p, prices, strict=True)]
+225:     choice = max(range(3), key=lambda i: ev[i])
+226:     return choice if ev[choice] >= 0.03 else None
+229: def ledger(rows: list[dict[str, Any]], strategy: str) -> list[dict[str, Any]]:
+231:     cash = 100.0
+232:     unsettled = 0.0
+233:     output = []
+234:     for day, batch in itertools.groupby(rows, key=lambda r: r["date"]):
+235:         pending = []
+236:         opening = cash
+237:         for row in batch:
+238:             item = {
+239:                 "key": row["key"],
+240:                 "date": day,
+241:                 "season": row["season"],
+242:                 "home": row["home"],
+243:                 "away": row["away"],
+244:                 "strategy": strategy,
+245:                 "stake": 0.0,
+246:                 "cost": 0.0,
+247:                 "return": 0.0,
+248:                 "net": 0.0,
+249:                 "choice": None,
+250:                 "probability": None,
+251:                 "price": None,
+252:                 "won": None,
+253:                 "status": "abstain",
+254:                 "reason": row.get("reason"),
+255:             }
+256:             if row.get("prediction") is not None and row.get("pinnacle") is not None:
+257:                 p = row["prediction"][strategy]
+258:                 choice = select(p, row["pinnacle"])
+259:                 if choice is None:
+260:                     item["reason"] = "no_edge_after_cost"
+261:                 else:
+262:                     item.update(choice=SIDES[choice], probability=p[choice], price=row["pinnacle"][choice])
+263:                     if cash + 1e-10 < 1 + COST:
+264:                         item["reason"] = "insufficient_unreserved_bankroll"
+265:                     else:
+266:                         cash -= 1 + COST
+267:                         item.update(stake=1.0, cost=COST, status="hypothetical_fill", reason=None)
+268:             pending.append((item, row["result"]))
+269:         exposure = sum(item["stake"] for item, _ in pending) + unsettled
+270:         for item, result in pending:
+271:             if item["stake"]:
+272:                 if result is None:
+273:                     unsettled += item["stake"]
+274:                     item.update(status="unsettled", reason="label_unavailable", net=None, **{"return": None})
+275:                 else:
+276:                     won = item["choice"] == result
+277:                     returned = item["price"] if won else 0.0
+278:                     cash += returned
+279:                     item.update(won=won, net=returned - item["stake"] - item["cost"], **{"return": returned})
+280:         for item, _ in pending:
+281:             item.update(cash_before_day=opening, cash_after_day=cash, day_exposure=exposure, unsettled_stakes=unsettled)
+282:             output.append(item)
+283:     return output
+286: def quantile(values: list[float], q: float) -> float:
+287:     if not values:
+288:         raise ValueError("empty distribution")
+289:     ordered = sorted(values)
+290:     at = (len(ordered) - 1) * q
+291:     lo = int(at)
+292:     hi = min(lo + 1, len(ordered) - 1)
+293:     return ordered[lo] * (hi - at) + ordered[hi] * (at - lo) if hi != lo else ordered[lo]
+296: def blocks(rows: list[dict[str, Any]]) -> list[tuple[float, float]]:
+297:     if not rows:
+298:         return []
+299:     start = date.fromisoformat(rows[0]["date"])
+300:     count = (date.fromisoformat(rows[-1]["date"]) - start).days // 28 + 1
+301:     bins = [[0.0, 0.0] for _ in range(count)]
+302:     for r in rows:
+303:         index = (date.fromisoformat(r["date"]) - start).days // 28
+304:         bins[index][0] += r["net"] or 0.0
+305:         bins[index][1] += r["stake"]
+306:     return [(pnl, stake) for pnl, stake in bins]
+309: def bootstrap(rows: list[dict[str, Any]]) -> dict[str, Any]:
+310:     if any(r["status"] == "unsettled" for r in rows):
+311:         return {"status": "unknown_unsettled_results"}
+312:     bins = blocks(rows)
+313:     rng = random.Random(20260910)
+314:     ratios = []
+315:     for _ in range(2000):
+316:         sample = rng.choices(bins, k=len(bins))
+317:         stake = sum(s for _, s in sample)
+318:         if stake:
+319:             ratios.append(sum(p for p, _ in sample) / stake)
+320:     return {
+321:         "block_days": 28,
+322:         "blocks_including_empty": len(bins),
+323:         "resamples": 2000,
+324:         "seed": 20260910,
+325:         "roi_ci95": [quantile(ratios, 0.025), quantile(ratios, 0.975)] if ratios else None,
+326:         "roi_lower95_one_sided": quantile(ratios, 0.05) if ratios else None,
+327:         "selection_history_adjusted": False,
+328:     }
+331: def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
+332:     fills = [r for r in rows if r["stake"]]
+333:     unknown = any(r["net"] is None for r in rows)
+334:     stake = sum(r["stake"] for r in rows)
+335:     net = sum(r["net"] or 0.0 for r in rows)
+336:     by_season = {}
+337:     for year in sorted({r["season"] for r in rows}):
+338:         subset = [r for r in rows if r["season"] == year]
+339:         s = sum(r["stake"] for r in subset)
+340:         n = sum(r["net"] or 0.0 for r in subset)
+341:         by_season[str(year)] = {
+342:             "events": len(subset),
+343:             "fills": sum(bool(r["stake"]) for r in subset),
+344:             "stake": s,
+345:             "net": n if not any(r["net"] is None for r in subset) else None,
+346:             "roi": n / s if s and not any(r["net"] is None for r in subset) else None,
+347:         }
+348:     peak = 100.0
+349:     drawdown = 0.0
+350:     for r in rows:
+351:         peak = max(peak, r["cash_after_day"])
+352:         drawdown = max(drawdown, peak - r["cash_after_day"])
+353:     costs = {}
+354:     for c in (0, 0.01, 0.02, 0.03, 0.05):
+355:         costs[str(c)] = sum(r["return"] - r["stake"] * (1 + c) for r in fills) if not unknown else None
+356:     degraded = (
+357:         sum((1 + (r["price"] - 1) * 0.99 if r["won"] else 0) - r["stake"] - r["cost"] for r in fills)
+358:         if not unknown
+359:         else None
+360:     )
+361:     teams = Counter(t for r in fills for t in (r["home"], r["away"]))
+362:     wins = sorted((r for r in fills if r["won"]), key=lambda r: r["net"], reverse=True)
+363:     return {
+364:         "events": len(rows),
+365:         "opportunities": sum(r["choice"] is not None for r in rows),
+366:         "hypothetical_fills": len(fills),
+367:         "real_bets": 0,
+368:         "abstentions": len(rows) - len(fills),
+369:         "abstention_reasons": dict(Counter(r["reason"] for r in rows if r["reason"])),
+370:         "initial_bankroll": 100,
+371:         "final_cash": rows[-1]["cash_after_day"] if rows else 100,
+372:         "unsettled_stakes": rows[-1]["unsettled_stakes"] if rows else 0,
+373:         "stake": stake,
+374:         "cost": sum(r["cost"] for r in rows),
+375:         "return_including_principal": sum(r["return"] or 0 for r in rows),
+376:         "net_scenario": None if unknown else net,
+377:         "net_total_after_unknown_personal_costs": None,
+378:         "roi_stakes": net / stake if stake and not unknown else None,
+379:         "bankroll_return": net / 100 if not unknown else None,
+380:         "max_daily_exposure": max((r["day_exposure"] for r in rows), default=0),
+381:         "max_cash_drawdown_units": drawdown,
+382:         "by_season": by_season,
+383:         "fixed_fill_cost_sensitivity_net": costs,
+384:         "fixed_fill_1pct_prize_deterioration_net": degraded,
+385:         "selected_mean_probability": sum(r["probability"] for r in fills) / len(fills) if fills else None,
+386:         "selected_win_fraction": sum(bool(r["won"]) for r in fills) / len(fills) if fills and not unknown else None,
+387:         "top_five_win_net": sum(r["net"] for r in wins[:5]),
+388:         "net_excluding_top_five_win_events": net - sum(r["net"] for r in wins[:5]) if not unknown else None,
+389:         "largest_team_involvement": teams.most_common(5),
+390:         "bootstrap": bootstrap(rows),
+391:     }
+394: def evaluate(matches: list[Match]) -> dict[str, Any]:
+395:     envelopes = []
+396:     predictions = []
+397:     for m in matches:
+398:         envelope = {
+399:             "key": m.key,
+400:             "date": m.day.isoformat(),
+401:             "season": m.season,
+402:             "reason": None if m.maximum else "missing_maximum",
+403:             "execution_admitted": False,
+404:         }
+405:         if m.maximum:
+406:             envelope.update(arbitrage(m.maximum))
+407:         envelopes.append(envelope)
+408:         if m.season >= 2015:
+409:             pred = predict(matches, m)
+410:             reason = (
+411:                 "missing_pinnacle"
+412:                 if m.pinnacle is None
+413:                 else "insufficient_training_or_invalid_model"
+414:                 if pred is None
+415:                 else None
+416:             )
+417:             predictions.append(
+418:                 {
+419:                     "key": m.key,
+420:                     "date": m.day.isoformat(),
+421:                     "season": m.season,
+422:                     "home": m.home,
+423:                     "away": m.away,
+424:                     "pinnacle": m.pinnacle,
+425:                     "result": m.result,
+426:                     "prediction": pred,
+427:                     "reason": reason,
+428:                 }
+429:             )
+430:     ledgers = {name: ledger(predictions, name) for name in ("model", "league")}
+431:     summaries = {name: summarize(rows) for name, rows in ledgers.items()}
+432:     scoring: dict[str, Any] = {
+433:         name: {"logloss": 0.0, "brier": 0.0} for name in ("model", "league", "pinnacle_normalized")
+434:     }
+435:     common = [r for r in predictions if r["prediction"] and r["pinnacle"] and r["result"]]
+436:     for r in common:
+437:         y = SIDES.index(r["result"])
+438:         q = [1 / o for o in r["pinnacle"]]
+439:         for name in scoring:
+440:             p = [x / sum(q) for x in q] if name == "pinnacle_normalized" else r["prediction"][name]
+441:             scoring[name]["logloss"] -= math.log(max(p[y], 1e-300)) / len(common)
+442:             scoring[name]["brier"] += sum((x - int(i == y)) ** 2 for i, x in enumerate(p)) / len(common)
+443:     candidates = [r for r in envelopes if r.get("candidate")]
+444:     arb_years = {}
+445:     for year in range(2012, 2025):
+446:         all_year = [r for r in envelopes if r["season"] == year]
+447:         chosen = [r for r in candidates if r["season"] == year]
+448:         arb_years[str(year)] = {
+449:             "events": len(all_year),
+450:             "candidates": len(chosen),
+451:             "net_envelope": sum(r["net"] for r in chosen),
+452:         }
+453:     model_summary = summaries["model"]
+454:     lower = model_summary["bootstrap"].get("roi_lower95_one_sided")
+455:     advance_model = (
+456:         model_summary["hypothetical_fills"] >= 300
+457:         and lower is not None
+458:         and lower > 0
+459:         and (model_summary["net_scenario"] or 0) > 0
+460:         and sum((s["net"] or 0) > 0 for s in model_summary["by_season"].values()) >= 6
+461:         and (model_summary["fixed_fill_1pct_prize_deterioration_net"] or 0) > 0
+462:     )
+463:     day_exposure = Counter(r["date"] for r in candidates)
+464:     arb_net = sum(r["net"] for r in candidates)
+465:     partial_worst = min((c["worst_net"] for r in candidates for c in r["partial_fill_cases"]), default=None)
+466:     summary = {
+467:         "status": "retrospective_conditional_scenarios_only",
+468:         "execution_admitted": False,
+469:         "arbitrage": {
+470:             "events": len(envelopes),
+471:             "missing_prices": sum(bool(r["reason"]) for r in envelopes),
+472:             "candidates": len(candidates),
+473:             "hypothetical_legs": 3 * len(candidates),
+474:             "real_bets": 0,
+475:             "stake_envelope": len(candidates),
+476:             "net_envelope": arb_net,
+477:             "cost_envelope": COST * len(candidates),
+478:             "roi_envelope": arb_net / len(candidates) if candidates else None,
+479:             "final_bankroll_envelope": 100 + arb_net,
+480:             "max_same_date_stake": max(day_exposure.values(), default=0),
+481:             "worst_partial_fill_net_per_event": partial_worst,
+482:             "by_season": arb_years,
+483:             "minimum_net": min((r["net"] for r in candidates), default=None),
+484:             "maximum_net": max((r["net"] for r in candidates), default=None),
+485:             "minimum_break_even_prize_deterioration": min(
+486:                 (r["break_even_prize_deterioration"] for r in candidates), default=None
+487:             ),
+488:             "fixed_candidate_cost_sensitivity": {
+489:                 str(c): sum(r["net"] + COST - c for r in candidates) for c in (0, 0.01, 0.02, 0.03, 0.05)
+490:             },
+491:             "advance_to_simultaneity_investigation": len(candidates) >= 30
+492:             and sum(s["candidates"] > 0 for s in arb_years.values()) >= 3,
+493:             "net_total_after_unknown_personal_costs": None,
+494:         },
+495:         "forecast": summaries,
+496:         "advance_model_to_new_validation": advance_model,
+497:         "common_panel": {"events": len(common), "scores": scoring},
+498:         "start_date": matches[0].day.isoformat(),
+499:         "end_date": matches[-1].day.isoformat(),
+500:     }
+501:     b1, b2 = blocks(ledgers["model"]), blocks(ledgers["league"])
+502:     if len(b1) == len(b2) and not any(r["status"] == "unsettled" for rows in ledgers.values() for r in rows):
+503:         rng = random.Random(20260910)
+504:         diffs = []
+505:         for _ in range(2000):
+506:             indices = rng.choices(range(len(b1)), k=len(b1))
+507:             diffs.append(sum(b1[i][0] - b2[i][0] for i in indices))
+508:         summary["paired_model_minus_league_net_ci95"] = [quantile(diffs, 0.025), quantile(diffs, 0.975)]
+509:     return {"summary": summary, "envelopes": envelopes, "predictions": predictions, "ledgers": ledgers}
+512: def write_json(path: Path, value: Any) -> None:
+513:     with path.open("x", encoding="utf-8", newline="\n") as stream:
+514:         json.dump(value, stream, ensure_ascii=False, indent=2, allow_nan=False)
+515:         stream.write("\n")
+518: def main() -> None:
+519:     parser = argparse.ArgumentParser(description=__doc__)
+520:     parser.add_argument("--source", type=Path, required=True)
+521:     parser.add_argument("--protocol", type=Path, required=True)
+522:     parser.add_argument("--output-dir", type=Path, required=True)
+523:     args = parser.parse_args()
+524:     raw = args.source.read_bytes()
+525:     if hashlib.sha256(raw).hexdigest() != SOURCE_SHA:
+526:         raise ValueError("not the preregistered public source")
+527:     if hashlib.sha256(args.protocol.read_bytes()).hexdigest() != PROTOCOL_SHA:
+528:         raise ValueError("not the frozen protocol")
+529:     root = Path("C:/BRASILEIRAO/work/economic-search-2026-09-10").resolve()
+530:     if not args.output_dir.resolve().is_relative_to(root) or args.output_dir.resolve() == root:
+531:         raise ValueError("output must be a new child of isolated study directory")
+532:     args.output_dir.mkdir(parents=True, exist_ok=False)
+533:     started = datetime.now(UTC).isoformat()
+534:     matches, coverage = read_matches(raw)
+535:     result = evaluate(matches)
+536:     write_json(args.output_dir / "coverage.json", coverage)
+537:     for name, value in result.items():
+538:         write_json(args.output_dir / f"{name}.json", value)
+539:     write_json(args.output_dir / "matches.json", [dict(asdict(m), day=m.day.isoformat()) for m in matches])
+540:     manifest = {
+541:         "started_at": started,
+542:         "finished_at": datetime.now(UTC).isoformat(),
+543:         "source_sha256": SOURCE_SHA,
+544:         "protocol_sha256": PROTOCOL_SHA,
+545:         "code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+546:         "outputs": {
+547:             p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(args.output_dir.iterdir()) if p.is_file()
+548:         },
+549:     }
+550:     write_json(args.output_dir / "manifest.json", manifest)
+551:     print(json.dumps(result["summary"], ensure_ascii=False, allow_nan=False))
+554: if __name__ == "__main__":
+555:     main()

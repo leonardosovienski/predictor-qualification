@@ -1,0 +1,460 @@
+### brasileirao_predictor/model.py
+13: import math
+14: import warnings
+15: from datetime import date
+16: from numbers import Integral, Real
+18: import numpy as np
+19: from scipy.optimize import minimize
+20: from scipy.special import gammaln
+21: from scipy.stats import nbinom
+24: def exponential_recency_weights(match_dates, asof, half_life_days):
+31:     if half_life_days is None:
+32:         return [1.0] * len(match_dates)
+33:     half_life = float(half_life_days)
+34:     if not math.isfinite(half_life) or half_life <= 0:
+35:         raise ValueError("model.goal_half_life_days must be finite and > 0")
+36:     reference = date.fromisoformat(str(asof)[:10])
+37:     weights = []
+38:     for value in match_dates:
+39:         age_days = (reference - date.fromisoformat(str(value)[:10])).days
+40:         if age_days < 0:
+41:             raise ValueError("recency weighting received a match after asof")
+42:         weights.append(math.exp(-math.log(2.0) * age_days / half_life))
+43:     return weights
+47: type Params = tuple[float, float, float, float] | tuple[float, float, float, float, float] | dict[str, float]
+50: class ModelIntegrityError(ValueError):
+54: class OptimizationFailedError(RuntimeError):
+58: def _validate_goal_model_inputs(history, delta_xg=None, sample_weights=None) -> None:
+65:     for index, item in enumerate(history):
+66:         if isinstance(item, (str, bytes, dict)) or not hasattr(item, "__len__") or len(item) != 3:
+67:             raise ModelIntegrityError(f"history[{index}] must be a three-item (elo_diff, home_goals, away_goals) tuple")
+68:         elo_diff, home_goals, away_goals = item
+69:         if isinstance(elo_diff, bool) or not isinstance(elo_diff, Real) or not math.isfinite(float(elo_diff)):
+70:             raise ModelIntegrityError(f"history[{index}].elo_diff must be a finite real number")
+71:         for field, value in (("home_goals", home_goals), ("away_goals", away_goals)):
+72:             if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+73:                 raise ModelIntegrityError(f"history[{index}].{field} must be a non-negative integer")
+75:     if sample_weights is not None:
+76:         try:
+77:             weights = np.asarray(sample_weights, dtype=float)
+78:         except (TypeError, ValueError) as exc:
+79:             raise ModelIntegrityError("sample_weights must be numeric") from exc
+80:         if weights.shape != (len(history),) or not np.isfinite(weights).all() or np.any(weights <= 0):
+81:             raise ModelIntegrityError("sample_weights must be finite, positive and match history length")
+83:     if delta_xg is not None:
+84:         try:
+85:             values = np.asarray(delta_xg, dtype=float)
+86:         except (TypeError, ValueError) as exc:
+87:             raise ModelIntegrityError("delta_xg must be numeric") from exc
+88:         if values.shape != (len(history),) or not np.isfinite(values).all():
+89:             raise ModelIntegrityError("delta_xg must be finite and match history length")
+92: def _nb_logpmf(k, mu, alpha):
+95:     r = 1.0 / alpha
+96:     return gammaln(k + r) - gammaln(r) - gammaln(k + 1.0) + r * np.log(r / (r + mu)) + k * np.log(mu / (r + mu))
+99: def _tau(hs, as_, lam, mu, rho):
+101:     t = np.ones_like(lam, dtype=float)
+102:     t = np.where((hs == 0) & (as_ == 0), 1.0 - lam * mu * rho, t)
+103:     t = np.where((hs == 0) & (as_ == 1), 1.0 + lam * rho, t)
+104:     t = np.where((hs == 1) & (as_ == 0), 1.0 + mu * rho, t)
+105:     t = np.where((hs == 1) & (as_ == 1), 1.0 - rho, t)
+106:     return t
+109: def _nb_low_score_probabilities(mu, alpha):
+111:     r = 1.0 / alpha
+112:     q = r / (r + mu)
+113:     p0 = np.power(q, r)
+114:     p1 = p0 * r * (1.0 - q)
+115:     return p0, p1
+118: def _dc_normalizer_nb(lam, mu, alpha, rho):
+120:     h0, h1 = _nb_low_score_probabilities(lam, alpha)
+121:     a0, a1 = _nb_low_score_probabilities(mu, alpha)
+122:     return 1.0 + rho * (-lam * mu * h0 * a0 + lam * h0 * a1 + mu * h1 * a0 - h1 * a1)
+125: def _all_dc_factors_positive(lam, mu, rho):
+127:     return (1.0 - lam * mu * rho > 0.0) & (1.0 + lam * rho > 0.0) & (1.0 + mu * rho > 0.0) & (1.0 - rho > 0.0)
+130: def valid_dc_rho_bounds(lam: float, mu: float) -> tuple[float, float]:
+132:     return max(-1.0 / lam, -1.0 / mu), min(1.0 / (lam * mu), 1.0)
+135: def clamp_dc_rho(rho: float, lam: float, mu: float, margin: float = 1e-9) -> float:
+137:     lo, hi = valid_dc_rho_bounds(lam, mu)
+138:     return min(max(rho, lo + margin), hi - margin)
+141: def fit_goal_model(history, delta_xg=None, sample_weights=None):
+148:     history = list(history)
+149:     if not history:
+150:         if sample_weights is not None and len(sample_weights) != 0:
+151:             raise ModelIntegrityError("sample_weights must match empty history")
+152:         if delta_xg is not None and len(delta_xg) != 0:
+153:             raise ModelIntegrityError("delta_xg must match empty history")
+154:         cold_start = (0.0, 0.3, 1e-4, 0.0)
+155:         return (*cold_start, 0.0) if delta_xg is not None else cold_start
+157:     _validate_goal_model_inputs(history, delta_xg=delta_xg, sample_weights=sample_weights)
+159:     diffs = np.array([h[0] for h in history], dtype=float) / 400.0
+160:     hs = np.array([h[1] for h in history], dtype=float)
+161:     as_ = np.array([h[2] for h in history], dtype=float)
+162:     if sample_weights is None:
+163:         weights = np.ones(len(diffs), dtype=float)
+164:     else:
+165:         weights = np.asarray(sample_weights, dtype=float)
+166:     base = math.log(max(float(np.average(np.r_[hs, as_], weights=np.r_[weights, weights])), 1e-3))
+168:     has_xg = delta_xg is not None
+169:     if has_xg:
+170:         dxg = np.array(delta_xg, dtype=float)
+171:     else:
+172:         dxg = np.zeros(len(diffs), dtype=float)
+174:     rho_scale = 0.4
+176:     def negll(theta):
+177:         if len(theta) == 5:
+178:             a, b, log_alpha, rho_raw, theta_xg = theta
+179:         else:
+180:             a, b, log_alpha, rho_raw = theta
+181:             theta_xg = 0.0
+182:         rho = rho_scale * math.tanh(rho_raw)
+184:         alpha = math.exp(log_alpha)
+185:         lam = np.exp(a + b * diffs)
+186:         mu = np.exp(a - b * diffs)
+188:         lam = lam * np.exp(theta_xg * dxg)
+189:         mu = mu * np.exp(-theta_xg * dxg)
+191:         tau = _tau(hs, as_, lam, mu, rho)
+192:         if np.any(tau <= 1e-12) or not np.all(_all_dc_factors_positive(lam, mu, rho)):
+193:             return 1e12
+194:         normalizer = _dc_normalizer_nb(lam, mu, alpha, rho)
+195:         if np.any(normalizer <= 1e-12) or not np.isfinite(normalizer).all():
+196:             return 1e12
+197:         ll = _nb_logpmf(hs, lam, alpha) + _nb_logpmf(as_, mu, alpha) + np.log(tau) - np.log(normalizer)
+198:         if not np.isfinite(ll).all():
+199:             return 1e12
+200:         return -float(np.dot(weights, ll))
+202:     if has_xg:
+203:         x0 = [base, 0.3, math.log(0.1), math.atanh(-0.03 / rho_scale), 0.5]
+204:         bounds = [(-3, 3), (-1, 4), (math.log(1e-4), math.log(3)), (None, None), (-5, 5)]
+205:     else:
+206:         x0 = [base, 0.3, math.log(0.1), math.atanh(-0.03 / rho_scale)]
+207:         bounds = [(-3, 3), (-1, 4), (math.log(1e-4), math.log(3)), (None, None)]
+209:     try:
+210:         res = minimize(negll, x0, method="L-BFGS-B", bounds=bounds)
+211:         if not res.success:
+212:             retry = minimize(
+213:                 negll,
+214:                 res.x if np.isfinite(res.x).all() else x0,
+215:                 method="Powell",
+216:                 bounds=bounds,
+217:                 options={"maxiter": 2000, "xtol": 1e-8, "ftol": 1e-10},
+218:             )
+219:             if retry.success or retry.fun < res.fun:
+220:                 res = retry
+221:     except (ArithmeticError, FloatingPointError, OverflowError, ValueError) as exc:
+222:         raise OptimizationFailedError(f"goal-model optimizer raised {type(exc).__name__}: {exc}") from exc
+224:     if not res.success:
+225:         raise OptimizationFailedError(f"goal-model optimizer did not converge: {res.message}")
+226:     if not np.isfinite(res.x).all() or not math.isfinite(float(res.fun)) or res.fun >= 1e11:
+227:         raise OptimizationFailedError("goal-model optimizer returned an invalid solution")
+229:     if len(res.x) == 5:
+230:         a, b, log_alpha, rho_raw, theta_xg = res.x
+231:     else:
+232:         a, b, log_alpha, rho_raw = res.x
+233:         theta_xg = 0.0
+234:     rho = rho_scale * math.tanh(rho_raw)
+238:     _names = ("a", "b", "log_alpha", "rho_raw", "theta_xg")
+239:     for name, val, (lo, hi) in zip(_names, res.x, bounds):
+240:         if lo is not None and hi is not None and min(abs(val - lo), abs(val - hi)) < 1e-6:
+241:             if name == "log_alpha" and abs(val - lo) < 1e-6:
+242:                 continue
+243:             warnings.warn(
+244:                 f"fit_goal_model: parametro {name}={val:.4f} cravado no bound "
+245:                 f"[{lo}, {hi}] — verifique o formato do history (diff, hs, as)",
+246:                 RuntimeWarning,
+247:                 stacklevel=2,
+248:             )
+249:     if has_xg:
+250:         return (float(a), float(b), float(math.exp(log_alpha)), float(rho), float(theta_xg))
+251:     return (float(a), float(b), float(math.exp(log_alpha)), float(rho))
+254: def _unpack_params(params: Params) -> tuple[float, float, float, float, float]:
+257:     if isinstance(params, dict):
+258:         return (params["a"], params["b"], params["alpha"], params["rho"], params.get("theta", 0.0))
+259:     if len(params) >= 5:
+260:         return (params[0], params[1], params[2], params[3], params[4])
+261:     return (params[0], params[1], params[2], params[3], 0.0)
+264: def predict_match(
+265:     elo_a: float,
+266:     elo_b: float,
+267:     params: Params,
+268:     home_adv: float = 0.0,
+269:     delta_vorp_a: float = 0.0,
+270:     delta_vorp_b: float = 0.0,
+271:     delta_xg: float = 0.0,
+272:     max_goals: int = 12,
+273:     seed: int | None = None,
+274: ) -> dict:
+284:     a, b, alpha, rho, theta = _unpack_params(params)
+285:     diff = (elo_a + home_adv - elo_b) / 400.0
+286:     lam_a = math.exp(a + b * diff + theta * (delta_vorp_a + delta_xg))
+287:     lam_b = math.exp(a - b * diff + theta * (delta_vorp_b - delta_xg))
+289:     grid = _score_grid(lam_a, lam_b, alpha, rho, max_goals)
+290:     return {
+291:         "lambda_a": lam_a,
+292:         "lambda_b": lam_b,
+293:         "total_goals": lam_a + lam_b,
+294:         **_grid_stats(grid, max_goals),
+295:     }
+298: def _score_grid(lam_a, lam_b, alpha, rho, max_goals):
+302:     values = (lam_a, lam_b, alpha, rho)
+303:     if not all(math.isfinite(float(value)) for value in values):
+304:         raise ValueError("lam_a, lam_b, alpha and rho must be finite")
+305:     if lam_a <= 0 or lam_b <= 0 or alpha <= 0:
+306:         raise ValueError("lam_a, lam_b and alpha must be > 0")
+307:     if not isinstance(max_goals, int) or max_goals < 1:
+308:         raise ValueError("max_goals must be an integer >= 1")
+309:     if not bool(_all_dc_factors_positive(lam_a, lam_b, rho)):
+310:         raise ValueError("rho produces a non-positive Dixon-Coles cell")
+312:     k = np.arange(max_goals + 1)
+313:     r = 1.0 / max(alpha, 1e-9)
+314:     pa = nbinom.pmf(k, r, r / (r + lam_a))
+315:     pb = nbinom.pmf(k, r, r / (r + lam_b))
+316:     grid = np.outer(pa, pb)
+318:     grid[0, 0] *= 1.0 - lam_a * lam_b * rho
+319:     grid[0, 1] *= 1.0 + lam_a * rho
+320:     grid[1, 0] *= 1.0 + lam_b * rho
+321:     grid[1, 1] *= 1.0 - rho
+322:     total = float(grid.sum())
+323:     if not math.isfinite(total) or total <= 0.0 or np.any(grid < 0.0):
+324:         raise ValueError("invalid score-grid mass")
+325:     grid /= total
+326:     return grid
+329: def _grid_stats(grid, max_goals):
+333:     k = np.arange(max_goals + 1)
+334:     p_win = float(np.tril(grid, -1).sum())
+335:     p_draw = float(np.trace(grid))
+336:     p_loss = float(np.triu(grid, 1).sum())
+338:     i_idx = k.reshape(-1, 1)
+339:     j_idx = k.reshape(1, -1)
+340:     totals = i_idx + j_idx
+341:     over = {t: float(grid[totals > t].sum()) for t in (1.5, 2.5, 3.5)}
+342:     btts = float(grid[(i_idx >= 1) & (j_idx >= 1)].sum())
+344:     flat = [((i, j), float(grid[i, j])) for i in k for j in k]
+345:     top = sorted(flat, key=lambda t: -t[1])[:5]
+346:     probs = {"home": p_win, "draw": p_draw, "away": p_loss}
+347:     ranked = sorted(probs, key=lambda outcome: probs[outcome], reverse=True)
+348:     ordered = sorted(probs.values(), reverse=True)
+349:     modal_score, modal_probability = top[0]
+350:     diagonal = {f"{i}-{i}": float(grid[i, i]) for i in range(max_goals + 1)}
+351:     entropy = -sum(p * math.log(p) for p in probs.values() if p > 0)
+352:     draw_diagnostics = {
+353:         "p_draw_1x2": p_draw,
+354:         "diagonal_score_probs": diagonal,
+355:         "modal_score": [int(modal_score[0]), int(modal_score[1])],
+356:         "modal_score_is_draw": bool(modal_score[0] == modal_score[1]),
+357:         "p_modal_score": modal_probability,
+358:         "draw_is_1x2_argmax": ranked[0] == "draw",
+359:         "draw_rank_1x2": ranked.index("draw") + 1,
+360:         "top_1x2_gap": ordered[0] - ordered[1],
+361:         "side_probability_gap": abs(p_win - p_loss),
+362:         "draw_vs_best_side_gap": p_draw - max(p_win, p_loss),
+363:         "entropy_1x2_nats": entropy,
+364:         "diagonal_concentration": max(diagonal.values()) / p_draw if p_draw > 0 else None,
+367:         "categorical_policy": "ARGMAX_DIAGNOSTIC_ONLY",
+368:         "robust_choice": None,
+369:     }
+371:     return {
+372:         "p_win": p_win,
+373:         "p_draw": p_draw,
+374:         "p_loss": p_loss,
+375:         "over": over,
+376:         "btts": btts,
+377:         "top_scores": top,
+378:         "draw_diagnostics": draw_diagnostics,
+379:         "grid": grid,  # exposto para o simulador amostrar placares
+380:     }
+383: def predict_remaining(
+384:     elo_a: float,
+385:     elo_b: float,
+386:     params: Params,
+387:     home_adv: float = 0.0,
+388:     fraction: float = 0.5,
+389:     max_goals: int = 12,
+390: ) -> dict:
+404:     if not math.isfinite(fraction) or not 0.0 <= fraction <= 1.0:
+405:         raise ValueError("fraction must be finite and between 0 and 1")
+406:     a, b, alpha, rho, _theta = _unpack_params(params)
+407:     diff = (elo_a + home_adv - elo_b) / 400.0
+408:     lam_a = math.exp(a + b * diff) * fraction
+409:     lam_b = math.exp(a - b * diff) * fraction
+411:     if fraction == 0.0:
+412:         grid = np.zeros((max_goals + 1, max_goals + 1), dtype=float)
+413:         grid[0, 0] = 1.0
+414:     else:
+415:         grid = _score_grid(lam_a, lam_b, alpha, rho, max_goals)
+416:     return {
+417:         "lambda_a": lam_a,
+418:         "lambda_b": lam_b,
+419:         "total_goals": lam_a + lam_b,
+420:         **_grid_stats(grid, max_goals),
+421:     }
+### brasileirao_predictor/net.py
+8: import time
+9: from functools import wraps
+11: from .obs import get_logger
+13: log = get_logger()
+16: def retry(
+17:     attempts: int = 4,
+18:     base_delay: float = 1.0,
+19:     backoff: float = 2.0,
+20:     exceptions: tuple = (Exception,),
+21: ):
+25:     def deco(fn):
+26:         @wraps(fn)
+27:         def wrapper(*args, **kwargs):
+28:             delay = base_delay
+29:             for n in range(1, attempts + 1):
+30:                 try:
+31:                     return fn(*args, **kwargs)
+32:                 except exceptions as e:
+33:                     if n == attempts:
+34:                         log.error("%s falhou após %d tentativas: %s", fn.__name__, n, e)
+35:                         raise
+36:                     log.warning(
+37:                         "%s falhou (tentativa %d/%d): %s — repetindo em %.1fs",
+38:                         fn.__name__,
+39:                         n,
+40:                         attempts,
+41:                         e,
+42:                         delay,
+43:                     )
+44:                     time.sleep(delay)
+45:                     delay *= backoff
+47:         return wrapper
+49:     return deco
+### brasileirao_predictor/obs.py
+8: import logging
+9: from logging.handlers import RotatingFileHandler
+10: from pathlib import Path
+12: _NAME = "brasileirao"
+13: _CONFIGURED = False
+16: def setup_logging(log_dir: Path | None = None, level: int = logging.INFO):
+17:     global _CONFIGURED
+18:     logger = logging.getLogger(_NAME)
+19:     if _CONFIGURED:
+20:         return logger
+21:     logger.setLevel(logging.DEBUG)
+23:     fmt = logging.Formatter("%(asctime)s %(levelname)-7s %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+24:     console = logging.StreamHandler()
+25:     console.setLevel(level)
+26:     console.setFormatter(fmt)
+27:     logger.addHandler(console)
+29:     if log_dir is not None:
+30:         log_dir.mkdir(parents=True, exist_ok=True)
+31:         fileh = RotatingFileHandler(log_dir / "brasileirao.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8")
+32:         fileh.setLevel(logging.DEBUG)
+33:         fileh.setFormatter(fmt)
+34:         logger.addHandler(fileh)
+36:     logger.propagate = False
+37:     _CONFIGURED = True
+38:     return logger
+41: def get_logger():
+42:     return logging.getLogger(_NAME)
+### brasileirao_predictor/operational_readiness.py
+3: import json
+4: import os
+5: import sqlite3
+6: from collections.abc import Mapping
+7: from datetime import UTC, datetime
+8: from pathlib import Path
+9: from typing import Any
+11: from .identity import CanonicalTeamResolver
+14: def _jsonl_rows(path: Path) -> int:
+15:     if not path.exists():
+16:         return 0
+17:     count = 0
+18:     for line in path.read_text(encoding="utf-8").splitlines():
+19:         if not line.strip():
+20:             continue
+21:         json.loads(line)
+22:         count += 1
+23:     return count
+26: def assess_operational_readiness(
+27:     root: Path, env: Mapping[str, str] | None = None, *, now: datetime | None = None
+28: ) -> dict[str, Any]:
+29:     environment = env if env is not None else os.environ
+30:     checked_at = (now or datetime.now(UTC)).astimezone(UTC)
+31:     data = root / "data"
+32:     checks: dict[str, dict[str, Any]] = {}
+34:     try:
+35:         CanonicalTeamResolver(data / "team_aliases.json", data / "teams_brasileirao.json")
+36:         checks["identity_catalog"] = {"status": "PASS"}
+37:     except (OSError, ValueError, json.JSONDecodeError) as exc:
+38:         checks["identity_catalog"] = {"status": "FAIL", "reason": str(exc)}
+40:     operational_db = data / "odds_operational.db"
+41:     required_tables = {"odds_event_versions", "odds_snapshot_facts"}
+42:     present_tables: set[str] = set()
+43:     if operational_db.exists():
+44:         try:
+45:             with sqlite3.connect(operational_db) as connection:
+46:                 query = "SELECT name FROM sqlite_master WHERE type='table'"
+47:                 present_tables = {row[0] for row in connection.execute(query)}
+48:         except sqlite3.DatabaseError:
+49:             present_tables = set()
+50:     db_ready = required_tables <= present_tables
+51:     checks["operational_database"] = {
+52:         "status": "PASS" if db_ready else "BLOCKED",
+53:         "exists": operational_db.exists(),
+54:         "required_tables_present": db_ready,
+55:     }
+56:     key_configured = bool(str(environment.get("ODDSPAPI_KEY", "")).strip())
+57:     checks["oddspapi_credential"] = {"status": "PASS" if key_configured else "BLOCKED", "configured": key_configured}
+59:     try:
+60:         snapshot_rows = sum(_jsonl_rows(path) for path in sorted((data / "odds_snapshots").glob("*.jsonl")))
+61:         checks["a1_snapshots"] = {"status": "PASS" if snapshot_rows else "PENDING", "rows": snapshot_rows}
+62:     except (OSError, json.JSONDecodeError) as exc:
+63:         checks["a1_snapshots"] = {"status": "FAIL", "reason": str(exc)}
+65:     verdict_path = data / "collector_metrics" / "gate_a1_verdict.json"
+66:     formal_pass = False
+67:     if verdict_path.exists():
+68:         try:
+69:             verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
+70:             formal_pass = verdict.get("verdict") == "PASS"
+71:         except json.JSONDecodeError:
+72:             pass
+73:     checks["gate_a1"] = {"status": "PASS" if formal_pass else "PENDING", "formal_pass": formal_pass}
+75:     heartbeat_specs = {"collector": 45 * 60, "discovery": 8 * 24 * 3600, "metrics": 26 * 3600}
+76:     for name, maximum_age in heartbeat_specs.items():
+77:         heartbeat_path = data / "collector_state" / f"{name}_heartbeat.json"
+78:         heartbeat_age: float | None = None
+79:         heartbeat_status = None
+80:         try:
+81:             heartbeat = json.loads(heartbeat_path.read_text(encoding="utf-8"))
+82:             heartbeat_at = datetime.fromisoformat(str(heartbeat["checked_at"]).replace("Z", "+00:00")).astimezone(UTC)
+83:             heartbeat_age = (checked_at - heartbeat_at).total_seconds()
+84:             heartbeat_status = heartbeat.get("status", "PASS")
+85:             heartbeat_ok = 0 <= heartbeat_age <= maximum_age and heartbeat_status == "PASS"
+86:         except (OSError, KeyError, ValueError, json.JSONDecodeError):
+87:             heartbeat_ok = False
+88:         checks[f"{name}_heartbeat"] = {
+89:             "status": "PASS" if heartbeat_ok else "BLOCKED",
+90:             "reported_status": heartbeat_status,
+91:             "age_seconds": heartbeat_age,
+92:             "maximum_age_seconds": maximum_age,
+93:         }
+95:     blockers = [name for name, check in checks.items() if check["status"] != "PASS"]
+96:     return {
+97:         "schema_version": "operational-readiness/v1",
+98:         "status": "READY_FOR_HUMAN_REVIEW" if not blockers else "BLOCKED",
+99:         "checks": checks,
+100:         "blockers": blockers,
+101:         "capital_enabled": False,
+102:         "secrets_exposed": False,
+103:     }
+### brasileirao_predictor/paths.py
+3: import os
+4: from pathlib import Path
+6: SOURCE_ROOT = Path(__file__).resolve().parent.parent
+9: def project_root() -> Path:
+10:     value = os.environ.get("BRASILEIRAO_PROJECT_ROOT")
+11:     if value is None:
+12:         return SOURCE_ROOT  # compatibility for explicitly invoked legacy checkout commands
+13:     root = Path(value).expanduser()
+14:     if not root.is_absolute():
+15:         raise ValueError("BRASILEIRAO_PROJECT_ROOT must be absolute")
+16:     return root.resolve()
+19: def runtime_root() -> Path:
+20:     root = Path(os.environ.get("BRASILEIRAO_RUNTIME_ROOT", project_root().parent / "runtime"))
+21:     if not root.is_absolute():
+22:         raise ValueError("BRASILEIRAO_RUNTIME_ROOT must be absolute")
+23:     if root.resolve().is_relative_to(SOURCE_ROOT):
+24:         raise ValueError("runtime must be outside the source checkout or installation")
+25:     return root.resolve()

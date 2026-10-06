@@ -1,0 +1,89 @@
+[
+  {
+    "id": "BR-TREE-001",
+    "project": "brasileirao-predictor",
+    "claim": "Fonte examinada contém modificados/não rastreados preexistentes",
+    "status": "OD",
+    "evidence": "baseline.json; hashes.json; untracked-hashes.json",
+    "limits": "Não equivale à release0.2.0 nem commit HEAD isolado"
+  },
+  {
+    "id": "BR-PLUGIN-001",
+    "project": "brasileirao-predictor",
+    "claim": "Capability labels não são métodos de plugin; health é WAITING estático",
+    "status": "OD",
+    "evidence": "ecosystem_plugin.py:BrasileiraoPredictorPlugin",
+    "limits": "Consumidor pode usar CLIs/jobs; método predict/collect não encontrado neste módulo"
+  },
+  {
+    "id": "BR-PROV-001",
+    "project": "brasileirao-predictor",
+    "claim": "Readiness verifica só declarações, não autentica evidência",
+    "status": "OD",
+    "evidence": "prediction_protocol.py:PredictionReadinessReport/assess_prediction_readiness",
+    "limits": "ready True mantém pre_match/economic_evidence_eligible False"
+  },
+  {
+    "id": "BR-PROS-001",
+    "project": "brasileirao-predictor",
+    "claim": "Sucessor prospectivo local especificado não ativado",
+    "status": "OD+ET-RUN",
+    "evidence": "prospective_protocol_v2.py PROTOCOL; domain-probes.json",
+    "limits": "Não rastreado;9 sondas puras não ativam nem homologam coorte"
+  },
+  {
+    "id": "BR-LEDGER-001",
+    "project": "brasileirao-predictor",
+    "claim": "Paper JSONL duplicate check não serializa concorrentes nesse arquivo",
+    "status": "OD+INF",
+    "evidence": "research/prospective_validation/ledger.py:append_pick/_append",
+    "limits": "Risco read-check-append; corrida não executada; não ausência global locks"
+  },
+  {
+    "id": "BR-ECO-001",
+    "project": "brasileirao-predictor",
+    "claim": "Book/bank manual não prova lucro líquido/extratos ou CLV admissível",
+    "status": "OD",
+    "evidence": "bet_log.py:bank_state/settle; economic_evidence_eligible False",
+    "limits": "Custos externos/proveniência/receipts econômicos não verificados"
+  },
+  {
+    "id": "BR-SCOPE-001",
+    "project": "brasileirao-predictor",
+    "claim": "CLI/modelos mantêm linguagem internacional/Copa",
+    "status": "OD",
+    "evidence": "predict.py main description; ratings.py k_factor; settle.py comments",
+    "limits": "Herança observada; não prova datasets de SérieA contaminados"
+  },
+  {
+    "id": "ALT-CONTRACT-BR",
+    "project": "brasileirao-predictor",
+    "claim": "Raiz alternativa introduz contratos de domínio LOCAL_FILE_ONLY e CLI research; nova época",
+    "status": "OD+ET-RUN",
+    "evidence": "alternate-material-hashes.json; alternate-domain-probes.json; relatorios/SUPLEMENTO_RAIZES_DOMINIOS.md",
+    "limits": "Probe contratos/PIT apenas; não instalação/serviço ou worker real. Primários permanecem outros SHAs."
+  },
+  {
+    "id": "BRA-A1-NONFINITE-STAGE",
+    "project": "brasileirao-predictor",
+    "claim": "A1 recommendation accepts NaN CLV lower and unknown evidence_stage, resulting score cap100 and SHADOW_CANDIDATE",
+    "status": "ET-RUN",
+    "evidence": [
+      "brasileirao_predictor/a1_recommendation.py:26-32,79-90",
+      "evidencias/brasileirao-predictor/a1-boundary-probe.json",
+      "evidencias/REGISTRO.log"
+    ],
+    "limits": "Synthetic input on isolated copied module; capital remainsFalse; no production corrupted record proven; alternative epoch not attributed."
+  },
+  {
+    "id": "BRA-SHADOW-CROSSRECORD",
+    "project": "brasileirao-predictor",
+    "claim": "Prospective shadow validators locally permit capture later than prediction and do not bind result pick_id/closing definition to supplied pick",
+    "status": "OD",
+    "evidence": [
+      "brasileirao_predictor/data/prospective_shadow.py:59-103",
+      "evidencias/REGISTRO.log"
+    ],
+    "limits": "Module guards only, callers may add constraints; no real poisoned cohort demonstrated; successor v2 distinct."
+  }
+]

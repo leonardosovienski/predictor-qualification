@@ -1,0 +1,448 @@
+### brasileirao_predictor/dixon_coles.py
+24: from __future__ import annotations
+26: import math
+27: from typing import Any
+29: __all__ = ["dc_tau", "time_decay_weight", "DixonColesMatrix", "fit_dixon_coles_parameters"]
+32: def dc_tau(home_goals: int, away_goals: int, lam: float, mu: float, rho: float) -> float:
+40:     if home_goals == 0 and away_goals == 0:
+41:         t = 1.0 - lam * mu * rho
+42:     elif home_goals == 0 and away_goals == 1:
+43:         t = 1.0 + lam * rho
+44:     elif home_goals == 1 and away_goals == 0:
+45:         t = 1.0 + mu * rho
+46:     elif home_goals == 1 and away_goals == 1:
+47:         t = 1.0 - rho
+48:     else:
+49:         return 1.0
+50:     if t <= 0.0:
+51:         raise ValueError(
+52:             f"tau({home_goals},{away_goals}) = {t:.4g} <= 0 com rho={rho}, "
+53:             f"lam={lam}, mu={mu} — rho fora da faixa válida para estas médias"
+54:         )
+55:     return t
+58: def time_decay_weight(days_ago: float, xi: float) -> float:
+65:     if xi < 0:
+66:         raise ValueError(f"xi deve ser >= 0 (recebido {xi})")
+67:     if days_ago < 0:
+68:         raise ValueError(
+69:             f"days_ago negativo ({days_ago}) — partida no futuro do corte; isso é lookahead do chamador, não decaimento"
+70:         )
+71:     return math.exp(-xi * days_ago)
+74: class DixonColesMatrix:
+88:     def __init__(self, lam: float, mu: float, rho: float = 0.0, max_goals: int = 10):
+89:         if lam <= 0 or mu <= 0:
+90:             raise ValueError(f"lam e mu devem ser > 0 (lam={lam}, mu={mu})")
+91:         if max_goals < 1:
+92:             raise ValueError("max_goals >= 1")
+93:         lo, hi = self.valid_rho_bounds(lam, mu)
+94:         if not (lo < rho < hi):
+95:             raise ValueError(
+96:                 f"rho={rho} fora da faixa válida ({lo:.4g}, {hi:.4g}) para lam={lam}, mu={mu} — tau ficaria <= 0"
+97:             )
+98:         self.lam = lam
+99:         self.mu = mu
+100:         self.rho = rho
+101:         self.max_goals = max_goals
+102:         self._grid = self._build_grid()
+104:     @staticmethod
+105:     def valid_rho_bounds(lam: float, mu: float) -> tuple:
+108:         return (max(-1.0 / lam, -1.0 / mu), min(1.0 / (lam * mu), 1.0))
+110:     @staticmethod
+111:     def _poisson_pmf(k: int, rate: float) -> float:
+112:         return math.exp(-rate + k * math.log(rate) - math.lgamma(k + 1))
+114:     def _build_grid(self) -> list:
+115:         n = self.max_goals + 1
+116:         grid = [
+117:             [
+118:                 self._poisson_pmf(h, self.lam)
+119:                 * self._poisson_pmf(a, self.mu)
+120:                 * dc_tau(h, a, self.lam, self.mu, self.rho)
+121:                 for a in range(n)
+122:             ]
+123:             for h in range(n)
+124:         ]
+125:         total = sum(sum(row) for row in grid)
+126:         return [[cell / total for cell in row] for row in grid]
+128:     def score_prob(self, home_goals: int, away_goals: int) -> float:
+130:         if not (0 <= home_goals <= self.max_goals and 0 <= away_goals <= self.max_goals):
+131:             raise ValueError(f"placar fora da grade 0..{self.max_goals}")
+132:         return self._grid[home_goals][away_goals]
+134:     def grid(self) -> list:
+136:         return [row[:] for row in self._grid]
+138:     def outcome_probs(self) -> dict:
+141:         home = draw = away = 0.0
+142:         for h in range(self.max_goals + 1):
+143:             for a in range(self.max_goals + 1):
+144:                 p = self._grid[h][a]
+145:                 if h > a:
+146:                     home += p
+147:                 elif h == a:
+148:                     draw += p
+149:                 else:
+150:                     away += p
+151:         return {"home": home, "draw": draw, "away": away}
+161: def fit_dixon_coles_parameters(
+162:     games: Any,
+163:     xi_fixed: float,
+164:     *,
+165:     max_goals: int = 10,
+166:     rho_bounds: tuple[float, float] = (-0.35, 0.35),
+167:     mean_attack_penalty: float = 100.0,
+168: ) -> dict:
+191:     import numpy as np
+192:     from scipy.optimize import minimize
+194:     rows: list[dict] = games.to_dict("records") if hasattr(games, "to_dict") else list(games)
+195:     if not rows:
+196:         raise ValueError("fit_dixon_coles_parameters: sem jogos")
+197:     teams: list[str] = sorted({r["home"] for r in rows} | {r["away"] for r in rows})
+198:     if len(teams) < 2:
+199:         raise ValueError("fit exige >= 2 times distintos")
+200:     idx: dict[str, int] = {t: i for i, t in enumerate(teams)}
+201:     n = len(teams)
+203:     weights = [time_decay_weight(float(r["days_ago"]), xi_fixed) for r in rows]
+205:     def objective(theta: np.ndarray) -> float:
+206:         log_a, log_b = theta[:n], theta[n : 2 * n]
+207:         log_gamma, rho = theta[2 * n], theta[2 * n + 1]
+208:         total = 0.0
+209:         for r, w in zip(rows, weights):
+210:             lam = math.exp(log_a[idx[r["home"]]] + log_b[idx[r["away"]]] + log_gamma)
+211:             mu = math.exp(log_a[idx[r["away"]]] + log_b[idx[r["home"]]])
+212:             lo, hi = DixonColesMatrix.valid_rho_bounds(lam, mu)
+213:             if not (lo < rho < hi):
+214:                 return float("inf")
+215:             h = int(r["home_goals"])
+216:             a = int(r["away_goals"])
+217:             if h < 0 or a < 0:
+218:                 return float("inf")
+219:             probability = (
+220:                 DixonColesMatrix._poisson_pmf(h, lam)
+221:                 * DixonColesMatrix._poisson_pmf(a, mu)
+222:                 * dc_tau(h, a, lam, mu, rho)
+223:             )
+224:             total += -w * math.log(probability)
+225:         total += mean_attack_penalty * float(np.mean(log_a)) ** 2
+226:         return total
+228:     theta0 = np.zeros(2 * n + 2)
+229:     theta0[2 * n] = math.log(1.3)  # chute inicial: vantagem de casa típica
+230:     bounds = [(None, None)] * (2 * n + 1) + [(rho_bounds[0], rho_bounds[1])]
+231:     res = minimize(objective, theta0, method="L-BFGS-B", bounds=bounds)
+233:     log_a, log_b = res.x[:n], res.x[n : 2 * n]
+234:     return {
+235:         "attack": {t: float(math.exp(log_a[idx[t]])) for t in teams},
+236:         "defense": {t: float(math.exp(log_b[idx[t]])) for t in teams},
+237:         "home_advantage": float(math.exp(res.x[2 * n])),
+238:         "rho": float(res.x[2 * n + 1]),
+239:         "xi": xi_fixed,
+240:         "converged": bool(res.success),
+241:         "wnll": float(res.fun),
+242:     }
+### brasileirao_predictor/dynamic_strength.py
+3: from __future__ import annotations
+5: import math
+6: from collections import defaultdict
+7: from collections.abc import Iterable
+10: def fit(
+11:     history: Iterable[tuple[float, int, int]],
+12:     params: tuple[float, ...],
+13:     teams: Iterable[tuple[str, str]],
+14:     *,
+15:     alpha_short: float,
+16:     alpha_long: float,
+17:     ridge_reg: float = 1.0,
+18:     eps: float = 0.1,
+19: ) -> dict[str, dict[str, float]]:
+21:     if not 0 < alpha_long <= alpha_short <= 1:
+22:         raise ValueError("alphas exigem 0 < alpha_long <= alpha_short <= 1")
+23:     if ridge_reg < 0 or eps <= 0:
+24:         raise ValueError("ridge_reg deve ser >= 0 e eps deve ser > 0")
+26:     a, b = float(params[0]), float(params[1])
+27:     states: dict[str, dict[str, list[float]]] = defaultdict(dict)
+29:     def update(team: str, key: str, observed: float, expected: float, alpha: float) -> None:
+30:         num, den = states[team].get(key, [0.0, 0.0])
+31:         states[team][key] = [(1 - alpha) * num + alpha * observed, (1 - alpha) * den + alpha * expected]
+33:     for (diff, home_goals, away_goals), (home, away) in zip(history, teams, strict=True):
+34:         lam_home = math.exp(a + b * float(diff) / 400.0)
+35:         lam_away = math.exp(a - b * float(diff) / 400.0)
+36:         for suffix, alpha in (("short", alpha_short), ("long", alpha_long)):
+37:             update(home, f"attack_{suffix}", home_goals + eps, lam_home + eps, alpha)
+38:             update(away, f"defence_{suffix}", home_goals + eps, lam_home + eps, alpha)
+39:             update(away, f"attack_{suffix}", away_goals + eps, lam_away + eps, alpha)
+40:             update(home, f"defence_{suffix}", away_goals + eps, lam_away + eps, alpha)
+42:     return {
+43:         team: {
+44:             key: math.log(max(num + ridge_reg, eps) / max(den + ridge_reg, eps)) for key, (num, den) in values.items()
+45:         }
+46:         for team, values in states.items()
+47:     }
+50: def corrections(states: dict[str, dict[str, float]], home: str, away: str) -> tuple[float, float]:
+53:     def value(team: str, key: str) -> float:
+54:         return float(states.get(team, {}).get(key, 0.0))
+56:     home_short = 0.5 * (value(home, "attack_short") + value(away, "defence_short"))
+57:     home_long = 0.5 * (value(home, "attack_long") + value(away, "defence_long"))
+58:     away_short = 0.5 * (value(away, "attack_short") + value(home, "defence_short"))
+59:     away_long = 0.5 * (value(away, "attack_long") + value(home, "defence_long"))
+60:     return 0.5 * (home_short + home_long), 0.5 * (away_short + away_long)
+### brasileirao_predictor/ecosystem_plugin.py
+7: from __future__ import annotations
+10: class BrasileiraoPredictorPlugin:
+11:     name = "brasileirao-predictor"
+12:     domain = "brasileirao"
+14:     def health(self) -> dict[str, object]:
+15:         return {
+16:             "domain": self.domain,
+17:             "status": "WAITING",
+18:             "version": "0.2.0",
+19:             "details": {
+20:                 "mode": "shadow",
+21:                 "adapter": "plugin-v1",
+22:                 "note": "saúde do domínio deve ser derivada dos jobs; adapter não promove readiness",
+23:             },
+24:         }
+26:     def capabilities(self) -> dict[str, object]:
+27:         return {
+28:             "domain": self.domain,
+29:             "supports_prediction": True,
+30:             "supports_settlement": False,
+31:             "supports_collection": True,
+32:             "scientific_status": "UNKNOWN",
+33:             "predictive_status": "UNKNOWN",
+34:             "economic_status": "NOT_VALIDATED",
+35:             "capital_permission": "FORBIDDEN",
+36:             "extra": {
+37:                 "mode": "shadow",
+38:                 "manual_execution": True,
+39:                 "source_of_scientific_truth": "HANDOFF.md",
+40:             },
+41:         }
+44: PLUGIN = BrasileiraoPredictorPlugin()
+### brasileirao_predictor/feature_builder.py
+9: import sqlite3
+11: DEFAULT_FEATURES = [
+12:     "Expected goals",
+13:     "Big chances",
+14:     "Total shots",
+15:     "Shots on target",
+16:     "Shots inside box",
+17:     "Touches in penalty area",
+18:     "Ball possession",
+19: ]
+22: def _connect_ro(db_path: str) -> sqlite3.Connection:
+23:     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+24:     conn.execute("PRAGMA query_only=ON")
+25:     conn.row_factory = sqlite3.Row
+26:     return conn
+29: def build_features(db_path: str, event_id: int, window: int = 10) -> dict:
+37:     conn = _connect_ro(db_path)
+39:     row = conn.execute(
+40:         "SELECT date, home_team, away_team FROM sofascore_matches WHERE event_id = ?", (event_id,)
+41:     ).fetchone()
+43:     if not row:
+44:         conn.close()
+45:         return {}
+47:     match_date = row["date"]
+48:     home_team = row["home_team"]
+49:     away_team = row["away_team"]
+51:     home_feats = _team_features(conn, home_team, match_date, window)
+52:     away_feats = _team_features(conn, away_team, match_date, window)
+53:     conn.close()
+55:     features = {}
+56:     for stat, val in home_feats.items():
+57:         features[f"home_{stat}"] = val
+58:     for stat, val in away_feats.items():
+59:         features[f"away_{stat}"] = val
+61:     home_xg = home_feats.get("Expected goals")
+62:     away_xg = away_feats.get("Expected goals")
+63:     has_home_xg = home_xg is not None
+64:     has_away_xg = away_xg is not None
+65:     features.setdefault("home_Expected goals", None)
+66:     features.setdefault("away_Expected goals", None)
+67:     features.setdefault("home_Expected goals_n_valid", 0)
+68:     features.setdefault("away_Expected goals_n_valid", 0)
+69:     features["has_home_xg"] = has_home_xg
+70:     features["has_away_xg"] = has_away_xg
+71:     features["has_delta_xg"] = has_home_xg and has_away_xg
+72:     features["delta_xg"] = home_xg - away_xg if home_xg is not None and away_xg is not None else None
+74:     return features
+77: def _team_features(conn: sqlite3.Connection, team: str, match_date: str, window: int) -> dict:
+85:     event_rows = conn.execute(
+86:         """
+87:         SELECT event_id,
+88:                CASE WHEN home_team = ? THEN 'home' ELSE 'away' END as side
+89:         FROM sofascore_matches
+90:         WHERE (home_team = ? OR away_team = ?)
+91:           AND date < ?
+92:           AND home_score IS NOT NULL
+93:         ORDER BY date DESC
+94:         LIMIT ?
+95:     """,
+96:         (team, team, team, match_date, window),
+97:     ).fetchall()
+99:     if not event_rows:
+100:         return {}
+102:     side_by_event = {r["event_id"]: r["side"] for r in event_rows}
+103:     event_ids = list(side_by_event)
+104:     placeholders = ",".join("?" * len(event_ids))
+105:     stat_placeholders = ",".join("?" * len(DEFAULT_FEATURES))
+107:     rows = conn.execute(
+108:         f"""
+109:         SELECT ms.event_id, ms.team, ms.stat_name, ms.value
+110:         FROM match_statistics ms
+111:         WHERE ms.event_id IN ({placeholders})
+112:           AND ms.stat_name IN ({stat_placeholders})
+113:           AND ms.period = 'ALL'
+114:           AND ms.value IS NOT NULL
+115:     """,
+116:         event_ids + DEFAULT_FEATURES,
+117:     ).fetchall()
+119:     sums: dict = {}
+120:     counts: dict = {}
+121:     for r in rows:
+122:         if r["team"] != side_by_event[r["event_id"]]:
+123:             continue  # linha do adversario: fora da media
+124:         sums[r["stat_name"]] = sums.get(r["stat_name"], 0.0) + r["value"]
+125:         counts[r["stat_name"]] = counts.get(r["stat_name"], 0) + 1
+127:     features = {stat: sums[stat] / counts[stat] for stat in sums}
+128:     features.update({f"{stat}_n_valid": count for stat, count in counts.items()})
+129:     return features
+### brasileirao_predictor/formal_prediction.py
+3: from datetime import UTC, datetime
+5: from .prediction_protocol import PredictionReadinessInput, assess_prediction_readiness
+8: def prepare_context(context: dict, home: str, away: str, match_date: str, resolver) -> dict:
+9:     if set(context) != {"readiness", "quote"}:
+10:         raise ValueError("formal context requires readiness and explicit quote (or null)")
+11:     candidate = PredictionReadinessInput.model_validate(context["readiness"])
+12:     identities = [resolver.resolve(name) for name in (home, away)]
+13:     if any(item.canonical is None for item in identities):
+14:         raise ValueError("formal prediction requires resolved canonical teams")
+15:     if (identities[0].canonical, identities[1].canonical) != (candidate.home, candidate.away):
+16:         raise ValueError("readiness teams differ from resolved prediction teams")
+17:     if candidate.kickoff_at.astimezone(UTC).date().isoformat() != match_date:
+18:         raise ValueError("match_date differs from formal UTC kickoff date")
+19:     report = assess_prediction_readiness(candidate)
+20:     if not report.ready:
+21:         raise ValueError("formal readiness blocked: " + ",".join(item.code for item in report.blockers))
+22:     quote = context["quote"]
+23:     if quote is not None:
+24:         if set(quote) != {"quote_id", "event_id", "captured_at", "market"}:
+25:             raise ValueError("formal quote requires exact quote/event identity and capture time")
+26:         if not isinstance(quote["quote_id"], str) or not quote["quote_id"].strip():
+27:             raise ValueError("quote_id is required")
+28:         if quote["event_id"] != candidate.event_id:
+29:             raise ValueError("quote belongs to another event")
+30:         captured = datetime.fromisoformat(quote["captured_at"].replace("Z", "+00:00"))
+31:         if captured.tzinfo is None or captured.utcoffset() is None or captured > candidate.predicted_at:
+32:             raise ValueError("quote capture must be aware and no later than prediction")
+33:         if candidate.odds_captured_at != captured:
+34:             raise ValueError("quote capture differs from readiness declaration")
+35:     elif candidate.odds_captured_at is not None:
+36:         raise ValueError("readiness declares odds without an exact quote")
+37:     return {
+38:         "schema_version": "formal-prediction-context/1",
+39:         "event_id": candidate.event_id,
+40:         "home_id": candidate.home,
+41:         "away_id": candidate.away,
+42:         "mapping_version": resolver.mapping_version,
+43:         "readiness": candidate.model_dump(mode="json"),
+44:         "assessment": report.model_dump(mode="json"),
+45:         "quote": quote,
+46:     }
+### brasileirao_predictor/ingest.py
+1: import io
+2: import os
+3: import sys
+4: import time
+5: import urllib.request
+6: from pathlib import Path
+7: from typing import Any, cast
+9: import pandas as pd
+10: import yaml
+11: from predictor_core.kernel.obs import emit_event
+13: from . import db
+14: from .net import retry
+15: from .obs import get_logger, setup_logging
+16: from .paths import project_root
+18: log = get_logger()
+19: _DOMAIN = "brasileirao"
+21: ROOT = project_root()
+24: def load_config() -> dict:
+25:     config_path = Path(os.environ.get("BRASILEIRAO_CONFIG_PATH", ROOT / "config.yaml"))
+26:     with config_path.open() as f:
+27:         return yaml.safe_load(f)
+30: @retry(attempts=3, base_delay=2.0)
+31: def _download(url: str) -> str:
+32:     with urllib.request.urlopen(url, timeout=30) as r:
+33:         return r.read().decode("utf-8")
+36: def fetch_csv(cfg: dict) -> pd.DataFrame:
+37:     try:
+38:         raw = _download(cfg["source"]["url"])
+39:         df = pd.read_csv(io.StringIO(raw))
+40:         log.info("fonte remota: %d linhas", len(df))
+41:     except Exception as e:
+42:         fallback = ROOT / cfg["source"]["local_fallback"]
+43:         log.warning("fonte remota indisponível (%s); usando fallback %s", e, fallback)
+44:         df = pd.read_csv(fallback)
+45:     return df
+48: def normalize(df: pd.DataFrame) -> pd.DataFrame:
+49:     df = df.copy()
+50:     df["date"] = pd.to_datetime(df["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+51:     df = df.dropna(subset=["date", "home_team", "away_team"])
+52:     df["neutral"] = df["neutral"].astype(str).str.upper().isin(["TRUE", "1"]).astype(int)
+53:     for col in ("home_score", "away_score"):
+54:         numeric = cast(pd.Series, pd.to_numeric(cast(pd.Series, df[col]), errors="coerce"))
+55:         df[col] = numeric.astype("Int64")
+56:     df = df.drop_duplicates(subset=["date", "home_team", "away_team"], keep="last")
+57:     return cast(
+58:         pd.DataFrame,
+59:         df[
+60:             [
+61:                 "date",
+62:                 "home_team",
+63:                 "away_team",
+64:                 "home_score",
+65:                 "away_score",
+66:                 "tournament",
+67:                 "city",
+68:                 "country",
+69:                 "neutral",
+70:             ]
+71:         ],
+72:     )
+75: def run() -> None:
+76:     cfg = load_config()
+77:     setup_logging(ROOT / "data")
+78:     t0 = time.monotonic()
+79:     df = normalize(fetch_csv(cfg))
+80:     conn = db.connect(str(ROOT / cfg["database"]))
+81:     rows = []
+82:     for values in df.itertuples(index=False, name=None):
+83:         date_, home, away, home_score, away_score, tournament, city, country, neutral = cast(tuple[Any, ...], values)
+84:         rows.append(
+85:             (
+86:                 date_,
+87:                 home,
+88:                 away,
+89:                 None if pd.isna(home_score) else int(home_score),
+90:                 None if pd.isna(away_score) else int(away_score),
+91:                 tournament,
+92:                 city,
+93:                 country,
+94:                 int(neutral),
+95:             )
+96:         )
+97:     db.upsert_matches(conn, rows)
+98:     played = conn.execute("SELECT COUNT(*) FROM matches WHERE home_score IS NOT NULL").fetchone()[0]
+99:     fixtures = conn.execute("SELECT COUNT(*) FROM matches WHERE home_score IS NULL").fetchone()[0]
+100:     log.info("banco: %d partidas jogadas, %d fixtures futuros", played, fixtures)
+101:     emit_event(
+102:         _DOMAIN,
+103:         "ingest_done",
+104:         metrics={
+105:             "records": float(len(rows)),
+106:             "played": float(played),
+107:             "fixtures": float(fixtures),
+108:             "duration_sec": round(time.monotonic() - t0, 2),
+109:         },
+110:         metadata={"source": "results_csv"},
+111:     )
+114: if __name__ == "__main__":
+115:     sys.exit(run())

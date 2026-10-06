@@ -1,0 +1,393 @@
+### brasileirao_predictor/research/price_strength/quotes.py
+8: from __future__ import annotations
+10: import hashlib
+11: import json
+12: import math
+13: import re
+14: from collections import defaultdict
+15: from dataclasses import asdict, dataclass
+16: from datetime import UTC, datetime
+17: from typing import Any
+19: _SIDES = {"1x2": ("away", "draw", "home"), "ou25": ("over", "under"), "btts": ("no", "yes")}
+20: _CLOCKS = ("observed_at", "available_at", "received_at", "kickoff_at")
+21: _IDENTIFIERS = ("snapshot_id", "source", "source_event_id", "event_id", "bookmaker")
+22: _FIELDS = set(_CLOCKS + _IDENTIFIERS) | {
+23:     "market",
+24:     "period",
+25:     "line",
+26:     "status",
+27:     "odds",
+28:     "raw_payload_hash",
+29:     "snapshot_scope",
+30: }
+33: def _number(value: Any, name: str) -> float:
+34:     if isinstance(value, bool) or not isinstance(value, (int, float)):
+35:         raise ValueError(f"invalid_number:{name}")
+36:     try:
+37:         number = float(value)
+38:     except OverflowError as exc:
+39:         raise ValueError(f"invalid_number:{name}") from exc
+40:     if not math.isfinite(number):
+41:         raise ValueError(f"invalid_number:{name}")
+42:     return number
+45: def _clock(value: Any, name: str) -> datetime:
+46:     if isinstance(value, str):
+47:         try:
+48:             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+49:         except ValueError as exc:
+50:             raise ValueError(f"invalid_timestamp:{name}") from exc
+51:     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+52:         raise ValueError(f"invalid_timestamp:{name}")
+53:     return value.astimezone(UTC)
+56: @dataclass(frozen=True)
+57: class PricePolicy:
+60:     reference_books: tuple[str, ...]
+61:     max_age_seconds: float
+62:     max_skew_seconds: float
+63:     cost_per_unit: float
+64:     commission_on_profit: float
+65:     min_reference_books: int = 1
+66:     min_ev: float | None = None
+67:     max_ev: float | None = None
+69:     def __post_init__(self) -> None:
+70:         books = self.reference_books
+71:         if (
+72:             not isinstance(books, tuple)
+73:             or not books
+74:             or any(not isinstance(book, str) or not book.strip() or book != book.strip() for book in books)
+75:             or len(set(books)) != len(books)
+76:         ):
+77:             raise ValueError("reference_books must be a nonempty tuple of distinct bookmaker keys")
+78:         if (
+79:             isinstance(self.min_reference_books, bool)
+80:             or not isinstance(self.min_reference_books, int)
+81:             or not 1 <= self.min_reference_books <= len(books)
+82:         ):
+83:             raise ValueError("min_reference_books must be between one and the reference book count")
+84:         if _number(self.max_age_seconds, "max_age_seconds") <= 0:
+85:             raise ValueError("max_age_seconds must be positive")
+86:         if _number(self.max_skew_seconds, "max_skew_seconds") < 0:
+87:             raise ValueError("max_skew_seconds cannot be negative")
+88:         if not 0 <= _number(self.cost_per_unit, "cost_per_unit") < 1:
+89:             raise ValueError("cost_per_unit must be in [0, 1)")
+90:         if not 0 <= _number(self.commission_on_profit, "commission_on_profit") < 1:
+91:             raise ValueError("commission_on_profit must be in [0, 1)")
+92:         for name in ("min_ev", "max_ev"):
+93:             value = getattr(self, name)
+94:             if value is not None and not 0 <= _number(value, name) <= 1:
+95:                 raise ValueError(f"{name} must be in [0, 1] or None")
+96:         if self.min_ev is not None and self.max_ev is not None and self.min_ev > self.max_ev:
+97:             raise ValueError("min_ev cannot exceed max_ev")
+100: def _identity(row: Any) -> tuple[str, str, str] | None:
+101:     if not isinstance(row, dict):
+102:         return None
+103:     parts = tuple(row.get(name) for name in ("event_id", "bookmaker", "market"))
+104:     if all(isinstance(part, str) and part.strip() and part == part.strip() for part in parts) and parts[2] in _SIDES:
+105:         return parts  # type: ignore[return-value]
+106:     return None
+109: def _normalize(row: dict[str, Any]) -> dict[str, Any]:
+110:     if not isinstance(row, dict):
+111:         raise ValueError("snapshot_must_be_object")
+112:     if any(not isinstance(key, str) for key in row):
+113:         raise ValueError("snapshot_keys_must_be_strings")
+114:     if missing := _FIELDS - row.keys():
+115:         raise ValueError(f"missing_fields:{','.join(sorted(missing))}")
+116:     if extra := row.keys() - _FIELDS:
+117:         raise ValueError(f"unknown_fields:{','.join(sorted(extra))}")
+118:     for name in _IDENTIFIERS:
+119:         value = row[name]
+120:         if not isinstance(value, str) or not value.strip() or value != value.strip():
+121:             raise ValueError(f"invalid_identifier:{name}")
+122:     if row["snapshot_scope"] != "complete_market":
+123:         raise ValueError("snapshot_scope_must_be_complete_market")
+124:     digest = row["raw_payload_hash"]
+125:     if not isinstance(digest, str) or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None:
+126:         raise ValueError("invalid_raw_payload_hash")
+127:     market = row["market"]
+128:     if not isinstance(market, str) or market not in _SIDES or row["period"] != "FT":
+129:         raise ValueError("unsupported_market_or_period")
+130:     if market == "ou25":
+131:         if _number(row["line"], "line") != 2.5:
+132:             raise ValueError("ou25_requires_line_2.5")
+133:     elif row["line"] is not None:
+134:         raise ValueError("line_must_be_null_for_1x2_or_btts")
+135:     clocks = {name: _clock(row[name], name) for name in _CLOCKS}
+136:     if not clocks["observed_at"] <= clocks["available_at"] <= clocks["received_at"]:
+137:         raise ValueError("observation_availability_receipt_clock_order")
+138:     status, odds = row["status"], row["odds"]
+139:     if status not in ("active", "suspended", "unavailable") or not isinstance(odds, dict):
+140:         raise ValueError("invalid_status_or_odds_object")
+141:     if status == "active":
+142:         if set(odds) != set(_SIDES[market]):
+143:             raise ValueError("incomplete_or_mismatched_market")
+144:         for side, odd in odds.items():
+145:             if _number(odd, f"odds.{side}") <= 1:
+146:                 raise ValueError(f"invalid_decimal_odds:{side}")
+147:     elif odds:
+148:         raise ValueError("inactive_snapshot_must_not_contain_prices")
+149:     return {
+150:         **row,
+151:         **clocks,
+152:         "raw_payload_hash": digest.lower(),
+153:         "odds": {side: float(odd) for side, odd in sorted(odds.items())},
+154:     }
+157: def _provenance(row: dict[str, Any]) -> dict[str, Any]:
+158:     return {
+159:         **{name: row[name] for name in _IDENTIFIERS},
+160:         **{name: row[name].isoformat() for name in _CLOCKS},
+161:         "raw_payload_hash": row["raw_payload_hash"],
+162:         "snapshot_scope": row["snapshot_scope"],
+163:         "market": row["market"],
+164:         "period": row["period"],
+165:         "line": row["line"],
+166:         "status": row["status"],
+167:         "odds": dict(row["odds"]),
+168:         "source_authentication_proven": False,
+169:     }
+172: def _canonical(row: dict[str, Any]) -> str:
+173:     return json.dumps(row, sort_keys=True, separators=(",", ":"), default=lambda item: item.isoformat())
+176: def _fair(row: dict[str, Any]) -> dict[str, float]:
+177:     implied = {side: 1.0 / odd for side, odd in row["odds"].items()}
+178:     total = sum(implied.values())
+179:     if total <= 1:
+180:         raise ValueError("reference_has_no_positive_overround")
+181:     return {side: value / total for side, value in implied.items()}
+184: def scan_quotes(rows: list[dict], *, as_of: datetime, policy: PricePolicy) -> dict[str, Any]:
+191:     decision = _clock(as_of, "as_of")
+192:     if not isinstance(policy, PricePolicy):
+193:         raise ValueError("policy must be PricePolicy")
+194:     result: dict[str, Any] = {
+195:         "schema_version": "price-strength-comparison/1",
+196:         "status": "RESEARCH_ONLY",
+197:         "capital_enabled": False,
+198:         "execution_proven": False,
+199:         "as_of": decision.isoformat(),
+200:         "policy": {**asdict(policy), "reference_books": list(policy.reference_books)},
+201:         "method": "mean-proportional-devig-independent-reference/v1",
+202:         "validation_errors": [],
+203:         "snapshot_reviews": [],
+204:         "evaluations": [],
+205:         "selected_candidates": [],
+206:         "batch_blocked": False,
+207:     }
+208:     if not isinstance(rows, list):
+209:         result["validation_errors"].append({"row_index": None, "reason": "rows_must_be_list"})
+210:         result["batch_blocked"] = True
+211:         return result
+212:     states: dict[tuple, list[dict]] = defaultdict(list)
+213:     sources: dict[tuple, set[str]] = defaultdict(set)
+214:     snapshot_ids: dict[str, set[str]] = defaultdict(set)
+215:     for index, raw in enumerate(rows):
+216:         identifier = raw.get("snapshot_id") if isinstance(raw, dict) else None
+217:         review = {"row_index": index, "snapshot_id": identifier if isinstance(identifier, str) else None}
+218:         result["snapshot_reviews"].append(review)
+219:         key = _identity(raw)
+220:         try:
+221:             received = _clock(raw.get("received_at"), "received_at") if isinstance(raw, dict) else None
+222:         except ValueError:
+223:             received = None
+224:         try:
+225:             row = _normalize(raw)
+226:         except ValueError as exc:
+227:             reason = str(exc)
+228:             result["validation_errors"].append({**review, "reason": reason})
+229:             review.update(status="rejected", reason=reason)
+230:             if received is not None and received > decision:
+231:                 review["availability_reason"] = "received_after_as_of"
+232:             elif key is not None and received is not None:
+233:                 states[key].append({"row": None, "received": received, "index": index})
+234:             else:
+235:                 result["batch_blocked"] = True
+236:             continue
+237:         if row["received_at"] > decision:
+238:             review.update(status="excluded", reason="received_after_as_of")
+239:             continue
+240:         sources[(row["event_id"], row["bookmaker"])].add(row["source"])
+241:         snapshot_ids[row["snapshot_id"]].add(_canonical(row))
+242:         assert key is not None  # _normalize validated every identity field above.
+243:         states[key].append({"row": row, "received": row["received_at"], "index": index})
+245:     conflicts = {identifier for identifier, versions in snapshot_ids.items() if len(versions) > 1}
+246:     latest: dict[tuple, dict] = {}
+247:     rejected: dict[tuple, str] = {}
+248:     for key, history in sorted(states.items()):
+249:         last_time = max(item["received"] for item in history)
+250:         last = [item for item in history if item["received"] == last_time]
+251:         for item in history:
+252:             review = result["snapshot_reviews"][item["index"]]
+253:             if "status" not in review:
+254:                 review.update(status="excluded", reason="superseded_snapshot")
+255:         if any(item["row"] is None for item in last):
+256:             rejected[key] = "latest_snapshot_invalid"
+257:         elif len({_canonical(item["row"]) for item in last}) > 1:
+258:             rejected[key] = "conflicting_latest_snapshots"
+259:             result["validation_errors"].append({"row_index": last[0]["index"], "reason": rejected[key]})
+260:         else:
+261:             row = last[0]["row"]
+262:             latest[key] = row
+263:             if row["snapshot_id"] in conflicts:
+264:                 rejected[key] = "snapshot_id_conflict"
+265:                 result["validation_errors"].append({"row_index": last[0]["index"], "reason": rejected[key]})
+266:             elif len(sources[(row["event_id"], row["bookmaker"])]) > 1:
+267:                 rejected[key] = "ambiguous_bookmaker_source"
+268:             elif decision >= row["kickoff_at"]:
+269:                 rejected[key] = "decision_not_strictly_pre_kickoff"
+270:             elif row["status"] != "active":
+271:                 rejected[key] = f"latest_snapshot_{row['status']}"
+272:             elif (decision - row["observed_at"]).total_seconds() > policy.max_age_seconds:
+273:                 rejected[key] = "latest_snapshot_stale"
+274:         for item in last:
+275:             review = result["snapshot_reviews"][item["index"]]
+276:             if key in rejected:
+277:                 review.update(status="rejected", reason=rejected[key])
+278:             else:
+279:                 review.update(status="latest", reason="latest_available_snapshot")
+281:     event_clocks: dict[str, set[datetime]] = defaultdict(set)
+282:     event_sources: dict[tuple, set[str]] = defaultdict(set)
+283:     source_events: dict[tuple, set[str]] = defaultdict(set)
+284:     for row in latest.values():
+285:         event_clocks[row["event_id"]].add(row["kickoff_at"])
+286:         event_sources[(row["event_id"], row["source"])].add(row["source_event_id"])
+287:         source_events[(row["source"], row["source_event_id"])].add(row["event_id"])
+288:     for key, row in latest.items():
+289:         if len(event_clocks[row["event_id"]]) > 1:
+290:             rejected[key] = "event_kickoff_conflict"
+291:         if len(event_sources[(row["event_id"], row["source"])]) > 1:
+292:             rejected[key] = "event_source_identity_conflict"
+293:         if len(source_events[(row["source"], row["source_event_id"])]) > 1:
+294:             rejected[key] = "source_event_canonical_identity_conflict"
+295:     if result["batch_blocked"]:
+296:         rejected.update({key: "batch_validation_failed" for key in states})
+297:     for key, history in states.items():
+298:         if key in rejected:
+299:             last_time = max(item["received"] for item in history)
+300:             for item in history:
+301:                 if item["received"] == last_time:
+302:                     result["snapshot_reviews"][item["index"]].update(status="rejected", reason=rejected[key])
+304:     candidates = []
+305:     for key in sorted(states):
+306:         event_id, bookmaker, market = key
+307:         base = {"event_id": event_id, "bookmaker": bookmaker, "market": market, "execution_proven": False}
+308:         if key in rejected:
+309:             result["evaluations"].append(
+310:                 {
+311:                     **base,
+312:                     "status": "rejected",
+313:                     "reason": rejected[key],
+314:                     "provenance": _provenance(latest[key]) if key in latest else None,
+315:                 }
+316:             )
+317:             continue
+318:         offer = latest[key]
+319:         reference_rows = []
+320:         reference_exclusions = []
+321:         for book in sorted(policy.reference_books):
+322:             reference_key = (event_id, book, market)
+323:             reason = None
+324:             if book == bookmaker:
+325:                 reason = "offering_book_excluded_from_reference"
+326:             elif reference_key not in latest:
+327:                 reason = rejected.get(reference_key, "reference_snapshot_missing")
+328:             elif reference_key in rejected:
+329:                 reason = rejected[reference_key]
+330:             else:
+331:                 reference = latest[reference_key]
+332:                 if any(
+333:                     abs((reference[clock] - offer[clock]).total_seconds()) > policy.max_skew_seconds
+334:                     for clock in ("observed_at", "available_at", "received_at")
+335:                 ):
+336:                     reason = "reference_clock_skew"
+337:                 else:
+338:                     try:
+339:                         probabilities = _fair(reference)
+340:                         reference_rows.append((reference, probabilities))
+341:                     except ValueError as exc:
+342:                         reason = str(exc)
+343:             if reason:
+344:                 reference_exclusions.append({"bookmaker": book, "reason": reason})
+345:         reason = None
+346:         if len(reference_rows) < policy.min_reference_books:
+347:             reason = "insufficient_independent_reference_books"
+348:         elif any(
+349:             (
+350:                 max(row[clock] for row, _ in reference_rows) - min(row[clock] for row, _ in reference_rows)
+351:             ).total_seconds()
+352:             > policy.max_skew_seconds
+353:             for clock in ("observed_at", "available_at", "received_at")
+354:         ):
+355:             reason = "reference_clock_skew"
+356:         fair = {}
+357:         if reason is None:
+358:             fair = {
+359:                 side: sum(probabilities[side] for _, probabilities in reference_rows) / len(reference_rows)
+360:                 for side in _SIDES[market]
+361:             }
+362:             normalization = sum(fair.values())
+363:             fair = {side: value / normalization for side, value in fair.items()}
+364:         reference_provenance = [_provenance(row) for row, _ in reference_rows]
+365:         reference_fingerprint = None
+366:         if reason is None:
+367:             reference_fingerprint = hashlib.sha256(
+368:                 _canonical(
+369:                     {
+370:                         "as_of": result["as_of"],
+371:                         "policy": result["policy"],
+372:                         "method": result["method"],
+373:                         "reference_provenance": reference_provenance,
+374:                     }
+375:                 ).encode()
+376:             ).hexdigest()
+377:         for side, odd in offer["odds"].items():
+378:             evaluation = {
+379:                 **base,
+380:                 "period": "FT",
+381:                 "line": offer["line"],
+382:                 "selection": side,
+383:                 "decimal_odds": odd,
+384:                 "status": "rejected",
+385:                 "reason": reason,
+386:                 "provenance": _provenance(offer),
+387:                 "reference_provenance": reference_provenance,
+388:                 "reference_probabilities": dict(fair) if reason is None else None,
+389:                 "reference_fingerprint": reference_fingerprint,
+390:                 "reference_books_used": [row["bookmaker"] for row, _ in reference_rows],
+391:                 "reference_exclusions": reference_exclusions,
+392:                 "reference_probability": None,
+393:                 "gross_ev": None,
+394:                 "net_ev": None,
+395:             }
+396:             if reason is None:
+397:                 probability = fair[side]
+398:                 gross = probability * odd - 1.0
+399:                 net = probability * (1 + (odd - 1) * (1 - policy.commission_on_profit)) - 1 - policy.cost_per_unit
+400:                 evaluation.update(reference_probability=probability, gross_ev=gross, net_ev=net)
+401:                 if net <= 0:
+402:                     evaluation["reason"] = "non_positive_net_ev"
+403:                 elif policy.min_ev is not None and net < policy.min_ev:
+404:                     evaluation["reason"] = "below_minimum_net_ev"
+405:                 elif policy.max_ev is not None and net > policy.max_ev:
+406:                     evaluation["reason"] = "above_maximum_net_ev"
+407:                 else:
+408:                     evaluation.update(status="candidate", reason="positive_net_ev_with_independent_reference")
+409:                     fingerprint = {"as_of": result["as_of"], "policy": result["policy"], "evaluation": evaluation}
+410:                     evaluation["candidate_id"] = hashlib.sha256(_canonical(fingerprint).encode()).hexdigest()
+411:                     candidates.append(evaluation)
+412:             result["evaluations"].append(evaluation)
+413:     picked = set()
+414:     for candidate in sorted(
+415:         candidates,
+416:         key=lambda item: (
+417:             -item["net_ev"],
+418:             item["event_id"],
+419:             item["market"],
+420:             item["selection"],
+421:             item["bookmaker"],
+422:             item["provenance"]["snapshot_id"],
+423:         ),
+424:     ):
+425:         if candidate["event_id"] in picked:
+426:             candidate.update(status="not_selected", reason="one_candidate_per_event")
+427:             continue
+428:         picked.add(candidate["event_id"])
+429:         candidate.update(status="selected_for_research", reason="highest_net_ev_for_event")
+430:         result["selected_candidates"].append(dict(candidate))
+431:     return result

@@ -1,0 +1,3 @@
+# Caracterização antes da narrativa: ecosystem-predictor alternativa
+
+Raiz `C:\QUALIFICACAO\repos\ecosystem-predictor`, HEAD `0a4f87e53d3d131e449096f82ba7b0c672b91d85` limpo conforme linked-roots.json. Manifest `ecosystem-predictor` versão `0.2.0`. Método: hash de todos rastreados; leitura integral de todo código/config/teste alterado; trechos idênticos referenciados à leitura semântica da fonte primária, sem reconstruir execução. Material e hashes em alternative-changes.json/alternative-hashes.json; diff preservado. Nenhum código da raiz alternativa executado. Narrativa alternativa ainda não lida neste bloco.

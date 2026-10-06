@@ -1,0 +1,660 @@
+[
+  {
+    "ID": "G-EPOCAS",
+    "Projeto": "conjunto",
+    "Prioridade": "P1",
+    "Certeza": "OD confirmado-remotamente",
+    "Afirmação": "HEADs originais diferem do main remoto; o Anexo A descreve outra época. Época main estudada em 2026-09-30 (LINHA_DE_BASE_EPOCA_MAIN.md): os oito HEADs originais são ancestrais dos main atuais; delta inventariado por arquivo e revisado só nos projetos pequenos (ops, core, ecosystem V2/transport) e nos adapters/contratos dos domínios.",
+    "Evidência": "LINHA_DE_BASE.md; LINHA_DE_BASE_EPOCA_MAIN.md; */baseline.json; epoca-main-20260930/baseline/SUMMARY.json; epoca-main-20260930/delta/*.json",
+    "Limites": "Main remoto observado por ref e CI, código remoto integral não revisado.",
+    "Próximo passo": "Associar cada conclusão a SHA (feito nos suplementos); revisar o delta pendente (EPOCA-COBERTURA-1)."
+  },
+  {
+    "ID": "cain-1",
+    "Projeto": "cain",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "Árvore local difere de HEAD e versões do Anexo",
+    "Evidência": "Baseline-status; pyproject0.4.12; analysis importa claim_tables não rastreado",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Estudar arquivo dirty e HEAD separadamente; não inferir pacote instalado"
+  },
+  {
+    "ID": "cain-2",
+    "Projeto": "cain",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "query de pesquisa grava histórico",
+    "Evidência": "ResearchService.query INSERT INTO queries linhas481-494",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Read-only CLI não é forense sem cópia"
+  },
+  {
+    "ID": "BR-LEDGER-001",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD+INF",
+    "Afirmação": "Paper JSONL duplicate check não serializa concorrentes nesse arquivo",
+    "Evidência": "research/prospective_validation/ledger.py:append_pick/_append",
+    "Limites": "Risco read-check-append; corrida não executada; não ausência global locks",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CR-LOCK-001",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "Manifest/lock divergem: research protocol declarado ausente lock",
+    "Evidência": "pyproject.toml dependencies; uv.lock todos package entries",
+    "Limites": "Instalação/uv sync atual NV; forte risco locked sync não coerente",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CR-CI-001",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "CI installed contract aponta wheel1.1.0 com manifest1.1.1rc4",
+    "Evidência": "pyproject.toml; .github/workflows/ci.yml wheel-contract",
+    "Limites": "Build atual não executado; não afirmar erro CI remoto sem run específico",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "stocks-predictor-1",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "Fonte0.2.0 antecede arquitetura Anexo0.3/V2",
+    "Evidência": "pyproject e ecosystem_pluginV1; trackedfiles",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Não afirmar V2/Ops presentes nessa árvore"
+  },
+  {
+    "ID": "stocks-predictor-2",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "external status/verify CLI escrevem storage/receipts",
+    "Evidência": "external_intelligence.run_cli/connect linhas1742-1792",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Nunca executar original; apenas cópia neutralizada"
+  },
+  {
+    "ID": "stocks-predictor-3",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD+NV",
+    "Afirmação": "Governança estatística e completa fonte não certificam lucro",
+    "Evidência": "trials_gate.apply_dsr; dataset_selection scope; plugincapitalFORBIDDEN",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Recomposição factual PIT/custos/eventos e holdout permanece necessária"
+  },
+  {
+    "ID": "OPS-05",
+    "Projeto": "predictor-ops",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "Permissão de capital vem do config",
+    "Evidência": "src/predictor_ops/models.py",
+    "Limites": "Kill switch valida declarações locais; autorização de pessoa/corretora e fonte de risco real não comprovadas.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CORE-02",
+    "Projeto": "core-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD",
+    "Afirmação": "Concorrência V2 não herda trava V1",
+    "Evidência": "src/predictor_core/contracts/trial_v2.py",
+    "Limites": "Read/append/replace analisado integralmente; testes existentes não comprovam escritores concorrentes V2.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "predictor-qualification-2",
+    "Projeto": "predictor-qualification",
+    "Prioridade": "P1",
+    "Certeza": "NV",
+    "Afirmação": "attest.check verifica subconjunto das oito regras C7.1; schema/hashs não provam semântica científica",
+    "Evidência": "qualification/crypto/scripts/attest.py check; COMMON_QUALIFICATION_CORE.md C7.1",
+    "Limites": "Outros gates podem aplicar verificações adicionais",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "predictor-qualification-3",
+    "Projeto": "predictor-qualification",
+    "Prioridade": "P1",
+    "Certeza": "NV",
+    "Afirmação": "science_real.separated_with_ci não verifica upper endpoints de IC; d16_finalize first JUnit suite e sem piso tests>0 explícito",
+    "Evidência": "science_real.py main; d16_finalize.py main",
+    "Limites": "Risco por leitura, não explorado com fixture",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "EPOCA-QUAL-1",
+    "Projeto": "predictor-qualification",
+    "Prioridade": "P1",
+    "Certeza": "OD (ET-RUN attest.py check)",
+    "Afirmação": "[época main 2026-09-30] No main 3ed750c5 as attestations QUALIFIED de crypto (V1.1), integration-crypto e integration-stocks não validam mais (9, 11 e 18 problemas: sha256 de relatórios, FINDINGS.json, EVIDENCE_NUMBERS.json e render_reports.py divergentes); validam só no commit de emissão (96da7d08, c9e7330e, 59deb091). O ciclo D-27 regravou os artefatos citados no mesmo diretório sem nova attestation (supersedes_sha256).",
+    "Evidência": "evidencias/epoca-main-20260930/runs/attest-check-current-*.log; attest-check-at-issuance-*.log; attestation-issuance-commits.json",
+    "Limites": "C7.1(3) exige sha256 no commit da attestation, que confere; o problema é de reprodutibilidade a partir do main, não de falsidade. Não reexecutado nenhum gate.",
+    "Próximo passo": "Dono decide: reemitir attestations com supersedes_sha256 após D-29/D-30/D-31, ou mover os artefatos dos ciclos novos para subdiretórios próprios."
+  },
+  {
+    "ID": "EPOCA-STOCKS-1",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P1",
+    "Certeza": "OD (ET-RUN comparação completa do lacre)",
+    "Afirmação": "[época main 2026-09-30] Lacre R8 (current-operational-evidence.json, 263 caminhos) quebrado no main 3ec7e413 por três arquivos, não só o pyproject.toml documentado: .github/workflows/ci.yml (3db4978), pyproject.toml (97979d5, 68a2647) e tools/build-requirements.txt (68a2647, 07f5c7f). O main também contém 24 módulos (v2/, research_*, adapters/) que nenhuma wheel publicada tem (rc4 não publicada).",
+    "Evidência": "evidencias/epoca-main-20260930/runs/stocks-r8-seal-full-compare.log; stocks-verify-operational-evidence.log; built-vs-published-wheels.json",
+    "Limites": "O verificador oficial aborta no primeiro arquivo; a comparação completa reutiliza suas funções. Nenhum efeito em resultado provado.",
+    "Próximo passo": "Relacrar após os bumps (engineering/2026-09-30-license-reseal) e publicar a rc4 são decisões do dono."
+  },
+  {
+    "ID": "G-COBERTURA-RESIDUAL",
+    "Projeto": "conjunto",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Após a reconciliação de 2026-09-30, a revisão semântica integral cobre o código próprio ativo dos oito projetos e o arquivo histórico Crypto (773 objetos). Residual explícito: Brasileirão 16 arquivos de configuração/contratos JSON/workflows/lock cujos bytes locais diferem do remoto; Stocks research/ (301 .py históricos separados), vendor/ (43, terceiros) e docs/OSS (10 protótipos) catalogados sem leitura semântica; docs/ históricos dos demais projetos catalogados.",
+    "Evidência": "evidencias/*/coverage.json; evidencias/brasileirao-predictor/retomada-residual-pendentes.json; evidencias/cripto-predictor/crypto-archive-coverage-merged.json",
+    "Limites": "Leitura não é execução; nenhum dos residuais está no caminho de serving revisado, mas isso não foi provado por grafo de imports.",
+    "Próximo passo": "Reler os 16 arquivos Brasil no original Windows; decidir se research/ do Stocks entra no escopo de uma missão própria."
+  },
+  {
+    "ID": "cain-3",
+    "Projeto": "cain",
+    "Prioridade": "P2",
+    "Certeza": "OD+INF",
+    "Afirmação": "Receipts não equivalem a correção semântica",
+    "Evidência": "analysis.review semantic_support not_certified, Workflowsproposals_only",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Testar respostas fonte por fonte com modelo real em QA autorizado"
+  },
+  {
+    "ID": "BR-TREE-001",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Fonte examinada contém modificados/não rastreados preexistentes",
+    "Evidência": "baseline.json; hashes.json; untracked-hashes.json",
+    "Limites": "Não equivale à release0.2.0 nem commit HEAD isolado",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "BR-PLUGIN-001",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Capability labels não são métodos de plugin; health é WAITING estático",
+    "Evidência": "ecosystem_plugin.py:BrasileiraoPredictorPlugin",
+    "Limites": "Consumidor pode usar CLIs/jobs; método predict/collect não encontrado neste módulo",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "BR-PROV-001",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Readiness verifica só declarações, não autentica evidência",
+    "Evidência": "prediction_protocol.py:PredictionReadinessReport/assess_prediction_readiness",
+    "Limites": "ready True mantém pre_match/economic_evidence_eligible False",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "BR-PROS-001",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD+ET-RUN",
+    "Afirmação": "Sucessor prospectivo local especificado não ativado",
+    "Evidência": "prospective_protocol_v2.py PROTOCOL; domain-probes.json",
+    "Limites": "Não rastreado;9 sondas puras não ativam nem homologam coorte",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "BR-ECO-001",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Book/bank manual não prova lucro líquido/extratos ou CLV admissível",
+    "Evidência": "bet_log.py:bank_state/settle; economic_evidence_eligible False",
+    "Limites": "Custos externos/proveniência/receipts econômicos não verificados",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "BR-SCOPE-001",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "CLI/modelos mantêm linguagem internacional/Copa",
+    "Evidência": "predict.py main description; ratings.py k_factor; settle.py comments",
+    "Limites": "Herança observada; não prova datasets de SérieA contaminados",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ALT-CONTRACT-BR",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD+ET-RUN",
+    "Afirmação": "Raiz alternativa introduz contratos de domínio LOCAL_FILE_ONLY e CLI research; nova época",
+    "Evidência": "alternate-material-hashes.json; alternate-domain-probes.json; relatorios/SUPLEMENTO_RAIZES_DOMINIOS.md",
+    "Limites": "Probe contratos/PIT apenas; não instalação/serviço ou worker real. Primários permanecem outros SHAs.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "BRA-A1-NONFINITE-STAGE",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "ET-RUN",
+    "Afirmação": "A1 recommendation accepts NaN CLV lower and unknown evidence_stage, resulting score cap100 and SHADOW_CANDIDATE",
+    "Evidência": [
+      "brasileirao_predictor/a1_recommendation.py:26-32,79-90",
+      "evidencias/brasileirao-predictor/a1-boundary-probe.json",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Synthetic input on isolated copied module; capital remainsFalse; no production corrupted record proven; alternative epoch not attributed.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "BRA-SHADOW-CROSSRECORD",
+    "Projeto": "brasileirao-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Prospective shadow validators locally permit capture later than prediction and do not bind result pick_id/closing definition to supplied pick",
+    "Evidência": [
+      "brasileirao_predictor/data/prospective_shadow.py:59-103",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Module guards only, callers may add constraints; no real poisoned cohort demonstrated; successor v2 distinct.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CR-BUDGET-001",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD+ET-RUN",
+    "Afirmação": "API guard habilitado com limites0 libera chamadas",
+    "Evidência": "config.py defaults; core/api_guard.py:allow; domain-probes.json",
+    "Limites": "Sonda função AST com settings/event sintéticos; concorrência SQLite não testada",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CR-PIT-001",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "V3 fit história+inferência causal é DESCRIPTIVE_REPLAY",
+    "Evidência": "v3/pipeline.py:run_symbol linhas348-358/394; regime_engine.py:_forward_causal",
+    "Limites": "Não inferir predictive PIT ou lucro; WFA separado não recomputado",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CR-PLUGIN-001",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Plugin não oferece operações preditivas apesar contratos existirem",
+    "Evidência": "plugin.py:capabilities; contracts.py protocols",
+    "Limites": "CLI e jobs têm funções próprias; não ausência global de previsão",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CR-USE-001",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "NV",
+    "Afirmação": "Estado banco privado/serviço ativo não sondado",
+    "Evidência": "Escopo de inspeção read-only; baseline/source only",
+    "Limites": "Contagens README antigas não são atuais",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ALT-CONTRACT-CR",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD+ET-RUN",
+    "Afirmação": "Raiz alternativa introduz contratos de domínio LOCAL_FILE_ONLY e CLI research; nova época",
+    "Evidência": "alternate-material-hashes.json; alternate-domain-probes.json; relatorios/SUPLEMENTO_RAIZES_DOMINIOS.md",
+    "Limites": "Probe contratos/PIT apenas; não instalação/serviço ou worker real. Primários permanecem outros SHAs.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-WORKER-NET-METRIC",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Primary research_worker reported net_return_bps subtracts one fee/slippage leg and omits funding, while equity/drawdown uses two legs+funding via CostModel",
+    "Evidência": [
+      "GarimpoInvestimentos/research_worker.py:88-116,149-167",
+      "GarimpoInvestimentos/v3/costs.py:48-83",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Primary 1.1.1rc4 only; no real result artifact executed; alternate1.2.0rc2 not attributed; direction fixed frozenfixture.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-ADMISSION-QUOTA-LIFETIME",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD+INF",
+    "Afirmação": "Quota global/per publisher contabiliza todo ACCEPTED persistido; execução concluída não libera contagem no caminho revisado",
+    "Evidência": [
+      "GarimpoInvestimentos/research_admission.py:submit",
+      "GarimpoInvestimentos/research_execution.py:execute",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Sem teste de saturação/serviço; políticas externas de retenção não observadas. Não atribuir à raiz alternativa.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-EXTERNAL-PAGINATION-BOUND",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "CoinMetrics adapter valida host de paginação, mas não limita páginas/URLs repetidas nem orçamento total do loop",
+    "Evidência": [
+      "GarimpoInvestimentos/external_intelligence/providers/coinmetrics.py:fetch_pages_with_receipt",
+      "evidencias/REGISTRO.log"
+    ],
+    "Limites": "Sem chamada externa/probe de loop; restrição endpoint/dados real pode encerrar normalmente, risco não ocorrência comprovada.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-RECOVERY-UNITS",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "money_left_on_table compara soma de retornos fracionários com PnL monetário de paper",
+    "Evidência": "GarimpoInvestimentos/profit_recovery_v1.py:736 money_left_on_table; capturable=future_net_return, captured=net_pnl; SHA em hashes.json/REGISTRO.log",
+    "Limites": "Rota replay atual passa paper vazio; divergência manifesta com paper não vazio, não afirma perdas reais",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-RECOVERY-ZERO-COST",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "_return_metrics dispensa custo de operação cujo retorno bruto é exatamente zero",
+    "Evidência": "GarimpoInvestimentos/profit_recovery_v1.py:850 _return_metrics active=[value!=0]; estratégia não-flat pode retornar0; SHA hashes.json",
+    "Limites": "Não medido painel econômico real; efeito nas métricas de cenários",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CRYPTO-PAPER-FUTURE-DEPTH",
+    "Projeto": "cripto-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Paper V2 limita fill de entrada também pela profundidade futura da saída e latência apenas declarada",
+    "Evidência": "GarimpoInvestimentos/profit_recovery_v1.py:630 paper_execute_v2 filled_qty=min(qty,available,exit_available); latency_seconds só output",
+    "Limites": "Simulador sem envio de ordens; não transferir finding à raiz alternativa",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "stocks-predictor-4",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "RJ persistência atualiza episódios sem chave de run",
+    "Evidência": "rj_pipeline.persist_run UPDATE rj_episodes/rj_family_scores",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Snapshots por execução separados são necessários para replay independente"
+  },
+  {
+    "ID": "stocks-predictor-5",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Sem dado ownership RJ, sem inferência secundária de companyrepeated",
+    "Evidência": "rj_pipeline.compute_family_scores ownershipNone; secondary_status",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Manter limites no aprendizado e denominador"
+  },
+  {
+    "ID": "stocks-predictor-6",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Ledger prospective verifica ligações mas não recalcula hash do payload JSON",
+    "Evidência": "prospective_big_winner.verify_chain; shared-review-notes.json",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-7",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Maturidade prospective é declarada pelo argumento horizon=12 sem comprovar tempo decorrido",
+    "Evidência": "prospective_big_winner; shared-review-notes.json",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-8",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Teste de idempotência RJ contém comparação tautológica",
+    "Evidência": "tests/test_rj_audit_2026_08_24.py:test_persist_run_updates_row_when_asof_advances linhas340 e349",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-9",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Outcome TOTALRETURN não exige série alcançar 12 meses",
+    "Evidência": "experiments/BIG_WINNER_DETECTION_V1/lib/outcome_stage.py:calculate_path_outcome; remaining-00.txt",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "stocks-predictor-10",
+    "Projeto": "stocks-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Compra ETF rejeitada mantém previous_target true e não tenta de novo até mudança de alvo",
+    "Evidência": "monthly_etf; shared-review-notes.json e tests/test_monthly_etf.py",
+    "Limites": "Ver inventário e cobertura",
+    "Próximo passo": "Teste dirigido em cópia e revisão do contrato antes de promoção científica."
+  },
+  {
+    "ID": "OPS-01",
+    "Projeto": "predictor-ops",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Artefato esperado é existência apenas",
+    "Evidência": "src/predictor_ops/runner.py",
+    "Limites": "Caminho existente pode ser antigo; este gate não valida hash, conteúdo ou origem do artefato.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "OPS-02",
+    "Projeto": "predictor-ops",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Chave econômica impede reexecutar ambiguidade",
+    "Evidência": "src/predictor_ops/runner.py",
+    "Limites": "Capitalpermission conserva registro prévio e requires_reconciliation. Não executa reconciliação externa automaticamente.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "OPS-03",
+    "Projeto": "predictor-ops",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-SRC",
+    "Afirmação": "Travas e ownership de processos têm mecanismos reais",
+    "Evidência": "src/predictor_ops/runtime.py",
+    "Limites": "Guard de SO/O_EXCL/runid e JobObject/grupo POSIX; testes adversariais existem, não foram executados nesta rodada.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "OPS-04",
+    "Projeto": "predictor-ops",
+    "Prioridade": "P2",
+    "Certeza": "ET-RUN/NV",
+    "Afirmação": "Smoke está fora do runtime declarado",
+    "Evidência": "pyproject.toml",
+    "Limites": "3 testes passaram em3.12;>=3.13 exige dependências não disponíveis e não foi substituído por falsa equivalência.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CORE-01",
+    "Projeto": "core-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/ET-RUN",
+    "Afirmação": "Fachada exige distribuição instalada",
+    "Evidência": "src/predictor_core/__init__.py",
+    "Limites": "Import de fonte em cópia sem metadata falhou PackageNotFoundError. Não prova defeito de wheel instalada.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CORE-03",
+    "Projeto": "core-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Replay limita visibilidade mas compartilha eventos",
+    "Evidência": "src/predictor_core/measurement/replay.py",
+    "Limites": "Handler só recebe prefixo; referências mutáveis e ambiente externo não são sandboxados.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CORE-04",
+    "Projeto": "core-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Bypass explícito do atestado V1",
+    "Evidência": "src/predictor_core/measurement/trials.py",
+    "Limites": "power_attestation=False é caminho de API; consumidores devem decidir e auditar política.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "CORE-05",
+    "Projeto": "core-predictor",
+    "Prioridade": "P2",
+    "Certeza": "DD/OD",
+    "Afirmação": "Versão do Anexo difere desta fonte",
+    "Evidência": "pyproject.toml",
+    "Limites": "3.2.1 local versus3.2.2 no Anexo; conclusão restrita ao checkout.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ECO-01",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Manifest e versão runtime divergem",
+    "Evidência": "src/ecosystem/__init__.py",
+    "Limites": "Literal0.1.0 frente pyproject0.2.0; não é verificação de wheel remota.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ECO-02",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/DD",
+    "Afirmação": "Onze pacotes no inventário atual contra dez na narrativa",
+    "Evidência": "tests/test_architecture_inventory.py",
+    "Limites": "Sete raízes registry mais protocol quarto pyproject total11; docs dez e histórico nove têm épocas diferentes.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ECO-03",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "ET-RUN/OD",
+    "Afirmação": "Dois atestados crypto vencidos seguem ALIGNED",
+    "Evidência": "scripts/check_ecosystem_drift.py",
+    "Limites": "Comando real offline na cópia3.13 exit1 em30Sep; validade até27Sep. Não é execução científica nova.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ECO-04",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Wrapper de saúde não é somente leitura",
+    "Evidência": "ecosystem_health.ps1",
+    "Limites": "Chama C:/CAIN/tools/ecosystem_health.py e acrescenta log externo. Não executado.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ECO-05",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "Verificação protocol é estrutural e criptográfica",
+    "Evidência": "packages/research-protocol/src/research_protocol/__init__.py",
+    "Limites": "Não executa tarefa nem consulta relógio para expiração; confiança scope depende resolver de caller.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "ECO-06",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD/NV",
+    "Afirmação": "Contrato transport/compat não encontrado nesta raiz",
+    "Evidência": "packages",
+    "Limites": "Busca arquivo integral tracked/untracked exclui.git/.venv/caches; não generaliza servidor/raiz alternativa.",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "predictor-qualification-1",
+    "Projeto": "predictor-qualification",
+    "Prioridade": "P2",
+    "Certeza": "OD + ET-RUN de hashes",
+    "Afirmação": "Atestados possuem épocas distintas: 94/94 referências do final e 100/100 do parcial conferem nos commits de emissão; 12 referências antigas diferem dos arquivos atuais",
+    "Evidência": "attestation-issuance-check.json; issuance-ATTESTATION_PARTIAL_v1-1-attestation.json; hash-mismatch-original-check.json",
+    "Limites": "Hashes no commit de emissão não reexecutam os gates nem autenticam conclusões científicas; diferença atual não demonstra corrupção histórica",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "predictor-qualification-4",
+    "Projeto": "predictor-qualification",
+    "Prioridade": "P2",
+    "Certeza": "NV",
+    "Afirmação": "Perfil soak declara corrupção e morte host Ops como classes, não encontradas como execução explícita em soak.py",
+    "Evidência": "QUALIFICATION_PROFILE_CRYPTO_V1.json; soak.py",
+    "Limites": "Suítes separadas podem cobrir, não afirmar ausência total",
+    "Próximo passo": "Verificar na mesma época e no fluxo consumidor; não corrigir fontes nesta missão"
+  },
+  {
+    "ID": "EPOCA-ECO-1",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD (METADATA das wheels)",
+    "Afirmação": "[época main 2026-09-30] As quatro subdistribuições (predictor-research-protocol 2.0.0rc2, -transport 0.1.0rc7, -snapshot 1.0.2rc1, -bundle 1.0.1rc1) não têm long description na METADATA, então a regra \"README entra na METADATA e só muda com versão nova\" não se aplica a elas; e não constam em registries/released_architecture.json (só 7 wheels), embora CURRENT_STATE.md as liste como publicadas.",
+    "Evidência": "evidencias/epoca-main-20260930/wheel-readme-metadata-check.json; released-architecture-vs-assets.json",
+    "Limites": "Sem efeito em runtime observado.",
+    "Próximo passo": "Incluir as quatro no registro ou documentar a exceção."
+  },
+  {
+    "ID": "EPOCA-ECO-2",
+    "Projeto": "ecosystem-predictor",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "[época main 2026-09-30] METADATA das wheels predictor_research_snapshot-1.0.2rc1 e predictor_research_bundle-1.0.1rc1 tem fim de linha CRLF (campo Version lido com \\r), sinal de build em ambiente não normalizado; incoerente com a alegação de build duplo byte-idêntico feita para as demais wheels.",
+    "Evidência": "evidencias/epoca-main-20260930/wheel-readme-metadata-check.json (metadata_version_field)",
+    "Limites": "pip aceita; nenhuma falha de instalação observada.",
+    "Próximo passo": "Reconstruir no CI Linux na próxima versão."
+  },
+  {
+    "ID": "EPOCA-DOCS-1",
+    "Projeto": "conjunto",
+    "Prioridade": "P2",
+    "Certeza": "OD (built-vs-published-wheels.json)",
+    "Afirmação": "[época main 2026-09-30] Frases dos docs/ESTADO_2026-09-30.md contradizem as wheels construídas do main: cain diz que a mudança de licença ficou \"fora da wheel\" (o LICENSE entra em licenses/); ops diz que \"a wheel construída do main é a mesma da release\" e, no mesmo arquivo, que o main declara 4.2.2rc2 não publicada (a construída difere em METADATA e licenses/LICENSE).",
+    "Evidência": "evidencias/epoca-main-20260930/built-vs-published-wheels.json; leituras dos ESTADO no REGISTRO.log",
+    "Limites": "Código-fonte dentro das wheels é idêntico ao publicado em cain, ops, core, cripto e brasileirão.",
+    "Próximo passo": "Corrigir as frases ou publicar as versões declaradas."
+  },
+  {
+    "ID": "EPOCA-COBERTURA-1",
+    "Projeto": "conjunto",
+    "Prioridade": "P2",
+    "Certeza": "OD",
+    "Afirmação": "[época main 2026-09-30] Na época main ficaram sem revisão semântica: cain (356/357 arquivos do delta), predictor-qualification (5.761/5.763), stocks (122/127), cripto (127/132), brasileirão (109/113) e os testes/workflows novos do ecosystem. As conclusões da época original sobre model.py/evaluator.py/serving_evaluator.py do Brasileirão e research_*/v3 do cripto valem só para os SHAs originais.",
+    "Evidência": "evidencias/epoca-main-20260930/delta/*-delta-inventory.json; coverage-by-project.json",
+    "Limites": "Inventário completo com sha256 e linhas; nenhuma leitura parcial foi marcada como revisada.",
+    "Próximo passo": "Missão própria por projeto para o delta, começando pelo caminho de previsão do Brasileirão e pela DecisionPolicy do cain."
+  }
+]

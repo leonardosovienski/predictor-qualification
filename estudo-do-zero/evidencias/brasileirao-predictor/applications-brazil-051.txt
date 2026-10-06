@@ -1,0 +1,462 @@
+### tests/test_followup_capture_contract.py
+3: import importlib.util
+4: import json
+5: import urllib.error
+6: from datetime import timedelta
+7: from pathlib import Path
+8: from types import SimpleNamespace
+10: import pytest
+12: SCRIPTS = Path(__file__).resolve().parents[1] / "docs/continuation/data_completion_2026-09-09/reproducao"
+13: FIXTURE = "id1000032566887012"
+14: SECRET = "SYNTHETIC_KEY_NEVER_USED_ON_NETWORK"
+17: def load(name):
+18:     spec = importlib.util.spec_from_file_location("contract_test_" + name, SCRIPTS / (name + ".py"))
+19:     module = importlib.util.module_from_spec(spec)
+20:     spec.loader.exec_module(module)
+21:     return module
+24: def fixture_payload():
+25:     return {
+26:         "fixtureId": FIXTURE,
+27:         "startTime": "2026-09-12T00:00:00Z",
+28:         "statusId": 0,
+29:         "hasOdds": True,
+30:         "participant1Id": 1982,
+31:         "participant2Id": 1967,
+32:         "sportId": 10,
+33:         "tournamentId": 325,
+34:         "seasonId": 137706,
+35:         "bookmakerOdds": {
+36:             book: {
+37:                 "bookmakerIsActive": True,
+38:                 "suspended": False,
+39:                 "markets": {
+40:                     "101": {
+41:                         "marketActive": True,
+42:                         "outcomes": {
+43:                             side: {
+44:                                 "players": {
+45:                                     "0": {
+46:                                         "price": 3.0,
+47:                                         "active": True,
+48:                                         "limit": None,
+49:                                         "changedAt": "2026-09-11T22:58:00Z",
+50:                                     }
+51:                                 }
+52:                             }
+53:                             for side in ("101", "102", "103")
+54:                         },
+55:                     }
+56:                 },
+57:             }
+58:             for book in ("pinnacle", "bet365.bet.br")
+59:         },
+60:     }
+63: @pytest.fixture
+64: def rig(tmp_path, monkeypatch):
+65:     collector, helper, auditor = load("followup_capture"), load("capture_pilot"), load("audit_followup")
+66:     helper.PRIVATE = tmp_path / "synthetic_api_config.json"
+67:     helper.PRIVATE.write_text(json.dumps({"values": {"ODDSPAPI_KEY": SECRET}}), encoding="utf-8")
+68:     collector.ROOT = tmp_path
+69:     auditor.INPUT, auditor.OUTPUT = tmp_path / "followup", tmp_path / "followup_audit"
+71:     monkeypatch.setattr(auditor.sys, "addaudithook", lambda hook: None)
+72:     state = SimpleNamespace(
+73:         now=collector.DECISION - timedelta(minutes=3),
+74:         calls=[],
+75:         used=67,
+76:         price=None,
+77:         odds=fixture_payload(),
+78:         http_failure=False,
+79:     )
+81:     class Clock:
+82:         @staticmethod
+83:         def now(tz):
+84:             return state.now.astimezone(tz)
+86:     class Response:
+87:         status = 200
+89:         def __init__(self, raw):
+90:             self.raw = raw
+91:             self.headers = {"Date": state.now.strftime("%a, %d %b %Y %H:%M:%S GMT")}
+93:         def __enter__(self):
+94:             return self
+96:         def __exit__(self, *args):
+97:             return False
+99:         def read(self, size):
+100:             return self.raw[:size]
+102:     class Opener:
+103:         def open(self, request, timeout):
+104:             endpoint = request.full_url.split("?")[0].rsplit("/", 1)[1]
+105:             state.calls.append(endpoint)
+106:             state.now += timedelta(milliseconds=100)
+107:             if endpoint == "odds":
+108:                 state.used += 1
+109:                 if state.http_failure:
+110:                     raise urllib.error.HTTPError(request.full_url, 429, SECRET, {}, None)
+111:                 body = state.odds if isinstance(state.odds, bytes) else json.dumps(state.odds).encode()
+112:             else:
+113:                 body = json.dumps(
+114:                     {
+115:                         "current_subscription_id": "synthetic",
+116:                         "subscriptions": [
+117:                             {
+118:                                 "subscription_id": "synthetic",
+119:                                 "is_active": True,
+120:                                 "price": state.price,
+121:                                 "currency": "USD",
+122:                                 "auto_renew": False,
+123:                                 "request_limit": 250,
+124:                                 "request_count": state.used,
+125:                             }
+126:                         ],
+127:                     }
+128:                 ).encode()
+129:             return Response(body)
+131:     class Loader:
+132:         def create_module(self, spec):
+133:             return None
+135:         def exec_module(self, module):
+136:             module.__dict__.update(helper.__dict__)
+138:     monkeypatch.setattr(
+139:         collector.importlib.util,
+140:         "spec_from_file_location",
+141:         lambda *args: SimpleNamespace(
+142:             loader=Loader(),
+143:             name="synthetic_helper",
+144:             submodule_search_locations=None,
+145:             origin=None,
+146:             cached=None,
+147:             has_location=False,
+148:         ),
+149:     )
+150:     monkeypatch.setattr(collector, "datetime", Clock)
+151:     monkeypatch.setattr(
+152:         collector.time, "sleep", lambda seconds: setattr(state, "now", state.now + timedelta(seconds=seconds))
+153:     )
+154:     monkeypatch.setattr(collector.urllib.request, "build_opener", lambda *args: Opener())
+155:     return SimpleNamespace(collector=collector, auditor=auditor, helper=helper, state=state, root=tmp_path)
+158: def receipt(rig):
+159:     return json.loads((rig.root / "followup/receipt.json").read_text(encoding="utf-8"))
+162: def audit_result(rig):
+163:     return json.loads((rig.root / "followup_audit/audit.json").read_text(encoding="utf-8"))
+166: def test_whole_capture_keeps_one_metered_call_and_is_idempotent(rig):
+167:     rig.collector.main()
+168:     assert rig.state.calls == ["account", "odds", "account"]
+169:     assert receipt(rig)["status"] == "CAPTURED_REQUIRES_OFFLINE_AUDIT"
+170:     rig.collector.main()
+171:     assert rig.state.calls == ["account", "odds", "account"]
+172:     rig.auditor.main()
+173:     assert audit_result(rig)["frozen_decision_clock_admitted"]
+174:     assert audit_result(rig)["prospective_price_observation_admitted"]
+175:     assert not audit_result(rig)["execution_admitted"]
+178: @pytest.mark.parametrize("offset", [-301, -45])
+179: def test_outside_window_does_not_read_credentials_or_call_api(rig, offset):
+180:     rig.state.now = rig.collector.DECISION + timedelta(seconds=offset)
+181:     rig.helper.PRIVATE.unlink()
+182:     rig.collector.main()
+183:     assert rig.state.calls == []
+184:     assert not (rig.root / "followup").exists()
+187: @pytest.mark.parametrize("remaining,paid,expected", [(20, None, 0), (21, None, 1), (183, 10, 0)])
+188: def test_quota_reserve_and_paid_plan_block_before_odds(rig, remaining, paid, expected):
+189:     rig.state.used = 250 - remaining
+190:     rig.state.price = paid
+191:     rig.collector.main()
+192:     assert rig.state.calls.count("odds") == expected
+193:     assert 250 - rig.state.used >= 20
+196: def test_http_failure_is_not_retried_and_does_not_expose_key(rig, capsys):
+197:     rig.state.http_failure = True
+198:     rig.collector.main()
+199:     assert rig.state.calls == ["account", "odds", "account"]
+200:     assert receipt(rig)["status"] == "STOPPED"
+201:     assert receipt(rig)["requests"][1]["http_status"] == 429
+202:     assert SECRET not in (rig.root / "followup/receipt.json").read_text(encoding="utf-8")
+203:     assert SECRET not in capsys.readouterr().out
+206: def test_invalid_json_response_is_preserved_and_audited_as_rejected(rig):
+207:     rig.state.odds = b'{"fixtureId":'
+208:     rig.collector.main()
+209:     assert (rig.root / "followup/capture.json").read_bytes() == rig.state.odds
+210:     rig.auditor.main()
+211:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+212:     assert audit_result(rig)["status"] == "REJECTED_INVALID_INPUT"
+215: def test_credential_failure_still_leaves_sanitized_receipt(rig):
+216:     rig.helper.PRIVATE.write_text('{"values": {}}', encoding="utf-8")
+217:     rig.collector.main()
+218:     assert rig.state.calls == []
+219:     assert receipt(rig)["status"] == "STOPPED"
+220:     assert receipt(rig)["reason"] == "ACQUISITION_SETUP_FAILED"
+223: def test_missing_kickoff_produces_rejection_instead_of_crashing(rig):
+224:     rig.state.odds = {"fixtureId": FIXTURE}
+225:     rig.collector.main()
+226:     rig.auditor.main()
+227:     assert audit_result(rig)["status"] == "REJECTED_INVALID_INPUT"
+228:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+231: def test_partial_audit_directory_does_not_prevent_recovery(rig):
+232:     rig.collector.main()
+233:     rig.auditor.OUTPUT.mkdir()
+234:     rig.auditor.main()
+235:     assert audit_result(rig)["source_hash"]
+238: def test_relabelled_provider_endpoint_cannot_be_admitted(rig):
+239:     rig.collector.main()
+240:     state = receipt(rig)
+241:     state["requests"][1]["endpoint"] = "https://unverified.example/v4/odds"
+242:     (rig.root / "followup/receipt.json").write_text(json.dumps(state), encoding="utf-8")
+243:     rig.auditor.main()
+244:     assert audit_result(rig)["status"] == "REJECTED_INVALID_INPUT"
+245:     assert audit_result(rig)["reason"] == "receipt_contract_mismatch"
+248: @pytest.mark.parametrize("received", ["2026-09-11T23:00:01+00:00", "2026-09-11T22:58:30"])
+249: def test_late_or_timezone_free_receipt_cannot_pass_price_gate(rig, received):
+250:     rig.collector.main()
+251:     state = receipt(rig)
+252:     state["requests"][1]["received_at"] = received
+253:     (rig.root / "followup/receipt.json").write_text(json.dumps(state), encoding="utf-8")
+254:     rig.auditor.main()
+255:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+258: def test_rescheduled_fixture_does_not_move_frozen_decision(rig):
+259:     rig.state.odds["startTime"] = "2026-09-12T01:00:00Z"
+260:     rig.collector.main()
+261:     rig.auditor.main()
+262:     assert not audit_result(rig)["frozen_kickoff_unchanged"]
+263:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+### tests/test_formal_prediction.py
+1: import json
+3: import pytest
+4: from test_prediction_log import _PARAMS, _PRED
+5: from test_prediction_protocol import NOW, candidate
+7: from brasileirao_predictor.formal_prediction import prepare_context
+8: from brasileirao_predictor.identity import CanonicalTeamResolver
+9: from brasileirao_predictor.prediction_log import log_prediction
+10: from brasileirao_predictor.settle import record_result
+13: @pytest.fixture
+14: def resolver(tmp_path):
+15:     aliases = tmp_path / "aliases.json"
+16:     teams = tmp_path / "teams.json"
+17:     aliases.write_text(json.dumps({"mapping_version": "synthetic/1", "aliases": {}}))
+18:     teams.write_text(json.dumps({"teams": {"A": {"slug": "a"}, "B": {"slug": "b"}}}))
+19:     return CanonicalTeamResolver(aliases, teams)
+22: def context(**changes):
+23:     return {"readiness": candidate(home="a", away="b", **changes), "quote": None}
+26: def test_formal_context_refuses_unknown_identity_or_wrong_date(resolver):
+27:     with pytest.raises(ValueError, match="canonical"):
+28:         prepare_context(context(), "unknown", "B", "2026-08-22", resolver)
+29:     with pytest.raises(ValueError, match="kickoff date"):
+30:         prepare_context(context(), "A", "B", "2026-08-23", resolver)
+33: def test_quote_cannot_be_borrowed_from_another_event(resolver):
+34:     item = context(odds_captured_at=NOW)
+35:     item["quote"] = {"quote_id": "quote-1", "event_id": "other-match", "captured_at": NOW.isoformat(), "market": {}}
+36:     with pytest.raises(ValueError, match="another event"):
+37:         prepare_context(item, "A", "B", "2026-08-22", resolver)
+40: def test_gate_blocks_before_model_is_called(resolver, monkeypatch):
+41:     from brasileirao_predictor import predict
+43:     monkeypatch.setattr(predict.model, "predict_match", lambda *args, **kwargs: pytest.fail("model ran"))
+44:     with pytest.raises(ValueError, match="readiness blocked"):
+45:         predict.show(
+46:             "A",
+47:             "B",
+48:             {},
+49:             {},
+50:             {},
+51:             False,
+52:             match_date="2026-08-22",
+53:             formal_context=context(capital_enabled=True),
+54:             identity_resolver=resolver,
+55:         )
+58: def test_formal_settlement_selects_exact_prediction_among_repeated_matches(resolver, tmp_path):
+59:     predictions = tmp_path / "predictions.jsonl"
+60:     first = log_prediction(
+61:         "A",
+62:         "B",
+63:         False,
+64:         1500,
+65:         1500,
+66:         _PARAMS,
+67:         _PRED,
+68:         match_date="2026-08-22",
+69:         path=predictions,
+70:         formal_context=prepare_context(context(), "A", "B", "2026-08-22", resolver),
+71:     )
+72:     log_prediction("A", "B", False, 1500, 1500, _PARAMS, _PRED, match_date="2026-09-22", path=predictions)
+73:     result = record_result(
+74:         "A", "B", 1, 0, prediction_id=first["prediction_id"], pred_path=predictions, path=tmp_path / "result.jsonl"
+75:     )
+76:     assert result["match_date"] == "2026-08-22"
+77:     assert result["event_id"] == "123"
+78:     with pytest.raises(ValueError, match="not found"):
+79:         record_result(
+80:             "A", "B", 1, 0, prediction_id="missing", pred_path=predictions, path=tmp_path / "must-not-exist.jsonl"
+81:         )
+82:     assert not (tmp_path / "must-not-exist.jsonl").exists()
+### tests/test_h10_fadiga_walkforward.py
+4: import json
+5: import random
+6: from datetime import date, timedelta
+8: import pytest
+10: from brasileirao_predictor import db
+11: from brasileirao_predictor.ingest import load_config as _real_load_config
+12: from brasileirao_scripts import h10_fadiga_walkforward as h10
+14: TEAMS = ["Alfa", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
+17: def _synthetic_rows(n_games: int, *, seed: int = 7, start: date = date(2024, 1, 1)) -> list[tuple]:
+18:     rng = random.Random(seed)
+19:     rows = []
+20:     seen: set[tuple[str, str, str]] = set()
+21:     d = start
+22:     i = 0
+23:     while i < n_games:
+24:         home, away = rng.sample(TEAMS, 2)
+25:         key = (d.isoformat(), home, away)
+26:         if key in seen:
+27:             d += timedelta(days=1)
+28:             continue
+29:         seen.add(key)
+30:         hs, aws = rng.randint(0, 3), rng.randint(0, 3)
+31:         rows.append((d.isoformat(), home, away, hs, aws, "Brasileirão Série A", 0))
+32:         i += 1
+33:         if i % 3 == 0:  # agrupa jogos em "rodadas" de ~3, datas avançam devagar
+34:             d += timedelta(days=1)
+35:     return rows
+38: def _cfg(block_games: int, *, database: str = "unused") -> dict:
+42:     cfg = _real_load_config()
+43:     cfg = {**cfg, "database": database}
+44:     cfg["model"] = {**cfg["model"], "calibration_window_years": 10}
+45:     cfg["backtest"] = {**cfg.get("backtest", {}), "walk_forward_window_rounds": block_games // h10.GAMES_PER_ROUND or 1}
+46:     return cfg
+49: def test_rest_days_diff_debut_and_cap_and_sign():
+50:     rows = [
+51:         ("2026-01-01", "A", "B", 1, 0, "T", 0),
+52:         ("2026-01-03", "A", "C", 1, 0, "T", 0),  # A jogou ha 2 dias; C estreia
+53:         ("2026-01-20", "A", "B", 1, 0, "T", 0),  # A descansou 17d (capado), B tambem
+54:     ]
+55:     diffs = h10.rest_days_diff(rows)
+56:     assert diffs[0] == pytest.approx(h10.CAP_DAYS - h10.CAP_DAYS)  # ambos estreiam
+57:     assert diffs[1] == pytest.approx(2.0 - h10.CAP_DAYS)  # A com 2d de descanso vs C estreante (CAP)
+58:     assert diffs[2] == pytest.approx(0.0)  # ambos descansaram >= CAP -> diferenca zero
+61: def test_outcome_index():
+62:     assert h10.outcome_index(2, 1) == 0
+63:     assert h10.outcome_index(1, 1) == 1
+64:     assert h10.outcome_index(0, 2) == 2
+67: def test_run_walkforward_produces_paired_series_of_equal_length(monkeypatch):
+68:     monkeypatch.setattr(h10, "MIN_CAL_GAMES", 10)
+69:     block_games = 15
+70:     rows = _synthetic_rows(45)
+71:     rest = h10.rest_days_diff(rows)
+72:     cfg = _cfg(block_games)
+73:     result = h10.run_walkforward(cfg, rows, rest, block_games)
+74:     assert result["n"] == 30  # 2 blocos avaliados de 15 jogos
+75:     assert result["n_blocks_used"] == 2
+76:     assert len(result["rps_base"]) == len(result["rps_fadiga"]) == result["n"]
+77:     assert all(0.0 <= v <= 2.0 for v in result["rps_base"] + result["rps_fadiga"])
+80: def test_run_walkforward_exits_when_base_too_small(monkeypatch):
+81:     rows = _synthetic_rows(10)
+82:     with pytest.raises(SystemExit):
+83:         h10.run_walkforward(_cfg(15), rows, h10.rest_days_diff(rows), 15)
+86: def test_paired_bootstrap_gain_tight_ci_around_constant_gain():
+87:     rps_base = [0.5] * 40
+88:     rps_fadiga = [0.4] * 40  # ganho constante de 0.1 em todo jogo
+89:     mean_gain, lo, hi = h10.paired_bootstrap_gain(rps_base, rps_fadiga)
+90:     assert mean_gain == pytest.approx(0.1)
+91:     assert lo == pytest.approx(0.1, abs=1e-9)
+92:     assert hi == pytest.approx(0.1, abs=1e-9)
+95: def test_main_registers_a_new_trial_with_attestation(tmp_path, monkeypatch):
+96:     dbpath = tmp_path / "t.db"
+97:     conn = db.connect(str(dbpath))
+98:     for d, home, away, hs, aws, tour, neutral in _synthetic_rows(60):
+99:         conn.execute(
+100:             "INSERT INTO matches (date, home_team, away_team, home_score, away_score, tournament, neutral) "
+101:             "VALUES (?, ?, ?, ?, ?, ?, ?)",
+102:             (d, home, away, hs, aws, tour, neutral),
+103:         )
+104:     conn.commit()
+105:     conn.close()
+107:     trials_path = tmp_path / "trials.json"
+108:     trials_path.write_text("[]", encoding="utf-8")
+110:     monkeypatch.setattr(h10, "TRIALS", trials_path)
+111:     monkeypatch.setattr(h10, "MIN_CAL_GAMES", 10)
+115:     monkeypatch.setattr(h10, "load_config", lambda: _cfg(20, database=str(dbpath)))
+116:     monkeypatch.setattr("sys.argv", ["h10_fadiga_walkforward.py", "--cutoff", "2026-12-31"])
+118:     exit_code = h10.main()
+119:     assert exit_code == 0
+121:     trials = json.loads(trials_path.read_text(encoding="utf-8"))
+122:     assert len(trials) == 1
+123:     trial = trials[0]
+124:     assert trial["name"] == h10.TRIAL_NAME
+125:     assert trial["metric"] == "rps"
+126:     assert trial["status"] in ("comprovada", "refutada")
+127:     assert trial["params"]["feature"] == "rest_days_diff_capped"
+130:     exit_code_2 = h10.main()
+131:     assert exit_code_2 == 0
+132:     trials_again = json.loads(trials_path.read_text(encoding="utf-8"))
+133:     assert len(trials_again) == 1  # update, nao trial nova
+### tests/test_h9_missed_window_exit.py
+1: from __future__ import annotations
+3: import sys
+5: from brasileirao_scripts import report_h9_missed_windows as missed
+8: def test_missed_window_alert_is_not_reported_as_task_failure(monkeypatch, capsys) -> None:
+9:     monkeypatch.setattr(
+10:         missed,
+11:         "report",
+12:         lambda **_: {"missed_count": 2, "at_risk_count": 1, "missed": [], "at_risk": []},
+13:     )
+14:     monkeypatch.setattr(sys, "argv", ["report_h9_missed_windows.py"])
+16:     assert missed.main() == 0
+17:     assert "H9_MISSED_WINDOW_ALERT missed=2 at_risk=1" in capsys.readouterr().err
+### tests/test_h9_shadow.py
+1: from pathlib import Path
+3: import pytest
+5: from brasileirao_predictor.research.h9_shadow import emit, settle
+8: def prediction():
+9:     return {
+10:         "event_id": "e1",
+11:         "kickoff_at": "2026-08-10T18:00:00+00:00",
+12:         "predicted_at": "2026-08-10T16:30:00+00:00",
+13:         "p_over": 0.55,
+14:     }
+17: def quote(selection="over", odds=1.90, captured="2026-08-10T16:29:00+00:00"):
+18:     return {
+19:         "source_event_id": "e1",
+20:         "bookmaker": "onexbet",
+21:         "market": "ou2.5",
+22:         "selection": selection,
+23:         "decimal_odds": odds,
+24:         "odds_captured_at": captured,
+25:         "retrieved_at": captured,
+26:     }
+29: def test_emission_is_blocked_without_approved_bookmaker(tmp_path: Path):
+30:     result = emit(prediction=prediction(), quotes=[quote()], approved_bookmaker=None, ledger=tmp_path / "h9.jsonl")
+31:     assert result == {"status": "BLOCKED_NO_STABLE_BOOKMAKER", "capital_enabled": False}
+34: def test_emit_and_same_book_settlement_are_idempotent(tmp_path: Path):
+35:     ledger = tmp_path / "h9.jsonl"
+36:     emitted = emit(prediction=prediction(), quotes=[quote(odds=1.90)], approved_bookmaker="onexbet", ledger=ledger)
+37:     assert emitted["status"] == "EMITTED"
+38:     duplicate = emit(prediction=prediction(), quotes=[quote()], approved_bookmaker="onexbet", ledger=ledger)
+39:     assert duplicate["status"] == "ALREADY_EMITTED"
+40:     closed = settle(
+41:         event_id="e1",
+42:         home_goals=2,
+43:         away_goals=1,
+44:         result_published_at="2026-08-10T20:00:00+00:00",
+45:         closing_quotes=[quote(odds=1.80, captured="2026-08-10T17:59:00+00:00")],
+46:         ledger=ledger,
+47:     )
+48:     assert closed["status"] == "SETTLED"
+49:     assert closed["pnl_units"] == pytest.approx(0.9)
+50:     assert closed["clv"] == pytest.approx((1.9 - 1.8) / 1.8)
+51:     assert (
+52:         settle(
+53:             event_id="e1",
+54:             home_goals=2,
+55:             away_goals=1,
+56:             result_published_at="2026-08-10T20:00:00+00:00",
+57:             closing_quotes=[quote(odds=1.8)],
+58:             ledger=ledger,
+59:         )["status"]
+60:         == "ALREADY_SETTLED"
+61:     )
+64: def test_rejects_early_result_and_other_book_closing(tmp_path: Path):
+65:     ledger = tmp_path / "h9.jsonl"
+66:     emit(prediction=prediction(), quotes=[quote()], approved_bookmaker="onexbet", ledger=ledger)
+67:     with pytest.raises(ValueError, match="not stable"):
+68:         settle(
+69:             event_id="e1",
+70:             home_goals=1,
+71:             away_goals=0,
+72:             result_published_at="2026-08-10T19:00:00+00:00",
+73:             closing_quotes=[quote()],
+74:             ledger=ledger,
+75:         )

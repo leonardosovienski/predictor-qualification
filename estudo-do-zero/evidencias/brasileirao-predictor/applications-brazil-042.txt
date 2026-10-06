@@ -1,0 +1,454 @@
+### tests/test_bet_log.py
+4: import json
+6: import pytest
+8: from brasileirao_predictor.bet_log import (
+9:     add_bet,
+10:     bank_flow,
+11:     bank_init,
+12:     bank_state,
+13:     capital_gate_status,
+14:     list_bets,
+15:     settle_bet,
+16:     summary,
+17: )
+20: def test_add_grava_linha_aberta(tmp_path):
+21:     p = tmp_path / "bets.jsonl"
+22:     rec = add_bet(
+23:         "Norway",
+24:         "England",
+25:         "ou25",
+26:         "under",
+27:         2.21,
+28:         book="BetOnline",
+29:         edge=0.095,
+30:         model_prob=0.548,
+31:         match_date="2026-07-11",
+32:         path=p,
+33:     )
+34:     lines = p.read_text(encoding="utf-8").splitlines()
+35:     assert len(lines) == 1
+36:     r = json.loads(lines[0])
+37:     assert r["kind"] == "bet" and r["status"] == "open"
+38:     assert r["selection"] == "under" and r["line"] == 2.5 and r["odds"] == 2.21
+39:     assert r["stake"] == 1.0  # stake fixo default
+40:     assert rec["book"] == "BetOnline"
+43: def test_add_rejeita_mercado_e_odd_invalidos(tmp_path):
+44:     p = tmp_path / "bets.jsonl"
+45:     with pytest.raises(ValueError):
+46:         add_bet("A", "B", "1x2", "home", 2.0, path=p)  # mercado sem CLV
+47:     with pytest.raises(ValueError):
+48:         add_bet("A", "B", "ou25", "over", 0.9, path=p)  # odd <= 1
+49:     with pytest.raises(ValueError):
+50:         add_bet("A", "B", "ou25", "over", 2.0, stake=-3, path=p)  # stake < 0
+51:     with pytest.raises(ValueError):
+52:         add_bet("A", "B", "ou25", "over", 2.0, stake=0, path=p)  # stake = 0
+55: def test_settle_rejeita_placar_negativo(tmp_path):
+56:     p = tmp_path / "bets.jsonl"
+57:     add_bet("A", "B", "ou25", "over", 2.0, path=p)
+58:     with pytest.raises(ValueError):
+59:         settle_bet("A", "B", -1, 0, path=p)
+60:     with pytest.raises(ValueError):
+61:         settle_bet("A", "B", 2, 1, ht="0--1", path=p)  # HT negativo via parse
+64: def test_settle_ganha_perde_e_nao_duplica(tmp_path):
+65:     p = tmp_path / "bets.jsonl"
+66:     add_bet("Norway", "England", "ou25", "under", 2.21, path=p)
+67:     add_bet("Norway", "England", "ou25", "over", 2.30, path=p)
+68:     recs = settle_bet("Norway", "England", 0, 1, path=p)  # total 1 -> under ganha
+69:     assert len(recs) == 2
+70:     by_sel = {r["selection"]: r for r in recs}
+71:     assert by_sel["under"]["won"] is True
+72:     assert by_sel["under"]["profit"] == pytest.approx(1.21)
+73:     assert by_sel["over"]["won"] is False
+74:     assert by_sel["over"]["profit"] == -1.0
+76:     assert settle_bet("Norway", "England", 0, 1, path=p) == []
+79: def test_settle_casa_por_conjunto_de_times(tmp_path):
+81:     p = tmp_path / "bets.jsonl"
+82:     add_bet("Norway", "England", "ou25", "under", 2.0, path=p)
+83:     recs = settle_bet("England", "Norway", 3, 1, path=p)  # total 4 -> under perde
+84:     assert len(recs) == 1 and recs[0]["won"] is False
+87: def test_settle_periodo_exige_ht_e_fecha_com_ht(tmp_path):
+89:     p = tmp_path / "bets.jsonl"
+90:     add_bet("A", "B", "ou05_1t", "over", 2.4, path=p)  # >=1 gol no 1o tempo
+91:     add_bet("A", "B", "ou15_2t", "under", 1.8, path=p)  # <2 gols no 2o tempo
+92:     add_bet("A", "B", "ou25", "under", 2.0, path=p)  # jogo inteiro
+93:     recs = settle_bet("A", "B", 2, 1, path=p)  # sem ht
+94:     assert [r["market"] for r in recs] == ["ou25"]  # só o FT fechou
+95:     recs = settle_bet("A", "B", 2, 1, ht="0-1", path=p)  # 1T=1 gol, 2T=2 gols
+96:     by = {r["market"]: r for r in recs}
+97:     assert by["ou05_1t"]["won"] is True  # 1 > 0.5
+98:     assert by["ou15_2t"]["won"] is False  # 2 > 1.5 -> under perde
+99:     assert by["ou05_1t"]["validated"] is False  # marcado sem CLV
+101:     assert settle_bet("A", "B", 2, 1, ht="0-1", path=p) == []
+104: def test_summary_separa_validado_de_informativo(tmp_path):
+105:     p = tmp_path / "bets.jsonl"
+106:     add_bet("A", "B", "ou25", "under", 2.0, path=p)
+107:     add_bet("A", "B", "ou05_1t", "over", 2.0, path=p)
+108:     settle_bet("A", "B", 1, 0, ht="1-0", path=p)
+109:     t = summary(path=p)
+110:     assert t["ou25"]["validated"] is True
+111:     assert t["ou05_1t"]["validated"] is False
+114: def test_summary_roi(tmp_path):
+115:     p = tmp_path / "bets.jsonl"
+116:     add_bet("A1", "B1", "ou25", "under", 2.0, path=p)
+117:     add_bet("A2", "B2", "ou25", "over", 2.0, path=p)
+118:     settle_bet("A1", "B1", 1, 0, path=p)  # under ganha: +1.0
+119:     settle_bet("A2", "B2", 1, 0, path=p)  # over perde: -1.0
+120:     t = summary(path=p)["ou25"]
+121:     assert t["n"] == 2 and t["staked"] == 2.0
+122:     assert t["profit"] == pytest.approx(0.0)
+123:     assert t["roi"] == pytest.approx(0.0)
+126: def test_banca_saldo_exposicao_e_drawdown(tmp_path):
+127:     bank = tmp_path / "bankroll.jsonl"
+128:     bets = tmp_path / "bets.jsonl"
+129:     bank_init(1000.0, 20.0, path=bank)  # unidade = 2% da banca
+130:     add_bet("A1", "B1", "ou25", "under", 2.0, path=bets)
+131:     add_bet("A2", "B2", "ou25", "over", 2.5, path=bets)
+132:     st = bank_state(bank_path=bank, bets_path=bets)
+133:     assert st["balance"] == 1000.0  # nada fechado ainda
+134:     assert st["open_units"] == 2.0 and st["open_money"] == 40.0
+135:     settle_bet("A1", "B1", 3, 1, path=bets)  # under 2.5 perde: -1u
+136:     settle_bet("A2", "B2", 2, 1, path=bets)  # over 2.5 ganha: +1.5u
+137:     st = bank_state(bank_path=bank, bets_path=bets)
+138:     assert st["profit_units"] == pytest.approx(0.5)
+139:     assert st["balance"] == pytest.approx(1000.0 + 0.5 * 20.0)
+140:     assert st["open_units"] == 0.0
+142:     assert st["max_drawdown_money"] == pytest.approx(20.0)
+145: def test_banca_deposito_saque_e_reinit(tmp_path):
+146:     bank = tmp_path / "bankroll.jsonl"
+147:     bets = tmp_path / "bets.jsonl"
+148:     bank_init(500.0, 10.0, path=bank)
+149:     bank_flow("deposit", 200.0, path=bank)
+150:     bank_flow("withdraw", 100.0, path=bank)
+151:     st = bank_state(bank_path=bank, bets_path=bets)
+152:     assert st["balance"] == 600.0 and st["flows"] == 100.0
+153:     bank_init(1000.0, 20.0, path=bank)  # reinit zera fluxos
+154:     st = bank_state(bank_path=bank, bets_path=bets)
+155:     assert st["balance"] == 1000.0 and st["flows"] == 0.0
+158: def test_kickoff_marca_aposta_tardia(tmp_path):
+161:     p = tmp_path / "bets.jsonl"
+162:     cedo = add_bet(
+163:         "A",
+164:         "B",
+165:         "ou25",
+166:         "under",
+167:         2.0,
+168:         path=p,
+169:         kickoff="2026-07-09T20:00:00Z",
+170:         logged_at="2026-07-09T18:00:00+00:00",
+171:     )
+172:     tarde = add_bet(
+173:         "A",
+174:         "B",
+175:         "ou25",
+176:         "over",
+177:         2.0,
+178:         path=p,
+179:         kickoff="2026-07-09T20:00:00Z",
+180:         logged_at="2026-07-09T20:05:00+00:00",
+181:     )
+182:     assert cedo["late"] is False
+183:     assert tarde["late"] is True
+184:     sem_ko = add_bet("A", "B", "ou15", "over", 2.0, path=p)
+185:     assert sem_ko["late"] is None  # sem kickoff, sem juízo
+188: def test_aviso_de_bilhete_duplicado_aberto(tmp_path):
+189:     p = tmp_path / "bets.jsonl"
+190:     a = add_bet("A", "B", "ou25", "under", 2.0, path=p)
+191:     b = add_bet("B", "A", "ou25", "under", 2.1, path=p)  # mesmo jogo invertido
+192:     assert a["duplicate_of_open"] is False
+193:     assert b["duplicate_of_open"] is True
+194:     settle_bet("A", "B", 1, 0, path=p)  # fecha as duas
+195:     c = add_bet("A", "B", "ou25", "under", 2.0, path=p)  # não há mais aberta
+196:     assert c["duplicate_of_open"] is False
+199: def test_settle_rejeita_ht_maior_que_final(tmp_path):
+200:     p = tmp_path / "bets.jsonl"
+201:     add_bet("A", "B", "ou05_1t", "over", 2.0, path=p)
+202:     with pytest.raises(ValueError):
+203:         settle_bet("A", "B", 1, 0, ht="2-1", path=p)  # 3 gols no HT, 1 no FT
+206: def test_list_bets_casa_aberta_e_fechada(tmp_path):
+207:     p = tmp_path / "bets.jsonl"
+208:     add_bet("A", "B", "ou25", "under", 2.0, path=p)
+209:     add_bet("C", "D", "ou25", "over", 2.0, path=p)
+210:     settle_bet("A", "B", 1, 0, path=p)
+211:     rows = list_bets(path=p)
+212:     by = {(r["home"], r["away"]): r for r in rows}
+213:     assert by[("A", "B")]["result"] is not None  # fechada
+214:     assert by[("A", "B")]["result"]["won"] is True
+215:     assert by[("C", "D")]["result"] is None  # aberta
+218: def test_banca_none_sem_init(tmp_path):
+219:     assert bank_state(bank_path=tmp_path / "nada.jsonl", bets_path=tmp_path / "bets.jsonl") is None
+220:     with pytest.raises(ValueError):
+221:         bank_init(-5, 1, path=tmp_path / "bankroll.jsonl")
+222:     with pytest.raises(ValueError):
+223:         bank_flow("roubo", 10, path=tmp_path / "bankroll.jsonl")
+229: def test_settle_confronto_repetido_exige_match_date_para_desambiguar(tmp_path):
+235:     p = tmp_path / "bets.jsonl"
+236:     add_bet("Flamengo", "Vasco", "ou25", "over", 2.0, match_date="2026-05-01", path=p)
+237:     add_bet("Vasco", "Flamengo", "ou25", "under", 2.0, match_date="2026-06-01", path=p)
+238:     with pytest.raises(ValueError, match="datas diferentes"):
+239:         settle_bet("Flamengo", "Vasco", 3, 1, path=p)
+241:     recs = settle_bet("Flamengo", "Vasco", 3, 1, match_date="2026-05-01", path=p)
+242:     assert len(recs) == 1
+243:     assert recs[0]["won"] is True  # over 2.5 bateu (3+1=4)
+244:     ainda_abertas = [b for b in list_bets(path=p) if b["result"] is None]
+245:     assert len(ainda_abertas) == 1
+246:     assert ainda_abertas[0]["match_date"] == "2026-06-01"  # returno intocado
+249: def test_settle_idempotente_sobrevive_a_reordenacao_do_arquivo(tmp_path):
+255:     p = tmp_path / "bets.jsonl"
+256:     rec = add_bet("A", "B", "ou25", "over", 2.0, bet_id="fixed-id-1", path=p)
+257:     settle_bet("A", "B", 3, 1, path=p)
+258:     original_lines = p.read_text(encoding="utf-8").splitlines()
+260:     nova_linha = json.dumps({**rec, "bet_id": "outra-aposta", "home": "X", "away": "Y"})
+261:     p.write_text(nova_linha + "\n" + "\n".join(original_lines) + "\n", encoding="utf-8")
+263:     recs_de_novo = settle_bet("A", "B", 3, 1, path=p)
+264:     assert recs_de_novo == []
+265:     st = summary(path=p)
+266:     assert st["ou25"]["n"] == 1  # não duplicou
+267:     assert st["ou25"]["staked"] == 1.0
+270: def test_settle_placar_none_levanta_valueerror_claro(tmp_path):
+271:     p = tmp_path / "bets.jsonl"
+272:     add_bet("A", "B", "ou25", "over", 2.0, path=p)
+273:     with pytest.raises(ValueError, match="placar inválido"):
+274:         settle_bet("A", "B", None, 1, path=p)
+277: def test_add_bet_naive_vs_aware_nao_crasha(tmp_path):
+278:     p = tmp_path / "bets.jsonl"
+283:     rec = add_bet(
+284:         "A",
+285:         "B",
+286:         "ou25",
+287:         "over",
+288:         2.0,
+289:         kickoff="2026-08-01T19:00:00Z",
+290:         logged_at="2026-08-01T16:00:00",  # naive, sem offset
+291:         path=p,
+292:     )
+293:     assert rec["kind"] == "bet"
+294:     assert rec["late"] is None
+297: def test_capital_gate_status_avisa_sem_trial_comprovada(tmp_path):
+298:     trials = tmp_path / "trials.json"
+299:     trials.write_text(
+300:         json.dumps(
+301:             [
+302:                 {"name": "h1", "params": {"market": "ou25"}, "status": "refutada"},
+303:                 {"name": "h3", "params": {"market": "ou25"}, "status": "inconclusiva"},
+304:             ]
+305:         ),
+306:         encoding="utf-8",
+307:     )
+308:     warning = capital_gate_status("ou25", trials_path=trials)
+309:     assert warning is not None
+310:     assert "comprovada" in warning
+313: def test_capital_gate_status_silencioso_com_trial_comprovada(tmp_path):
+314:     trials = tmp_path / "trials.json"
+315:     trials.write_text(
+316:         json.dumps([{"name": "h1", "params": {"market": "ou2.5"}, "status": "comprovada"}]),
+317:         encoding="utf-8",
+318:     )
+319:     assert capital_gate_status("ou25", trials_path=trials) is None
+322: def test_capital_gate_status_ignora_mercado_fora_do_gate(tmp_path):
+325:     assert capital_gate_status("ou15", trials_path=tmp_path / "inexistente.json") is None
+328: def test_capital_gate_status_falha_fechado_sem_trials_json(tmp_path):
+329:     warning = capital_gate_status("ou25", trials_path=tmp_path / "nao_existe.json")
+330:     assert warning is not None
+331:     assert "não encontrado" in warning
+### tests/test_bitemporal_store.py
+1: from datetime import UTC, datetime
+3: import pytest
+5: from brasileirao_predictor.data.bitemporal_store import BitemporalObservation, append, as_known_at, connect
+8: def dt(hour: int) -> datetime:
+9:     return datetime(2026, 8, 9, hour, tzinfo=UTC)
+12: def observation(*, published: int, ingested: int, goals: int) -> BitemporalObservation:
+13:     return BitemporalObservation(
+14:         entity_type="match_result",
+15:         entity_id="123",
+16:         source="api_football",
+17:         event_at=dt(10),
+18:         published_at=dt(published),
+19:         ingested_at=dt(ingested),
+20:         payload={"home_goals": goals},
+21:         charter_id="brasileirao-api-football-fixtures-v1",
+22:     )
+25: def test_as_known_at_never_sees_a_result_published_later(tmp_path):
+26:     connection = connect(tmp_path / "pit.db")
+27:     assert append(connection, observation(published=11, ingested=12, goals=1))
+28:     assert as_known_at(connection, "match_result", dt(10)) == []
+29:     assert as_known_at(connection, "match_result", dt(11)) == []
+30:     assert as_known_at(connection, "match_result", dt(12))[0]["payload"]["home_goals"] == 1
+33: def test_latest_version_and_idempotency(tmp_path):
+34:     connection = connect(tmp_path / "pit.db")
+35:     first = observation(published=11, ingested=12, goals=1)
+36:     assert append(connection, first)
+37:     assert not append(connection, first)
+38:     assert append(connection, observation(published=12, ingested=13, goals=2))
+39:     assert as_known_at(connection, "match_result", dt(13))[0]["payload"]["home_goals"] == 2
+42: def test_rejects_impossible_ingestion_clock():
+43:     with pytest.raises(ValueError, match="ingested_at"):
+44:         observation(published=12, ingested=11, goals=1)
+### tests/test_bookmaker_odds.py
+7: from brasileirao_predictor.data.bookmaker_odds import (
+8:     closing_quote,
+9:     fold,
+10:     load_snapshots,
+11:     match_fixture,
+12:     persist_snapshots,
+13:     resolve_team,
+14: )
+16: CONHECIDOS = [
+17:     "Grêmio",
+18:     "Fluminense",
+19:     "São Paulo",
+20:     "Atlético Mineiro",
+21:     "Atlético Goianiense",
+22:     "Red Bull Bragantino",
+23:     "Vitória",
+24:     "Athletico",
+25: ]
+28: def _fixture(event_id, home, away, kickoff):
+29:     return {"event_id": event_id, "home_team": home, "away_team": away, "kickoff_at": kickoff}
+32: def test_fold_remove_acento_e_caixa():
+33:     assert fold("São Paulo") == fold("Sao Paulo") == "sao paulo"
+34:     assert fold("  Vitória ") == "vitoria"
+37: def test_fold_nao_colide_times_distintos():
+38:     assert fold("Atlético Mineiro") != fold("Atlético Goianiense")
+41: def test_nome_exato():
+42:     assert resolve_team("Grêmio", CONHECIDOS) == ("Grêmio", "EXACT")
+45: def test_acento_ausente_resolve_quando_unico():
+46:     assert resolve_team("Sao Paulo", CONHECIDOS) == ("São Paulo", "RULE_BASED")
+47:     assert resolve_team("Atletico Mineiro", CONHECIDOS) == ("Atlético Mineiro", "RULE_BASED")
+48:     assert resolve_team("Vitoria", CONHECIDOS) == ("Vitória", "RULE_BASED")
+51: def test_alias_explicito_para_nome_comercial_diferente():
+52:     assert resolve_team("Bragantino-SP", CONHECIDOS) == ("Red Bull Bragantino", "RULE_BASED")
+53:     assert resolve_team("Athletico-PR", CONHECIDOS) == ("Athletico", "RULE_BASED")
+56: def test_nome_desconhecido_falha_fechado():
+57:     assert resolve_team("Clube Inexistente", CONHECIDOS) == (None, "REJECTED")
+60: def test_alias_para_time_fora_da_base_falha_fechado():
+61:     assert resolve_team("Bragantino-SP", ["Grêmio"]) == (None, "REJECTED")
+64: def test_ambiguidade_de_dobra_falha_fechado():
+66:     assert resolve_team("UNIAO", ["União", "Uniao"]) == (None, "AMBIGUOUS")
+69: def test_caixa_exata_tem_precedencia_sobre_a_dobra():
+71:     assert resolve_team("Uniao", ["União", "Uniao"]) == ("Uniao", "EXACT")
+74: def test_casa_fixture_com_acento_divergente():
+75:     fx = [_fixture(1, "São Paulo", "Grêmio", "2026-07-26T21:30:00+00:00")]
+76:     row = {
+77:         "home_team": "Sao Paulo",
+78:         "away_team": "Grêmio",
+79:         "kickoff_at": "2026-07-26T21:30:00+00:00",
+80:     }
+81:     achado, status = match_fixture(row, fx)
+82:     assert achado["event_id"] == 1 and status == "RULE_BASED"
+85: def test_kickoff_distante_nao_casa():
+86:     fx = [_fixture(1, "Grêmio", "Fluminense", "2026-07-26T21:30:00+00:00")]
+87:     row = {
+88:         "home_team": "Grêmio",
+89:         "away_team": "Fluminense",
+90:         "kickoff_at": "2026-07-30T21:30:00+00:00",
+91:     }
+92:     assert match_fixture(row, fx) == (None, "sem_fixture")
+95: def test_placeholder_de_meia_noite_da_api_ainda_casa():
+100:     fx = [_fixture(9, "Botafogo", "Grêmio", "2026-07-29T18:00:00+00:00")]
+101:     row = {
+102:         "home_team": "Botafogo",
+103:         "away_team": "Grêmio",
+104:         "kickoff_at": "2026-07-29T00:00:00+00:00",
+105:     }
+106:     achado, _ = match_fixture(row, fx)
+107:     assert achado["event_id"] == 9
+110: def test_alias_sem_h_do_athletico():
+111:     assert resolve_team("Atletico Paranaense", CONHECIDOS) == ("Athletico", "RULE_BASED")
+114: def test_mesmo_confronto_duas_vezes_na_janela_e_ambiguo():
+115:     fx = [
+116:         _fixture(1, "Grêmio", "Fluminense", "2026-07-26T18:00:00+00:00"),
+117:         _fixture(2, "Grêmio", "Fluminense", "2026-07-26T22:00:00+00:00"),
+118:     ]
+119:     row = {
+120:         "home_team": "Grêmio",
+121:         "away_team": "Fluminense",
+122:         "kickoff_at": "2026-07-26T20:00:00+00:00",
+123:     }
+124:     assert match_fixture(row, fx) == (None, "fixture_ambiguo")
+127: def test_mando_invertido_nao_casa():
+129:     fx = [_fixture(1, "Grêmio", "Fluminense", "2026-07-26T21:30:00+00:00")]
+130:     row = {
+131:         "home_team": "Fluminense",
+132:         "away_team": "Grêmio",
+133:         "kickoff_at": "2026-07-26T21:30:00+00:00",
+134:     }
+135:     assert match_fixture(row, fx)[0] is None
+138: def test_persistencia_e_idempotente(tmp_path):
+139:     path = tmp_path / "snaps.jsonl"
+140:     linha = {
+141:         "event_id": 1,
+142:         "selection": "over",
+143:         "odds_captured_at": "2026-07-26T10:00:00+00:00",
+144:         "market": "ou2.5",
+145:         "odd": 1.95,
+146:     }
+147:     assert persist_snapshots(path, [linha]) == 1
+148:     assert persist_snapshots(path, [linha]) == 0  # retry não duplica
+149:     assert len(load_snapshots(path)) == 1
+152: def test_persistencia_nao_colapsa_bookmaker_ou_mercado(tmp_path):
+153:     path = tmp_path / "snaps.jsonl"
+154:     base = {
+155:         "source": "odds",
+156:         "source_event_id": "e",
+157:         "event_id": 1,
+158:         "bookmaker": "a",
+159:         "market": "ou2.5",
+160:         "selection": "over",
+161:         "line": 2.5,
+162:         "odds_captured_at": "2026-07-26T10:00:00+00:00",
+163:         "odd": 1.95,
+164:     }
+165:     assert persist_snapshots(path, [base, {**base, "bookmaker": "b"}]) == 2
+166:     assert persist_snapshots(path, [{**base, "market": "ou1.5_1h", "line": 1.5}]) == 1
+169: def _snap(captured, odd, selection="over"):
+170:     return {
+171:         "event_id": 1,
+172:         "market": "ou2.5",
+173:         "selection": selection,
+174:         "odds_captured_at": captured,
+175:         "odd": odd,
+176:     }
+179: def test_fechamento_pega_a_ultima_antes_do_apito():
+180:     snaps = [
+181:         _snap("2026-07-26T10:00:00+00:00", 1.90),
+182:         _snap("2026-07-26T20:00:00+00:00", 2.05),
+183:         _snap("2026-07-26T15:00:00+00:00", 1.95),
+184:     ]
+185:     achado = closing_quote(snaps, event_id=1, market="ou2.5", selection="over", kickoff_at="2026-07-26T21:30:00+00:00")
+186:     assert achado["odd"] == 2.05
+189: def test_fechamento_ignora_cotacao_pos_apito():
+190:     snaps = [_snap("2026-07-26T22:00:00+00:00", 2.50)]
+191:     assert (
+192:         closing_quote(
+193:             snaps,
+194:             event_id=1,
+195:             market="ou2.5",
+196:             selection="over",
+197:             kickoff_at="2026-07-26T21:30:00+00:00",
+198:         )
+199:         is None
+200:     )
+203: def test_fechamento_ignora_odd_invalida():
+204:     snaps = [_snap("2026-07-26T20:00:00+00:00", 1.0)]
+205:     assert (
+206:         closing_quote(
+207:             snaps,
+208:             event_id=1,
+209:             market="ou2.5",
+210:             selection="over",
+211:             kickoff_at="2026-07-26T21:30:00+00:00",
+212:         )
+213:         is None
+214:     )
+217: def test_fechamento_nao_mistura_selecao():
+218:     snaps = [_snap("2026-07-26T20:00:00+00:00", 2.05, selection="under")]
+219:     assert (
+220:         closing_quote(
+221:             snaps,
+222:             event_id=1,
+223:             market="ou2.5",
+224:             selection="over",
+225:             kickoff_at="2026-07-26T21:30:00+00:00",
+226:         )
+227:         is None
+228:     )

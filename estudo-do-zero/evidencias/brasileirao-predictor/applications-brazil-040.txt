@@ -1,0 +1,497 @@
+### tests/test_audit_fixes.py
+7: import sqlite3
+9: import numpy as np
+10: import pytest
+12: from brasileirao_predictor.bootstrap import ci_mean, ci_mean_cluster
+13: from brasileirao_predictor.event_models import fit_event_model, predict_event
+14: from brasileirao_predictor.model import OptimizationFailedError, fit_goal_model, predict_match
+15: from brasileirao_predictor.ratings import ratings_asof
+17: CFG_ELO = {
+18:     "initial_rating": 1500,
+19:     "home_advantage": 100,
+20:     "k_factors": {"default": 30},
+21: }
+29: def test_p5_params_5_elementos_com_deltas_zero_equivale_ao_baseline():
+33:     p4 = (0.224, 1.06, 0.154, -0.039)
+34:     p5 = (0.224, 1.06, 0.154, -0.039, -0.087)
+35:     r4 = predict_match(100, 0.0, p4, 0.0, max_goals=12)
+36:     r5 = predict_match(100, 0.0, p5, 0.0, max_goals=12)
+37:     assert r5["p_win"] == pytest.approx(r4["p_win"], abs=1e-12)
+38:     assert r5["p_draw"] == pytest.approx(r4["p_draw"], abs=1e-12)
+41: def test_p5_padrao_buggy_documentado():
+46:     p5 = (0.224, 1.06, 0.154, -0.039, -0.087)
+47:     buggy = predict_match(100, 0.0, p5, 0.0, 12)  # 12 → delta_vorp_a!
+48:     right = predict_match(100, 0.0, p5, 0.0, max_goals=12)
+49:     assert abs(buggy["p_win"] - right["p_win"]) > 0.05
+57: def test_p10_history_no_formato_errado_falha_fechado():
+59:     rng = np.random.default_rng(7)
+60:     buggy_history = [
+61:         (
+62:             1500 + rng.integers(-100, 100),
+63:             1450 + rng.integers(-100, 100),
+64:             int(rng.integers(0, 4)),
+65:         )  # h[1] ~ 1450 "gols"
+66:         for _ in range(60)
+67:     ]
+70:     with pytest.raises(OptimizationFailedError, match="invalid solution"):
+71:         fit_goal_model(buggy_history)
+74: def test_p10_history_saudavel_nao_avisa():
+77:     rng = np.random.default_rng(7)
+78:     history = []
+79:     for _ in range(300):
+80:         diff = float(rng.normal(0, 250))
+81:         mu_h = np.exp(0.2 + 0.8 * diff / 400.0)
+82:         mu_a = np.exp(0.2 - 0.8 * diff / 400.0)
+83:         lam_h = rng.gamma(shape=6.67, scale=mu_h / 6.67)
+84:         lam_a = rng.gamma(shape=6.67, scale=mu_a / 6.67)
+85:         history.append((diff, int(rng.poisson(lam_h)), int(rng.poisson(lam_a))))
+86:     import warnings as _w
+88:     with _w.catch_warnings():
+89:         _w.simplefilter("error", RuntimeWarning)  # warning vira erro
+90:         params = fit_goal_model(history)
+91:     assert len(params) == 4
+99: def test_p3_ratings_asof_nao_enxerga_o_futuro():
+100:     matches = [
+101:         ("2026-01-10", "Brazil", "France", 3, 0, "Friendly", 1),
+102:         ("2026-03-10", "Brazil", "France", 0, 3, "Friendly", 1),
+103:     ]
+104:     snaps = ratings_asof(matches, CFG_ELO, ["2026-01-01", "2026-02-01", "2026-04-01"])
+106:     assert snaps["2026-01-01"] == {}
+108:     assert snaps["2026-02-01"]["Brazil"] > 1500
+109:     assert snaps["2026-02-01"]["France"] < 1500
+112:     assert snaps["2026-04-01"]["Brazil"] < snaps["2026-02-01"]["Brazil"]
+120: def test_p6_cluster_ci_mais_largo_que_iid_sob_correlacao():
+124:     rng_pop = np.random.default_rng(3)
+125:     game_vals = rng_pop.normal(0.0, 0.10, size=4)
+126:     pairs = [(v, g) for g, v in enumerate(game_vals) for _ in range(5)]
+127:     values = [v for v, _g in pairs]
+129:     m_iid, lo_iid, hi_iid = ci_mean(values, 2000, np.random.default_rng(13))
+130:     m_cl, lo_cl, hi_cl = ci_mean_cluster(pairs, 2000, np.random.default_rng(13))
+131:     assert m_cl == pytest.approx(m_iid)
+132:     assert (hi_cl - lo_cl) > (hi_iid - lo_iid)
+135: def test_p6_cluster_degenera_no_iid_com_um_por_cluster():
+136:     vals = [0.1, -0.2, 0.3, 0.05, -0.07]
+137:     pairs = [(v, i) for i, v in enumerate(vals)]
+138:     m_cl, lo_cl, hi_cl = ci_mean_cluster(pairs, 1000, np.random.default_rng(13))
+139:     m_iid, _, _ = ci_mean(vals, 1000, np.random.default_rng(13))
+140:     assert m_cl == pytest.approx(m_iid)
+141:     assert lo_cl <= m_cl <= hi_cl
+144: def test_p6_cluster_amostra_vazia_estoura():
+145:     with pytest.raises(ValueError):
+146:         ci_mean_cluster([], 100, np.random.default_rng(13))
+154: def _synthetic_event_history(n=300, seed=11):
+157:     rng = np.random.default_rng(seed)
+158:     hist = []
+159:     for _ in range(n):
+160:         diff = float(rng.normal(0, 300))
+161:         d = diff / 1000.0
+162:         hist.append(
+163:             {
+164:                 "home_team": "A",
+165:                 "away_team": "B",
+166:                 "home_elo": 1500 + diff / 2,
+167:                 "away_elo": 1500 - diff / 2,
+168:                 "home_event": int(rng.poisson(np.exp(1.5 + 0.4 * d))),
+169:                 "away_event": int(rng.poisson(np.exp(1.5 - 0.4 * d))),
+170:             }
+171:         )
+172:     return hist
+175: def test_p8_lambda_home_diferente_de_away_para_diff_positivo():
+176:     params = fit_event_model(_synthetic_event_history(), "corners", distribution="poisson")
+177:     lam_h, lam_a, _probs = predict_event(1700, 1400, params)
+180:     assert lam_h > lam_a
+181:     assert params["b"] > 0
+184: def test_p8_b_recupera_o_sinal_gerador():
+185:     params = fit_event_model(_synthetic_event_history(), "corners", distribution="poisson")
+188:     assert params["b"] == pytest.approx(0.16, rel=0.3)
+196: def _synthetic_overdispersed_history(n=400, seed=21, true_mean=12.0, true_b=0.6):
+199:     rng = np.random.default_rng(seed)
+200:     hist = []
+201:     shape = 6.0  # controla a overdispersão (menor = mais overdisperso)
+202:     for _ in range(n):
+203:         diff = float(rng.normal(0, 250))
+204:         d = diff / 400.0
+205:         mu_h = true_mean * np.exp(true_b * d - true_b * 0)  # ~ exp(log(mean)+b*d)
+206:         mu_a = true_mean * np.exp(-true_b * d)
+207:         lam_h = rng.gamma(shape=shape, scale=mu_h / shape)
+208:         lam_a = rng.gamma(shape=shape, scale=mu_a / shape)
+209:         hist.append(
+210:             {
+211:                 "home_team": "A",
+212:                 "away_team": "B",
+213:                 "home_elo": 1500 + diff / 2,
+214:                 "away_elo": 1500 - diff / 2,
+215:                 "home_event": int(rng.poisson(lam_h)),
+216:                 "away_event": int(rng.poisson(lam_a)),
+217:             }
+218:         )
+219:     return hist
+222: def test_p11_nb_recupera_a_media_real_nao_a_invertida():
+228:     hist = _synthetic_overdispersed_history()
+229:     params = fit_event_model(hist, "shots", distribution="nbinom")
+230:     lam_h, lam_a, _ = predict_event(1500, 1500, params)
+232:     assert lam_h == pytest.approx(12.0, rel=0.35)
+233:     assert lam_a == pytest.approx(12.0, rel=0.35)
+236: def test_p11_b_positivo_recupera_direcao_correta():
+237:     hist = _synthetic_overdispersed_history()
+238:     params = fit_event_model(hist, "shots", distribution="nbinom")
+239:     assert params["b"] > 0  # time mais forte gera mais eventos, não menos
+247: def _synthetic_poisson_like_history(n=300, seed=5, true_mean=2.0):
+251:     rng = np.random.default_rng(seed)
+252:     hist = []
+253:     for _ in range(n):
+254:         diff = float(rng.normal(0, 200))
+255:         d = diff / 400.0
+256:         hist.append(
+257:             {
+258:                 "home_team": "A",
+259:                 "away_team": "B",
+260:                 "home_elo": 1500 + diff / 2,
+261:                 "away_elo": 1500 - diff / 2,
+262:                 "home_event": int(rng.poisson(true_mean * np.exp(0.1 * d))),
+263:                 "away_event": int(rng.poisson(true_mean * np.exp(-0.1 * d))),
+264:             }
+265:         )
+266:     return hist
+269: def test_p12_nb_em_dado_poisson_nao_diverge():
+274:     hist = _synthetic_poisson_like_history()
+275:     with pytest.warns(RuntimeWarning):  # bound do intercepto acionado — esperado
+276:         params = fit_event_model(hist, "cards", distribution="nbinom")
+277:     lam_h, lam_a, _ = predict_event(1500, 1500, params)
+278:     assert lam_h < 50 and lam_a < 50  # nada de milhões de cartões
+286: @pytest.fixture
+287: def event_db(tmp_path):
+290:     p = tmp_path / "events.db"
+291:     conn = sqlite3.connect(str(p))
+292:     conn.executescript("""
+293:         CREATE TABLE sofascore_matches (
+294:             event_id INTEGER PRIMARY KEY, date TEXT,
+295:             home_team TEXT, away_team TEXT,
+296:             home_score INTEGER, away_score INTEGER);
+297:         CREATE TABLE odds_lines (
+298:             event_id INTEGER, market TEXT, line REAL,
+299:             odd_a REAL, odd_b REAL, odd_a_open REAL, odd_b_open REAL,
+300:             PRIMARY KEY (event_id, market, line));
+301:         CREATE TABLE match_statistics (
+302:             event_id INTEGER, team TEXT, period TEXT, stat_name TEXT, value REAL,
+303:             PRIMARY KEY (event_id, team, period, stat_name));
+304:     """)
+305:     for i in range(1, 11):
+306:         conn.execute(
+307:             "INSERT INTO sofascore_matches VALUES (?,?,?,?,?,?)",
+308:             (i, f"2026-06-{i:02d}", f"T{i}h", f"T{i}a", 1, 0),
+309:         )
+310:         conn.execute(
+311:             "INSERT INTO odds_lines VALUES (?,?,?,?,?,?,?)",
+312:             (i, "corners", 8.5, 1.80, 2.00, 1.90, 1.90),
+313:         )
+314:         for team, all_v, h1, h2 in (("home", 6.0, 4.0, 2.0), ("away", 5.0, 1.0, 4.0)):
+315:             conn.execute(
+316:                 "INSERT INTO match_statistics VALUES (?,?,?,?,?)",
+317:                 (i, team, "ALL", "Corner kicks", all_v),
+318:             )
+319:             conn.execute(
+320:                 "INSERT INTO match_statistics VALUES (?,?,?,?,?)",
+321:                 (i, team, "1ST", "Corner kicks", h1),
+322:             )
+323:             conn.execute(
+324:                 "INSERT INTO match_statistics VALUES (?,?,?,?,?)",
+325:                 (i, team, "2ND", "Corner kicks", h2),
+326:             )
+327:     conn.commit()
+328:     return conn
+331: def test_p2_load_event_data_uma_linha_por_jogo_e_so_periodo_all(event_db):
+332:     from brasileirao_predictor.backtest_event import load_event_data
+334:     data = load_event_data(event_db, "corners", cfg_elo=CFG_ELO)
+336:     assert len(data) == 10
+337:     assert all(d["home_event"] == 6.0 and d["away_event"] == 5.0 for d in data)
+338:     assert all(d["total_events"] == 11.0 for d in data)
+341: def test_p7_gatilho_e_prob_de_mercado_usam_a_abertura(event_db):
+342:     from brasileirao_predictor.backtest_event import backtest_event
+344:     out = backtest_event("corners", min_edge=-1.0, max_edge=1.0, conn=event_db)
+345:     assert out["n_trades"] >= 1
+346:     for t in out["trades"]:
+348:         assert t["market_prob"] == pytest.approx(1.0 / t["open_odd"])
+349:         assert t["open_odd"] == pytest.approx(1.90)
+### tests/test_backtest_extended.py
+8: import pytest
+10: from brasileirao_predictor import db
+11: from brasileirao_predictor.backtest import run_backtest
+13: CFG = {
+14:     "elo": {
+15:         "initial_rating": 1500,
+16:         "home_advantage": 100,
+17:         "k_factors": {"default": 30, "Friendly": 20},
+18:     },
+19:     "model": {"max_goals": 8},
+20:     "backtest": {"min_edge": -1.0, "max_edge": 1.0, "over_under_line": 2.5},
+21: }
+24: def _ss_row(event_id, home, away, date):
+26:     base = dict(
+27:         event_id=event_id,
+28:         competition="WC",
+29:         season="2026",
+30:         date=date,
+31:         home_team=home,
+32:         away_team=away,
+33:         home_score=None,
+34:         away_score=None,
+35:         home_xg=None,
+36:         away_xg=None,
+37:         odds_home=2.80,
+38:         odds_draw=3.40,
+39:         odds_away=2.50,
+40:         odds_over=1.90,
+41:         odds_under=1.95,
+42:         odds_home_open=2.90,
+43:         odds_draw_open=3.30,
+44:         odds_away_open=2.40,
+45:         odds_over_open=1.85,
+46:         odds_under_open=2.00,
+47:     )
+48:     return tuple(base.values())
+51: def _setup(conn, home="Brazil", away="Serbia", hs=2, as_=0, eid=1, dc=None, btts=None, ou_lines=None):
+52:     conn.execute(
+53:         "INSERT INTO matches (date, home_team, away_team, home_score, away_score,"
+54:         " tournament, city, country, neutral) "
+55:         "VALUES ('2026-06-20',?,?,?,?,'Friendly','','',0)",
+56:         (home, away, hs, as_),
+57:     )
+58:     conn.commit()
+59:     db.upsert_ss_matches(conn, [_ss_row(eid, home, away, "2026-06-20")])
+60:     parsed = {}
+61:     if dc:
+62:         parsed["dc"] = dc
+63:     if btts:
+64:         parsed["btts"] = btts
+65:     if parsed:
+66:         db.update_flat_markets(conn, eid, parsed, parsed)  # open == close para o teste
+67:     if ou_lines:
+68:         rows = [(eid, "ou", ln, o, u, o, u) for ln, (o, u) in ou_lines.items()]
+69:         db.upsert_odds_lines(conn, rows)
+72: @pytest.fixture
+73: def conn():
+74:     c = db.connect(":memory:")
+75:     yield c
+76:     c.close()
+84: def test_btts_settled_no_push(conn):
+86:     _setup(conn, btts={"Yes": 2.0, "No": 1.7})
+87:     _params, ledger = run_backtest(CFG, conn)
+88:     btts = {b["selection"]: b for b in ledger if b["market"] == "btts"}
+89:     assert set(btts) == {"yes", "no"}
+90:     assert btts["no"]["won"] == 1
+91:     assert btts["yes"]["won"] == 0
+92:     assert btts["yes"]["offered_odd"] == 2.0  # abertura == fechamento aqui
+100: def test_double_chance_settled(conn):
+102:     _setup(conn, dc={"1X": 1.2, "X2": 1.9, "12": 1.4})
+103:     _params, ledger = run_backtest(CFG, conn)
+104:     dc = {b["selection"]: b for b in ledger if b["market"] == "dc"}
+105:     assert set(dc) == {"1X", "X2", "12"}
+106:     assert dc["1X"]["won"] == 1 and dc["1X"]["offered_odd"] == 1.2
+107:     assert dc["X2"]["won"] == 0
+108:     assert dc["12"]["won"] == 1 and dc["12"]["offered_odd"] == 1.4
+111: def test_double_chance_swap_orientation(conn):
+115:     _setup(
+116:         conn,
+117:         home="Serbia",
+118:         away="Brazil",
+119:         hs=0,
+120:         as_=2,  # placar na orient. sofascore
+121:         dc={"1X": 9.99, "X2": 1.23, "12": 1.4},
+122:     )
+124:     conn.execute(
+125:         "UPDATE matches SET home_team='Brazil', away_team='Serbia', home_score=2, away_score=0 WHERE home_team='Serbia'"
+126:     )
+127:     conn.commit()
+128:     _params, ledger = run_backtest(CFG, conn)
+129:     dc = {b["selection"]: b for b in ledger if b["market"] == "dc"}
+131:     assert dc["1X"]["offered_odd"] == 1.23
+132:     assert dc["1X"]["won"] == 1  # Brazil-ou-empate, Brazil venceu
+140: def test_ou_half_lines_settled(conn):
+142:     _setup(conn, ou_lines={1.5: (1.4, 3.0), 3.5: (4.3, 1.2)})
+143:     _params, ledger = run_backtest(CFG, conn)
+144:     mkts = {b["market"] for b in ledger}
+145:     assert "ou1.5" in mkts and "ou3.5" in mkts
+146:     ou15 = {b["selection"]: b for b in ledger if b["market"] == "ou1.5"}
+147:     assert ou15["over"]["won"] == 1  # 2 > 1.5
+148:     ou35 = {b["selection"]: b for b in ledger if b["market"] == "ou3.5"}
+149:     assert ou35["under"]["won"] == 1  # 2 < 3.5
+152: def test_integer_line_and_2_5_excluded(conn):
+155:     _setup(conn, ou_lines={2.0: (1.9, 1.9), 2.5: (2.0, 1.8)})
+156:     _params, ledger = run_backtest(CFG, conn)
+157:     mkts = {b["market"] for b in ledger}
+158:     assert "ou2.0" not in mkts  # inteira pulada
+159:     assert "ou2" not in mkts
+162: def test_ah_lines_excluded_in_phase_4a(conn):
+163:     _setup(conn, ou_lines={1.5: (1.4, 3.0)})
+164:     db.upsert_odds_lines(conn, [(1, "ah", -0.5, 2.0, 1.8, 2.0, 1.8)])
+165:     _params, ledger = run_backtest(CFG, conn)
+166:     assert not any(b["market"].startswith("ah") for b in ledger)
+174: def test_no_extended_data_only_legacy_markets(conn):
+175:     _setup(conn)  # sem dc/btts/ou_lines
+176:     _params, ledger = run_backtest(CFG, conn)
+177:     mkts = {b["market"] for b in ledger}
+178:     assert mkts <= {"1x2", "ou25"}  # só os legados
+### tests/test_backtest_odds.py
+8: import pytest
+10: from brasileirao_predictor import db
+11: from brasileirao_predictor.backtest import _find_odds, _load_odds, run_backtest
+12: from brasileirao_predictor.math_utils import shin_probabilities
+17: def _ss_row(event_id, home, away, date, **over):
+18:     base = dict(
+19:         event_id=event_id,
+20:         competition="WC",
+21:         season="2026",
+22:         date=date,
+23:         home_team=home,
+24:         away_team=away,
+25:         home_score=None,
+26:         away_score=None,
+27:         home_xg=None,
+28:         away_xg=None,
+29:         odds_home=2.80,
+30:         odds_draw=3.40,
+31:         odds_away=2.50,
+32:         odds_over=1.90,
+33:         odds_under=1.95,
+34:         odds_home_open=2.90,
+35:         odds_draw_open=3.30,
+36:         odds_away_open=2.40,
+37:         odds_over_open=1.85,
+38:         odds_under_open=2.00,
+39:     )
+40:     base.update(over)
+41:     return tuple(base.values())
+44: @pytest.fixture
+45: def conn():
+46:     c = db.connect(":memory:")
+47:     yield c
+48:     c.close()
+52: def test_swap_orienta_odd_pro_time_certo(conn):
+56:     db.upsert_ss_matches(conn, [_ss_row(1, "Serbia", "Brazil", "2026-06-20")])
+57:     found = _find_odds(_load_odds(conn), "Brazil", "Serbia", "2026-06-20")
+58:     assert found is not None
+59:     close_1x2, close_ou, open_1x2, open_ou = found
+60:     assert close_1x2 == (2.50, 3.40, 2.80)  # Brazil, empate, Serbia
+61:     assert open_1x2 == (2.40, 3.30, 2.90)
+62:     assert close_ou == (1.90, 1.95)  # total de gols não tem orientação
+63:     assert open_ou == (1.85, 2.00)
+66: def test_sem_swap_quando_orientacao_coincide(conn):
+67:     db.upsert_ss_matches(conn, [_ss_row(1, "Brazil", "Serbia", "2026-06-20")])
+68:     close_1x2, _, open_1x2, _ = _find_odds(_load_odds(conn), "Brazil", "Serbia", "2026-06-20")
+69:     assert close_1x2 == (2.80, 3.40, 2.50)
+70:     assert open_1x2 == (2.90, 3.30, 2.40)
+73: def test_swap_fim_a_fim_no_ledger(conn):
+78:     cfg = {
+79:         "elo": {
+80:             "initial_rating": 1500,
+81:             "home_advantage": 100,
+82:             "k_factors": {"default": 30, "Friendly": 20},
+83:         },
+84:         "model": {"max_goals": 8},
+85:         "backtest": {"min_edge": -1.0, "max_edge": 1.0, "over_under_line": 2.5},
+86:     }
+87:     conn.execute(
+88:         "INSERT INTO matches (date, home_team, away_team, home_score, away_score,"
+89:         " tournament, city, country, neutral) "
+90:         "VALUES ('2026-06-20','Brazil','Serbia',2,0,'Friendly','','',0)"
+91:     )
+92:     conn.commit()
+93:     db.upsert_ss_matches(conn, [_ss_row(1, "Serbia", "Brazil", "2026-06-20")])
+95:     _params, ledger = run_backtest(cfg, conn)
+96:     bets = {b["selection"]: b for b in ledger if b["market"] == "1x2"}
+97:     assert bets["home"]["offered_odd"] == 2.40  # abertura do Brasil
+98:     assert bets["home"]["odd_close"] == 2.50  # fechamento do Brasil
+99:     assert bets["home"]["bet_at"] == "open"
+100:     assert bets["home"]["won"] == 1
+101:     assert bets["away"]["offered_odd"] == 2.90  # abertura da Sérvia
+102:     assert bets["away"]["won"] == 0
+103:     over = next(b for b in ledger if b["market"] == "ou25" and b["selection"] == "over")
+104:     assert over["offered_odd"] == 1.85  # OU intocado pelo swap
+108: def test_alias_reconcilia_south_korea(conn):
+111:     db.upsert_ss_matches(conn, [_ss_row(1, "Korea Republic", "Ghana", "2026-06-20")])
+112:     assert _find_odds(_load_odds(conn), "South Korea", "Ghana", "2026-06-20") is not None
+115: def test_alias_reconcilia_united_states(conn):
+116:     db.upsert_ss_matches(conn, [_ss_row(1, "USA", "Wales", "2026-06-20")])
+117:     assert _find_odds(_load_odds(conn), "United States", "Wales", "2026-06-20") is not None
+120: def test_nome_nao_mapeado_nao_casa(conn):
+124:     db.upsert_ss_matches(conn, [_ss_row(1, "Türkiye", "Georgia", "2026-06-20")])
+125:     assert _find_odds(_load_odds(conn), "Turkey", "Georgia", "2026-06-20") is None
+128: def test_odds_orfas_geram_aviso(conn, capsys):
+132:     cfg = {
+133:         "elo": {
+134:             "initial_rating": 1500,
+135:             "home_advantage": 100,
+136:             "k_factors": {"default": 30, "Friendly": 20},
+137:         },
+138:         "model": {"max_goals": 8},
+139:         "backtest": {"min_edge": -1.0, "max_edge": 1.0, "over_under_line": 2.5},
+140:     }
+141:     conn.execute(
+142:         "INSERT INTO matches (date, home_team, away_team, home_score, away_score,"
+143:         " tournament, city, country, neutral) "
+144:         "VALUES ('2026-06-20','Turkey','Georgia',1,0,'Friendly','','',0)"
+145:     )
+146:     conn.commit()
+147:     db.upsert_ss_matches(conn, [_ss_row(1, "Türkiye", "Georgia", "2026-06-20")])
+148:     run_backtest(cfg, conn)
+149:     out = capsys.readouterr().out
+150:     assert "não reconciliados" in out
+151:     assert "türkiye" in out
+155: def test_data_dentro_de_3_dias_casa(conn):
+156:     db.upsert_ss_matches(conn, [_ss_row(1, "Brazil", "Serbia", "2026-06-17")])
+157:     assert _find_odds(_load_odds(conn), "Brazil", "Serbia", "2026-06-20") is not None
+160: def test_data_alem_de_3_dias_nao_casa(conn):
+163:     db.upsert_ss_matches(conn, [_ss_row(1, "Brazil", "Serbia", "2026-06-16")])
+164:     assert _find_odds(_load_odds(conn), "Brazil", "Serbia", "2026-06-20") is None
+167: def test_data_invalida_descartada_calada(conn):
+170:     db.upsert_ss_matches(conn, [_ss_row(1, "Brazil", "Serbia", None)])
+171:     assert _find_odds(_load_odds(conn), "Brazil", "Serbia", "2026-06-20") is None
+174: def test_candidato_mais_proximo_na_data_vence(conn):
+176:     db.upsert_ss_matches(
+177:         conn,
+178:         [
+179:             _ss_row(1, "Brazil", "Serbia", "2026-06-18", odds_home=9.99),
+180:             _ss_row(2, "Brazil", "Serbia", "2026-06-20", odds_home=2.80),
+181:         ],
+182:     )
+183:     close_1x2, _, _, _ = _find_odds(_load_odds(conn), "Brazil", "Serbia", "2026-06-20")
+184:     assert close_1x2[0] == 2.80
+188: def test_mercado_parcial_pula_o_mercado_nao_o_jogo(conn, capsys):
+194:     cfg = {
+195:         "elo": {
+196:             "initial_rating": 1500,
+197:             "home_advantage": 100,
+198:             "k_factors": {"default": 30, "Friendly": 20},
+199:         },
+200:         "model": {"max_goals": 8},
+201:         "backtest": {"min_edge": -1.0, "max_edge": 1.0, "over_under_line": 2.5},
+202:     }
+203:     conn.execute(
+204:         "INSERT INTO matches (date, home_team, away_team, home_score, away_score,"
+205:         " tournament, city, country, neutral) "
+206:         "VALUES ('2026-06-20','Brazil','Serbia',2,0,'Friendly','','',0)"
+207:     )
+208:     conn.commit()
+209:     db.upsert_ss_matches(
+210:         conn,
+211:         [
+212:             _ss_row(
+213:                 1,
+214:                 "Brazil",
+215:                 "Serbia",
+216:                 "2026-06-20",
+217:                 odds_draw=None,  # 1X2 incompleto
+218:                 odds_home_open=None,
+219:                 odds_draw_open=None,
+220:                 odds_away_open=None,
+221:             )
+222:         ],
+223:     )
+225:     _params, ledger = run_backtest(cfg, conn)
+226:     assert all(b["market"] == "ou25" for b in ledger)  # nada de 1X2 capenga
+227:     assert any(b["market"] == "ou25" for b in ledger)  # OU do jogo sobreviveu
+228:     assert "parcial" in capsys.readouterr().out  # e a perda foi anunciada
+231: def test_shin_estoura_com_odd_none():
+236:     with pytest.raises(ValueError, match="odd inválida"):
+237:         shin_probabilities([2.5, None, 3.0])

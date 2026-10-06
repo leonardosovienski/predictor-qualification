@@ -1,0 +1,500 @@
+### brasileirao_predictor/ingest_sofascore.py
+8: import math
+9: import re
+10: import sys
+11: import time
+12: from datetime import UTC, datetime
+14: from . import db
+15: from .ingest import ROOT, load_config
+16: from .obs import get_logger, setup_logging
+18: log = get_logger()
+24: def frac_to_decimal(choice: dict, key: str = "fractionalValue"):
+34:     fv = choice.get(key)
+35:     if not fv:
+36:         if key == "fractionalValue":
+37:             dv = choice.get("decimalValue")
+38:             try:
+39:                 return float(dv) if dv else None
+40:             except (TypeError, ValueError):
+41:                 return None
+42:         return None
+43:     try:
+44:         num, den = fv.split("/")
+45:         return round(1 + float(num) / float(den), 3)
+46:     except (ValueError, ZeroDivisionError, AttributeError, TypeError):
+47:         return None
+50: def is_pre_match(start_ts, now=None) -> bool:
+63:     if not start_ts:
+64:         return False
+65:     if start_ts > 1e11:  # 13 dígitos: milissegundos, unidade errada
+66:         return False
+67:     if now is None:
+68:         now = int(time.time())
+69:     return start_ts > now
+72: def parse_match(ev: dict):
+73:     ts = ev.get("startTimestamp")
+74:     if ts and ts > 1e11:  # Sofascore trocou a unidade pra ms: normaliza
+75:         log.warning("startTimestamp em milissegundos (%s) — normalizando", ts)
+76:         ts = int(ts // 1000)
+77:     date = datetime.fromtimestamp(ts, UTC).strftime("%Y-%m-%d") if ts else None
+78:     finished = ev.get("status", {}).get("type") == "finished"
+79:     return {
+80:         "event_id": ev["id"],
+81:         "date": date,
+82:         "start_ts": ts,
+83:         "finished": finished,
+84:         "home_team": ev.get("homeTeam", {}).get("name"),
+85:         "away_team": ev.get("awayTeam", {}).get("name"),
+86:         "home_score": ev.get("homeScore", {}).get("current") if finished else None,
+87:         "away_score": ev.get("awayScore", {}).get("current") if finished else None,
+90:         "home_score_ht": ev.get("homeScore", {}).get("period1") if finished else None,
+91:         "away_score_ht": ev.get("awayScore", {}).get("period1") if finished else None,
+92:     }
+95: def parse_xg(stats: dict | None):
+102:     if not isinstance(stats, dict):
+103:         return None, None
+104:     periods = stats.get("statistics", [])
+105:     if isinstance(periods, dict):
+106:         periods = periods.get("periods", [])
+107:     if not isinstance(periods, list):
+108:         return None, None
+109:     values = set()
+110:     for period in periods:
+111:         if not isinstance(period, dict):
+112:             return None, None
+113:         if period.get("period") != "ALL":
+114:             continue
+115:         groups = period.get("groups", [])
+116:         if not isinstance(groups, list):
+117:             return None, None
+118:         for group in groups:
+119:             if not isinstance(group, dict) or not isinstance(group.get("statisticsItems", []), list):
+120:                 return None, None
+121:             for item in group.get("statisticsItems", []):
+122:                 if not isinstance(item, dict):
+123:                     return None, None
+124:                 name = item.get("name", "")
+125:                 if not isinstance(name, str) or name.strip().casefold() not in {
+126:                     "expected goals",
+127:                     "expected goals (xg)",
+128:                 }:
+129:                     continue
+130:                 if "key" in item and item["key"] != "expectedGoals":
+131:                     return None, None
+132:                 pair = []
+133:                 for side in ("home", "away"):
+134:                     raw = item.get(side)
+135:                     if isinstance(raw, bool) or not isinstance(raw, (int, float, str)):
+136:                         return None, None
+137:                     try:
+138:                         number = float(raw)
+139:                     except (ValueError, OverflowError):
+140:                         return None, None
+141:                     if not math.isfinite(number) or number < 0:
+142:                         return None, None
+143:                     pair.append(number)
+144:                 values.add(tuple(pair))
+145:     return next(iter(values)) if len(values) == 1 else (None, None)
+148: def _safe_float(val):
+150:     if val is None:
+151:         return None
+152:     if isinstance(val, (int, float)):
+153:         return float(val)
+154:     s = str(val)
+155:     for suffix in ("%", "km", "KM", "m", "M"):
+156:         s = s.replace(suffix, "")
+157:     s = s.strip()
+158:     try:
+159:         return float(s)
+160:     except (ValueError, TypeError):
+161:         return None
+164: def parse_statistics(event_data):
+169:     if not event_data:
+170:         return {}
+171:     periods = event_data.get("statistics")
+172:     if not periods:
+173:         return {}
+174:     if isinstance(periods, dict):
+175:         periods = periods.get("periods", [])
+176:     if not isinstance(periods, list):
+177:         return {}
+178:     result = {}
+179:     for period in periods:
+180:         period_name = period.get("period", "ALL")
+181:         groups = period.get("groups", [])
+182:         period_stats = {}
+183:         for group in groups:
+184:             for item in group.get("statisticsItems", []):
+185:                 name = item.get("name")
+186:                 if not name:
+187:                     continue
+188:                 home_val = _safe_float(item.get("home"))
+189:                 away_val = _safe_float(item.get("away"))
+190:                 if home_val is not None or away_val is not None:
+191:                     period_stats[name] = {"home": home_val, "away": away_val}
+192:         if period_stats:
+193:             result[period_name] = period_stats
+194:     return result
+197: def parse_statistics_flat(event_data, event_id):
+202:     stats_dict = parse_statistics(event_data)
+203:     rows = []
+204:     for period, stats in stats_dict.items():
+205:         for stat_name, vals in stats.items():
+206:             for team in ("home", "away"):
+207:                 value = vals.get(team)
+208:                 if value is not None:
+209:                     rows.append(
+210:                         {
+211:                             "event_id": event_id,
+212:                             "team": team,
+213:                             "period": period,
+214:                             "stat_name": stat_name,
+215:                             "value": value,
+216:                         }
+217:                     )
+218:     return rows
+221: def parse_odds(odds: dict | None, initial: bool = False):
+223:     key = "initialFractionalValue" if initial else "fractionalValue"
+224:     for market in (odds or {}).get("markets", []):
+225:         name = market.get("marketName", "").lower()
+226:         if "full time" in name or market.get("marketId") == 1:
+227:             out = {}
+228:             for choice in market.get("choices", []):
+229:                 out[choice.get("name")] = frac_to_decimal(choice, key)
+230:             return out.get("1"), out.get("X"), out.get("2")
+231:     return None, None, None
+234: _OU_CHOICE = re.compile(r"(over|under)(?:\s+(\d+(?:\.\d+)?))?", re.IGNORECASE)
+235: _FULL_TIME_GOALS_NAMES = frozenset(
+236:     {"match goals", "total goals", "goals", "over/under", "over/under goals", "goals over/under"}
+237: )
+238: _FULL_TIME_PERIODS = frozenset(
+239:     {"full time", "fulltime", "ft", "match", "all", "regular time", "regulation", "90 minutes"}
+240: )
+243: def _full_time_goals_market(market: dict) -> bool:
+250:     mid = market.get("marketId")
+251:     if mid is not None and (type(mid) is not int or mid != 9):
+252:         return False
+253:     name = market.get("marketName")
+254:     if name is None or name == "":
+255:         if mid != 9:
+256:             return False
+257:     elif not isinstance(name, str) or " ".join(name.lower().split()) not in _FULL_TIME_GOALS_NAMES:
+258:         return False
+259:     for field in ("period", "periodName", "marketPeriod", "periodId"):
+260:         value = market.get(field)
+261:         if value is not None and (
+262:             not isinstance(value, str) or " ".join(value.lower().split()) not in _FULL_TIME_PERIODS
+263:         ):
+264:             return False
+265:     return True
+268: def parse_ou(odds: dict | None, line: float = 2.5, initial: bool = False):
+277:     if type(line) not in (int, float) or not math.isfinite(line) or line < 0:
+278:         return None, None
+279:     key = "initialFractionalValue" if initial else "fractionalValue"
+280:     pairs = set()
+281:     for market in (odds or {}).get("markets", []) or []:
+282:         if not isinstance(market, dict) or not _full_time_goals_market(market):
+283:             continue
+284:         group = market.get("choiceGroup")
+285:         try:
+286:             group_line = float(group) if group is not None else None
+287:         except (TypeError, ValueError):
+288:             continue
+289:         if group_line is not None and not math.isfinite(group_line):
+290:             continue
+291:         sides = {}
+292:         for choice in market.get("choices", []) or []:
+293:             if not isinstance(choice, dict) or not isinstance(choice.get("name"), str):
+294:                 continue
+295:             match = _OU_CHOICE.fullmatch(choice["name"].strip())
+296:             if match is None:
+297:                 continue
+298:             side, choice_line = match.groups()
+299:             choice_line = float(choice_line) if choice_line is not None else None
+300:             if choice_line is not None and group_line is not None and choice_line != group_line:
+301:                 if line in (choice_line, group_line):
+302:                     return None, None
+303:                 continue
+304:             handicap = choice_line if choice_line is not None else group_line
+305:             if handicap != line:
+306:                 continue
+307:             price = frac_to_decimal(choice, key)
+308:             if price is None:
+309:                 continue
+310:             try:
+311:                 valid_price = math.isfinite(price) and price > 1
+312:             except (TypeError, ValueError):
+313:                 valid_price = False
+314:             if not valid_price:
+315:                 return None, None
+316:             side = side.lower()
+317:             if side in sides and sides[side] != price:
+318:                 return None, None
+319:             sides[side] = price
+320:         if "over" in sides and "under" in sides:
+321:             pairs.add((sides["over"], sides["under"]))
+322:     return next(iter(pairs)) if len(pairs) == 1 else (None, None)
+326: _AH_LINE_RE = re.compile(r"\(\s*([+-]?\d+(?:\.\d+)?)\s*\)\s*(.+)")
+329: def _line_value(market: dict):
+331:     cg = market.get("choiceGroup")
+332:     try:
+333:         return float(cg) if cg is not None else None
+334:     except (TypeError, ValueError):
+335:         return None
+338: def _same_team(a: str | None, b: str | None) -> bool:
+342:     return bool(a) and bool(b) and a.strip().lower() == b.strip().lower()
+345: def parse_all_odds(
+346:     odds: dict | None, home_name: str | None = None, away_name: str | None = None, initial: bool = False
+347: ) -> dict:
+357:     key = "initialFractionalValue" if initial else "fractionalValue"
+358:     out = {
+359:         "1x2": {},
+360:         "dc": {},
+361:         "dnb": {},
+362:         "btts": {},
+363:         "ou": {},
+364:         "ah": {},
+365:         "cards": {},
+366:         "corners": {},
+367:     }  # <-- adicionado
+368:     for market in (odds or {}).get("markets", []) or []:
+369:         mid = market.get("marketId")
+370:         choices = market.get("choices", []) or []
+372:         if mid == 1:
+373:             for c in choices:
+374:                 out["1x2"][c.get("name")] = frac_to_decimal(c, key)
+375:         elif mid == 2:
+376:             for c in choices:
+377:                 out["dc"][c.get("name")] = frac_to_decimal(c, key)
+378:         elif mid == 4:
+379:             for c in choices:
+380:                 out["dnb"][c.get("name")] = frac_to_decimal(c, key)
+381:         elif mid == 5:
+382:             for c in choices:
+383:                 out["btts"][c.get("name")] = frac_to_decimal(c, key)
+384:         elif mid == 9:
+385:             line = _line_value(market)
+386:             if line is None or not _full_time_goals_market(market):
+387:                 continue
+390:             over, under = parse_ou(odds, line, initial=initial)
+391:             if over is not None and under is not None:
+392:                 out["ou"][line] = {"Over": over, "Under": under}
+393:         elif mid == 17:
+394:             home_line = None
+395:             entry = {}
+396:             for c in choices:
+397:                 m = _AH_LINE_RE.match((c.get("name") or "").strip())
+398:                 if not m:
+399:                     continue
+400:                 line, team = float(m.group(1)), m.group(2).strip()
+401:                 odd = frac_to_decimal(c, key)
+402:                 if _same_team(team, home_name):
+403:                     home_line, entry["home"] = line, odd
+404:                 elif _same_team(team, away_name):
+405:                     entry["away"] = odd
+406:             if home_line is not None and entry:
+407:                 out["ah"][home_line] = entry
+409:         elif mid == 20:  # cartões
+410:             line = _line_value(market)
+411:             if line is None:
+412:                 continue
+413:             over = under = None
+414:             for c in choices:
+415:                 nm = (c.get("name") or "").strip().lower()
+416:                 if nm == "over":
+417:                     over = frac_to_decimal(c, key)
+418:                 elif nm == "under":
+419:                     under = frac_to_decimal(c, key)
+420:             out["cards"][line] = {"Over": over, "Under": under}
+421:         elif mid == 21:  # escanteios
+422:             line = _line_value(market)
+423:             if line is None:
+424:                 continue
+425:             over = under = None
+426:             for c in choices:
+427:                 nm = (c.get("name") or "").strip().lower()
+428:                 if nm == "over":
+429:                     over = frac_to_decimal(c, key)
+430:                 elif nm == "under":
+431:                     under = frac_to_decimal(c, key)
+432:             out["corners"][line] = {"Over": over, "Under": under}
+433:     return out
+436: def parse_ratings(lineups: dict | None, home_name: str, away_name: str, event_id: int):
+437:     rows = []
+438:     for side, team in (("home", home_name), ("away", away_name)):
+439:         for p in (lineups or {}).get(side, {}).get("players", []):
+440:             st = p.get("statistics", {})
+441:             rating = st.get("rating")
+442:             if rating is None:
+443:                 continue
+444:             rows.append(
+445:                 (
+446:                     event_id,
+447:                     p.get("player", {}).get("name"),
+448:                     team,
+449:                     float(rating),
+450:                     st.get("minutesPlayed"),
+451:                 )
+452:             )
+453:     return rows
+456: def run(
+457:     seasons_for: int | None = None,
+458:     *,
+459:     outcomes_odds_only: bool = False,
+460:     through_season: str | None = None,
+461:     rate_limit: float | None = None,
+462: ) -> None:
+463:     from .sofascore import Sofascore
+465:     setup_logging(ROOT / "data")
+466:     cfg = load_config()
+467:     scfg = cfg.get("sofascore", {})
+468:     client = Sofascore(
+469:         rate_limit=float(scfg.get("rate_limit_seconds", 1.5)) if rate_limit is None else rate_limit,
+470:         cache_dir=str(ROOT / scfg["cache_dir"]) if scfg.get("cache_dir") else None,
+471:     )
+473:     if seasons_for:
+474:         for sid, year in client.list_seasons(seasons_for):
+475:             log.info("season_id=%s  year=%s", sid, year)
+476:         return
+478:     comps = scfg.get("competitions")
+479:     if not comps:
+480:         sys.exit("nada em sofascore.competitions no config.yaml")
+481:     conn = db.connect(str(ROOT / cfg["database"]))
+483:     n_matches = n_ratings = 0
+484:     for comp in comps:
+485:         if through_season is not None and str(comp["season"]) > through_season:
+486:             continue
+487:         name, season = comp["name"], str(comp["season"])
+488:         try:
+489:             events = client.season_events(comp["ut_id"], comp["season_id"], upcoming=comp.get("upcoming", False))
+490:         except Exception as e:
+491:             log.error("coleta de %s falhou: %s", name, e)
+492:             continue
+493:         total = len(events)
+494:         log.info(
+495:             "%s: %d jogos a coletar (~%.0fs com rate limit)...",
+496:             name,
+497:             total,
+498:             total * client.rate * 2,
+499:         )
+500:         for i, ev in enumerate(events, 1):
+501:             m = parse_match(ev)
+502:             eid = m["event_id"]
+503:             try:
+504:                 raw_odds = client.event_odds(eid, finished=m["finished"])
+505:                 oh, od, oa = parse_odds(raw_odds)
+506:                 ou_line = cfg.get("backtest", {}).get("over_under_line", 2.5)
+507:                 o_over, o_under = parse_ou(raw_odds, ou_line)
+509:                 oh_o, od_o, oa_o = parse_odds(raw_odds, initial=True)
+510:                 o_over_o, o_under_o = parse_ou(raw_odds, ou_line, initial=True)
+511:                 opens = (oh_o, od_o, oa_o, o_over_o, o_under_o)
+513:                 pre = is_pre_match(m["start_ts"])
+515:                 stats_data = {}
+516:                 if m["finished"] and not outcomes_odds_only:
+517:                     stats_data = client.event_statistics(eid)
+518:                     hxg, axg = parse_xg(stats_data)
+519:                     ratings = parse_ratings(client.event_lineups(eid), m["home_team"], m["away_team"], eid)
+520:                 else:
+521:                     hxg = axg = None
+522:                     ratings = []
+524:                 db.upsert_ss_matches(
+525:                     conn,
+526:                     [
+527:                         (
+528:                             eid,
+529:                             name,
+530:                             season,
+531:                             m["date"],
+532:                             m["home_team"],
+533:                             m["away_team"],
+534:                             m["home_score"],
+535:                             m["away_score"],
+536:                             hxg,
+537:                             axg,
+538:                             oh,
+539:                             od,
+540:                             oa,
+541:                             o_over,
+542:                             o_under,
+543:                             *opens,
+544:                         )
+545:                     ],
+546:                 )
+547:                 db.update_kickoff(conn, eid, m["start_ts"])
+548:                 db.update_ht_scores(conn, eid, m["home_score_ht"], m["away_score_ht"])
+550:                 now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+551:                 snaps = [
+552:                     (eid, now, "1x2", sel, odd, int(pre))
+553:                     for sel, odd in (("home", oh), ("draw", od), ("away", oa))
+554:                     if odd
+555:                 ]
+556:                 snaps += [
+557:                     (eid, now, f"ou{ou_line}", sel, odd, int(pre))
+558:                     for sel, odd in (("over", o_over), ("under", o_under))
+559:                     if odd
+560:                 ]
+561:                 if snaps:
+562:                     db.insert_snapshots(conn, snaps)
+564:                 parsed_close = parse_all_odds(raw_odds, m["home_team"], m["away_team"])
+565:                 parsed_open = parse_all_odds(raw_odds, m["home_team"], m["away_team"], initial=True)
+566:                 db.update_flat_markets(conn, eid, parsed_close, parsed_open)
+567:                 line_rows = db.lines_rows_from_parsed(eid, parsed_close, parsed_open)
+568:                 if line_rows:
+569:                     db.upsert_odds_lines(conn, line_rows)
+572:                 if m["finished"]:
+573:                     stats_rows = parse_statistics_flat(stats_data, eid)
+574:                     if stats_rows:
+575:                         db.upsert_match_statistics(conn, stats_rows)
+577:                 if ratings:
+578:                     db.upsert_ss_ratings(conn, ratings)
+579:                     n_ratings += len(ratings)
+580:                 n_matches += 1
+581:                 placar = f"{m['home_score']}x{m['away_score']}" if m["finished"] else "fixture"
+582:                 log.info("  [%d/%d] %s %s %s", i, total, m["home_team"], placar, m["away_team"])
+583:             except Exception as e:
+584:                 log.warning("evento %s falhou: %s", eid, e)
+585:         log.info("%s: %d jogos processados", name, len(events))
+586:     log.info("sofascore_matches: %d | sofascore_player_ratings: %d", n_matches, n_ratings)
+589: if __name__ == "__main__":
+590:     arg = sys.argv[1:]
+591:     if arg and arg[0] == "--seasons" and len(arg) > 1:
+592:         sys.exit(run(seasons_for=int(arg[1])))
+593:     if arg and arg[0] == "--outcomes-odds-only":
+594:         through = arg[arg.index("--through-season") + 1] if "--through-season" in arg else None
+595:         rate = float(arg[arg.index("--rate-limit") + 1]) if "--rate-limit" in arg else None
+596:         sys.exit(run(outcomes_odds_only=True, through_season=through, rate_limit=rate))
+597:     sys.exit(run())
+### brasileirao_predictor/kernel_cli.py
+3: import argparse
+4: import asyncio
+5: import logging
+6: import os
+7: from pathlib import Path
+9: from brasileirao_predictor import kernel_redis_v2 as protocol
+12: def main() -> int | None:
+13:     parser = argparse.ArgumentParser(description="Kernel Python Daemon — Zona 3")
+14:     parser.add_argument("--db", default=os.environ.get("SPORTS_DB_PATH"))
+15:     parser.add_argument("--redis", default=os.environ.get("REDIS_URL"))
+16:     parser.add_argument("--healthcheck", action="store_true")
+17:     args = parser.parse_args()
+18:     if not args.db or not Path(args.db).is_absolute():
+19:         parser.error("--db or SPORTS_DB_PATH must be an absolute path")
+20:     if not args.redis:
+21:         parser.error("--redis or REDIS_URL is required")
+23:     if args.healthcheck:
+24:         import redis
+26:         client = None
+27:         try:
+28:             client = redis.from_url(args.redis, socket_connect_timeout=1, socket_timeout=1, retry_on_timeout=False)
+29:             return 0 if client.eval(protocol.HEALTHCHECK_SCRIPT, 1, protocol.HEALTH_KEY) == 1 else 1
+30:         except (redis.RedisError, OSError, ValueError) as exc:
+31:             logging.getLogger(__name__).warning("kernel healthcheck failed: %s", type(exc).__name__)
+32:             return 1
+33:         finally:
+34:             if client is not None:
+35:                 client.close()
+37:     from brasileirao_predictor.kernel_daemon import _run_daemon
+39:     asyncio.run(_run_daemon(args.db, args.redis))
+40:     return None
+43: if __name__ == "__main__":
+44:     raise SystemExit(main())

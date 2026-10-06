@@ -1,0 +1,17 @@
+stateDiagram-v2
+ [*] --> ready: create
+ ready --> awaiting_generation_approval: etapa de geracao sem aprovacao
+ awaiting_generation_approval --> running: approve_generation
+ ready --> running: etapa deterministica
+ running --> ready: etapa concluida e restantes
+ running --> completed: ultima etapa concluida
+ running --> failed: erro preservado em attempts
+ failed --> running: recover explicito
+ running --> running: recover apos lease 600s
+ failed --> ready: abstain operador e restantes
+ failed --> completed: abstain ultima etapa
+ ready --> cancelled: cancel
+ failed --> cancelled: cancel
+ running --> cancelled: cancel invalida claim
+ completed --> [*]
+ cancelled --> [*]

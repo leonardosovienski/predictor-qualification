@@ -1,0 +1,495 @@
+### brasileirao_predictor/research/market_0b_resolution.py
+7: from __future__ import annotations
+9: import math
+10: import random
+11: import statistics as st
+12: from collections import defaultdict
+13: from statistics import NormalDist
+14: from typing import Any
+16: MIN_MARKET_COVERAGE = 0.80
+17: THRESHOLD_VAR = {"ou25": 0.02, "btts": 0.02}
+18: HISTOGRAM_WIDTH = 0.05
+19: TARGET_ROI = 0.05
+20: POWER = 0.80
+21: ALPHA = 0.05
+22: DIVERGENCE_BINS = (
+23:     ("lt_-5pp", -math.inf, -0.05),
+24:     ("-5_0pp", -0.05, 0.0),
+25:     ("0_5pp", 0.0, 0.05),
+26:     ("5_10pp", 0.05, 0.10),
+27:     ("ge_10pp", 0.10, math.inf),
+28: )
+31: def valid_two_way_odds(value: Any) -> bool:
+32:     return bool(
+33:         value
+34:         and len(value) == 2
+35:         and all(isinstance(odd, (int, float)) and math.isfinite(odd) and odd > 1 for odd in value)
+36:     )
+39: def _quantile(values: list[float], q: float) -> float:
+40:     ordered = sorted(values)
+41:     if len(ordered) == 1:
+42:         return ordered[0]
+43:     position = (len(ordered) - 1) * q
+44:     lower = math.floor(position)
+45:     upper = math.ceil(position)
+46:     if lower == upper:
+47:         return ordered[lower]
+48:     return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
+51: def _histogram(values: list[float]) -> list[dict[str, Any]]:
+52:     counts = [0] * int(1 / HISTOGRAM_WIDTH)
+53:     for value in values:
+54:         index = min(int(value / HISTOGRAM_WIDTH), len(counts) - 1)
+55:         counts[max(index, 0)] += 1
+56:     return [
+57:         {"lower": i * HISTOGRAM_WIDTH, "upper": (i + 1) * HISTOGRAM_WIDTH, "n": count} for i, count in enumerate(counts)
+58:     ]
+61: def market_summary(
+62:     rows: list[dict[str, Any]], probability_key: str, odds_key: str, *, threshold_var: float
+63: ) -> dict[str, Any]:
+64:     probabilities = [
+65:         float(row[probability_key])
+66:         for row in rows
+67:         if isinstance(row.get(probability_key), (int, float)) and math.isfinite(row[probability_key])
+68:     ]
+69:     odds_n = sum(valid_two_way_odds(row.get(odds_key)) for row in rows)
+70:     p10 = _quantile(probabilities, 0.10) if probabilities else None
+71:     p90 = _quantile(probabilities, 0.90) if probabilities else None
+72:     sd = st.pstdev(probabilities) if len(probabilities) > 1 else 0.0 if probabilities else None
+73:     spread = p90 - p10 if p10 is not None and p90 is not None else None
+74:     resolution_pass = bool(sd is not None and sd >= threshold_var)
+75:     coverage = odds_n / len(rows) if rows else 0.0
+76:     return {
+77:         "n_predictions": len(probabilities),
+78:         "requested_n": len(rows),
+79:         "probability_mean": st.mean(probabilities) if probabilities else None,
+80:         "probability_sd": sd,
+81:         "probability_variance": sd * sd if sd is not None else None,
+82:         "probability_min": min(probabilities) if probabilities else None,
+83:         "probability_max": max(probabilities) if probabilities else None,
+84:         "probability_range": max(probabilities) - min(probabilities) if probabilities else None,
+85:         "probability_p10": p10,
+86:         "probability_p90": p90,
+87:         "probability_p10_p90_spread": spread,
+88:         "unique_probabilities_4dp": len({round(value, 4) for value in probabilities}),
+89:         "histogram_width": HISTOGRAM_WIDTH,
+90:         "histogram": _histogram(probabilities),
+91:         "threshold_var": threshold_var,
+92:         "odds_complete_n": odds_n,
+93:         "odds_coverage": coverage,
+94:         "odds_coverage_pass": coverage >= MIN_MARKET_COVERAGE,
+95:         "resolution_pass": resolution_pass,
+96:         "structural_verdict": "RESOLUTION_SUFFICIENT" if resolution_pass else "NO_GO_LOW_MODEL_RESOLUTION",
+97:     }
+100: def scalar_summary(rows: list[dict[str, Any]], key: str) -> dict[str, Any]:
+102:     values = [float(row[key]) for row in rows if isinstance(row.get(key), (int, float)) and math.isfinite(row[key])]
+103:     sd = st.pstdev(values) if len(values) > 1 else 0.0 if values else None
+104:     p10 = _quantile(values, 0.10) if values else None
+105:     p90 = _quantile(values, 0.90) if values else None
+106:     return {
+107:         "n": len(values),
+108:         "mean": st.mean(values) if values else None,
+109:         "sd": sd,
+110:         "variance": sd * sd if sd is not None else None,
+111:         "min": min(values) if values else None,
+112:         "max": max(values) if values else None,
+113:         "range": max(values) - min(values) if values else None,
+114:         "p10": p10,
+115:         "p90": p90,
+116:         "p10_p90_spread": p90 - p10 if p10 is not None and p90 is not None else None,
+117:     }
+120: def evaluate(rows: list[dict[str, Any]]) -> dict[str, Any]:
+121:     ou25 = market_summary(rows, "p_over", "market_odds_ou25", threshold_var=THRESHOLD_VAR["ou25"])
+122:     btts = market_summary(rows, "p_btts", "market_odds_btts", threshold_var=THRESHOLD_VAR["btts"])
+123:     candidates = [name for name, result in (("ou25", ou25), ("btts", btts)) if result["resolution_pass"]]
+124:     covered = [
+125:         name
+126:         for name, result in (("ou25", ou25), ("btts", btts))
+127:         if result["resolution_pass"] and result["odds_coverage_pass"]
+128:     ]
+129:     return {
+130:         "thresholds": {
+131:             "threshold_var": THRESHOLD_VAR,
+132:             "min_market_coverage": MIN_MARKET_COVERAGE,
+133:             "policy": "ANY_MARKET_SD_BELOW_THRESHOLD_IS_GLOBAL_STRUCTURAL_NO_GO",
+134:         },
+135:         "markets": {"ou25": ou25, "btts": btts},
+136:         "lambda_total": scalar_summary(rows, "lambda_total"),
+137:         "resolution_candidates": candidates,
+138:         "full_protocol_candidates": covered,
+139:         "verdict": (
+140:             "NO_GO_STRUCTURAL"
+141:             if len(candidates) < 2
+142:             else "PROCEED_TO_FULL_0B"
+143:             if len(covered) == 2
+144:             else "INSUFFICIENT_ODDS_COVERAGE"
+145:         ),
+146:     }
+149: def _devig(odds: Any) -> list[float] | None:
+150:     if not valid_two_way_odds(odds):
+151:         return None
+152:     implied = [1.0 / float(odd) for odd in odds]
+153:     total = sum(implied)
+154:     return [value / total for value in implied]
+157: def paired_records(
+158:     rows: list[dict[str, Any]], probability_key: str, odds_key: str, actual_key: str
+159: ) -> list[dict[str, Any]]:
+160:     records = []
+161:     for row in rows:
+162:         market = _devig(row.get(odds_key))
+163:         probability = row.get(probability_key)
+164:         elo = row.get("effective_elo_diff")
+165:         if market is None or not isinstance(probability, (int, float)) or not isinstance(elo, (int, float)):
+166:             continue
+167:         records.append(
+168:             {
+169:                 "date": row["date"],
+170:                 "model_p": float(probability),
+171:                 "market_p": market[0],
+172:                 "odds": [float(value) for value in row[odds_key]],
+173:                 "actual": int(row[actual_key]),
+174:                 "effective_elo_diff": float(elo),
+175:             }
+176:         )
+177:     return records
+180: def _bin(value: float) -> str:
+181:     return next(name for name, low, high in DIVERGENCE_BINS if low <= value < high)
+184: def required_n(returns: list[float]) -> int | None:
+185:     if len(returns) < 2 or st.stdev(returns) == 0:
+186:         return None
+187:     z = NormalDist().inv_cdf(1 - ALPHA / 2) + NormalDist().inv_cdf(POWER)
+188:     return math.ceil((z * st.stdev(returns) / TARGET_ROI) ** 2)
+191: def ordering(records: list[dict[str, Any]], power_reference: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+192:     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+193:     for record in records:
+194:         groups[_bin(record["model_p"] - record["market_p"])].append(record)
+195:     reference_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+196:     for record in power_reference or records:
+197:         reference_groups[_bin(record["model_p"] - record["market_p"])].append(record)
+198:     bins = []
+199:     for name, _low, _high in DIVERGENCE_BINS:
+200:         sample = groups.get(name, [])
+201:         if not sample:
+202:             continue
+203:         pnl = [row["odds"][0] - 1 if row["actual"] else -1 for row in sample]
+204:         ref_pnl = [row["odds"][0] - 1 if row["actual"] else -1 for row in reference_groups.get(name, [])]
+205:         need = required_n(ref_pnl)
+206:         bins.append(
+207:             {
+208:                 "divergence_bin": name,
+209:                 "n": len(sample),
+210:                 "mean_divergence": st.mean(row["model_p"] - row["market_p"] for row in sample),
+211:                 "roi_diagnostic": st.mean(pnl),
+212:                 "required_n_for_5pct_roi_80pct_power": need,
+213:                 "power_met": need is not None and len(sample) >= need,
+214:             }
+215:         )
+216:     roi = [item["roi_diagnostic"] for item in bins]
+217:     return {
+218:         "bins": bins,
+219:         "monotonic_roi": len(roi) >= 3 and all(b >= a for a, b in zip(roi, roi[1:])),
+220:         "power_minimums_met": bool(bins) and all(item["power_met"] for item in bins),
+221:     }
+224: def _stratum(record: dict[str, Any]) -> tuple[str, int]:
+225:     absolute = abs(record["effective_elo_diff"])
+226:     band = 0 if absolute < 50 else 1 if absolute < 100 else 2 if absolute < 200 else 3
+227:     return record["date"][:7], band
+230: def _permuted(records: list[dict[str, Any]], seed: int) -> list[dict[str, Any]]:
+231:     rng = random.Random(seed)
+232:     indexes: dict[tuple[str, int], list[int]] = defaultdict(list)
+233:     for index, record in enumerate(records):
+234:         indexes[_stratum(record)].append(index)
+235:     actual = [record["actual"] for record in records]
+236:     changed = list(actual)
+237:     for group in indexes.values():
+238:         values = [actual[index] for index in group]
+239:         rng.shuffle(values)
+240:         for index, value in zip(group, values):
+241:             changed[index] = value
+242:     return [dict(record, actual=value) for record, value in zip(records, changed)]
+245: def _selection(records: list[dict[str, Any]], index: int) -> list[dict[str, Any]]:
+246:     if index == 0:
+247:         return records
+248:     return [
+249:         dict(
+250:             record,
+251:             model_p=1.0 - record["model_p"],
+252:             market_p=1.0 - record["market_p"],
+253:             odds=[record["odds"][1], record["odds"][0]],
+254:             actual=1 - record["actual"],
+255:         )
+256:         for record in records
+257:     ]
+260: def full_market_protocol(
+261:     records: list[dict[str, Any]], *, power_reference: list[dict[str, Any]], permutations: int, seed: int
+262: ) -> dict[str, Any]:
+263:     selections = {}
+264:     passed = False
+265:     for index, name in enumerate(("side_a", "side_b")):
+266:         selected = _selection(records, index)
+267:         reference = _selection(power_reference, index)
+268:         observed = ordering(selected, reference)
+269:         null_count = sum(
+270:             ordering(_permuted(selected, seed + index * permutations + i))["monotonic_roi"] for i in range(permutations)
+271:         )
+272:         selection_pass = (
+273:             observed["monotonic_roi"] and observed["power_minimums_met"] and null_count / permutations < 0.05
+274:         )
+275:         passed = passed or selection_pass
+276:         selections[name] = {
+277:             "ordering": observed,
+278:             "permutation": {
+279:                 "n": permutations,
+280:                 "seed": seed + index * permutations,
+281:                 "null_monotonic_count": null_count,
+282:                 "null_monotonic_rate": null_count / permutations,
+283:             },
+284:             "verdict": "SIGNAL" if selection_pass else "NO_GO",
+285:         }
+286:     return {
+287:         "n": len(records),
+288:         "declared_cells": 10,
+289:         "selections": selections,
+290:         "verdict": "SIGNAL_FOR_PROSPECTIVE_REPLICATION" if passed else "NO_GO_CURRENT_RESIDUAL",
+291:     }
+### brasileirao_predictor/research/market_edge_ordering.py
+7: from __future__ import annotations
+9: import math
+10: import random
+11: import statistics as st
+12: from collections import defaultdict
+13: from datetime import UTC, datetime
+14: from statistics import NormalDist
+15: from typing import Any
+17: from predictor_core.contracts import registry as registry_module
+18: from predictor_core.measurement.metrics import brier, log_loss, rps
+19: from predictor_core.measurement.stats import probabilistic_sharpe_ratio
+21: from brasileirao_predictor.math_utils import shin_probabilities
+23: SELECTIONS = ("away", "draw", "home")
+24: DIVERGENCE_BINS = (
+25:     ("lt_-5pp", -math.inf, -0.05),
+26:     ("-5_0pp", -0.05, 0.0),
+27:     ("0_5pp", 0.0, 0.05),
+28:     ("5_10pp", 0.05, 0.10),
+29:     ("ge_10pp", 0.10, math.inf),
+30: )
+31: ODDS_BINS = (("1_2", 1.0, 2.0), ("2_3", 2.0, 3.0), ("3_5", 3.0, 5.0), ("ge_5", 5.0, math.inf))
+32: DECLARED_FAMILY_TRIALS = len(SELECTIONS) * len(DIVERGENCE_BINS) * len(ODDS_BINS)
+33: TARGET_ROI = 0.05
+34: POWER = 0.80
+35: ALPHA = 0.05
+38: def devig_1x2(odds: Any) -> list[float] | None:
+40:     if not odds or len(odds) != 3 or any(not isinstance(o, (int, float)) or o <= 1 for o in odds):
+41:         return None
+42:     probabilities, _z, _margin = shin_probabilities(odds)
+43:     return [float(probabilities[2]), float(probabilities[1]), float(probabilities[0])]
+46: def paired_records(rows: list[dict[str, Any]], start: str, end: str) -> list[dict[str, Any]]:
+47:     records = []
+48:     for row in rows:
+49:         if not start <= row["date"] <= end:
+50:             continue
+51:         market = devig_1x2(row.get("market_odds_1x2"))
+52:         elo_diff = row.get("effective_elo_diff")
+53:         if market is None or not isinstance(elo_diff, (int, float)) or not math.isfinite(elo_diff):
+54:             continue
+55:         raw_home, raw_draw, raw_away = row["market_odds_1x2"]
+56:         records.append(
+57:             {
+58:                 "date": row["date"],
+59:                 "event_key": f"{row['date']}|{row['home']}|{row['away']}",
+60:                 "model": [float(row["p_loss"]), float(row["p_draw"]), float(row["p_win"])],
+61:                 "market": market,
+62:                 "odds": [float(raw_away), float(raw_draw), float(raw_home)],
+63:                 "outcome": int(row["actual_1x2"]),
+64:                 "effective_elo_diff": float(elo_diff),
+65:             }
+66:         )
+67:     return records
+70: def divergence_bin(value: float) -> str:
+71:     return next(name for name, low, high in DIVERGENCE_BINS if low <= value < high)
+74: def odds_bin(value: float) -> str:
+75:     return next(name for name, low, high in ODDS_BINS if low <= value < high)
+78: def required_n_for_roi(returns: list[float], target_roi: float = TARGET_ROI) -> int | None:
+80:     if len(returns) < 2 or target_roi <= 0:
+81:         return None
+82:     sigma = st.stdev(returns)
+83:     if sigma == 0:
+84:         return None
+85:     z_alpha = NormalDist().inv_cdf(1 - ALPHA / 2)
+86:     z_power = NormalDist().inv_cdf(POWER)
+87:     return math.ceil(((z_alpha + z_power) * sigma / target_roi) ** 2)
+90: def _finite_or_none(value: float) -> float | None:
+91:     return float(value) if math.isfinite(value) else None
+94: def _metric_block(records: list[dict[str, Any]]) -> dict[str, Any]:
+95:     model = [r["model"] for r in records]
+96:     market = [r["market"] for r in records]
+97:     outcomes = [r["outcome"] for r in records]
+98:     return {
+99:         "n": len(records),
+100:         "model": {
+101:             "rps": rps(model, outcomes),
+102:             "brier_1x2": brier(model, outcomes),
+103:             "log_loss": log_loss(model, outcomes),
+104:         },
+105:         "market": {
+106:             "rps": rps(market, outcomes),
+107:             "brier_1x2": brier(market, outcomes),
+108:             "log_loss": log_loss(market, outcomes),
+109:         },
+110:     }
+113: def selection_rows(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+114:     expanded = []
+115:     for record in records:
+116:         for index, selection in enumerate(SELECTIONS):
+117:             model_p = record["model"][index]
+118:             market_p = record["market"][index]
+119:             odd = record["odds"][index]
+120:             won = record["outcome"] == index
+121:             expanded.append(
+122:                 {
+123:                     "date": record["date"],
+124:                     "event_key": record["event_key"],
+125:                     "selection": selection,
+126:                     "model_p": model_p,
+127:                     "market_p": market_p,
+128:                     "divergence": model_p - market_p,
+129:                     "divergence_bin": divergence_bin(model_p - market_p),
+130:                     "odd": odd,
+131:                     "odds_bin": odds_bin(odd),
+132:                     "won": won,
+133:                     "pnl": odd - 1.0 if won else -1.0,
+134:                     "effective_elo_diff": record["effective_elo_diff"],
+135:                 }
+136:             )
+137:     return expanded
+140: def _dsr(returns: list[float], historical_trial_sharpes: list[float | None]) -> dict[str, Any]:
+141:     denominator = list(historical_trial_sharpes) + [None] * DECLARED_FAMILY_TRIALS
+142:     result = registry_module.deflated_sharpe_ratio(returns, denominator)
+147:     return {
+148:         "dsr": _finite_or_none(float(result["dsr"])),
+149:         "sr0": _finite_or_none(float(result["sr0"])),
+150:         "n_trials": int(result["n_trials"]),
+151:         "n_sharpes": int(result["n_sharpes"]),
+152:         "sr0_estimable": bool(result["sr0_estimable"]),
+153:         "deflation_applied": bool(result["deflation_applied"]),
+154:         "sharpe_coverage": float(result["sharpe_coverage"]),
+155:         "declared_family_trials": DECLARED_FAMILY_TRIALS,
+156:         "effective_trials_policy": "CONSERVATIVE_NO_CORRELATION_DISCOUNT",
+157:     }
+160: def _cell(rows: list[dict[str, Any]], historical_trial_sharpes: list[float | None]) -> dict[str, Any]:
+161:     pnl = [r["pnl"] for r in rows]
+162:     model_brier = st.mean((r["model_p"] - float(r["won"])) ** 2 for r in rows)
+163:     market_brier = st.mean((r["market_p"] - float(r["won"])) ** 2 for r in rows)
+164:     return {
+165:         "n": len(rows),
+166:         "coverage": None,
+167:         "mean_divergence": st.mean(r["divergence"] for r in rows),
+168:         "mean_model_p": st.mean(r["model_p"] for r in rows),
+169:         "mean_market_p": st.mean(r["market_p"] for r in rows),
+170:         "actual_rate": st.mean(float(r["won"]) for r in rows),
+171:         "mean_odds": st.mean(r["odd"] for r in rows),
+172:         "roi_diagnostic": st.mean(pnl),
+173:         "model_brier_binary": model_brier,
+174:         "market_brier_binary": market_brier,
+175:         "brier_delta_model_minus_market": model_brier - market_brier,
+176:         "psr": _finite_or_none(probabilistic_sharpe_ratio(pnl, 0.0)),
+177:         "dsr": _dsr(pnl, historical_trial_sharpes),
+178:         "required_n_for_5pct_roi_80pct_power": required_n_for_roi(pnl),
+179:     }
+182: def cells(records: list[dict[str, Any]], historical_trial_sharpes: list[float | None]) -> list[dict[str, Any]]:
+183:     expanded = selection_rows(records)
+184:     groups: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
+185:     for row in expanded:
+186:         groups[(row["selection"], row["divergence_bin"], row["odds_bin"])].append(row)
+187:     output = []
+188:     for key, rows in sorted(groups.items()):
+189:         result = _cell(rows, historical_trial_sharpes)
+190:         result.update(zip(("selection", "divergence_bin", "odds_bin"), key))
+191:         result["coverage"] = len(rows) / len(records) if records else 0.0
+192:         output.append(result)
+193:     return output
+196: def draw_ordering(records: list[dict[str, Any]]) -> dict[str, Any]:
+197:     draw_rows = [r for r in selection_rows(records) if r["selection"] == "draw"]
+198:     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+199:     for row in draw_rows:
+200:         groups[row["divergence_bin"]].append(row)
+201:     ordered = []
+202:     for name, _low, _high in DIVERGENCE_BINS:
+203:         rows = groups.get(name, [])
+204:         if rows:
+205:             ordered.append(
+206:                 {
+207:                     "divergence_bin": name,
+208:                     "n": len(rows),
+209:                     "mean_divergence": st.mean(r["divergence"] for r in rows),
+210:                     "actual_draw_rate": st.mean(float(r["won"]) for r in rows),
+211:                     "roi_diagnostic": st.mean(r["pnl"] for r in rows),
+212:                 }
+213:             )
+214:     roi = [row["roi_diagnostic"] for row in ordered]
+215:     monotonic = len(roi) >= 3 and all(right >= left for left, right in zip(roi, roi[1:]))
+216:     return {"bins": ordered, "monotonic_roi": monotonic}
+219: def _permutation_stratum(row: dict[str, Any]) -> tuple[str, int]:
+220:     month = row["date"][:7]
+221:     abs_diff = abs(row["effective_elo_diff"])
+222:     elo_band = 0 if abs_diff < 50 else 1 if abs_diff < 100 else 2 if abs_diff < 200 else 3
+223:     return month, elo_band
+226: def permute_outcomes(records: list[dict[str, Any]], seed: int) -> list[dict[str, Any]]:
+228:     rng = random.Random(seed)
+229:     by_stratum: dict[tuple[str, int], list[int]] = defaultdict(list)
+230:     for index, row in enumerate(records):
+231:         by_stratum[_permutation_stratum(row)].append(index)
+232:     outcomes = [r["outcome"] for r in records]
+233:     permuted = list(outcomes)
+234:     for indexes in by_stratum.values():
+235:         values = [outcomes[index] for index in indexes]
+236:         rng.shuffle(values)
+237:         for index, value in zip(indexes, values):
+238:             permuted[index] = value
+239:     return [dict(row, outcome=outcome) for row, outcome in zip(records, permuted)]
+242: def permutation_sanity(records: list[dict[str, Any]], permutations: int, seed: int) -> dict[str, Any]:
+243:     observed = draw_ordering(records)["monotonic_roi"]
+244:     null_monotonic = 0
+245:     for offset in range(permutations):
+246:         null_monotonic += int(draw_ordering(permute_outcomes(records, seed + offset))["monotonic_roi"])
+247:     return {
+248:         "strata": "calendar_month_x_abs_effective_elo_diff_band",
+249:         "permutations": permutations,
+250:         "seed": seed,
+251:         "observed_monotonic": observed,
+252:         "null_monotonic_count": null_monotonic,
+253:         "null_monotonic_rate": null_monotonic / permutations,
+254:     }
+257: def draw_power_requirements(records: list[dict[str, Any]]) -> dict[str, int | None]:
+258:     grouped: dict[str, list[float]] = defaultdict(list)
+259:     for row in selection_rows(records):
+260:         if row["selection"] == "draw":
+261:             grouped[row["divergence_bin"]].append(row["pnl"])
+262:     return {name: required_n_for_roi(grouped.get(name, [])) for name, _low, _high in DIVERGENCE_BINS}
+265: def evaluate(
+266:     records: list[dict[str, Any]],
+267:     *,
+268:     requested_n: int,
+269:     historical_trial_sharpes: list[float | None],
+270:     permutations: int,
+271:     seed: int,
+272:     power_reference: list[dict[str, Any]] | None = None,
+273: ) -> dict[str, Any]:
+274:     draw = draw_ordering(records)
+275:     power_requirements = draw_power_requirements(power_reference if power_reference is not None else records)
+276:     minimums_met = all(
+277:         power_requirements.get(row["divergence_bin"]) is not None
+278:         and row["n"] >= int(power_requirements[row["divergence_bin"]] or 0)
+279:         for row in draw["bins"]
+280:     )
+281:     return {
+282:         "n": len(records),
+283:         "requested_n": requested_n,
+284:         "coverage": len(records) / requested_n if requested_n else 0.0,
+285:         "paired_probabilistic": _metric_block(records),
+286:         "draw_ordering": draw,
+287:         "all_declared_cells": cells(records, historical_trial_sharpes),
+288:         "permutation_sanity": permutation_sanity(records, permutations, seed),
+289:         "draw_power_requirements_from_development": power_requirements,
+290:         "power_minimums_met": minimums_met,
+291:         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+292:     }

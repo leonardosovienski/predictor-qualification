@@ -1,0 +1,360 @@
+### tests/test_run_passive_process_tree.py
+3: import json
+4: import os
+5: import sys
+6: import time
+7: from pathlib import Path
+8: from types import SimpleNamespace
+10: import pytest
+12: from brasileirao_scripts import run_passive_task as launcher
+15: @pytest.mark.skipif(sys.platform != "win32", reason="Windows process-tree regression")
+16: def test_timeout_terminates_descendants_before_finished_heartbeat(tmp_path, monkeypatch):
+17:     import ctypes
+18:     from ctypes import wintypes
+20:     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+21:     kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+22:     kernel.OpenProcess.restype = wintypes.HANDLE
+23:     kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+24:     kernel.WaitForSingleObject.restype = wintypes.DWORD
+25:     kernel.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+26:     kernel.TerminateProcess.restype = wintypes.BOOL
+27:     kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+28:     kernel.CloseHandle.restype = wintypes.BOOL
+30:     marker = tmp_path / "grandchild_survived.txt"
+31:     ready = tmp_path / "leaf_started.txt"
+32:     leaf_code = (
+33:         "import os,time; from pathlib import Path; "
+34:         "Path('leaf_started.txt').write_text(str(os.getpid()), encoding='ascii'); "
+35:         "time.sleep(30); Path('grandchild_survived.txt').write_text('synthetic')"
+36:     )
+37:     parent_code = (
+38:         "import subprocess,sys,time\n"
+39:         f"subprocess.Popen([sys.executable, '-c', {leaf_code!r}], creationflags=subprocess.CREATE_NO_WINDOW)\n"
+40:         "time.sleep(40)\n"
+41:     )
+42:     (tmp_path / "synthetic_refresh_parent.py").write_text(parent_code, encoding="utf-8")
+43:     monkeypatch.setattr(launcher, "ROOT", tmp_path)
+44:     monkeypatch.setattr(launcher, "JOBS", {"fixture-refresh": ("synthetic_refresh_parent", (), 2.0)})
+45:     original_popen = launcher.subprocess.Popen
+46:     original_heartbeat = launcher._write_heartbeat
+47:     parent = None
+48:     leaf_handle = None
+49:     checked_finished = []
+51:     def start(command, **options):
+52:         nonlocal parent, leaf_handle
+53:         process = original_popen(command, **options)
+54:         if "synthetic_refresh_parent" not in command:
+55:             return process
+56:         parent = process
+59:         deadline = time.monotonic() + 5
+60:         while time.monotonic() < deadline:
+61:             if ready.exists():
+62:                 try:
+63:                     leaf_pid = int(ready.read_text(encoding="ascii"))
+64:                 except ValueError:
+65:                     time.sleep(0.01)  # creation may precede the short PID write
+66:                     continue
+67:                 leaf_handle = kernel.OpenProcess(0x100000 | 0x0001, False, leaf_pid)
+68:                 if not leaf_handle:
+69:                     raise ctypes.WinError(ctypes.get_last_error())
+70:                 assert kernel.WaitForSingleObject(leaf_handle, 0) == 258  # WAIT_TIMEOUT: alive
+71:                 return process
+72:             time.sleep(0.01)
+73:         pytest.fail("Synthetic descendant did not become ready")
+75:     def write_heartbeat(path, state):
+76:         if state["status"] == "finished":
+77:             assert leaf_handle is not None
+80:             assert kernel.WaitForSingleObject(leaf_handle, 0) == 0  # WAIT_OBJECT_0: exited
+81:             assert not marker.exists()
+82:             checked_finished.append(True)
+83:         return original_heartbeat(path, state)
+85:     monkeypatch.setattr(launcher.subprocess, "Popen", start)
+86:     monkeypatch.setattr(launcher, "_write_heartbeat", write_heartbeat)
+87:     try:
+88:         assert launcher.run_job("fixture-refresh") == 124
+89:         state = json.loads(
+90:             (tmp_path / "data/runtime/passive/fixture-refresh/heartbeat.json").read_text(encoding="utf-8")
+91:         )
+92:         assert state["status"] == "finished" and state["error"] == "timeout"
+93:         assert checked_finished == [True]
+94:     finally:
+96:         try:
+97:             if parent is not None and parent.poll() is None:
+98:                 taskkill = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32/taskkill.exe"
+99:                 try:
+100:                     launcher.subprocess.run(
+101:                         [str(taskkill), "/PID", str(parent.pid), "/T", "/F"],
+102:                         stdout=launcher.subprocess.DEVNULL,
+103:                         stderr=launcher.subprocess.DEVNULL,
+104:                         creationflags=launcher.subprocess.CREATE_NO_WINDOW,
+105:                         timeout=15,
+106:                         check=False,
+107:                     )
+108:                 finally:
+109:                     if parent.poll() is None:
+110:                         parent.kill()
+111:                     parent.wait(timeout=5)
+112:         finally:
+113:             if leaf_handle is not None:
+114:                 try:
+115:                     if kernel.WaitForSingleObject(leaf_handle, 0) == 258:
+116:                         if not kernel.TerminateProcess(leaf_handle, 1):
+117:                             raise ctypes.WinError(ctypes.get_last_error())
+118:                         assert kernel.WaitForSingleObject(leaf_handle, 5000) == 0
+119:                 finally:
+120:                     kernel.CloseHandle(leaf_handle)
+123: def test_failed_tree_cleanup_is_explicit_and_waits_are_bounded(monkeypatch):
+124:     waits, killed, kill_commands = [], [], []
+126:     class Child:
+127:         pid = 424242
+129:         def wait(self, timeout):
+130:             waits.append(timeout)
+131:             if len(waits) == 1:
+132:                 raise launcher.subprocess.TimeoutExpired("synthetic", timeout)
+133:             return -1
+135:         def poll(self):
+136:             return None
+138:         def kill(self):
+139:             killed.append(True)
+141:     def fake_taskkill(command, **options):
+142:         kill_commands.append(command)
+143:         assert options["shell"] is False
+144:         assert options["timeout"] == 15
+145:         assert options["stdout"] == options["stderr"] == launcher.subprocess.DEVNULL
+146:         return SimpleNamespace(returncode=1)
+148:     monkeypatch.setattr(launcher.sys, "platform", "win32")
+149:     monkeypatch.setattr(launcher.subprocess, "CREATE_NO_WINDOW", 0x08000000, raising=False)
+150:     monkeypatch.setattr(launcher.subprocess, "Popen", lambda *args, **kwargs: Child())
+151:     monkeypatch.setattr(launcher.subprocess, "run", fake_taskkill)
+152:     with pytest.raises(launcher.ProcessTreeTerminationError):
+153:         launcher._run_command(["synthetic"], timeout=1, check=False)
+154:     assert kill_commands[0][1:] == ["/PID", "424242", "/T", "/F"]
+155:     assert killed == [True]
+156:     assert waits == [1, 10]
+### tests/test_run_passive_task.py
+3: import json
+4: import subprocess
+5: from types import SimpleNamespace
+7: import pytest
+9: from brasileirao_scripts import run_passive_task as launcher
+12: @pytest.fixture
+13: def isolated(tmp_path, monkeypatch):
+14:     monkeypatch.setattr(launcher, "ROOT", tmp_path)
+15:     monkeypatch.setattr(launcher.sys, "executable", str(tmp_path / "venv" / "pythonw.exe"))
+16:     monkeypatch.setattr(launcher.sys, "platform", "win32")
+17:     monkeypatch.setattr(subprocess, "CREATE_NO_WINDOW", 0x08000000, raising=False)
+18:     return tmp_path
+21: def heartbeat(root, job="h14-persist"):
+22:     path = root / "data" / "runtime" / "passive" / job / "heartbeat.json"
+23:     return json.loads(path.read_text(encoding="utf-8"))
+26: @pytest.mark.parametrize(
+27:     "job,module,arguments,timeout",
+28:     [
+29:         ("h14-persist", "brasileirao_scripts.persist_h14_prospective", [], 900),
+30:         ("h15-persist", "brasileirao_scripts.persist_h15_prospective", [], 900),
+31:         ("fixture-refresh", "brasileirao_scripts.update_h9_fixtures", [], 5400),
+32:         ("model-update", "brasileirao_predictor.cron_update_models", [], 1800),
+33:         ("a1-collect", "brasileirao_scripts.collect_odds_a1", ["--collect"], 300),
+34:         ("a1-discover", "brasileirao_scripts.collect_odds_a1", ["--discover"], 300),
+35:         ("a1-metrics", "brasileirao_scripts.collector_daily_metrics", [], 300),
+36:     ],
+37: )
+38: def test_allowlist_silent_windows_launch(isolated, monkeypatch, capsys, job, module, arguments, timeout):
+39:     monkeypatch.setattr(launcher, "_a1_ready", lambda: True)
+41:     def run(command, **options):
+42:         assert command == [str(isolated / "venv" / "python.exe"), "-X", "utf8", "-m", module, *arguments]
+43:         assert options["cwd"] == isolated
+44:         assert options["shell"] is False
+45:         assert options["creationflags"] == 0x08000000
+46:         assert options["stdin"] == subprocess.DEVNULL
+47:         assert options["stderr"] == subprocess.STDOUT
+48:         assert options["timeout"] == timeout
+49:         assert options["check"] is False
+50:         assert options["close_fds"] is True
+51:         assert heartbeat(isolated, job)["status"] == "started"
+52:         options["stdout"].write(b"synthetic child output")
+53:         return SimpleNamespace(returncode=0)
+55:     monkeypatch.setattr(launcher, "_run_command", run)
+56:     assert launcher.main([job]) == 0
+57:     state = heartbeat(isolated, job)
+58:     assert state["status"] == "finished"
+59:     assert state["exit_code"] == 0
+60:     assert state["last_success_at"] == state["finished_at"]
+61:     assert state["error"] is None
+62:     assert "synthetic child output" not in json.dumps(state)
+63:     assert len(state["wrapper_sha256"]) == 64
+64:     logs = list((isolated / "data" / "runtime" / "passive" / job).glob("*.log"))
+65:     assert len(logs) == 1 and logs[0].read_bytes() == b"synthetic child output"
+66:     assert capsys.readouterr() == ("", "")
+69: @pytest.mark.parametrize(
+70:     "failure,expected,error",
+71:     [
+72:         (17, 17, None),
+73:         (subprocess.TimeoutExpired("hidden detail", 900), 124, "timeout"),
+74:         (launcher.ProcessTreeTerminationError("hidden detail"), 125, "timeout_tree_cleanup_failed"),
+75:         (OSError("hidden detail"), 127, "launch_or_log_error"),
+76:     ],
+77: )
+78: def test_failure_exit_and_heartbeat_preserve_success(isolated, monkeypatch, capsys, failure, expected, error):
+79:     monkeypatch.setattr(launcher, "_run_command", lambda *args, **kwargs: SimpleNamespace(returncode=0))
+80:     assert launcher.run_job("h14-persist") == 0
+81:     previous_success = heartbeat(isolated)["last_success_at"]
+83:     def run(*args, **kwargs):
+84:         if isinstance(failure, Exception):
+85:             raise failure
+86:         return SimpleNamespace(returncode=failure)
+88:     monkeypatch.setattr(launcher, "_run_command", run)
+89:     assert launcher.run_job("h14-persist") == expected
+90:     state = heartbeat(isolated)
+91:     assert state["status"] == "finished" and state["finished_at"] is not None
+92:     assert state["exit_code"] == expected and state["error"] == error
+93:     assert state["last_success_at"] == previous_success
+94:     assert "hidden detail" not in json.dumps(state)
+95:     assert len(list((isolated / "data" / "runtime" / "passive" / "h14-persist").glob("*.log"))) == 2
+96:     assert capsys.readouterr() == ("", "")
+99: def test_reject_unknown_job_before_launch(isolated, monkeypatch):
+100:     def unexpected(*args, **kwargs):
+101:         pytest.fail("An unknown job must never start a process")
+103:     monkeypatch.setattr(launcher, "_run_command", unexpected)
+104:     with pytest.raises(ValueError, match="Unknown passive job"):
+105:         launcher.run_job("evaluate_h14_prospective")
+106:     assert not (isolated / "data").exists()
+109: def test_python_executable_is_preserved(isolated, monkeypatch):
+110:     executable = str(isolated / "venv" / "python.exe")
+111:     monkeypatch.setattr(launcher.sys, "executable", executable)
+113:     def run(command, **kwargs):
+114:         assert command[0] == executable
+115:         return SimpleNamespace(returncode=0)
+117:     monkeypatch.setattr(launcher, "_run_command", run)
+118:     assert launcher.run_job("h14-persist") == 0
+121: @pytest.mark.parametrize("case", ["ok", "missing", "mismatch", "rotation_missing", "rotation_false", "key_missing"])
+122: def test_a1_preflight_fails_closed(isolated, monkeypatch, capsys, case):
+123:     phase = isolated / "data" / "a1_phase0"
+124:     metrics = isolated / "data" / "collector_metrics"
+125:     phase.mkdir(parents=True)
+126:     metrics.mkdir(parents=True)
+127:     if case != "missing":
+128:         (phase / "fingerprint.json").write_text(
+129:             json.dumps({"fingerprint": "other" if case == "mismatch" else "synthetic-hash"}), encoding="utf-8"
+130:         )
+131:     if case != "rotation_missing":
+132:         (metrics / "key_rotation_attestation.json").write_text(
+133:             json.dumps({"rotated": case != "rotation_false"}), encoding="utf-8"
+134:         )
+135:     monkeypatch.setenv("ODDSPAPI_KEY", "" if case == "key_missing" else "synthetic-secret")
+136:     monkeypatch.setitem(
+137:         launcher.sys.modules,
+138:         "brasileirao_scripts.a1_phase0",
+139:         SimpleNamespace(_fingerprint=lambda: {"fingerprint": "synthetic-hash"}),
+140:     )
+141:     calls = []
+143:     def run(*args, **kwargs):
+144:         calls.append(args)
+145:         return SimpleNamespace(returncode=0)
+147:     monkeypatch.setattr(launcher, "_run_command", run)
+148:     assert launcher.run_job("a1-collect") == (0 if case == "ok" else 78)
+149:     assert len(calls) == (1 if case == "ok" else 0)
+150:     state = heartbeat(isolated, "a1-collect")
+151:     assert state["status"] == "finished"
+152:     assert state["error"] == (None if case == "ok" else "a1_preflight_failed")
+153:     assert "synthetic-secret" not in json.dumps(state)
+154:     assert capsys.readouterr() == ("", "")
+### tests/test_season_2026_split.py
+1: from datetime import UTC, datetime, timedelta, timezone
+2: from itertools import product
+4: import pytest
+6: from brasileirao_predictor.research.season_2026_split import DECISION_LEAD_HOURS, eligibility_for_paper, role_for
+8: FREEZE = datetime(2026, 9, 7, 18, 0, tzinfo=UTC)
+9: FUTURE = FREEZE + timedelta(days=7)
+12: @pytest.mark.parametrize("season", range(2021, 2025))
+13: def test_earlier_seasons_are_training_even_without_round(season):
+14:     assert role_for(season, None) == "train"
+17: def test_2025_is_calibration():
+18:     assert role_for(2025, None) == "calibration"
+21: @pytest.mark.parametrize("round_number", range(1, 39))
+22: def test_every_official_2026_round_has_exact_role(round_number):
+23:     expected = "test_exploratory" if round_number <= 19 else "paper_betting"
+24:     assert role_for(2026, round_number) == expected
+27: @pytest.mark.parametrize("bad_round", [None, 0, -1, 39, 100, 19.0, "19", True])
+28: def test_2026_round_cannot_be_missing_coerced_or_outside_calendar(bad_round):
+29:     with pytest.raises(ValueError, match="official integer round"):
+30:         role_for(2026, bad_round)
+33: @pytest.mark.parametrize("season", [2020, 2027, 1900])
+34: def test_unselected_seasons_remain_outside_scope(season):
+35:     assert role_for(season, None) == "out_of_scope"
+38: @pytest.mark.parametrize("season", [True, "2026", 2026.0, None])
+39: def test_season_is_not_silently_coerced(season):
+40:     with pytest.raises(TypeError):
+41:         role_for(season, 20)
+44: def test_delayed_round_19_in_september_remains_test():
+45:     role = role_for(2026, 19)
+46:     assert role == "test_exploratory"
+47:     assert eligibility_for_paper(role, "2026-09-30T21:00:00Z", FREEZE, True, True, True) == "OUT_OF_SCOPE"
+50: @pytest.mark.parametrize("role", ["train", "calibration", "test_exploratory", "out_of_scope"])
+51: def test_nonpaper_roles_cannot_emit_a_signal(role):
+52:     assert eligibility_for_paper(role, FUTURE, FREEZE, True, True, True) == "OUT_OF_SCOPE"
+55: @pytest.mark.parametrize("gates", list(product([False, True], repeat=3)))
+56: def test_future_game_requires_every_gate(gates):
+57:     expected = "PAPER_SIGNAL" if all(gates) else "NO_BET"
+58:     assert eligibility_for_paper("paper_betting", FUTURE, FREEZE, *gates) == expected
+61: @pytest.mark.parametrize("offset_seconds", [-86400, -1, 0, 1800, 3600])
+62: @pytest.mark.parametrize("gates", [(True, True, True), (False, False, False)])
+63: def test_past_or_exact_freeze_decision_never_becomes_prospective(offset_seconds, gates):
+64:     kickoff = FREEZE + timedelta(seconds=offset_seconds)
+65:     assert eligibility_for_paper("paper_betting", kickoff, FREEZE, *gates) == "REPLAY_ONLY"
+68: def test_decision_lead_matches_frozen_one_hour_contract():
+69:     assert DECISION_LEAD_HOURS == 1
+72: def test_first_second_after_decision_boundary_can_be_a_paper_signal():
+73:     kickoff = FREEZE + timedelta(hours=1, seconds=1)
+74:     assert eligibility_for_paper("paper_betting", kickoff, FREEZE, True, True, True) == "PAPER_SIGNAL"
+77: def test_unknown_kickoff_stays_pending_instead_of_getting_an_invented_date():
+78:     assert eligibility_for_paper("paper_betting", None, FREEZE, True, True, True) == "PENDING_KICKOFF"
+81: def test_unknown_kickoff_stays_pending_even_without_an_eligible_model():
+82:     assert eligibility_for_paper("paper_betting", None, FREEZE, False, False, False) == "PENDING_KICKOFF"
+85: def test_timezone_equivalent_kickoff_is_not_a_future_game():
+86:     kickoff = FREEZE.astimezone(timezone(timedelta(hours=-3)))
+87:     assert eligibility_for_paper("paper_betting", kickoff, FREEZE.isoformat(), True, True, True) == "REPLAY_ONLY"
+90: def test_offset_comparison_uses_instants_and_accepts_utc_z():
+91:     assert (
+92:         eligibility_for_paper("paper_betting", "2026-09-07T17:00:00-03:00", "2026-09-07T18:00:00Z", True, True, True)
+93:         == "PAPER_SIGNAL"
+94:     )
+97: @pytest.mark.parametrize(
+98:     "bad_time",
+99:     [
+100:         "2026-09-07",
+101:         "2026-09-07T18:00:00",
+102:         "",
+103:         "garbage",
+104:         datetime(2026, 9, 7),  # noqa: DTZ001 -- intentionally invalid input
+105:     ],
+106: )
+107: @pytest.mark.parametrize("field", ["freeze", "kickoff"])
+108: def test_naive_and_invalid_timestamps_are_rejected(bad_time, field):
+109:     kickoff, freeze = (bad_time, FREEZE) if field == "kickoff" else (FUTURE, bad_time)
+110:     with pytest.raises(ValueError):
+111:         eligibility_for_paper("paper_betting", kickoff, freeze, True, True, True)
+114: @pytest.mark.parametrize("bad_time", [0, 1788804000, None])
+115: def test_invalid_freeze_types_are_rejected(bad_time):
+116:     with pytest.raises(TypeError):
+117:         eligibility_for_paper("paper_betting", FUTURE, bad_time, True, True, True)
+120: @pytest.mark.parametrize("gate_index", range(3))
+121: @pytest.mark.parametrize("bad_gate", [1, "False", None])
+122: def test_truthy_nonbooleans_cannot_unlock_paper_signal(gate_index, bad_gate):
+123:     gates = [True, True, True]
+124:     gates[gate_index] = bad_gate
+125:     with pytest.raises(TypeError):
+126:         eligibility_for_paper("paper_betting", FUTURE, FREEZE, *gates)
+129: def test_unknown_role_fails_closed():
+130:     with pytest.raises(ValueError):
+131:         eligibility_for_paper("real_betting", FUTURE, FREEZE, True, True, True)
+### tests/test_secrets_telemetry.py
+6: from pathlib import Path
+8: from predictor_core.testing.secrets import assert_no_secrets_in_events, find_secrets
+10: EVENTS = Path(__file__).resolve().parents[1] / "events.jsonl"
+13: def test_guard_catches_planted_secret():
+14:     assert find_secrets("leak <REDACTED_OPENAI_TOKEN>")
+17: def test_guard_passes_clean_text():
+18:     assert find_secrets('{"score": 0.9, "team": "Brazil"}') == []
+21: def test_real_telemetry_has_no_secrets():
+22:     assert_no_secrets_in_events(EVENTS)  # no-op se ausente; falha se algum segredo vazou

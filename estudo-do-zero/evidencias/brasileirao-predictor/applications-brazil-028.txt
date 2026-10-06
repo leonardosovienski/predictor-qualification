@@ -1,0 +1,463 @@
+### brasileirao_predictor/research/price_strength/historical_admission.py
+7: from __future__ import annotations
+9: import math
+10: from datetime import UTC, datetime, timedelta
+11: from typing import Any
+13: SIDES = {"home": "101", "draw": "102", "away": "103"}
+14: MISSING_EXECUTION = (
+15:     "historical_available_at",
+16:     "historical_received_at",
+17:     "point_in_time_fixture_schedule",
+18:     "bookmaker_region_mapping",
+19:     "acceptance_slippage_and_capacity",
+20:     "actual_costs_and_settlement",
+21: )
+24: def timestamp(value: Any) -> datetime:
+25:     if not isinstance(value, str):
+26:         raise ValueError("timestamp_not_string")
+27:     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+28:     if parsed.tzinfo is None or parsed.utcoffset() is None:
+29:         raise ValueError("timestamp_without_timezone")
+30:     return parsed.astimezone(UTC)
+33: def number(value: Any, *, minimum: float) -> bool:
+34:     if isinstance(value, bool) or not isinstance(value, int | float):
+35:         return False
+36:     try:
+37:         return math.isfinite(value) and value > minimum
+38:     except OverflowError:
+39:         return False
+42: def latest_state(timeline: Any, cutoff: datetime) -> dict[str, Any]:
+44:     if cutoff.tzinfo is None or cutoff.utcoffset() is None:
+45:         raise ValueError("cutoff_without_timezone")
+46:     if not isinstance(timeline, list):
+47:         return {"valid": False, "reason": "missing_or_malformed_history"}
+48:     eligible = []
+49:     for row in timeline:
+50:         if not isinstance(row, dict):
+51:             return {"valid": False, "reason": "malformed_state"}
+52:         try:
+53:             at = timestamp(row.get("createdAt"))
+54:         except (ValueError, TypeError, OverflowError):
+55:             return {"valid": False, "reason": "unorderable_state_timestamp"}
+56:         if at <= cutoff:
+57:             eligible.append((at, row))
+58:     if not eligible:
+59:         return {"valid": False, "reason": "no_state_at_cutoff"}
+60:     at = max(at for at, _ in eligible)
+61:     rows = [r for t, r in eligible if t == at]
+62:     base = {"state_created_at": at.isoformat(), "state_age_seconds": (cutoff - at).total_seconds()}
+63:     active = {str(type(r.get("active"))) + repr(r.get("active")) for r in rows}
+64:     if len(active) != 1:
+65:         return {**base, "valid": False, "reason": "conflicting_latest_state"}
+66:     if rows[0].get("active") is not True:
+67:         reason = "inactive_latest_state" if rows[0].get("active") is False else "unverified_latest_active"
+68:         return {**base, "valid": False, "reason": reason}
+69:     if any(not number(r.get("price"), minimum=1) for r in rows):
+70:         return {**base, "valid": False, "reason": "invalid_latest_price"}
+71:     if len({float(r["price"]) for r in rows}) != 1:
+72:         return {**base, "valid": False, "reason": "conflicting_latest_state"}
+73:     limits = [float(r["limit"]) if number(r.get("limit"), minimum=-1) and r["limit"] >= 0 else None for r in rows]
+74:     limit = limits[0] if all(v == limits[0] for v in limits) else None
+75:     return {
+76:         **base,
+77:         "valid": True,
+78:         "reason": "last_recorded_active_state",
+79:         "price": float(rows[0]["price"]),
+80:         "reported_limit": limit,
+81:         "limit_currency": None,
+82:         "limit_is_accepted_fill": False,
+83:     }
+86: def audit_history(payload: Any, fixture: dict[str, Any], received_at: str) -> dict[str, Any]:
+88:     kickoff, receipt = timestamp(fixture["kickoff_at"]), timestamp(received_at)
+89:     if not datetime(2026, 1, 1, tzinfo=UTC) <= kickoff < datetime(2026, 7, 1, tzinfo=UTC):
+90:         raise ValueError("outside_allowlisted_exploratory_window")
+91:     decision = kickoff - timedelta(hours=1)
+92:     result: dict[str, Any] = {
+93:         "fixture_id": fixture["fixture_id"],
+94:         "kickoff_at": kickoff.isoformat(),
+95:         "decision_at": decision.isoformat(),
+96:         "actual_archive_received_at": receipt.isoformat(),
+97:         "archive_received_after_decision": receipt > decision,
+98:         "execution_admitted": False,
+99:         "missing_execution_evidence": list(MISSING_EXECUTION),
+100:         "conditional_status": "REJECTED",
+101:         "conditional_selection": None,
+102:         "bookmakers": {},
+103:     }
+104:     if not isinstance(payload, dict) or payload.get("fixtureId") != fixture["fixture_id"]:
+105:         result["reason"] = "payload_fixture_identity_mismatch"
+106:         return result
+107:     books = payload.get("bookmakers")
+108:     if not isinstance(books, dict):
+109:         result["reason"] = "malformed_bookmakers"
+110:         return result
+111:     for book in ("pinnacle", "bet365"):
+112:         legs = {}
+113:         for side, outcome_id in SIDES.items():
+114:             try:
+115:                 timeline = books[book]["markets"]["101"]["outcomes"][outcome_id]["players"]["0"]
+116:             except (KeyError, TypeError):
+117:                 timeline = None
+118:             legs[side] = latest_state(timeline, decision)
+119:         complete = all(leg["valid"] for leg in legs.values())
+120:         fresh = complete and all(leg["state_age_seconds"] <= 120 for leg in legs.values())
+121:         result["bookmakers"][book] = {"legs": legs, "complete_active": complete, "within_120s": fresh}
+122:     if not all(book["complete_active"] for book in result["bookmakers"].values()):
+123:         result["reason"] = "incomplete_active_pair"
+124:         return result
+125:     if not all(book["within_120s"] for book in result["bookmakers"].values()):
+126:         result["reason"] = "last_change_age_over_120s_not_network_freshness"
+127:         return result
+128:     all_legs = [leg for b in result["bookmakers"].values() for leg in b["legs"].values()]
+129:     clocks = [timestamp(leg["state_created_at"]) for leg in all_legs]
+130:     skew = (max(clocks) - min(clocks)).total_seconds()
+131:     result["state_change_skew_seconds"] = skew
+132:     if skew > 30:
+133:         result["reason"] = "state_change_skew_over_30s"
+134:         return result
+135:     pin = result["bookmakers"]["pinnacle"]["legs"]
+136:     bet = result["bookmakers"]["bet365"]["legs"]
+137:     total = sum(1 / leg["price"] for leg in pin.values())
+138:     result["reference_overround_sum"] = total
+139:     if total <= 1:
+140:         result["reason"] = "reference_sum_not_above_one"
+141:         return result
+142:     evs = {side: (1 / pin[side]["price"]) / total * bet[side]["price"] - 1 - 0.02 for side in SIDES}
+143:     choices = sorted(((-ev, side) for side, ev in evs.items() if 0 < ev <= 0.15))
+144:     result.update(conditional_status="TEMPORAL_STATE_DIAGNOSTIC_ONLY", net_ev_scenario_by_side=evs)
+145:     if choices:
+146:         neg_ev, side = choices[0]
+147:         result.update(conditional_selection=side, conditional_net_ev=-neg_ev, reason="conditional_price_discrepancy")
+148:     else:
+149:         result["reason"] = "no_conditional_selection"
+150:     return result
+### brasileirao_predictor/research/price_strength/live_capture_admission.py
+7: from __future__ import annotations
+9: import json
+10: import math
+11: from typing import Any
+13: from .historical_admission import SIDES, number, timestamp
+16: def strict_json_loads(raw: str | bytes) -> Any:
+19:     def object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+20:         value: dict[str, Any] = {}
+21:         for key, item in pairs:
+22:             if key in value:
+23:                 raise ValueError("duplicate_json_key")
+24:             value[key] = item
+25:         return value
+27:     def finite_float(value: str) -> float:
+28:         result = float(value)
+29:         if not math.isfinite(result):
+30:             raise ValueError("nonfinite_json_number")
+31:         return result
+33:     def reject_constant(value: str) -> Any:
+34:         raise ValueError("nonfinite_json_number")
+36:     return json.loads(raw, object_pairs_hook=object_pairs, parse_float=finite_float, parse_constant=reject_constant)
+39: def audit_capture(
+40:     payload: Any,
+41:     receipt: dict[str, Any],
+42:     expected_fixture: str,
+43:     *,
+44:     expected_identity: dict[str, int] | None = None,
+45: ) -> dict[str, Any]:
+46:     started = timestamp(receipt["requested_at"])
+47:     received = timestamp(receipt["received_at"])
+48:     if received < started:
+49:         raise ValueError("receipt_before_request")
+50:     result: dict[str, Any] = {
+51:         "fixture_id": expected_fixture,
+52:         "received_at": received.isoformat(),
+53:         "round_trip_seconds": (received - started).total_seconds(),
+54:         "clock_semantics": "actual_collector_API_receipt_not_bookmaker_publication",
+55:         "execution_admitted": False,
+56:         "pair_api_state_admitted": False,
+57:         "bookmakers": {},
+58:         "missing_execution_evidence": ["accepted_price_and_stake", "offer_capacity", "costs", "future_validation"],
+59:     }
+60:     if not isinstance(payload, dict) or payload.get("fixtureId") != expected_fixture:
+61:         result["reason"] = "fixture_identity_mismatch"
+62:         return result
+63:     if expected_identity is not None:
+64:         fields = {"participant1Id", "participant2Id", "sportId", "tournamentId", "seasonId"}
+65:         if set(expected_identity) != fields or any(type(v) is not int or v <= 0 for v in expected_identity.values()):
+66:             raise ValueError("invalid_frozen_identity_contract")
+67:         if expected_identity["participant1Id"] == expected_identity["participant2Id"]:
+68:             raise ValueError("invalid_frozen_identity_contract")
+69:         result["frozen_identity_admitted"] = all(
+70:             type(payload.get(field)) is int and payload[field] == expected_identity[field] for field in fields
+71:         )
+72:         if not result["frozen_identity_admitted"]:
+73:             result["reason"] = "frozen_fixture_identity_mismatch"
+74:             return result
+75:     result["fixture_identity_scope"] = "frozen_participants_and_competition" if expected_identity else "fixture_id_only"
+76:     kickoff = timestamp(payload.get("startTime"))
+77:     result["kickoff_at"] = kickoff.isoformat()
+78:     if type(payload.get("statusId")) is not int or payload["statusId"] != 0 or received >= kickoff:
+79:         result["reason"] = "not_pre_game"
+80:         return result
+81:     if payload.get("trueStartTime") is not None or payload.get("trueEndTime") is not None:
+82:         result["reason"] = "actual_start_or_end_conflicts_with_pre_game"
+83:         return result
+84:     if payload.get("hasOdds") is not True:
+85:         result["reason"] = "fixture_odds_absent_or_unverified"
+86:         return result
+87:     if payload.get("updatedAt") is not None:
+88:         try:
+89:             if timestamp(payload["updatedAt"]) > received:
+90:                 raise ValueError("future_fixture_update")
+91:         except (ValueError, TypeError, OverflowError):
+92:             result["reason"] = "invalid_or_future_fixture_update"
+93:             return result
+94:     for name in ("pinnacle", "bet365.bet.br"):
+95:         reasons = []
+96:         books = payload.get("bookmakerOdds", {})
+97:         book = books.get(name, {}) if isinstance(books, dict) else {}
+98:         if not isinstance(book, dict):
+99:             book = {}
+100:         if book.get("bookmakerIsActive") is not True:
+101:             reasons.append("bookmaker_not_active")
+102:         if book.get("suspended") is not False:
+103:             reasons.append("bookmaker_suspended_or_unverified")
+104:         markets = book.get("markets", {})
+105:         market = markets.get("101", {}) if isinstance(markets, dict) else {}
+106:         if not isinstance(market, dict):
+107:             market = {}
+108:         if market.get("marketActive") is not True:
+109:             reasons.append("market_not_active")
+110:         legs = {}
+111:         for side, outcome in SIDES.items():
+112:             try:
+113:                 row = market["outcomes"][outcome]["players"]["0"]
+114:                 if not isinstance(row, dict):
+115:                     raise TypeError
+116:             except (KeyError, TypeError):
+117:                 reasons.append(side + ":missing_selection")
+118:                 continue
+119:             if row.get("active") is not True or not number(row.get("price"), minimum=1):
+120:                 reasons.append(side + ":invalid_or_inactive_selection")
+121:                 continue
+122:             clocks = {}
+123:             for field in ("changedAt", "bookmakerChangedAt"):
+124:                 if row.get(field) is None:
+125:                     clocks[field] = None
+126:                     if field == "changedAt":
+127:                         reasons.append(side + ":missing_change_timestamp")
+128:                     continue
+129:                 try:
+130:                     at = timestamp(row[field])
+131:                     clocks[field] = at.isoformat()
+132:                     if at > received:
+133:                         reasons.append(side + ":future_change_timestamp")
+134:                 except (ValueError, TypeError, OverflowError):
+135:                     reasons.append(side + ":invalid_change_timestamp")
+136:             limit = row.get("limit")
+137:             legs[side] = {
+138:                 "price": float(row["price"]),
+139:                 "change_clocks": clocks,
+140:                 "reported_limit": limit
+141:                 if isinstance(limit, int | float) and number(limit, minimum=-1) and limit >= 0
+142:                 else None,
+143:                 "limit_currency": None,
+144:             }
+145:         result["bookmakers"][name] = {
+146:             "api_state_admitted": not reasons and len(legs) == 3,
+147:             "reasons": reasons,
+148:             "bookmakerIsActive": book.get("bookmakerIsActive"),
+149:             "suspended": book.get("suspended"),
+150:             "marketActive": market.get("marketActive"),
+151:             "legs": legs,
+152:         }
+153:     result["pair_api_state_admitted"] = all(b["api_state_admitted"] for b in result["bookmakers"].values())
+154:     result["reason"] = "API_OBSERVATION_ONLY" if result["pair_api_state_admitted"] else "INACTIVE_OR_UNVERIFIED_PAIR"
+155:     return result
+### brasileirao_predictor/research/price_strength/price_hurdle.py
+8: from __future__ import annotations
+10: import math
+11: from collections import Counter, defaultdict
+12: from datetime import datetime
+13: from statistics import median
+14: from typing import Any
+16: SIDES = ("home", "draw", "away")
+17: SCENARIO_COSTS = (0.0, 0.01, 0.02, 0.03, 0.05)
+20: def _finite(value: Any, name: str) -> float:
+21:     if isinstance(value, bool) or not isinstance(value, int | float):
+22:         raise ValueError(f"invalid_number:{name}")
+23:     try:
+24:         result = float(value)
+25:     except OverflowError as exc:
+26:         raise ValueError(f"invalid_number:{name}") from exc
+27:     if not math.isfinite(result):
+28:         raise ValueError(f"invalid_number:{name}")
+29:     return result
+32: def break_even_decimal(probability: float, *, cost_per_unit: float, commission_on_profit: float = 0.0) -> float:
+39:     probability = _finite(probability, "probability")
+40:     cost = _finite(cost_per_unit, "cost_per_unit")
+41:     commission = _finite(commission_on_profit, "commission_on_profit")
+42:     if not 0 < probability <= 1 or not 0 <= cost < 1 or not 0 <= commission < 1:
+43:         raise ValueError("invalid_probability_or_friction_domain")
+44:     required = 1 + ((1 + cost) / probability - 1) / (1 - commission)
+45:     if not math.isfinite(required):
+46:         raise ValueError("nonfinite_required_price")
+47:     return required
+50: def aggregate_price_hurdle(odds: list[float], *, cost_per_unit: float = 0.02) -> dict[str, Any]:
+52:     if not isinstance(odds, list) or len(odds) != 3:
+53:         raise ValueError("incomplete_1x2_vector")
+54:     prices = [_finite(value, "odds") for value in odds]
+55:     if any(price <= 1 for price in prices):
+56:         raise ValueError("decimal_odds_must_exceed_one")
+57:     implied = [1 / price for price in prices]
+58:     overround_sum = math.fsum(implied)
+59:     probabilities = [value / overround_sum for value in implied]
+60:     required = [break_even_decimal(p, cost_per_unit=cost_per_unit) for p in probabilities]
+61:     own_gross_ev = [p * price - 1 for p, price in zip(probabilities, prices, strict=True)]
+62:     uplift = [threshold / price - 1 for threshold, price in zip(required, prices, strict=True)]
+63:     algebraic_ev = 1 / overround_sum - 1
+64:     algebraic_uplift = overround_sum * (1 + cost_per_unit) - 1
+65:     if not all(math.isclose(value, algebraic_ev, abs_tol=1e-12) for value in own_gross_ev):
+66:         raise ArithmeticError("own_price_identity_mismatch")
+67:     if not all(math.isclose(value, algebraic_uplift, abs_tol=1e-12) for value in uplift):
+68:         raise ArithmeticError("price_uplift_identity_mismatch")
+69:     return {
+70:         "overround_sum": overround_sum,
+71:         "margin_sign": "positive" if overround_sum > 1 else "zero" if overround_sum == 1 else "negative",
+72:         "reference_kind": "PROPORTIONAL_SAME_AGGREGATE_DIAGNOSTIC_ONLY",
+73:         "probabilities": dict(zip(SIDES, probabilities, strict=True)),
+74:         "aggregate_odds": dict(zip(SIDES, prices, strict=True)),
+75:         "own_price_gross_ev": algebraic_ev,
+76:         "own_price_net_ev_scenario": algebraic_ev - cost_per_unit,
+77:         "cost_per_unit_scenario": cost_per_unit,
+78:         "break_even_odds_scenario": dict(zip(SIDES, required, strict=True)),
+79:         "relative_price_uplift_to_break_even": algebraic_uplift,
+80:         "executable": False,
+81:     }
+84: def _distribution(values: list[float]) -> dict[str, float | int] | None:
+85:     if not values:
+86:         return None
+87:     ordered = sorted(values)
+89:     return {
+90:         "n": len(values),
+91:         "min": ordered[0],
+92:         "median": median(ordered),
+93:         "p90": ordered[math.ceil(0.9 * len(ordered)) - 1],
+94:         "max": ordered[-1],
+95:     }
+98: def audit_legacy_2025(rows: list[dict[str, Any]]) -> dict[str, Any]:
+107:     if not isinstance(rows, list):
+108:         raise ValueError("history_must_be_list")
+109:     allowed = {"event_id", "home", "away", "kickoff", "date", "tournament", "city", "neutral", "result", "odds"}
+110:     admitted = []
+111:     identities: set[str] = set()
+112:     for row in rows:
+113:         if not isinstance(row, dict):
+114:             raise ValueError("history_row_must_be_object")
+115:         date = row.get("date")
+116:         if not isinstance(date, str):
+117:             raise ValueError("date_required_for_universe_filter")
+118:         if not date.startswith("2025-"):
+119:             continue
+120:         if set(row) - allowed:
+121:             raise ValueError("unexpected_legacy_schema")
+122:         if row.get("tournament") != "Brasileirão Série A":
+123:             raise ValueError("tournament_outside_universe")
+124:         identity = row.get("event_id")
+125:         if isinstance(identity, bool) or not isinstance(identity, str | int) or not str(identity).strip():
+126:             raise ValueError("invalid_event_identity")
+127:         key = str(identity)
+128:         if key in identities:
+129:             raise ValueError("duplicate_event_identity")
+130:         identities.add(key)
+131:         if not isinstance(row.get("home"), str) or not isinstance(row.get("away"), str):
+132:             raise ValueError("missing_team_identity")
+133:         if not row["home"].strip() or not row["away"].strip() or row["home"] == row["away"]:
+134:             raise ValueError("conflicting_team_identity")
+135:         kickoff = datetime.fromisoformat(row["kickoff"])
+136:         if kickoff.tzinfo is None or kickoff.utcoffset() is None or kickoff.year != 2025:
+137:             raise ValueError("kickoff_incompatible_with_universe")
+138:         if kickoff.date().isoformat() != date:
+139:             raise ValueError("date_kickoff_conflict")
+140:         admitted.append(row)
+142:     events = []
+143:     price_reasons: Counter[str] = Counter()
+144:     for row in sorted(admitted, key=lambda item: (item["kickoff"], str(item["event_id"]))):
+145:         event: dict[str, Any] = {
+146:             "event_id": str(row["event_id"]),
+147:             "date": row["date"],
+148:             "kickoff_supplied": row["kickoff"],
+149:             "home": row["home"],
+150:             "away": row["away"],
+151:             "action": "ABSTAIN",
+152:             "reason": "MISSING_BOOKMAKER_AND_QUOTE_TIMELINE",
+153:             "executable": False,
+154:             "missing_evidence": [
+155:                 "bookmaker",
+156:                 "quote_observed_at",
+157:                 "quote_available_at",
+158:                 "quote_received_at",
+159:                 "quote_status",
+160:                 "raw_quote_payload",
+161:                 "independent_reference",
+162:                 "execution_capacity",
+163:             ],
+164:         }
+165:         try:
+166:             market_prices = row.get("odds")
+167:             vector = market_prices.get("1x2") if isinstance(market_prices, dict) else None
+168:             event["price_diagnostic"] = aggregate_price_hurdle(vector)  # type: ignore[arg-type]
+169:         except ValueError as exc:
+170:             event["price_diagnostic"] = None
+171:             event["price_rejection"] = str(exc)
+172:             price_reasons[str(exc)] += 1
+173:         events.append(event)
+175:     valid = [event for event in events if event["price_diagnostic"] is not None]
+176:     monthly: dict[str, list[float]] = defaultdict(list)
+177:     for event in valid:
+178:         monthly[event["date"][:7]].append(event["price_diagnostic"]["relative_price_uplift_to_break_even"])
+179:     sums = [event["price_diagnostic"]["overround_sum"] for event in valid]
+180:     return {
+181:         "schema_version": "price-hurdle-audit/1",
+182:         "status": "BLOCKED_MISSING_PRICE_PROVENANCE",
+183:         "evaluation_year": 2025,
+184:         "market": "1x2",
+185:         "labels_accessed": False,
+186:         "profitability_established": False,
+187:         "execution_proven": False,
+188:         "real_capital_enabled": False,
+189:         "summary": {
+190:             "universe_matches": len(events),
+191:             "numeric_complete_vectors": len(valid),
+192:             "matches_without_numeric_price": len(events) - len(valid),
+193:             "executable_price_pairs": 0,
+194:             "opportunities": None,
+195:             "opportunities_reason": "NOT_MEASURABLE_WITHOUT_ADMISSIBLE_PRICE_PAIRS",
+196:             "abstentions": len(events),
+197:             "bets": 0,
+198:             "stake_units": 0.0,
+199:             "price_rejections": dict(price_reasons),
+200:             "margin_sign_counts": dict(Counter(event["price_diagnostic"]["margin_sign"] for event in valid)),
+201:             "overround_sum": _distribution(sums),
+202:             "own_price_gross_ev": _distribution([1 / value - 1 for value in sums]),
+203:             "relative_price_uplift_scenarios": {
+204:                 str(cost): _distribution([value * (1 + cost) - 1 for value in sums]) for cost in SCENARIO_COSTS
+205:             },
+206:             "monthly_relative_uplift_at_2pct_cost": {month: _distribution(v) for month, v in sorted(monthly.items())},
+207:             "actual_execution_costs": None,
+208:             "fixed_operating_costs": None,
+209:         },
+210:         "abstention_portfolio": {
+211:             "initial_bankroll_scenario_units": 100.0,
+212:             "final_bankroll_before_unknown_fixed_costs_units": 100.0,
+213:             "contributions": 0.0,
+214:             "stakes": 0.0,
+215:             "liability": 0.0,
+216:             "locked_capital": 0.0,
+217:             "returned_principal": 0.0,
+218:             "winning_profit": 0.0,
+219:             "variable_execution_costs": 0.0,
+220:             "net_betting_result": 0.0,
+221:             "roi_on_stakes": None,
+222:             "return_on_bankroll_before_fixed_costs": 0.0,
+223:             "simultaneous_exposure": 0.0,
+224:             "total_business_net_result": None,
+225:         },
+226:         "events": events,
+227:     }

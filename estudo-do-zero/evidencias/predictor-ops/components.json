@@ -1,0 +1,122 @@
+[
+  {
+    "id": "CLI",
+    "path": "src/predictor_ops/cli.py",
+    "symbol": "main",
+    "role": "validate, provenance e run; JSON de erro sanitizado e sinais de shutdown.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "b606006c1ad264d1a14ec94941887a462859a8d32f390db2421911aab625b7da",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "configuração",
+    "path": "src/predictor_ops/config.py",
+    "symbol": "HttpJobConfigSource",
+    "role": "JSON local ou HTTPS por interface de biblioteca; CLI seleciona arquivo.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "8b1ff67f8f477221836390bd99fc8f2e42824ad225b8fa6f23982916b4b758d9",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "modelos",
+    "path": "src/predictor_ops/models.py",
+    "symbol": "JobConfig",
+    "role": "Pydantic; schemas jobs1/2/3, chave econômica e limites/snapshot.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "f9d3c0c318111df8b80ca0a16508962f2eb0ad55b5c28725bae2f3d0b162141b",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "runner",
+    "path": "src/predictor_ops/runner.py",
+    "symbol": "run_job",
+    "role": "Trava, idempotência econômica, risco, subprocesso, captura limitada, heartbeat e persistência final.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "6dfeed54229ef41368e19fe30833e54b33197b2184b6aed280b43093bc48325f",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "processos",
+    "path": "src/predictor_ops/processes.py",
+    "symbol": "WindowsJob",
+    "role": "Windows JobObject/suspensão inicial; POSIX grupo de processos; limpeza/timeout.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "4264004e4eca665d6df491ab6038453725ca3f042de0fe58f739cc6c0d59f00f",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "runtime",
+    "path": "src/predictor_ops/runtime.py",
+    "symbol": "LocalBackend",
+    "role": "O_EXCL com guard de SO e posse run_id; JSON atômico/fsync e JSONL com trava.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "16a58ca233c7aac997cf981823bf26898814b85f782abf4c6c705da7e78441fa",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "proveniência",
+    "path": "src/predictor_ops/provenance.py",
+    "symbol": "collect_provenance",
+    "role": "Git limpo ou wheel RECORD sha256; strict rejeita identidade não verificada.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "168d0e07ea946eb5a6cc132f0051e9b3e1d42a68adccd5fc7fdc3ea35f5feca3",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "redação",
+    "path": "src/predictor_ops/redaction.py",
+    "symbol": "redact_text",
+    "role": "Sanitização de chaves/flags/headers/valores; colhe valores sensíveis longos.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "a81ea44822af1d2a4182333b704370a2a74505994b854cfb3b32a4583eaa0ba0",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "risco",
+    "path": "src/predictor_ops/operations.py",
+    "symbol": "retry_action",
+    "role": "Kill switch fail-closed e conselho de retry/reconciliação; não automatiza ordens.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "792299a91987c8614717291dfcaf63a445226efda3a99edccf03a70a10a5458d",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "health Windows",
+    "path": "src/predictor_ops/windows.py",
+    "symbol": "inspect_scheduled_task",
+    "role": "Consulta PowerShell do agendador; não registra tarefas.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "857dbf2bb6f60ba700aa87d91ffebdeb2f49e58ddcb13eab7a57c621aeaf9e7f",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "health",
+    "path": "src/predictor_ops/health.py",
+    "symbol": "assess",
+    "role": "Combina heartbeat terminal/frescura e status agendador opcional.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "aad569e06ee1a4467e65ccc42403ffaf08656e53ff346bda6302a97ec9b1990b",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  },
+  {
+    "id": "observabilidade",
+    "path": "src/predictor_ops/observability.py",
+    "symbol": "configure_otel",
+    "role": "JSON logging; OTEL opcional configurado por chamador.",
+    "evidence": "OD/ET-SRC",
+    "scope": "fonte local",
+    "sha256": "eea032441420d3583d291f90ad7d7a8fc6f649d983267636fce45d200febce44",
+    "limit": "Execução/uso atual apenas quando ET-RUN explícito."
+  }
+]

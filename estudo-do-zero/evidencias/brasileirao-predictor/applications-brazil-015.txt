@@ -1,0 +1,451 @@
+### brasileirao_predictor/kernel_daemon.py
+21: import asyncio
+22: import json
+23: import logging
+24: import math
+25: import os
+26: import signal
+27: import time
+28: from numbers import Integral, Real
+29: from uuid import uuid4
+31: import numpy as np
+33: from brasileirao_predictor import db as _db
+34: from brasileirao_predictor import kernel_redis_v2 as protocol
+35: from brasileirao_predictor.kernel_message import parse_invoke as _parse_invoke
+37: log = logging.getLogger("kernel_daemon")
+38: logging.basicConfig(
+39:     level=logging.INFO,
+40:     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+41: )
+47: try:
+48:     from numba import njit
+50:     @njit(cache=True)
+51:     def _compute_grid_numba(lam_a: float, lam_b: float, alpha: float, rho: float, max_goals: int) -> np.ndarray:
+54:         G = max_goals + 1
+55:         r = 1.0 / alpha if alpha > 1e-9 else 1e9
+57:         p_a = r / (r + lam_a)
+58:         p_b = r / (r + lam_b)
+60:         pa = np.empty(G)
+61:         pb = np.empty(G)
+62:         log_pa = math.log(p_a)
+63:         log_1mpa = math.log(1.0 - p_a)
+64:         log_pb = math.log(p_b)
+65:         log_1mpb = math.log(1.0 - p_b)
+66:         lgamma_r = math.lgamma(r)
+68:         for k in range(G):
+69:             lk = float(k)
+70:             lgk1 = math.lgamma(lk + 1.0)
+71:             pa[k] = math.exp(math.lgamma(lk + r) - lgamma_r - lgk1 + r * log_pa + lk * log_1mpa)
+72:             pb[k] = math.exp(math.lgamma(lk + r) - lgamma_r - lgk1 + r * log_pb + lk * log_1mpb)
+74:         grid = np.empty((G, G))
+75:         for i in range(G):
+76:             for j in range(G):
+77:                 grid[i, j] = pa[i] * pb[j]
+80:         v00 = 1.0 - lam_a * lam_b * rho
+81:         v01 = 1.0 + lam_a * rho
+82:         v10 = 1.0 + lam_b * rho
+83:         v11 = 1.0 - rho
+84:         grid[0, 0] *= v00 if v00 > 0.0 else 0.0
+85:         grid[0, 1] *= v01 if v01 > 0.0 else 0.0
+86:         grid[1, 0] *= v10 if v10 > 0.0 else 0.0
+87:         grid[1, 1] *= v11 if v11 > 0.0 else 0.0
+89:         total = 0.0
+90:         for i in range(G):
+91:             for j in range(G):
+92:                 if grid[i, j] < 0.0:
+93:                     grid[i, j] = 0.0
+94:                 total += grid[i, j]
+95:         if total > 0.0:
+96:             for i in range(G):
+97:                 for j in range(G):
+98:                     grid[i, j] /= total
+100:         return grid
+102:     _compute_grid_jit = _compute_grid_numba
+103:     _NUMBA_AVAILABLE = True
+104:     log.info("[kernel] Numba disponível — grade será compilada JIT no boot.")
+106: except ImportError:
+107:     _NUMBA_AVAILABLE = False
+108:     log.warning("[kernel] Numba NÃO disponível — usando NumPy puro (fallback adequado).")
+110:     def _compute_grid_fallback(lam_a, lam_b, alpha, rho, max_goals):
+112:         from scipy.stats import nbinom
+114:         G = max_goals + 1
+115:         k = np.arange(G)
+116:         r = 1.0 / max(alpha, 1e-9)
+117:         pa = nbinom.pmf(k, r, r / (r + lam_a))
+118:         pb = nbinom.pmf(k, r, r / (r + lam_b))
+119:         grid = np.outer(pa, pb)
+120:         grid[0, 0] *= max(0.0, 1.0 - lam_a * lam_b * rho)
+121:         grid[0, 1] *= max(0.0, 1.0 + lam_a * rho)
+122:         grid[1, 0] *= max(0.0, 1.0 + lam_b * rho)
+123:         grid[1, 1] *= max(0.0, 1.0 - rho)
+124:         grid = np.clip(grid, 0.0, None)
+125:         s = grid.sum()
+126:         return grid / s if s > 0 else grid
+128:     _compute_grid_jit = _compute_grid_fallback
+131: def _fair_odds_from_grid(grid: np.ndarray) -> dict:
+133:     G = grid.shape[0]
+134:     k = np.arange(G)
+135:     totals = k[:, None] + k[None, :]
+137:     p_home = float(np.tril(grid, -1).sum())
+138:     p_draw = float(np.trace(grid))
+139:     p_away = float(np.triu(grid, 1).sum())
+140:     p_over = float(grid[totals > 2.5].sum())
+141:     p_under = 1.0 - p_over
+143:     def safe_odd(p):
+144:         return round(1.0 / p, 4) if p > 1e-6 else None
+146:     return {
+147:         "1": safe_odd(p_home),
+148:         "X": safe_odd(p_draw),
+149:         "2": safe_odd(p_away),
+150:         "o25": safe_odd(p_over),
+151:         "u25": safe_odd(p_under),
+152:     }
+160: def _validate_params(params: tuple) -> tuple[float, float, float, float, float, int]:
+167:     if len(params) != 6:
+168:         raise ValueError("six kernel parameters are required")
+169:     values = params[:5]
+170:     try:
+171:         if any(isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value) for value in values):
+172:             raise ValueError("kernel coefficients must be finite real numbers")
+173:         a, b, alpha, rho, theta = map(float, values)
+174:     except (OverflowError, TypeError) as exc:
+175:         raise ValueError("kernel coefficients must be finite real numbers") from exc
+176:     maximum = params[5]
+177:     if alpha < 0 or isinstance(maximum, bool) or not isinstance(maximum, Integral):
+178:         raise ValueError("kernel requires nonnegative dispersion and integer max_goals in [1,100]")
+179:     maximum = int(maximum)
+180:     if not 1 <= maximum <= 100:
+181:         raise ValueError("kernel requires nonnegative dispersion and integer max_goals in [1,100]")
+182:     try:
+183:         rate = math.exp(a)
+184:     except OverflowError as exc:
+185:         raise ValueError("kernel baseline rate is not representable") from exc
+186:     if not math.isfinite(rate) or rate <= 0:
+187:         raise ValueError("kernel baseline rate must be finite and positive")
+188:     return a, b, alpha, rho, theta, int(maximum)
+191: def _warmup_jit(params: tuple) -> float:
+193:     a, b, alpha, rho, theta, max_goals = _validate_params(params)
+194:     lam_a, lam_b = math.exp(a), math.exp(a)
+195:     t0 = time.perf_counter()
+196:     _compute_grid_jit(lam_a, lam_b, alpha, abs(rho), max_goals)
+198:     _compute_grid_jit(lam_a, lam_b, alpha, abs(rho), max_goals)
+199:     elapsed = (time.perf_counter() - t0) * 1000
+200:     log.info("[kernel] JIT warm-up concluído em %.2f ms (2 invocações)", elapsed)
+201:     return elapsed
+209: def _load_params(db_path: str) -> tuple:
+211:     conn = _db.connect(db_path, read_only=True)
+212:     try:
+213:         prow = _db.load_params(conn)
+214:         if prow and len(prow) >= 7:
+215:             from .cron_update_models import cache_is_current
+216:             from .ingest import load_config
+218:             if not cache_is_current(load_config(), conn, prow):
+219:                 raise RuntimeError("cache desatualizado — rode cron_update_models primeiro")
+220:     finally:
+221:         conn.close()
+222:     if not prow:
+223:         raise RuntimeError("cache vazio — rode cron_update_models primeiro")
+224:     theta = float(os.environ.get("KERNEL_VORP_THETA", "0.0"))
+225:     max_goals = int(os.environ.get("KERNEL_MAX_GOALS", "12"))
+226:     log.info(
+227:         "[kernel] params carregados: a=%.4f b=%.4f alpha=%.4f rho=%.4f theta=%.4f",
+228:         prow[0],
+229:         prow[1],
+230:         prow[2],
+231:         prow[3],
+232:         theta,
+233:     )
+234:     return _validate_params((float(prow[0]), float(prow[1]), float(prow[2]), float(prow[3]), theta, max_goals))
+242: def _status(result) -> str:
+243:     return result.decode("ascii") if isinstance(result, bytes) else str(result)
+246: async def _release_attempt(client, keys: tuple[str, ...], raw: bytes, run_id: str, token: str) -> None:
+247:     try:
+248:         await asyncio.wait_for(
+249:             client.eval(protocol.RELEASE_SCRIPT, len(keys), *keys, raw, run_id, token, protocol.RETRY_MS),
+250:             timeout=2,
+251:         )
+252:     except Exception as exc:
+255:         log.warning("[kernel] liberação não confirmada run=%s erro=%s", run_id, type(exc).__name__)
+258: async def _handle_invoke(client, payload_bytes: bytes, params: tuple) -> None:
+260:     t_recv = time.perf_counter()
+261:     try:
+262:         msg = _parse_invoke(payload_bytes)
+263:     except (ValueError, TypeError, OverflowError):
+264:         log.error("[kernel] payload inválido para redis-protocol-v2")
+265:         return
+267:     match_id = msg["match_id"]
+268:     job_id = msg["job_id"]
+269:     run_id = msg["run_id"]
+270:     a, b, alpha, rho, theta, max_goals = params
+273:     try:
+274:         diff = (msg["elo_a"] - msg["elo_b"]) / 400.0
+275:         lam_a = math.exp(a + b * diff + theta * msg["dvorp_a"])
+276:         lam_b = math.exp(a - b * diff + theta * msg["dvorp_b"])
+277:     except (OverflowError, ValueError):
+278:         log.error("[kernel] taxas de gols não representáveis")
+279:         return
+280:     if not all(math.isfinite(rate) and rate > 0 for rate in (lam_a, lam_b)):
+281:         log.error("[kernel] taxas de gols não positivas ou não finitas")
+282:         return
+284:     keys = (
+285:         protocol.CURRENT_PREFIX + match_id,
+286:         protocol.REQUEST_PREFIX + run_id,
+287:         protocol.LEASE_PREFIX + run_id,
+288:         protocol.PENDING_KEY,
+289:         f"lineup_state:{match_id}",
+290:     )
+291:     token = uuid4().hex
+292:     try:
+293:         claimed = await client.eval(
+294:             protocol.CLAIM_SCRIPT, len(keys), *keys, payload_bytes, run_id, token, protocol.LEASE_MS
+295:         )
+296:         if _status(claimed) != "CLAIMED":
+297:             log.info("[kernel] tentativa não adquirida run=%s status=%s", run_id, _status(claimed))
+298:             return
+300:         grid = _compute_grid_jit(lam_a, lam_b, alpha, rho, max_goals)
+301:         fair = _fair_odds_from_grid(grid)
+302:         fair.update(
+303:             {
+304:                 "protocol_version": protocol.PROTOCOL_VERSION,
+305:                 "job_id": job_id,
+306:                 "run_id": run_id,
+307:                 "match_id": match_id,
+308:                 "idempotency_key": msg["idempotency_key"],
+309:                 "state_version": msg["state_version"],
+310:             }
+311:         )
+312:         t_compute = time.perf_counter()
+313:         payload = json.dumps(fair, allow_nan=False)
+314:         completed = await client.eval(
+315:             protocol.COMPLETE_SCRIPT,
+316:             7,
+317:             *keys[:3],
+318:             f"fair_odds:{match_id}",
+319:             protocol.PENDING_KEY,
+320:             keys[4],
+321:             protocol.READY_KEY,
+322:             payload_bytes,
+323:             run_id,
+324:             token,
+325:             payload,
+326:             protocol.FAIR_MS,
+327:             f"fair_odds_ready:{match_id}",
+328:         )
+329:         if _status(completed) != "COMPLETED":
+330:             log.info("[kernel] conclusão recusada run=%s status=%s", run_id, _status(completed))
+331:             await _release_attempt(client, keys, payload_bytes, run_id, token)
+332:             return
+333:     except asyncio.CancelledError:
+334:         await _release_attempt(client, keys, payload_bytes, run_id, token)
+335:         raise
+336:     except Exception as exc:
+339:         await _release_attempt(client, keys, payload_bytes, run_id, token)
+340:         log.error("[kernel] tentativa falhou run=%s erro=%s", run_id, type(exc).__name__)
+341:         return
+343:     t_write = time.perf_counter()
+345:     elapsed_ms = (t_write - t_recv) * 1000
+346:     log.info(
+347:         "[kernel] %s -> lambda=(%.3f,%.3f) compute=%.2fms write=%.2fms total=%.2fms odds=%s",
+348:         match_id,
+349:         lam_a,
+350:         lam_b,
+351:         (t_compute - t_recv) * 1000,
+352:         (t_write - t_compute) * 1000,
+353:         elapsed_ms,
+354:         payload,
+355:     )
+357:     if elapsed_ms > 15:
+358:         log.warning("[kernel] LATÊNCIA ACIMA DE 15ms: %.2fms — investigar JIT ou GC.", elapsed_ms)
+361: async def _poll_pending(client, params: tuple, stop: asyncio.Event, heartbeat_payload: str | None = None) -> None:
+363:     while not stop.is_set():
+364:         payloads = await client.eval(
+365:             protocol.POLL_SCRIPT,
+366:             1,
+367:             protocol.PENDING_KEY,
+368:             protocol.POLL_LIMIT,
+369:             protocol.REQUEST_PREFIX,
+370:             protocol.CURRENT_PREFIX,
+371:             protocol.LEASE_PREFIX,
+372:         )
+373:         await asyncio.gather(*(_handle_invoke(client, raw, params) for raw in payloads))
+374:         if heartbeat_payload is not None:
+375:             await client.eval(
+376:                 protocol.HEARTBEAT_SCRIPT,
+377:                 1,
+378:                 protocol.HEALTH_KEY,
+379:                 heartbeat_payload,
+380:                 protocol.HEALTH_MS,
+381:                 "renew",
+382:             )
+383:         try:
+384:             await asyncio.wait_for(stop.wait(), timeout=protocol.POLL_SECONDS)
+385:         except TimeoutError:
+386:             pass
+394: def _install_stop_signals(loop, stop: asyncio.Event):
+396:     originals = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+397:     installed = []
+398:     try:
+399:         for sig in originals:
+400:             try:
+401:                 loop.add_signal_handler(sig, stop.set)
+402:                 installed.append(sig)
+403:             except NotImplementedError:
+406:                 signal.signal(sig, lambda *_: loop.call_soon_threadsafe(stop.set))
+407:     except BaseException:
+408:         for sig in installed:
+409:             loop.remove_signal_handler(sig)
+410:         for sig, previous in originals.items():
+411:             signal.signal(sig, previous)
+412:         raise
+414:     def restore() -> None:
+415:         for sig in installed:
+416:             loop.remove_signal_handler(sig)
+417:         for sig, previous in originals.items():
+418:             signal.signal(sig, previous)
+420:     return restore
+423: async def _run_daemon(db_path: str, redis_url: str) -> None:
+425:     params = _load_params(db_path)
+428:     loop = asyncio.get_event_loop()
+429:     await loop.run_in_executor(None, _warmup_jit, params)
+432:     stop = asyncio.Event()
+433:     restore_signals = _install_stop_signals(loop, stop)
+434:     try:
+435:         await _serve_sessions(params, redis_url, stop)
+436:     finally:
+437:         restore_signals()
+440: async def _serve_sessions(params: tuple, redis_url: str, stop: asyncio.Event) -> None:
+441:     params = _validate_params(params)
+442:     import redis.asyncio as aioredis
+443:     from redis.exceptions import RedisError
+445:     reconnect_delay = 1.0
+446:     first_session = True
+448:     while first_session or not stop.is_set():
+449:         first_session = False
+450:         client = aioredis.from_url(redis_url, decode_responses=False, socket_timeout=5, socket_connect_timeout=5)
+451:         pubsub = client.pubsub()
+452:         heartbeat_payload = json.dumps({"protocol_version": protocol.PROTOCOL_VERSION, "session_id": uuid4().hex})
+453:         invocations: set[asyncio.Task[None]] = set()
+454:         session_tasks: list[asyncio.Task] = []
+456:         def invocation_done(task: asyncio.Task) -> None:
+457:             invocations.discard(task)
+458:             if not task.cancelled() and (failure := task.exception()) is not None:
+459:                 log.error("[kernel] handler encerrado com erro=%s", type(failure).__name__)
+461:         try:
+462:             await pubsub.subscribe(protocol.INVOKE_CHANNEL)
+463:             await client.eval(
+464:                 protocol.HEARTBEAT_SCRIPT,
+465:                 1,
+466:                 protocol.HEALTH_KEY,
+467:                 heartbeat_payload,
+468:                 protocol.HEALTH_MS,
+469:                 "start",
+470:             )
+471:             reconnect_delay = 1.0
+472:             log.info("[kernel] DAEMON PRONTO. Protocolo %s", protocol.PROTOCOL_VERSION)
+474:             async def listen() -> None:
+475:                 deferred = 0
+476:                 async for message in pubsub.listen():
+477:                     if message["type"] != "message":
+478:                         continue
+479:                     if len(invocations) >= protocol.POLL_LIMIT:
+484:                         deferred += 1
+485:                         if deferred == 1:
+486:                             log.warning("[kernel] limite de notificações concorrentes; recuperação durável ativa")
+487:                         continue
+488:                     task = asyncio.create_task(_handle_invoke(client, message["data"], params))
+489:                     invocations.add(task)
+490:                     task.add_done_callback(invocation_done)
+492:             listener = asyncio.create_task(listen())
+493:             recovery = asyncio.create_task(_poll_pending(client, params, stop, heartbeat_payload))
+494:             shutdown = asyncio.create_task(stop.wait())
+495:             session_tasks = [listener, recovery, shutdown]
+496:             done, _ = await asyncio.wait(session_tasks, return_when=asyncio.FIRST_COMPLETED)
+497:             for task in done:
+498:                 await task
+499:         except (RedisError, OSError) as exc:
+500:             if not stop.is_set():
+501:                 log.warning(
+502:                     "[kernel] Redis indisponível; reconectando em %.1fs: %s",
+503:                     reconnect_delay,
+504:                     exc,
+505:                 )
+506:                 try:
+507:                     await asyncio.wait_for(stop.wait(), timeout=reconnect_delay)
+508:                 except TimeoutError:
+509:                     reconnect_delay = min(reconnect_delay * 2, 30.0)
+510:         finally:
+513:             for task in session_tasks:
+514:                 if not task.done():
+515:                     task.cancel()
+516:             await asyncio.gather(*session_tasks, return_exceptions=True)
+517:             unfinished = tuple(invocations)
+518:             for task in unfinished:
+519:                 task.cancel()
+520:             await asyncio.gather(*unfinished, return_exceptions=True)
+521:             try:
+522:                 await pubsub.unsubscribe(protocol.INVOKE_CHANNEL)
+523:                 await client.eval(
+524:                     protocol.HEARTBEAT_SCRIPT,
+525:                     1,
+526:                     protocol.HEALTH_KEY,
+527:                     heartbeat_payload,
+528:                     protocol.HEALTH_MS,
+529:                     "release",
+530:                 )
+531:             except (RedisError, OSError):
+532:                 pass
+533:             await pubsub.aclose()
+534:             await client.aclose()
+536:     log.info("[kernel] daemon encerrado com sucesso.")
+539: def main():
+542:     from brasileirao_predictor.kernel_cli import main as cli_main
+544:     return cli_main()
+547: if __name__ == "__main__":
+548:     raise SystemExit(main())
+### brasileirao_predictor/kernel_message.py
+6: import json
+7: import math
+9: from brasileirao_predictor import kernel_redis_v2 as protocol
+12: def _unique_object(pairs):
+13:     result = {}
+14:     for key, value in pairs:
+15:         if key in result:
+16:             raise ValueError("duplicate JSON field in invocation")
+17:         result[key] = value
+18:     return result
+21: _INVOKE_ID_FIELDS = ("job_id", "run_id", "match_id", "idempotency_key")
+22: _INVOKE_NUMBER_FIELDS = ("elo_a", "elo_b", "dvorp_a", "dvorp_b")
+23: _INVOKE_FIELDS = frozenset(
+24:     (*_INVOKE_ID_FIELDS, *_INVOKE_NUMBER_FIELDS, "protocol_version", "timestamp_t3", "state_version")
+25: )
+28: def parse_invoke(payload_bytes: bytes) -> dict:
+30:     msg = json.loads(payload_bytes, object_pairs_hook=_unique_object)
+31:     if not isinstance(msg, dict) or msg.keys() != _INVOKE_FIELDS:
+32:         raise ValueError("campos fora do contrato")
+33:     if msg["protocol_version"] != protocol.PROTOCOL_VERSION:
+34:         raise ValueError("protocol_version incompatível")
+35:     for field in _INVOKE_ID_FIELDS:
+36:         if not isinstance(msg[field], str) or not msg[field]:
+37:             raise ValueError("identifiers obrigatórios inválidos")
+38:     for field in _INVOKE_NUMBER_FIELDS:
+39:         value = msg[field]
+40:         if type(value) not in (int, float):
+41:             raise ValueError("entrada numérica inválida")
+42:         value = float(value)
+43:         if not math.isfinite(value):
+44:             raise ValueError("entrada numérica não finita")
+45:         msg[field] = value
+46:     timestamp = msg["timestamp_t3"]
+48:     if not (type(timestamp) is int or (type(timestamp) is float and timestamp.is_integer())) or timestamp < 0:
+49:         raise ValueError("timestamp_t3 inválido")
+50:     version = msg["state_version"]
+51:     if (
+52:         not isinstance(version, str)
+53:         or not version.isascii()
+54:         or not version.isdecimal()
+55:         or version.startswith("0")
+56:         or len(version) > 19
+57:         or int(version) > 9223372036854775807
+58:     ):
+59:         raise ValueError("state_version inválida")
+60:     return msg

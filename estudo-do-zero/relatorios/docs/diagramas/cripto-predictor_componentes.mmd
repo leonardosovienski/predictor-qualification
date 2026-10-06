@@ -1,0 +1,20 @@
+flowchart TD
+ CLI[main.py CLI analyze ingest] --> ING[ingestion.run_ingest]
+ CLI --> AN[analyzers.ai_insights]
+ ING --> COL[v3.collectors binance_vision funding_collector]
+ COL --> FS[(dpl.FeatureStore SQLite)]
+ FS --> AN
+ AN --> LLM[Notícias e juiz LLM via api_guard]
+ AN --> HIST[core.history e output.reporter]
+ HIST --> EXP[export e relatório]
+ RUN[research_runner entrypoint por arquivo] --> ADM[research_admission allowlist]
+ ADM --> EXEC[research_execution Circuit]
+ EXEC --> OPS[predictor-ops lock timeout heartbeat]
+ EXEC --> CORE[predictor-core TrialRegistryV2 replay]
+ EXEC --> V3[v3.backtest_v3 cost_spec]
+ EXEC --> RES[research_results authoritative_result_source]
+ RES --> REC[research_recovery reread após restart]
+ ADP[adapters.research_v2 época main] -. adapter_api .-> RUN
+ CT[research_contract tipos refs estados] --> ADM
+ CT --> RES
+ SS[(charters/scientific_state.json protegido)] -.-> EXEC

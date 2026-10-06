@@ -1,0 +1,418 @@
+### tests/test_elo_baseline.py
+3: from datetime import UTC, datetime, timedelta
+5: import pytest
+6: from predictor_core.contracts.points import PredictionPoint
+8: from brasileirao_predictor.elo_baseline import EloBaselineEvaluator
+11: def _obs(n: int = 40) -> list:
+13:     t0 = datetime(2026, 4, 1, tzinfo=UTC)
+14:     teams = [("forte", "fraco"), ("fraco", "forte"), ("forte", "medio"), ("medio", "fraco")]
+15:     obs = []
+16:     for i in range(n):
+17:         home, away = teams[i % len(teams)]
+18:         hg, ag = (2, 0) if home == "forte" else ((0, 2) if away == "forte" else (1, 1))
+19:         obs.append(
+20:             {
+21:                 "home": home,
+22:                 "away": away,
+23:                 "kickoff": t0 + timedelta(days=3 * i),
+24:                 "result": {"home_goals": hg, "away_goals": ag},
+25:             }
+26:         )
+27:     return obs
+30: def test_predictions_are_proper_distributions():
+31:     ev = EloBaselineEvaluator()
+32:     results = ev.run(_obs(), min_history=12)
+33:     assert results
+34:     for r in results:
+35:         pp = r["prediction"]
+36:         assert isinstance(pp, PredictionPoint)
+37:         assert sum(pp.value.values()) == pytest.approx(1.0)
+38:         assert all(0.0 <= v <= 1.0 for v in pp.value.values())
+41: def test_strong_team_is_favored():
+42:     ev = EloBaselineEvaluator()
+43:     results = ev.run(_obs(), min_history=20)
+44:     for r in results:
+45:         md = r["prediction"].metadata
+46:         v = r["prediction"].value
+47:         if md["home"] == "forte":
+48:             assert v["home"] > v["away"]
+49:         elif md["away"] == "forte":
+50:             assert v["away"] > v["home"]
+53: def test_deterministic_across_runs():
+54:     r1 = EloBaselineEvaluator().run(_obs(), min_history=12)
+55:     r2 = EloBaselineEvaluator().run(_obs(), min_history=12)
+56:     assert [r["prediction"].value for r in r1] == [r["prediction"].value for r in r2]
+59: def test_draw_rate_comes_from_training_history():
+60:     ev = EloBaselineEvaluator()
+61:     ev.run(_obs(), min_history=12)
+62:     assert 0.0 < ev.draw_rate < 1.0  # há empates (medio x fraco) no sintético
+### tests/test_elo_baseline_block_guard.py
+10: from __future__ import annotations
+12: from datetime import UTC, datetime, timedelta
+14: import pytest
+16: from brasileirao_predictor.elo_baseline import EloBaselineEvaluator
+18: TEAMS = ["flamengo", "palmeiras", "gremio", "santos"]
+21: def _blocks(n_blocks: int, *, simultaneous: bool) -> list[dict]:
+22:     t0 = datetime(2021, 4, 3, 16, 0, tzinfo=UTC)
+23:     obs = []
+24:     for b in range(n_blocks):
+25:         start = t0 + timedelta(days=7 * b)
+26:         pairs = [(TEAMS[0], TEAMS[1]), (TEAMS[2], TEAMS[3])]
+27:         if b % 2:
+28:             pairs = [(a, h) for h, a in pairs]
+29:         for j, (home, away) in enumerate(pairs):
+30:             obs.append(
+31:                 {
+32:                     "home": home,
+33:                     "away": away,
+34:                     "kickoff": start if simultaneous else start + timedelta(hours=2 * j),
+35:                     "result": {"home_goals": (b + j) % 3, "away_goals": (b + 2 * j) % 3},
+36:                 }
+37:             )
+38:     return obs
+41: def test_predicted_at_e_estritamente_anterior_ao_matures_at() -> None:
+42:     results = EloBaselineEvaluator().run(_blocks(40, simultaneous=True), min_history=10)
+43:     assert results
+44:     for r in results:
+45:         assert r["prediction"].predicted_at < r["prediction"].matures_at
+48: def test_bloco_simultaneo_e_descartado_do_treino() -> None:
+49:     ev = EloBaselineEvaluator()
+50:     ev.run(_blocks(40, simultaneous=True), min_history=10)
+51:     assert ev.blocked_observations > 0
+54: def test_kickoffs_distintos_nao_descartam_nada() -> None:
+55:     ev = EloBaselineEvaluator()
+56:     ev.run(_blocks(40, simultaneous=False), min_history=10)
+57:     assert ev.blocked_observations == 0
+60: def test_taxa_de_empate_sai_do_historico_truncado() -> None:
+64:     ev = EloBaselineEvaluator()
+65:     ev.run(_blocks(40, simultaneous=True), min_history=10)
+66:     assert 0.0 <= ev.draw_rate <= 1.0
+69: def test_primeiro_ajuste_sem_historico_utilizavel_falha_alto() -> None:
+72:     t0 = datetime(2021, 4, 3, 16, 0, tzinfo=UTC)
+73:     obs = [
+74:         {
+75:             "home": TEAMS[i % 2],
+76:             "away": TEAMS[(i % 2) + 2],
+77:             "kickoff": t0,
+78:             "result": {"home_goals": 1, "away_goals": 0},
+79:         }
+80:         for i in range(20)
+81:     ]
+82:     with pytest.raises(ValueError, match="insuficiente"):
+83:         EloBaselineEvaluator().run(obs, min_history=10)
+86: def test_probabilidades_somam_um() -> None:
+87:     results = EloBaselineEvaluator().run(_blocks(40, simultaneous=False), min_history=10)
+88:     for r in results:
+89:         v = r["prediction"].value
+90:         assert sum(v.values()) == pytest.approx(1.0)
+### tests/test_emit_h9_shadow.py
+4: import json
+5: from datetime import UTC, datetime, timedelta
+6: from pathlib import Path
+8: import pytest
+10: from brasileirao_predictor import db, model
+11: from brasileirao_scripts import emit_h9_shadow as job
+13: KICKOFF = datetime(2027, 3, 1, 19, 0, tzinfo=UTC)
+14: ELO_HOME, ELO_AWAY, HOME_ADV = 1550, 1450, 100.0
+15: PARAMS = (0.2, 0.7, 1e-4, 0.0)
+18: def _p_over(params=PARAMS) -> float:
+19:     return model.predict_match(ELO_HOME, ELO_AWAY, params, HOME_ADV, max_goals=12)["over"][2.5]
+22: def _odd_for_edge(p_over: float, edge: float = 0.05) -> float:
+23:     return round(1.0 / (p_over - edge), 4)
+26: def _trials_json(path: Path, *, a=0.2, b=0.7, alpha=1e-4, rho=0.0, max_goals=12) -> None:
+27:     path.write_text(
+28:         json.dumps(
+29:             [
+30:                 {
+31:                     "name": job.TRIAL,
+32:                     "params": {"model": {"a": a, "b": b, "alpha": alpha, "rho": rho, "max_goals": max_goals}},
+33:                 }
+34:             ]
+35:         ),
+36:         encoding="utf-8",
+37:     )
+40: def _quote(source_event_id="odds-1", bookmaker="williamhill", selection="over", odds=1.90, captured=None) -> dict:
+41:     captured = captured or (KICKOFF - timedelta(minutes=60))
+42:     return {
+43:         "source_event_id": source_event_id,
+44:         "bookmaker": bookmaker,
+45:         "market": "ou2.5",
+46:         "selection": selection,
+47:         "decimal_odds": odds,
+48:         "odds_captured_at": captured.isoformat(timespec="seconds"),
+49:         "retrieved_at": captured.isoformat(timespec="seconds"),
+50:         "home_team": "Casa",
+51:         "away_team": "Fora",
+52:         "kickoff_at": KICKOFF.isoformat(timespec="seconds"),
+53:     }
+56: @pytest.fixture
+57: def ambiente(tmp_path, monkeypatch):
+58:     dbpath = tmp_path / "t.db"
+59:     conn = db.connect(str(dbpath))
+60:     db.save_elo(conn, [("Casa", ELO_HOME), ("Fora", ELO_AWAY)])
+61:     db.save_params(
+62:         conn,
+63:         *PARAMS,
+64:         0,
+65:         "test-config",
+66:         (KICKOFF - timedelta(hours=7)).isoformat(timespec="seconds"),
+67:     )
+68:     conn.execute(
+69:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+70:         "VALUES (1, 'T', '2027', ?, 'Casa', 'Fora', ?)",
+71:         (KICKOFF.date().isoformat(), KICKOFF.isoformat(timespec="seconds")),
+72:     )
+73:     conn.commit()
+74:     conn.close()
+76:     trials_path = tmp_path / "trials.json"
+77:     _trials_json(trials_path)
+78:     stability_path = tmp_path / "stability.jsonl"
+79:     stability_path.write_text("", encoding="utf-8")
+80:     market_obs_path = tmp_path / "market_observations.jsonl"
+81:     ledger_path = tmp_path / "h9.jsonl"
+82:     attempts_path = tmp_path / "h9_emission_attempts.jsonl"
+84:     monkeypatch.setattr(job, "approved_bookmaker", lambda stability_path=None: "williamhill")
+85:     monkeypatch.setattr(job, "load_config", lambda: {"database": str(dbpath), "elo": {"home_advantage": HOME_ADV}})
+87:     return {
+88:         "db_path": dbpath,
+89:         "trials_path": trials_path,
+90:         "stability_path": stability_path,
+91:         "market_obs_path": market_obs_path,
+92:         "ledger_path": ledger_path,
+93:         "attempts_path": attempts_path,
+94:     }
+97: def _write_quotes(path: Path, quotes: list[dict]) -> None:
+98:     path.write_text("\n".join(json.dumps(q) for q in quotes) + "\n", encoding="utf-8")
+101: def _run(ambiente, **overrides):
+102:     kwargs = dict(
+103:         trials_path=ambiente["trials_path"],
+104:         stability_path=ambiente["stability_path"],
+105:         market_obs_path=ambiente["market_obs_path"],
+106:         ledger_path=ambiente["ledger_path"],
+107:         attempts_path=ambiente["attempts_path"],
+108:         db_path=ambiente["db_path"],
+109:     )
+110:     kwargs.update(overrides)
+111:     return job.run(**kwargs)
+114: def test_emits_pick_when_fixture_is_in_decision_window(ambiente):
+115:     odd = _odd_for_edge(_p_over())
+116:     _write_quotes(ambiente["market_obs_path"], [_quote(selection="over", odds=odd)])
+117:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+118:     assert len(outcomes) == 1
+119:     assert outcomes[0]["status"] == "EMITTED"
+120:     assert outcomes[0]["home"] == "Casa" and outcomes[0]["away"] == "Fora"
+121:     ledger_rows = [json.loads(line) for line in ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()]
+122:     assert len(ledger_rows) == 1
+123:     assert ledger_rows[0]["bookmaker"] == "williamhill"
+124:     assert ledger_rows[0]["capital_enabled"] is False
+125:     assert ledger_rows[0]["elo_policy"] == "current_elo"
+126:     assert len(ledger_rows[0]["policy_fingerprint"]) == 16
+129: def test_ignores_fixture_outside_decision_window(ambiente):
+130:     odd = _odd_for_edge(_p_over())
+131:     _write_quotes(
+132:         ambiente["market_obs_path"], [_quote(selection="over", odds=odd, captured=KICKOFF - timedelta(hours=6))]
+133:     )
+134:     outcomes = _run(ambiente, now=KICKOFF - timedelta(hours=6))  # bem antes da janela H-1.5
+135:     assert outcomes == []
+136:     assert not ambiente["ledger_path"].exists()
+139: def test_fixture_in_window_without_market_observation_is_audited(ambiente):
+140:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+141:     assert outcomes[0]["status"] == "NO_MARKET_OBSERVATION"
+142:     assert _attempts_rows(ambiente)[0]["status"] == "NO_MARKET_OBSERVATION"
+145: def test_missing_elo_team_is_audited(ambiente):
+146:     conn = db.connect(str(ambiente["db_path"]))
+147:     conn.execute("DELETE FROM current_elo WHERE team='Fora'")
+148:     conn.commit()
+149:     conn.close()
+150:     _write_quotes(ambiente["market_obs_path"], [_quote()])
+152:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+153:     assert outcomes[0]["status"] == "MISSING_ELO_TEAM"
+154:     assert _attempts_rows(ambiente)[0]["missing_elo_teams"] == ["Fora"]
+157: def test_stale_model_cache_fails_before_emission(ambiente):
+158:     conn = db.connect(str(ambiente["db_path"]))
+159:     db.save_params(conn, *PARAMS, 0, "test-config", (KICKOFF - timedelta(days=1)).isoformat())
+160:     conn.commit()
+161:     conn.close()
+163:     with pytest.raises(RuntimeError, match="cache de modelo stale"):
+164:         _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+167: def test_second_run_in_window_is_idempotent(ambiente):
+168:     odd = _odd_for_edge(_p_over())
+169:     _write_quotes(ambiente["market_obs_path"], [_quote(selection="over", odds=odd)])
+170:     now = KICKOFF - timedelta(minutes=60)
+171:     first = _run(ambiente, now=now)
+172:     second = _run(ambiente, now=now)
+173:     assert first[0]["status"] == "EMITTED"
+174:     assert second[0]["status"] == "ALREADY_EMITTED"
+175:     ledger_rows = [json.loads(line) for line in ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()]
+176:     assert len(ledger_rows) == 1  # nao duplicou
+179: def test_uses_frozen_model_params_not_arbitrary_values(ambiente):
+183:     alt_params = (0.3, 0.5, 1e-4, 0.0)
+184:     _trials_json(ambiente["trials_path"], a=0.3, b=0.5, alpha=1e-4, rho=0.0, max_goals=12)
+185:     expected_p_over = _p_over(alt_params)
+186:     odd = _odd_for_edge(expected_p_over)
+187:     _write_quotes(ambiente["market_obs_path"], [_quote(selection="over", odds=odd)])
+189:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+190:     assert outcomes[0]["status"] == "EMITTED"
+191:     ledger_rows = [json.loads(line) for line in ambiente["ledger_path"].read_text(encoding="utf-8").splitlines()]
+192:     assert ledger_rows[0]["model_probability"] == pytest.approx(expected_p_over)
+195: def test_no_stable_bookmaker_blocks_emission(ambiente, monkeypatch):
+196:     monkeypatch.setattr(job, "approved_bookmaker", lambda stability_path=None: None)
+197:     odd = _odd_for_edge(_p_over())
+198:     _write_quotes(ambiente["market_obs_path"], [_quote(selection="over", odds=odd)])
+199:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+200:     assert len(outcomes) == 1
+201:     assert outcomes[0]["status"] == "BLOCKED_NO_STABLE_BOOKMAKER"
+204: def test_wrong_bookmaker_quote_is_not_matched_to_a_different_approved_book(ambiente):
+207:     odd = _odd_for_edge(_p_over())
+208:     _write_quotes(ambiente["market_obs_path"], [_quote(selection="over", odds=odd, bookmaker="outrobook")])
+209:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+210:     assert len(outcomes) == 1
+211:     assert outcomes[0]["status"] == "NO_EXECUTABLE_QUOTE"
+214: def _attempts_rows(ambiente) -> list[dict]:
+215:     path = ambiente["attempts_path"]
+216:     if not path.exists():
+217:         return []
+218:     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+221: def test_audit_trail_records_blocked_evaluations_not_just_emitted(ambiente, monkeypatch):
+222:     monkeypatch.setattr(job, "approved_bookmaker", lambda stability_path=None: None)
+223:     odd = _odd_for_edge(_p_over())
+224:     _write_quotes(ambiente["market_obs_path"], [_quote(selection="over", odds=odd)])
+225:     _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+226:     rows = _attempts_rows(ambiente)
+227:     assert len(rows) == 1
+228:     assert rows[0]["status"] == "BLOCKED_NO_STABLE_BOOKMAKER"
+229:     assert "executed_odds" not in rows[0]
+232: def test_audit_trail_computes_slippage_against_best_available_book(ambiente):
+233:     odd = _odd_for_edge(_p_over())
+236:     better_odd = round(odd + 0.15, 4)
+237:     _write_quotes(
+238:         ambiente["market_obs_path"],
+239:         [
+240:             _quote(selection="over", odds=odd, bookmaker="williamhill"),
+241:             _quote(selection="over", odds=better_odd, bookmaker="pinnacle"),
+242:         ],
+243:     )
+244:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+245:     assert outcomes[0]["status"] == "EMITTED"
+246:     rows = _attempts_rows(ambiente)
+247:     assert len(rows) == 1
+248:     row = rows[0]
+249:     assert row["executed_odds"] == pytest.approx(odd)
+250:     assert row["best_available_bookmaker"] == "pinnacle"
+251:     assert row["best_available_odds"] == pytest.approx(better_odd)
+252:     assert row["slippage_vs_best"] == pytest.approx(odd - better_odd)
+253:     assert row["slippage_vs_best"] < 0  # aceitamos pior preco que o disponivel no mercado
+256: def test_audit_trail_has_zero_slippage_when_only_the_approved_book_quoted(ambiente):
+259:     odd = _odd_for_edge(_p_over())
+260:     _write_quotes(ambiente["market_obs_path"], [_quote(selection="over", odds=odd, bookmaker="williamhill")])
+261:     outcomes = _run(ambiente, now=KICKOFF - timedelta(minutes=60))
+262:     assert outcomes[0]["status"] == "EMITTED"
+263:     row = _attempts_rows(ambiente)[0]
+264:     assert row["executed_odds"] == pytest.approx(odd)
+265:     assert row["best_available_bookmaker"] == "williamhill"
+266:     assert row["slippage_vs_best"] == pytest.approx(0.0)
+### tests/test_evaluate_h14_prospective.py
+4: import json
+5: from pathlib import Path
+7: from brasileirao_predictor import db
+8: from brasileirao_scripts import evaluate_h14_prospective as job
+11: MIN_N = 21
+14: def _trials_json(path: Path, min_n: int = MIN_N) -> None:
+15:     path.write_text(
+16:         json.dumps(
+17:             [
+18:                 {
+19:                     "name": job.TRIAL,
+20:                     "params": {
+21:                         "min_n_avaliacao": min_n,
+22:                         "primary_metric": "rps",
+23:                         "guardrails": list(job.GUARDRAIL_METRICS),
+24:                     },
+25:                 }
+26:             ]
+27:         ),
+28:         encoding="utf-8",
+29:     )
+32: def _seed_db_and_ledger(tmp_path: Path, n: int) -> tuple[Path, Path]:
+33:     dbpath = tmp_path / "t.db"
+34:     conn = db.connect(str(dbpath))
+35:     ledger_path = tmp_path / "h14.jsonl"
+36:     lines = []
+37:     for i in range(n):
+38:         eid = 100 + i
+39:         home_score, away_score = (2, 0) if i % 2 else (0, 2)
+40:         conn.execute(
+41:             "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, "
+42:             "home_score, away_score) VALUES (?, 'T', '2027', '2027-01-01', 'A', 'B', ?, ?)",
+43:             (eid, home_score, away_score),
+44:         )
+45:         record = {
+46:             "event_id": eid,
+47:             "home": "A",
+48:             "away": "B",
+49:             "serving_v2": {"p_home": 0.6, "p_draw": 0.2, "p_away": 0.2},
+50:             "climatology": {"p_home": 0.33, "p_draw": 0.34, "p_away": 0.33},
+51:         }
+52:         lines.append(json.dumps(record))
+53:     conn.commit()
+54:     conn.close()
+55:     ledger_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+56:     return dbpath, ledger_path
+59: def test_abaixo_do_n_minimo_nao_calcula_nada(tmp_path):
+60:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=3)
+61:     trials_path = tmp_path / "trials.json"
+62:     _trials_json(trials_path, min_n=MIN_N)
+64:     result = job.evaluate(
+65:         trials_path=trials_path, ledger_path=ledger_path, db_path=dbpath, reports_dir=tmp_path / "reports"
+66:     )
+67:     assert result["status"] == "AGUARDANDO_N"
+68:     assert result["n"] == 3
+69:     assert result["faltam"] == MIN_N - 3
+70:     assert "primary_rps" not in result
+71:     assert "guardrails" not in result
+74: def test_no_n_minimo_calcula_e_reporta_veredito(tmp_path):
+75:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=MIN_N)
+76:     trials_path = tmp_path / "trials.json"
+77:     _trials_json(trials_path, min_n=MIN_N)
+79:     result = job.evaluate(
+80:         trials_path=trials_path, ledger_path=ledger_path, db_path=dbpath, reports_dir=tmp_path / "reports"
+81:     )
+82:     assert result["n"] == MIN_N
+83:     assert result["status"] in {"COMPROVADA", "REFUTADA", "INCONCLUSIVA"}
+84:     assert "primary_rps" in result
+85:     assert result["capital_enabled"] is False
+88: def test_main_recusa_sobrescrever_relatorio_existente(tmp_path, monkeypatch):
+89:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=MIN_N)
+90:     trials_path = tmp_path / "trials.json"
+91:     _trials_json(trials_path, min_n=MIN_N)
+92:     reports_dir = tmp_path / "reports"
+94:     monkeypatch.setattr(job, "TRIALS_PATH", trials_path)
+95:     monkeypatch.setattr(job, "LEDGER_PATH", ledger_path)
+96:     monkeypatch.setattr(job, "REPORTS_DIR", reports_dir)
+98:     monkeypatch.setattr(job, "load_config", lambda: {"database": str(dbpath)})
+100:     assert job.main() == 0
+101:     written = list(reports_dir.glob("h14_avaliacao_*.json"))
+102:     assert len(written) == 1
+104:     assert job.main() == 1  # segunda chamada: recusa sobrescrever
+105:     assert len(list(reports_dir.glob("h14_avaliacao_*.json"))) == 1
+108: def test_ignora_previsoes_sem_resultado_ainda(tmp_path):
+109:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=MIN_N)
+111:     with ledger_path.open("a", encoding="utf-8") as handle:
+112:         handle.write(
+113:             json.dumps(
+114:                 {
+115:                     "event_id": 999,
+116:                     "home": "C",
+117:                     "away": "D",
+118:                     "serving_v2": {"p_home": 0.5, "p_draw": 0.3, "p_away": 0.2},
+119:                     "climatology": {"p_home": 0.33, "p_draw": 0.34, "p_away": 0.33},
+120:                 }
+121:             )
+122:             + "\n"
+123:         )
+124:     trials_path = tmp_path / "trials.json"
+125:     _trials_json(trials_path, min_n=MIN_N)
+127:     result = job.evaluate(
+128:         trials_path=trials_path, ledger_path=ledger_path, db_path=dbpath, reports_dir=tmp_path / "reports"
+129:     )
+130:     assert result["n"] == MIN_N  # não n+1 linhas do ledger

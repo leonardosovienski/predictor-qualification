@@ -1,0 +1,318 @@
+### brasileirao_predictor/research/price_strength/dynamic_xg.py
+11: from __future__ import annotations
+13: import hashlib
+14: import json
+15: import math
+16: from collections.abc import Iterable
+17: from dataclasses import asdict, dataclass
+18: from datetime import UTC, datetime, timedelta
+20: from scipy.stats import poisson, skellam
+22: LINEAGE = "rolling-xg-price-strength/1"
+25: def _utc(value: datetime, name: str) -> datetime:
+26:     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+27:         raise ValueError(f"{name} must be timezone-aware")
+28:     return value.astimezone(UTC)
+31: def _number(value: float, name: str, *, positive: bool = False) -> float:
+32:     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+33:         raise ValueError(f"{name} must be a finite number")
+34:     if value < 0 or (positive and value == 0):
+35:         raise ValueError(f"{name} must be {'positive' if positive else 'nonnegative'}")
+36:     return float(value)
+39: def _integer(value: int, name: str, *, minimum: int = 0) -> None:
+40:     if type(value) is not int or value < minimum:
+41:         raise ValueError(f"{name} must be an integer >= {minimum}")
+44: def _identity(match_id: str, home_team: str, away_team: str) -> None:
+45:     if any(not isinstance(value, str) or not value.strip() for value in (match_id, home_team, away_team)):
+46:         raise ValueError("match_id and team names must be nonempty strings")
+47:     if home_team == away_team:
+48:         raise ValueError("home_team and away_team must differ")
+51: @dataclass(frozen=True)
+52: class DynamicXGConfig:
+55:     window_matches: int = 5
+56:     min_team_matches: int = 3
+57:     half_life_days: float = 90.0
+58:     prior_weight: float = 2.0
+59:     prior_home_xg: float = 1.5
+60:     prior_away_xg: float = 1.2
+61:     min_calibration_matches: int = 20
+62:     calibration_prior_exposure: float = 5.0
+63:     calibration_lead_minutes: int = 60
+65:     def __post_init__(self) -> None:
+66:         for field in ("window_matches", "min_team_matches", "min_calibration_matches", "calibration_lead_minutes"):
+67:             _integer(getattr(self, field), field, minimum=1)
+68:         if self.min_team_matches > self.window_matches:
+69:             raise ValueError("min_team_matches cannot exceed window_matches")
+70:         for field in ("half_life_days", "prior_weight", "prior_home_xg", "prior_away_xg", "calibration_prior_exposure"):
+71:             object.__setattr__(self, field, _number(getattr(self, field), field, positive=True))
+73:     @property
+74:     def fingerprint(self) -> str:
+75:         encoded = json.dumps({"lineage": LINEAGE, **asdict(self)}, sort_keys=True, separators=(",", ":"))
+76:         return hashlib.sha256(encoded.encode()).hexdigest()
+79: @dataclass(frozen=True)
+80: class Fixture:
+81:     match_id: str
+82:     home_team: str
+83:     away_team: str
+84:     kickoff: datetime
+86:     def __post_init__(self) -> None:
+87:         _identity(self.match_id, self.home_team, self.away_team)
+88:         object.__setattr__(self, "kickoff", _utc(self.kickoff, "kickoff"))
+91: @dataclass(frozen=True)
+92: class XGObservation:
+95:     match_id: str
+96:     home_team: str
+97:     away_team: str
+98:     kickoff: datetime
+99:     completed_at: datetime
+100:     available_at: datetime
+101:     home_xg: float
+102:     away_xg: float
+103:     home_goals: int | None = None
+104:     away_goals: int | None = None
+106:     def __post_init__(self) -> None:
+107:         _identity(self.match_id, self.home_team, self.away_team)
+108:         for field in ("kickoff", "completed_at", "available_at"):
+109:             object.__setattr__(self, field, _utc(getattr(self, field), field))
+110:         if not self.kickoff < self.completed_at <= self.available_at:
+111:             raise ValueError("required chronology: kickoff < completed_at <= available_at")
+112:         for field in ("home_xg", "away_xg"):
+113:             object.__setattr__(self, field, _number(getattr(self, field), field))
+114:         if (self.home_goals is None) != (self.away_goals is None):
+115:             raise ValueError("both goal counts must be supplied together")
+116:         if self.home_goals is not None:
+117:             assert self.away_goals is not None
+118:             _integer(self.home_goals, "home_goals")
+119:             _integer(self.away_goals, "away_goals")
+122: @dataclass(frozen=True)
+123: class LambdaCalibration:
+124:     config_fingerprint: str
+125:     training_end: datetime
+126:     calibration_end: datetime
+127:     eligible: bool
+128:     reason: str
+129:     n_matches: int
+130:     home_scale: float
+131:     away_scale: float
+132:     latest_available_at: datetime | None
+133:     used_match_ids: tuple[str, ...]
+134:     lineage: str = LINEAGE
+135:     status: str = "UNVALIDATED_NEW_LINEAGE"
+137:     def __post_init__(self) -> None:
+138:         for field in ("training_end", "calibration_end"):
+139:             object.__setattr__(self, field, _utc(getattr(self, field), field))
+140:         if self.training_end >= self.calibration_end:
+141:             raise ValueError("training_end must precede calibration_end")
+142:         if type(self.eligible) is not bool:
+143:             raise ValueError("calibration eligible must be a boolean")
+144:         _integer(self.n_matches, "n_matches")
+145:         for field in ("home_scale", "away_scale"):
+146:             object.__setattr__(self, field, _number(getattr(self, field), field, positive=True))
+147:         if self.latest_available_at is not None:
+148:             object.__setattr__(self, "latest_available_at", _utc(self.latest_available_at, "latest_available_at"))
+149:             if self.latest_available_at >= self.calibration_end:
+150:                 raise ValueError("calibration data must be available before calibration_end")
+153: @dataclass(frozen=True)
+154: class XGForecast:
+155:     match_id: str
+156:     decision_at: datetime
+157:     eligible: bool
+158:     reason: str
+159:     lambda_home: float | None
+160:     lambda_away: float | None
+161:     probabilities: dict[str, dict[str, float]]
+162:     n_home: int
+163:     n_away: int
+164:     latest_available_at: datetime | None
+165:     history_match_ids: tuple[str, ...]
+166:     config_fingerprint: str
+167:     calibration_applied: bool = False
+168:     calibration_n: int = 0
+169:     calibration_match_ids: tuple[str, ...] = ()
+170:     lineage: str = LINEAGE
+171:     status: str = "UNVALIDATED_NEW_LINEAGE"
+174: def _visible(
+175:     observations: Iterable[XGObservation], cutoff: datetime, excluded_id: str | None = None
+176: ) -> list[XGObservation]:
+177:     latest: dict[str, XGObservation] = {}
+178:     versions: dict[tuple[str, datetime], XGObservation] = {}
+179:     for item in observations:
+180:         if item.match_id == excluded_id or item.kickoff >= cutoff or item.available_at >= cutoff:
+181:             continue
+182:         previous = latest.get(item.match_id)
+183:         if previous is not None:
+184:             if (item.home_team, item.away_team, item.kickoff) != (
+185:                 previous.home_team,
+186:                 previous.away_team,
+187:                 previous.kickoff,
+188:             ):
+189:                 raise ValueError("conflicting match identity in visible observations")
+190:         version_key = (item.match_id, item.available_at)
+191:         same_time = versions.get(version_key)
+192:         if same_time is not None and item != same_time:
+193:             raise ValueError("conflicting statistics at the same availability timestamp")
+196:         versions[version_key] = item
+197:         if previous is None or item.available_at > previous.available_at:
+198:             latest[item.match_id] = item
+199:     return sorted(latest.values(), key=lambda item: (item.kickoff, item.match_id))
+202: def _mean(
+203:     history: list[XGObservation], field: str, prior: float, decision_at: datetime, config: DynamicXGConfig
+204: ) -> float:
+205:     weights = [
+206:         0.5 ** ((decision_at - item.kickoff).total_seconds() / 86400 / config.half_life_days) for item in history
+207:     ]
+208:     numerator = math.fsum(
+209:         [config.prior_weight * prior, *(w * getattr(item, field) for item, w in zip(history, weights))]
+210:     )
+211:     return numerator / (config.prior_weight + math.fsum(weights))
+214: def _normalize(values: dict[str, float]) -> dict[str, float]:
+215:     if any(not math.isfinite(value) or value < 0 for value in values.values()):
+216:         raise ValueError("Poisson probabilities are not representable")
+217:     total = math.fsum(values.values())
+218:     if total <= 0:
+219:         raise ValueError("Poisson probabilities have zero mass")
+220:     return {key: value / total for key, value in values.items()}
+223: def _probabilities(home: float, away: float) -> dict[str, dict[str, float]]:
+224:     _number(home, "lambda_home", positive=True)
+225:     _number(away, "lambda_away", positive=True)
+226:     _number(home + away, "total_lambda", positive=True)
+228:     result = _normalize(
+229:         {
+230:             "home": float(skellam.sf(0, home, away)),
+231:             "draw": float(skellam.pmf(0, home, away)),
+232:             "away": float(skellam.cdf(-1, home, away)),
+233:         }
+234:     )
+235:     under = float(poisson.cdf(2, home + away))
+236:     btts = (-math.expm1(-home)) * (-math.expm1(-away))
+237:     return {
+238:         "1x2": result,
+239:         "ou25": _normalize({"over": 1 - under, "under": under}),
+240:         "btts": _normalize({"yes": btts, "no": 1 - btts}),
+241:     }
+244: def forecast(
+245:     observations: Iterable[XGObservation],
+246:     fixture: Fixture,
+247:     decision_at: datetime,
+248:     config: DynamicXGConfig,
+249:     calibration: LambdaCalibration | None = None,
+250: ) -> XGForecast:
+258:     decision_at = _utc(decision_at, "decision_at")
+259:     if decision_at >= fixture.kickoff:
+260:         raise ValueError("decision_at must precede fixture kickoff")
+261:     if calibration is not None:
+262:         if calibration.config_fingerprint != config.fingerprint:
+263:             raise ValueError("calibration belongs to a different candidate configuration")
+264:         if calibration.calibration_end >= decision_at:
+265:             raise ValueError("calibration must end strictly before decision_at")
+266:         if fixture.match_id in calibration.used_match_ids:
+267:             raise ValueError("the forecast fixture cannot contribute to its own calibration")
+268:     visible = _visible(observations, decision_at, fixture.match_id)
+269:     home = [item for item in visible if item.home_team == fixture.home_team][-config.window_matches :]
+270:     away = [item for item in visible if item.away_team == fixture.away_team][-config.window_matches :]
+271:     history = {item.match_id: item for item in (*home, *away)}
+272:     availability = [item.available_at for item in history.values()]
+273:     if calibration is not None and calibration.latest_available_at is not None:
+274:         availability.append(calibration.latest_available_at)
+275:     metadata = {
+276:         "match_id": fixture.match_id,
+277:         "decision_at": decision_at,
+278:         "n_home": len(home),
+279:         "n_away": len(away),
+280:         "latest_available_at": max(availability, default=None),
+281:         "history_match_ids": tuple(sorted(history)),
+282:         "config_fingerprint": config.fingerprint,
+283:         "calibration_n": calibration.n_matches if calibration is not None else 0,
+284:         "calibration_match_ids": calibration.used_match_ids if calibration is not None else (),
+285:     }
+286:     if len(home) < config.min_team_matches or len(away) < config.min_team_matches:
+287:         return XGForecast(
+288:             eligible=False,
+289:             reason="INSUFFICIENT_HISTORY",
+290:             lambda_home=None,
+291:             lambda_away=None,
+292:             probabilities={},
+293:             **metadata,
+294:         )
+295:     if calibration is not None and (not calibration.eligible or calibration.n_matches < config.min_calibration_matches):
+296:         return XGForecast(
+297:             eligible=False,
+298:             reason="INSUFFICIENT_CALIBRATION",
+299:             lambda_home=None,
+300:             lambda_away=None,
+301:             probabilities={},
+302:             **metadata,
+303:         )
+304:     lambda_home = (
+305:         _mean(home, "home_xg", config.prior_home_xg, decision_at, config)
+306:         + _mean(away, "home_xg", config.prior_home_xg, decision_at, config)
+307:     ) / 2
+308:     lambda_away = (
+309:         _mean(away, "away_xg", config.prior_away_xg, decision_at, config)
+310:         + _mean(home, "away_xg", config.prior_away_xg, decision_at, config)
+311:     ) / 2
+312:     if calibration is not None:
+313:         lambda_home *= calibration.home_scale
+314:         lambda_away *= calibration.away_scale
+315:     return XGForecast(
+316:         eligible=True,
+317:         reason="ELIGIBLE",
+318:         lambda_home=lambda_home,
+319:         lambda_away=lambda_away,
+320:         probabilities=_probabilities(lambda_home, lambda_away),
+321:         calibration_applied=calibration is not None,
+322:         **metadata,
+323:     )
+326: def fit_calibration(
+327:     observations: Iterable[XGObservation],
+328:     training_end: datetime,
+329:     calibration_end: datetime,
+330:     config: DynamicXGConfig,
+331: ) -> LambdaCalibration:
+342:     training_end = _utc(training_end, "training_end")
+343:     calibration_end = _utc(calibration_end, "calibration_end")
+344:     if training_end >= calibration_end:
+345:         raise ValueError("training_end must precede calibration_end")
+346:     observations = tuple(observations)
+347:     targets = [
+348:         item
+349:         for item in _visible(observations, calibration_end)
+350:         if item.kickoff >= training_end and item.home_goals is not None
+351:     ]
+352:     predicted_home: list[float] = []
+353:     predicted_away: list[float] = []
+354:     goals_home: list[int] = []
+355:     goals_away: list[int] = []
+356:     used_ids: set[str] = set()
+357:     latest_available_at: datetime | None = None
+358:     for target in targets:
+359:         raw = forecast(
+360:             observations,
+361:             Fixture(target.match_id, target.home_team, target.away_team, target.kickoff),
+362:             target.kickoff - timedelta(minutes=config.calibration_lead_minutes),
+363:             config,
+364:         )
+365:         if not raw.eligible:
+366:             continue
+367:         assert raw.lambda_home is not None and raw.lambda_away is not None
+368:         assert target.home_goals is not None and target.away_goals is not None
+369:         predicted_home.append(raw.lambda_home)
+370:         predicted_away.append(raw.lambda_away)
+371:         goals_home.append(target.home_goals)
+372:         goals_away.append(target.away_goals)
+373:         used_ids.update((*raw.history_match_ids, target.match_id))
+374:         latest_available_at = max(latest_available_at or target.available_at, target.available_at)
+375:     n_matches = len(predicted_home)
+376:     eligible = n_matches >= config.min_calibration_matches
+377:     prior = config.calibration_prior_exposure
+378:     return LambdaCalibration(
+379:         config_fingerprint=config.fingerprint,
+380:         training_end=training_end,
+381:         calibration_end=calibration_end,
+382:         eligible=eligible,
+383:         reason="ELIGIBLE" if eligible else "INSUFFICIENT_CALIBRATION",
+384:         n_matches=n_matches,
+385:         home_scale=(math.fsum(goals_home) + prior) / (math.fsum(predicted_home) + prior) if eligible else 1.0,
+386:         away_scale=(math.fsum(goals_away) + prior) / (math.fsum(predicted_away) + prior) if eligible else 1.0,
+387:         latest_available_at=latest_available_at,
+388:         used_match_ids=tuple(sorted(used_ids)),
+389:     )

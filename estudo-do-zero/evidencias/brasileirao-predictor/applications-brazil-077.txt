@@ -1,0 +1,501 @@
+### tests/test_sync_competition_filter.py
+10: from __future__ import annotations
+12: import sqlite3
+14: from brasileirao_predictor import db
+15: from brasileirao_scripts.sync_matches_from_sofascore import sync
+17: SERIE_A = "Brasileirão Série A 2024"
+18: SERIE_B = "Brasileirão Série B 2024"
+21: def _conn() -> sqlite3.Connection:
+22:     conn = db.connect(":memory:")  # DDL REAL — schema fabricado no teste diverge do de produção
+23:     linhas = [
+24:         (1, SERIE_A, "2024-04-13", "flamengo", "palmeiras", 2, 1),
+25:         (2, SERIE_A, "2024-04-14", "gremio", "santos", None, None),
+26:         (3, SERIE_B, "2024-04-13", "novorizontino", "mirassol", 1, 0),
+27:     ]
+28:     conn.executemany(
+29:         "INSERT INTO sofascore_matches (event_id, competition, date, home_team, away_team,"
+30:         " home_score, away_score) VALUES (?,?,?,?,?,?,?)",
+31:         linhas,
+32:     )
+33:     conn.commit()
+34:     return conn
+37: def test_so_a_competicao_configurada_e_espelhada() -> None:
+38:     conn = _conn()
+39:     played, fixtures = sync(conn, "Brasileirão Série A", [SERIE_A])
+40:     assert (played, fixtures) == (1, 1)
+41:     times = {r[0] for r in conn.execute("SELECT home_team FROM matches")}
+42:     assert "novorizontino" not in times, "Série B vazou para `matches`"
+45: def test_competicao_extra_configurada_entra() -> None:
+47:     conn = _conn()
+48:     played, _ = sync(conn, "Brasileirão", [SERIE_A, SERIE_B])
+49:     assert played == 2
+52: def test_upsert_e_idempotente() -> None:
+53:     conn = _conn()
+54:     primeiro = sync(conn, "Brasileirão Série A", [SERIE_A])
+55:     segundo = sync(conn, "Brasileirão Série A", [SERIE_A])
+56:     assert primeiro == segundo
+57:     assert conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 2
+### tests/test_telemetry.py
+4: from predictor_core import obs
+6: from brasileirao_predictor import backtest
+9: def test_backtest_emits_structured_event(tmp_path, monkeypatch):
+10:     monkeypatch.setenv("PREDICTOR_EVENTS_PATH", str(tmp_path / "ev.jsonl"))
+11:     ledger = [
+12:         {"stake": 1.0, "pnl": 0.25, "bet_at": "open", "clv": 0.05},
+13:         {"stake": 1.0, "pnl": -1.0, "bet_at": "open", "clv": -0.02},
+14:         {"stake": 1.0, "pnl": 0.40, "bet_at": "close", "clv": -0.01},
+15:     ]
+16:     backtest._emit_telemetry(ledger)
+17:     events = obs.read_events(tmp_path / "ev.jsonl")
+18:     assert len(events) == 1
+19:     e = events[0]
+20:     assert e["domain"] == "brasileirao" and e["event"] == "backtest_completed"
+21:     assert e["metrics"]["n_bets"] == 3
+22:     assert "roi" in e["metrics"] and "clv_open_mean" in e["metrics"]
+23:     assert e["metadata"]["shadow"] == "v2"
+### tests/test_temporal_policy.py
+1: import pytest
+3: from brasileirao_predictor.temporal_policy import TemporalPolicy, assert_unique_teams
+6: def test_groups_equal_utc_kickoffs_and_fingerprints_policy():
+7:     rows = [
+8:         {"kickoff_at": "2026-01-01T15:00:00-03:00", "home_team": "A", "away_team": "B"},
+9:         {"kickoff_at": "2026-01-01T18:00:00Z", "home_team": "C", "away_team": "D"},
+10:     ]
+11:     policy = TemporalPolicy()
+12:     groups = policy.group(rows)
+13:     assert len(groups) == 1
+14:     assert groups[0].precision == "kickoff"
+15:     assert policy.fingerprint == TemporalPolicy().fingerprint
+16:     assert policy.fingerprint != TemporalPolicy(fallback="reject").fingerprint
+19: def test_date_fallback_is_conservative_and_reject_is_available():
+20:     rows = [
+21:         {"date": "2026-01-01", "home_team": "A", "away_team": "B"},
+22:         {"date": "2026-01-01", "home_team": "C", "away_team": "D"},
+23:     ]
+24:     group = TemporalPolicy().group(rows)[0]
+25:     assert group.precision == "date" and len(group.rows) == 2
+26:     with pytest.raises(ValueError, match="kickoff_at missing"):
+27:         TemporalPolicy(fallback="reject").group(rows)
+30: def test_duplicate_team_in_same_group_fails_closed():
+31:     rows = [
+32:         {"date": "2026-01-01", "home_team": "A", "away_team": "B"},
+33:         {"date": "2026-01-01", "home_team": "A", "away_team": "C"},
+34:     ]
+35:     with pytest.raises(ValueError, match="more than once"):
+36:         assert_unique_teams(TemporalPolicy().group(rows)[0])
+39: def test_missing_kickoff_collapses_known_kickoffs_on_the_same_utc_day():
+40:     rows = [
+41:         {"date": "2030-01-01", "home_team": "A", "away_team": "B"},
+42:         {"kickoff_at": "2030-01-01T21:00:00Z", "home_team": "C", "away_team": "D"},
+43:     ]
+44:     groups = TemporalPolicy().group(rows)
+45:     assert len(groups) == 1
+46:     assert groups[0].precision == "date"
+47:     assert len(groups[0].rows) == 2
+50: def test_missing_kickoff_is_grouped_after_timezone_normalization():
+51:     rows = [
+52:         {"date": "2030-01-02", "home_team": "A", "away_team": "B"},
+53:         {"kickoff_at": "2030-01-01T22:00:00-03:00", "home_team": "C", "away_team": "D"},
+54:     ]
+55:     assert len(TemporalPolicy().group(rows)) == 1
+### tests/test_temporal_replay.py
+1: from brasileirao_predictor.research.temporal_replay import build_temporal_manifest
+4: def test_temporal_replay_manifest_is_fingerprinted_and_batched() -> None:
+5:     rows = [
+6:         {"date": "2025-05-01", "home_team": "a", "away_team": "b"},
+7:         {"date": "2025-05-01", "home_team": "c", "away_team": "d"},
+8:         {
+9:             "kickoff_at": "2025-05-02T21:00:00-03:00",
+10:             "home_team": "e",
+11:             "away_team": "f",
+12:         },
+13:     ]
+14:     manifest = build_temporal_manifest(rows)
+15:     assert manifest["row_count"] == 3
+16:     assert manifest["group_count"] == 2
+17:     assert len(manifest["source_sha256"]) == 64
+18:     assert len(manifest["temporal_policy"]["fingerprint"]) == 16
+19:     assert [group["precision"] for group in manifest["groups"]] == ["date", "kickoff"]
+22: def test_temporal_replay_rejects_team_twice_in_same_batch() -> None:
+23:     rows = [
+24:         {"date": "2025-05-01", "home_team": "a", "away_team": "b"},
+25:         {"date": "2025-05-01", "home_team": "a", "away_team": "c"},
+26:     ]
+27:     try:
+28:         build_temporal_manifest(rows)
+29:     except ValueError as exc:
+30:         assert "appears more than once" in str(exc)
+31:     else:
+32:         raise AssertionError("duplicate team in a temporal batch must fail closed")
+### tests/test_the_odds_api_provider.py
+1: from datetime import UTC, datetime
+3: import pytest
+4: from predictor_core.data.contracts import DataUnavailableError
+6: from brasileirao_predictor.data.the_odds_api_provider import TheOddsApiProvider
+9: def test_normalizes_explicit_bookmaker_and_pre_event_quote():
+10:     payload = [
+11:         {
+12:             "id": "evt",
+13:             "commence_time": "2026-08-01T20:00:00Z",
+14:             "home_team": "Bahia",
+15:             "away_team": "Santos",
+16:             "bookmakers": [
+17:                 {
+18:                     "key": "pinnacle",
+19:                     "last_update": "2026-08-01T19:00:00Z",
+20:                     "markets": [
+21:                         {
+22:                             "key": "totals",
+23:                             "outcomes": [
+24:                                 {"name": "Over", "point": 2.5, "price": 2.1},
+25:                                 {"name": "Under", "point": 2.5, "price": 1.8},
+26:                             ],
+27:                         }
+28:                     ],
+29:                 }
+30:             ],
+31:         }
+32:     ]
+33:     rows = TheOddsApiProvider(api_key="test", get_json=lambda _: payload).fetch_ou25(
+34:         retrieved_at=datetime(2026, 8, 1, tzinfo=UTC)
+35:     )
+36:     assert {(r["bookmaker"], r["selection"]) for r in rows} == {
+37:         ("pinnacle", "over"),
+38:         ("pinnacle", "under"),
+39:     }
+42: def test_normalizes_1x2_and_multiple_total_lines():
+43:     payload = [
+44:         {
+45:             "id": "evt",
+46:             "commence_time": "2026-08-10T20:00:00Z",
+47:             "home_team": "Bahia",
+48:             "away_team": "Flamengo",
+49:             "bookmakers": [
+50:                 {
+51:                     "key": "book",
+52:                     "last_update": "2026-08-10T10:00:00Z",
+53:                     "markets": [
+54:                         {
+55:                             "key": "h2h",
+56:                             "outcomes": [
+57:                                 {"name": "Bahia", "price": 3.0},
+58:                                 {"name": "Draw", "price": 3.2},
+59:                                 {"name": "Flamengo", "price": 2.4},
+60:                             ],
+61:                         },
+62:                         {
+63:                             "key": "totals",
+64:                             "outcomes": [
+65:                                 {"name": "Over", "price": 1.8, "point": 2.5},
+66:                                 {"name": "Under", "price": 2.1, "point": 2.5},
+67:                                 {"name": "Over", "price": 2.4, "point": 3.5},
+68:                                 {"name": "Under", "price": 1.6, "point": 3.5},
+69:                             ],
+70:                         },
+71:                     ],
+72:                 }
+73:             ],
+74:         }
+75:     ]
+76:     provider = TheOddsApiProvider(api_key="x", get_json=lambda _: payload)
+77:     rows = provider.fetch_markets(retrieved_at=datetime(2026, 8, 10, 11, tzinfo=UTC))
+78:     assert {(row["market"], row["selection"]) for row in rows} == {
+79:         ("1x2", "home"),
+80:         ("1x2", "draw"),
+81:         ("1x2", "away"),
+82:         ("ou2.5", "over"),
+83:         ("ou2.5", "under"),
+84:         ("ou3.5", "over"),
+85:         ("ou3.5", "under"),
+86:     }
+89: def test_normalizes_event_scoped_first_half_totals():
+90:     payload = {
+91:         "id": "evt",
+92:         "commence_time": "2026-08-10T20:00:00Z",
+93:         "home_team": "Bahia",
+94:         "away_team": "Flamengo",
+95:         "bookmakers": [
+96:             {
+97:                 "key": "book",
+98:                 "last_update": "2026-08-10T10:00:00Z",
+99:                 "markets": [
+100:                     {
+101:                         "key": "totals_h1",
+102:                         "last_update": "2026-08-10T10:05:00Z",
+103:                         "outcomes": [
+104:                             {"name": "Over", "price": 2.05, "point": 1.5},
+105:                             {"name": "Under", "price": 1.75, "point": 1.5},
+106:                         ],
+107:                     }
+108:                 ],
+109:             }
+110:         ],
+111:     }
+112:     provider = TheOddsApiProvider(api_key="x", get_json=lambda _: payload)
+113:     rows = provider.fetch_event_markets("evt", retrieved_at=datetime(2026, 8, 10, 11, tzinfo=UTC))
+114:     assert {(row["market"], row["selection"]) for row in rows} == {
+115:         ("ou1.5_1h", "over"),
+116:         ("ou1.5_1h", "under"),
+117:     }
+118:     assert {row["odds_captured_at"] for row in rows} == {"2026-08-10T10:05:00+00:00"}
+119:     assert rows[0]["canonical_match_id"] == "the_odds_api:evt"
+122: def test_rejects_aggregate_without_bookmaker_or_post_kickoff_quote():
+123:     payload = [
+124:         {
+125:             "id": "evt",
+126:             "commence_time": "2026-08-01T20:00:00Z",
+127:             "bookmakers": [
+128:                 {"last_update": "2026-08-01T19:00:00Z", "markets": []},
+129:                 {"key": "x", "last_update": "2026-08-01T21:00:00Z", "markets": []},
+130:             ],
+131:         }
+132:     ]
+133:     assert TheOddsApiProvider(api_key="test", get_json=lambda _: payload).fetch_ou25() == []
+136: def test_requires_key_without_network(monkeypatch):
+137:     monkeypatch.delenv("ODDS_API_KEY", raising=False)
+138:     with pytest.raises(DataUnavailableError, match="ODDS_API_KEY"):
+139:         TheOddsApiProvider(get_json=lambda _: pytest.fail("network")).fetch_ou25()
+142: def test_transport_error_is_sanitized_even_when_url_contains_key(monkeypatch):
+143:     provider = TheOddsApiProvider(api_key="secret-value")
+144:     monkeypatch.setattr(
+145:         "urllib.request.urlopen",
+146:         lambda *_a, **_k: (_ for _ in ()).throw(OSError("https://x/?apiKey=secret-value")),
+147:     )
+148:     with pytest.raises(DataUnavailableError) as exc:
+149:         provider.fetch_ou25()
+150:     assert "secret-value" not in str(exc.value)
+153: def test_rejects_invalid_featured_market_requests_without_network():
+154:     provider = TheOddsApiProvider(api_key="x", get_json=lambda _: pytest.fail("network"))
+155:     with pytest.raises(ValueError, match="h2h/totals"):
+156:         provider.fetch_markets(markets=("totals_h1",))
+157:     with pytest.raises(ValueError, match="timezone"):
+158:         provider.fetch_markets(retrieved_at=datetime(2026, 8, 10))
+161: def test_rejects_invalid_event_market_requests_without_network(monkeypatch):
+162:     provider = TheOddsApiProvider(api_key="x", get_json=lambda _: pytest.fail("network"))
+163:     with pytest.raises(ValueError, match="event_id"):
+164:         provider.fetch_event_markets(" ")
+165:     with pytest.raises(ValueError, match="nao suportado"):
+166:         provider.fetch_event_markets("evt", markets=("totals",))
+167:     with pytest.raises(ValueError, match="timezone"):
+168:         provider.fetch_event_markets("evt", retrieved_at=datetime(2026, 8, 10))
+170:     monkeypatch.delenv("ODDS_API_KEY", raising=False)
+171:     with pytest.raises(DataUnavailableError, match="ODDS_API_KEY"):
+172:         TheOddsApiProvider(get_json=lambda _: pytest.fail("network")).fetch_event_markets("evt")
+175: def test_rejects_invalid_payload_shapes():
+176:     provider = TheOddsApiProvider(api_key="x", get_json=lambda _: {})
+177:     with pytest.raises(DataUnavailableError, match="payload inválido"):
+178:         provider.fetch_markets()
+180:     provider = TheOddsApiProvider(api_key="x", get_json=lambda _: [])
+181:     with pytest.raises(DataUnavailableError, match="payload de evento invalido"):
+182:         provider.fetch_event_markets("evt")
+### tests/test_trial_provenance_enforcement.py
+22: from __future__ import annotations
+24: import json
+25: from pathlib import Path
+27: ROOT = Path(__file__).resolve().parent.parent
+28: TRIALS_V2 = ROOT / "data" / "trials.v2.json"
+32: VEREDITOS_FECHADOS = frozenset({"comprovada", "refutada", "inconclusiva", "informativa", "substituida"})
+35: PROVENIENCIA_EXIGIDA = ("dataset_hash", "code_version", "seed", "data_cutoff", "executed_at")
+40: HISTORICAS_IRREPRODUZIVEIS = frozenset(
+41:     {
+42:         "h1-ou25-edge-2-15-walkforward",
+43:         "h2-periodo-1t-conf60",
+44:         "h3-ou25-sombra-2026",
+45:         "H4_DIXON_COLES_CALIBRATED",
+46:         "h5-ensemble-xg-sombra-2026",
+47:         "h3-ou25-sombra-pinnacle-2026",
+48:         "h5-ensemble-xg-sombra-pinnacle-2026",
+49:         "h1-ou25-walkforward-2023-2026-exploratoria",
+50:         "h7-clv-prospectivo-pinnacle-2026",
+51:         "h8-ou25-train-2023-2025-test-2026-observed",
+52:         "h9-ou25-prospective-replication",
+53:         "h11-refit-cadence-rodada-vs-100jogos",
+54:         "h11-v2-refit10-vs-100-retrospective-reanalysis",
+55:         "h15-refit10-vs-100-serving-v2-prospectivo",
+56:         "h12-ensemble-xg-ligado-vs-desligado",
+57:         "h13-serving-vs-climatologia-prospectivo",
+58:         "market-03-edge-ordering-sofascore-diagnostic",
+59:         "market-04-ou25-btts-resolution-and-ordering",
+60:         "pit-absences-new-information",
+61:         "pit-lineup-strength-new-information",
+62:         "pit-isolated-xg-new-lineage",
+63:         "pit-hierarchical-team-home-advantage",
+64:         "live-backtest-viability-gate",
+65:         "prospective-paper-validation-governance",
+66:         "market-05-pinnacle-soft-structural-edge",
+67:         "market-06-ou25-dev-only-ordering-triage",
+68:         "observation-2026-inter-bahia-slow-reactivity",
+69:         "market05-a1-shadow",
+70:         "h14-serving-v2-vs-climatologia-prequential-prospectivo",
+71:     }
+72: )
+75: def _trials() -> list[dict]:
+76:     return json.loads(TRIALS_V2.read_text(encoding="utf-8"))
+79: def test_a_lista_historica_nao_cresce() -> None:
+86:     assert len(HISTORICAS_IRREPRODUZIVEIS) == 29, (
+87:         "a lista de trials historicamente irreproduzíveis é congelada em 29 "
+88:         "(estado de 2026-09-05). Trial nova com veredito fechado precisa de "
+89:         "proveniência real, não de uma linha nova aqui."
+90:     )
+93: def test_toda_trial_historica_da_lista_ainda_existe() -> None:
+95:     ids = {t["trial_id"] for t in _trials()}
+96:     sumidas = HISTORICAS_IRREPRODUZIVEIS - ids
+97:     assert not sumidas, (
+98:         f"trials da lista histórica desapareceram do registro: {sorted(sumidas)}. "
+99:         "Renomear ou remover uma trial fechada apaga o registro de que ela existiu."
+100:     )
+103: def test_trial_nova_com_veredito_fechado_tem_proveniencia() -> None:
+105:     faltando: dict[str, list[str]] = {}
+106:     for trial in _trials():
+107:         tid = trial["trial_id"]
+108:         if tid in HISTORICAS_IRREPRODUZIVEIS:
+109:             continue
+110:         if trial.get("status") not in VEREDITOS_FECHADOS:
+111:             continue
+112:         vazios = [
+113:             campo for campo in PROVENIENCIA_EXIGIDA if str(trial.get(campo, "UNKNOWN")).strip() in ("", "UNKNOWN")
+114:         ]
+115:         if vazios:
+116:             faltando[tid] = vazios
+118:     assert not faltando, (
+119:         "trial com veredito fechado e proveniência ausente:\n  "
+120:         + "\n  ".join(f"{tid}: {campos}" for tid, campos in sorted(faltando.items()))
+121:         + "\n\npredictor_core exporta dataset_fingerprint() e current_code_version() "
+122:         "justamente para preencher esses campos. Sem eles, o veredito não é "
+123:         "verificável por terceiro — ver docs/AUDITORIA_ADVERSARIAL_2026-09-05.md."
+124:     )
+127: def test_o_estado_historico_esta_registrado_e_nao_escondido() -> None:
+134:     trials = {t["trial_id"]: t for t in _trials()}
+135:     ainda_sem_proveniencia = {
+136:         tid
+137:         for tid in HISTORICAS_IRREPRODUZIVEIS
+138:         if tid in trials
+139:         and all(str(trials[tid].get(campo, "UNKNOWN")).strip() in ("", "UNKNOWN") for campo in PROVENIENCIA_EXIGIDA)
+140:     }
+141:     recuperadas = HISTORICAS_IRREPRODUZIVEIS & set(trials) - ainda_sem_proveniencia
+142:     assert not recuperadas, (
+143:         f"estas trials históricas ganharam proveniência: {sorted(recuperadas)}. "
+144:         "Ótimo — remova-as de HISTORICAS_IRREPRODUZIVEIS e ajuste a contagem "
+145:         "esperada em test_a_lista_historica_nao_cresce."
+146:     )
+### tests/test_trials_registry_schema.py
+11: from __future__ import annotations
+13: import json
+14: from pathlib import Path
+16: from predictor_core.contracts.registry import TrialRegistry, validate_trials
+18: ROOT = Path(__file__).resolve().parent.parent
+19: TRIALS = ROOT / "data" / "trials.json"
+22: def test_trials_json_existe_e_e_uma_lista() -> None:
+23:     assert TRIALS.exists(), f"{TRIALS} ausente — é o denominador do DSR, não é opcional"
+24:     assert isinstance(json.loads(TRIALS.read_text(encoding="utf-8")), list)
+27: def test_trials_json_conforma_ao_schema_do_core() -> None:
+28:     erros = validate_trials(TrialRegistry(TRIALS).load())
+29:     assert erros == [], "violações de schema em data/trials.json:\n  " + "\n  ".join(erros)
+32: def test_nomes_de_trial_sao_unicos() -> None:
+35:     nomes = [t["name"] for t in TrialRegistry(TRIALS).load()]
+36:     assert len(nomes) == len(set(nomes)), f"nomes duplicados: {sorted({n for n in nomes if nomes.count(n) > 1})}"
+39: def test_toda_trial_declara_status() -> None:
+42:     sem_status = [t["name"] for t in TrialRegistry(TRIALS).load() if not t.get("status")]
+43:     assert sem_status == [], f"trials sem status: {sem_status}"
+51: STATUS_VOCABULARY = frozenset(
+52:     {
+53:         "pre-registrada",
+54:         "exploratoria",
+55:         "informativa",
+56:         "inconclusiva",
+57:         "refutada",
+58:         "comprovada",
+59:         "substituida",
+60:     }
+61: )
+63: TRIALS_V2 = ROOT / "data" / "trials.v2.json"
+66: def test_status_pertence_ao_vocabulario_fechado() -> None:
+67:     for caminho in (TRIALS, TRIALS_V2):
+68:         registro = json.loads(caminho.read_text(encoding="utf-8"))
+69:         fora = sorted({t["status"] for t in registro if t.get("status") not in STATUS_VOCABULARY})
+70:         assert fora == [], f"{caminho.name}: status fora do vocabulário: {fora}"
+73: def test_status_por_trial_e_o_mesmo_nas_duas_geracoes_do_registro() -> None:
+76:     v1 = {t["name"]: t["status"] for t in json.loads(TRIALS.read_text(encoding="utf-8"))}
+77:     v2 = {t["trial_id"]: t["status"] for t in json.loads(TRIALS_V2.read_text(encoding="utf-8"))}
+78:     assert set(v1) == set(v2), f"identidades divergentes: {sorted(set(v1) ^ set(v2))}"
+79:     divergentes = {k: (v1[k], v2[k]) for k in v1 if v1[k] != v2[k]}
+80:     assert divergentes == {}, f"status divergente entre v1 e v2: {divergentes}"
+### tests/test_update_h9_fixtures.py
+1: from brasileirao_scripts import update_h9_fixtures as job
+4: def test_refresh_stops_at_first_failed_step(monkeypatch):
+5:     calls = []
+7:     def run(command, **kwargs):
+8:         calls.append(command)
+9:         return type("Result", (), {"returncode": 7 if len(calls) == 2 else 0})()
+11:     monkeypatch.setattr(job.subprocess, "run", run)
+12:     assert job.main() == 7
+13:     assert calls == [job.STEPS[0][1], job.STEPS[1][1]]
+16: def test_refresh_runs_all_steps(monkeypatch):
+17:     calls = []
+19:     def run(command, **kwargs):
+20:         calls.append(command)
+21:         return type("Result", (), {"returncode": 0})()
+23:     monkeypatch.setattr(job.subprocess, "run", run)
+24:     assert job.main() == 0
+25:     assert calls == [step[1] for step in job.STEPS]
+### tests/test_walkforward_temporal_blocks.py
+1: from brasileirao_scripts.backtest_walkforward import _aligned_blocks
+4: def test_blocks_never_split_a_calendar_date() -> None:
+5:     rows = [
+6:         ("2025-01-01", "a", "b"),
+7:         ("2025-01-01", "c", "d"),
+8:         ("2025-01-02", "a", "c"),
+9:         ("2025-01-02", "b", "d"),
+10:         ("2025-01-03", "a", "d"),
+11:     ]
+12:     blocks = _aligned_blocks(rows, 3)
+13:     assert blocks == [(0, 4), (4, 5)]
+14:     for _start, end in blocks[:-1]:
+15:         assert rows[end - 1][0] != rows[end][0]
+### tests/test_windows_scheduler_contract.py
+1: from __future__ import annotations
+3: import json
+4: from pathlib import Path
+6: ROOT = Path(__file__).resolve().parent.parent
+7: INSTALLER = ROOT / "brasileirao_scripts" / "install_windows_scheduler.ps1"
+8: JOBS = ROOT / "jobs.market-research.example.json"
+11: def test_scheduler_installer_uses_every_manifest_job() -> None:
+12:     installer = INSTALLER.read_text(encoding="utf-8")
+13:     jobs = json.loads(JOBS.read_text(encoding="utf-8"))["jobs"]
+15:     assert len(jobs) == 11
+16:     assert "foreach ($job in $manifest.jobs)" in installer
+17:     assert "Install-PredictorTask -Name ([string]$job.id)" in installer
+20: def test_scheduler_installer_keeps_model_cache_alive() -> None:
+21:     installer = INSTALLER.read_text(encoding="utf-8")
+23:     assert '"brasileirao-model-update"' in installer
+24:     assert '-Module "brasileirao_predictor.cron_update_models"' in installer
+25:     assert '$arguments = "-X utf8 -m $Module"' in installer
+28: def test_scheduler_registration_fails_high() -> None:
+29:     installer = INSTALLER.read_text(encoding="utf-8")
+31:     assert installer.count("Register-ScheduledTask") == 3
+32:     assert installer.count("Register-ScheduledTask -TaskName $Name") == 3
+33:     assert installer.count("-Force -ErrorAction Stop") == 3
+36: def test_scheduler_disables_stale_h11_and_audits_repository_root() -> None:
+37:     installer = INSTALLER.read_text(encoding="utf-8")
+38:     assert '"brasileirao-h11-1x2-shadow"' in installer
+39:     assert "tarefas apontando para outro repositorio" in installer
+42: def test_scheduler_installer_declares_20_unique_tasks() -> None:
+43:     jobs = {job["id"] for job in json.loads(JOBS.read_text(encoding="utf-8"))["jobs"]}
+44:     direct = {
+45:         "brasileirao-market-research",
+46:         "brasileirao-model-update",
+47:         "brasileirao-h9-emit",
+48:         "brasileirao-h9-closing",
+49:         "brasileirao-h9-settle",
+50:         "brasileirao-h9-backup",
+51:         "brasileirao-h9-missed-window",
+52:         "brasileirao-h14-persist",
+53:         "brasileirao-h15-persist",
+54:     }
+56:     assert len(jobs | direct) == 20
+59: def test_scheduler_installer_covers_h14_and_h15_persistence() -> None:
+60:     installer = INSTALLER.read_text(encoding="utf-8")
+61:     assert '"brasileirao-h14-persist"' in installer
+62:     assert '"brasileirao-h15-persist"' in installer
+63:     assert "persist_h14_prospective.py" in installer
+64:     assert "persist_h15_prospective.py" in installer

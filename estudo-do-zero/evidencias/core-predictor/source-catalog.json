@@ -1,0 +1,3823 @@
+[
+  {
+    "path": ".github/dependabot.yml",
+    "lines": 56,
+    "bytes": 1062
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "lines": 79,
+    "bytes": 2576
+  },
+  {
+    "path": ".github/workflows/consumer-compatibility.yml",
+    "lines": 51,
+    "bytes": 1963
+  },
+  {
+    "path": ".github/workflows/dependency-review.yml",
+    "lines": 31,
+    "bytes": 721
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "lines": 155,
+    "bytes": 4402
+  },
+  {
+    "path": "pyproject.toml",
+    "lines": 86,
+    "bytes": 2329
+  },
+  {
+    "path": "src/predictor_core/__init__.py",
+    "lines": 208,
+    "bytes": 11361,
+    "symbols": [
+      {
+        "name": "__getattr__",
+        "line": 198,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__dir__",
+        "line": 207,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from importlib import import_module",
+      "from importlib.metadata import version",
+      "from typing import TYPE_CHECKING",
+      "from predictor_core.contracts.scientific import SCIENTIFIC_GOVERNANCE_SCHEMA_VERSION, DataAcquisitionCharter, DatasetFreeze, LatencySLA, ResourceBudget, ScientificState, ScientificTransitionError, TimestampSemantics, validate_scientific_transition",
+      "from predictor_core.contracts.trial_v2 import NOT_APPLICABLE, TRIAL_SCHEMA_VERSION, UNKNOWN, TrialRegistryV2, TrialSchemaError, current_code_version, dataset_fingerprint, migrate_legacy_registry, migrate_legacy_trial, require_trial_v2, validate_trial_v2",
+      "from predictor_core.data.collection import COLLECTION_SCHEMA_VERSION, CollectionArchive, CollectionTransitionError, LifecycleState, ObservationEnvelope, ScientificPromotionError, aggregate_funnel",
+      "from predictor_core.data.contracts import PredictionPoint",
+      "from predictor_core.data.source_quality import SourceQualityScorecard, SourceQualityState, SourceQualityThresholds, source_quality_scorecard",
+      "from predictor_core.kernel.infra import config_hash, connect, run_migrations",
+      "from predictor_core.kernel.jsonl_store import JsonlStore",
+      "from predictor_core.kernel.meta import StaleModelError, fingerprint, validate",
+      "from predictor_core.kernel.net import download_file, sha256_file",
+      "from predictor_core.kernel.obs import emit_event, get_logger, read_events, setup_logging",
+      "from predictor_core.kernel.settings import MissingCredentialsError, require_secrets",
+      "from predictor_core.kernel.timeindex import NaiveDatetimeError, iso_z, parse_iso, to_utc, utcnow",
+      "from predictor_core.measurement.bootstrap import bootstrap_ci",
+      "from predictor_core.measurement.metrics import brier, calibration_table, diebold_mariano, log_loss, rps",
+      "from predictor_core.measurement.replay import LookaheadError, PastView, replay",
+      "from predictor_core.measurement.stats import block_bootstrap_ci, ci_mean, max_drawdown, probabilistic_sharpe_ratio, sharpe, sortino, spearman, spearman_block_ci",
+      "from predictor_core.measurement.trials import DeflationNotEstimableError, MetricMismatchError, PowerAttestationMissingError, TrialRegistry, attestation_path_for, deflated_sharpe_ratio, load_trials, register_trial, validate_trials",
+      "from predictor_core.testing.prequential import PrequentialEvaluator"
+    ]
+  },
+  {
+    "path": "src/predictor_core/contracts/__init__.py",
+    "lines": 196,
+    "bytes": 7725,
+    "symbols": [
+      {
+        "name": "__getattr__",
+        "line": 186,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__dir__",
+        "line": 195,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from importlib import import_module",
+      "from typing import TYPE_CHECKING",
+      "from predictor_core.contracts.collection import COLLECTION_SCHEMA_VERSION, CollectionArchive, CollectionTransitionError, LifecycleState, ObservationEnvelope, ScientificPromotionError, aggregate_funnel",
+      "from predictor_core.contracts.points import DataUnavailableError, MarketDataPoint, PredictionPoint, SignalPoint",
+      "from predictor_core.contracts.registry import NOT_APPLICABLE, TRIAL_SCHEMA_VERSION, UNKNOWN, DeflationNotEstimableError, MetricMismatchError, PowerAttestationMissingError, TrialRegistry, TrialRegistryV2, TrialSchemaError, attestation_path_for, current_code_version, dataset_fingerprint, deflated_sharpe_ratio, load_trials, migrate_legacy_registry, migrate_legacy_trial, register_trial, require_trial_v2, validate_trial_v2, validate_trials",
+      "from predictor_core.contracts.scientific import SCIENTIFIC_GOVERNANCE_SCHEMA_VERSION, DataAcquisitionCharter, DatasetFreeze, LatencySLA, ResourceBudget, ScientificState, ScientificTransitionError, TimestampSemantics, validate_scientific_transition",
+      "from predictor_core.data.source_quality import SourceQualityScorecard, SourceQualityState, SourceQualityThresholds, source_quality_scorecard",
+      "from predictor_core.kernel.jsonable import to_jsonable"
+    ]
+  },
+  {
+    "path": "src/predictor_core/contracts/collection.py",
+    "lines": 21,
+    "bytes": 521,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.data.collection import COLLECTION_SCHEMA_VERSION, CollectionArchive, CollectionTransitionError, LifecycleState, ObservationEnvelope, ScientificPromotionError, aggregate_funnel"
+    ]
+  },
+  {
+    "path": "src/predictor_core/contracts/points.py",
+    "lines": 22,
+    "bytes": 547,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.data.contracts import DataProvider, DataUnavailableError, MarketDataPoint, PredictionPoint, SignalPoint, SignalProvider"
+    ]
+  },
+  {
+    "path": "src/predictor_core/contracts/registry.py",
+    "lines": 54,
+    "bytes": 1377,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.contracts.trial_v2 import NOT_APPLICABLE, TRIAL_SCHEMA_VERSION, UNKNOWN, TrialRegistryV2, TrialSchemaError, current_code_version, dataset_fingerprint, migrate_legacy_registry, migrate_legacy_trial, require_trial_v2, validate_trial_v2",
+      "from predictor_core.measurement.trials import DeflationNotEstimableError, MetricMismatchError, PowerAttestationMissingError, TrialRegistry, attestation_path_for, deflated_sharpe_ratio, expected_max_sharpe, load_trials, register_trial, validate_trials"
+    ]
+  },
+  {
+    "path": "src/predictor_core/contracts/scientific.py",
+    "lines": 277,
+    "bytes": 10094,
+    "symbols": [
+      {
+        "name": "ScientificState",
+        "line": 19,
+        "type": "ClassDef"
+      },
+      {
+        "name": "ScientificTransitionError",
+        "line": 42,
+        "type": "ClassDef"
+      },
+      {
+        "name": "validate_scientific_transition",
+        "line": 46,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_required_text",
+        "line": 53,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_aware",
+        "line": 59,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_jsonable",
+        "line": 68,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_sha256",
+        "line": 75,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "TimestampSemantics",
+        "line": 82,
+        "type": "ClassDef"
+      },
+      {
+        "name": "LatencySLA",
+        "line": 93,
+        "type": "ClassDef"
+      },
+      {
+        "name": "ResourceBudget",
+        "line": 107,
+        "type": "ClassDef"
+      },
+      {
+        "name": "DataAcquisitionCharter",
+        "line": 123,
+        "type": "ClassDef"
+      },
+      {
+        "name": "DatasetFreeze",
+        "line": 187,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 87,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 97,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 111,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 143,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "to_dict",
+        "line": 163,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "from_dict",
+        "line": 169,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 209,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_unsigned_dict",
+        "line": 238,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "computed_hash",
+        "line": 245,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "seal",
+        "line": 255,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "verify",
+        "line": 260,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "to_dict",
+        "line": 263,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import hashlib",
+      "import json",
+      "import math",
+      "from collections.abc import Mapping",
+      "from dataclasses import asdict, dataclass, replace",
+      "from datetime import datetime",
+      "from enum import StrEnum",
+      "from typing import Any",
+      "from predictor_core.kernel.timeindex import iso_z, to_utc",
+      "from predictor_core.kernel.timeindex import parse_iso"
+    ]
+  },
+  {
+    "path": "src/predictor_core/contracts/trial_v2.py",
+    "lines": 302,
+    "bytes": 12244,
+    "symbols": [
+      {
+        "name": "TrialSchemaError",
+        "line": 60,
+        "type": "ClassDef"
+      },
+      {
+        "name": "_utc_z",
+        "line": 64,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_json_native",
+        "line": 76,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "validate_trial_v2",
+        "line": 84,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "require_trial_v2",
+        "line": 181,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "dataset_fingerprint",
+        "line": 188,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "current_code_version",
+        "line": 212,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "migrate_legacy_trial",
+        "line": 237,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "migrate_legacy_registry",
+        "line": 258,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "TrialRegistryV2",
+        "line": 277,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__init__",
+        "line": 280,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "load",
+        "line": 283,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "register",
+        "line": 291,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import hashlib",
+      "import json",
+      "import re",
+      "import subprocess",
+      "from collections.abc import Iterable, Mapping, Sequence",
+      "from importlib.metadata import PackageNotFoundError, version",
+      "from pathlib import Path",
+      "from typing import Any",
+      "from datetime import datetime"
+    ]
+  },
+  {
+    "path": "src/predictor_core/data/__init__.py",
+    "lines": 15,
+    "bytes": 910,
+    "symbols": [],
+    "imports": []
+  },
+  {
+    "path": "src/predictor_core/data/aggregation.py",
+    "lines": 84,
+    "bytes": 3534,
+    "symbols": [
+      {
+        "name": "_fuse_per_timestamp",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "consensus_median",
+        "line": 46,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "consensus_mean",
+        "line": 62,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "twap",
+        "line": 67,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import statistics",
+      "from predictor_core.data.contracts import MarketDataPoint"
+    ]
+  },
+  {
+    "path": "src/predictor_core/data/circuit_breaker.py",
+    "lines": 126,
+    "bytes": 4806,
+    "symbols": [
+      {
+        "name": "CircuitOpenError",
+        "line": 32,
+        "type": "ClassDef"
+      },
+      {
+        "name": "CircuitBreaker",
+        "line": 36,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__init__",
+        "line": 41,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "state",
+        "line": 63,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "data_quality_score",
+        "line": 68,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "can_attempt",
+        "line": 78,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "allow",
+        "line": 99,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "record_success",
+        "line": 102,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "record_failure",
+        "line": 108,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_transition",
+        "line": 116,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import time",
+      "from collections.abc import Callable",
+      "from predictor_core.kernel.obs import emit_event"
+    ]
+  },
+  {
+    "path": "src/predictor_core/data/collection.py",
+    "lines": 389,
+    "bytes": 15449,
+    "symbols": [
+      {
+        "name": "LifecycleState",
+        "line": 34,
+        "type": "ClassDef"
+      },
+      {
+        "name": "CollectionTransitionError",
+        "line": 74,
+        "type": "ClassDef"
+      },
+      {
+        "name": "ScientificPromotionError",
+        "line": 78,
+        "type": "ClassDef"
+      },
+      {
+        "name": "_utc",
+        "line": 82,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_hash",
+        "line": 91,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_json_object",
+        "line": 100,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "ObservationEnvelope",
+        "line": 113,
+        "type": "ClassDef"
+      },
+      {
+        "name": "CollectionArchive",
+        "line": 286,
+        "type": "ClassDef"
+      },
+      {
+        "name": "aggregate_funnel",
+        "line": 349,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 142,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "is_terminal",
+        "line": 194,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "transition",
+        "line": 197,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "to_dict",
+        "line": 245,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "from_dict",
+        "line": 274,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "as_scientific_trial",
+        "line": 282,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__init__",
+        "line": 289,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_events",
+        "line": 292,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "history",
+        "line": 298,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "append",
+        "line": 306,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "from collections.abc import Iterable, Mapping",
+      "from dataclasses import dataclass, replace",
+      "from datetime import datetime",
+      "from pathlib import Path",
+      "from typing import Any",
+      "from predictor_core.kernel.jsonl_store import JsonlStore",
+      "from predictor_core.kernel.timeindex import NaiveDatetimeError, iso_z, to_utc, utcnow",
+      "from predictor_core.kernel.timeindex import parse_iso"
+    ]
+  },
+  {
+    "path": "src/predictor_core/data/contracts.py",
+    "lines": 267,
+    "bytes": 12015,
+    "symbols": [
+      {
+        "name": "_freeze",
+        "line": 20,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "DataUnavailableError",
+        "line": 33,
+        "type": "ClassDef"
+      },
+      {
+        "name": "_utc_datetime",
+        "line": 38,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "MarketDataPoint",
+        "line": 48,
+        "type": "ClassDef"
+      },
+      {
+        "name": "SignalPoint",
+        "line": 85,
+        "type": "ClassDef"
+      },
+      {
+        "name": "PredictionPoint",
+        "line": 169,
+        "type": "ClassDef"
+      },
+      {
+        "name": "DataProvider",
+        "line": 238,
+        "type": "ClassDef"
+      },
+      {
+        "name": "SignalProvider",
+        "line": 260,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 67,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 113,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "is_enriched",
+        "line": 149,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "require_enriched",
+        "line": 161,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 193,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "is_mature",
+        "line": 221,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__hash__",
+        "line": 224,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "fetch_ohlcv",
+        "line": 248,
+        "type": "AsyncFunctionDef"
+      },
+      {
+        "name": "health_check",
+        "line": 256,
+        "type": "AsyncFunctionDef"
+      },
+      {
+        "name": "fetch",
+        "line": 266,
+        "type": "AsyncFunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import abc",
+      "import math",
+      "from dataclasses import dataclass",
+      "from datetime import datetime",
+      "from types import MappingProxyType",
+      "from predictor_core.kernel.timeindex import NaiveDatetimeError, to_utc"
+    ]
+  },
+  {
+    "path": "src/predictor_core/data/quality.py",
+    "lines": 86,
+    "bytes": 3895,
+    "symbols": [
+      {
+        "name": "overnight_returns",
+        "line": 21,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "detect_jumps",
+        "line": 39,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "infer_split_factor",
+        "line": 54,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "adjusted_closes",
+        "line": 69,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import logging",
+      "import math"
+    ]
+  },
+  {
+    "path": "src/predictor_core/data/router.py",
+    "lines": 176,
+    "bytes": 6789,
+    "symbols": [
+      {
+        "name": "FallbackRouter",
+        "line": 37,
+        "type": "ClassDef"
+      },
+      {
+        "name": "AggregationRouter",
+        "line": 109,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__init__",
+        "line": 38,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "fetch_ohlcv",
+        "line": 51,
+        "type": "AsyncFunctionDef"
+      },
+      {
+        "name": "__init__",
+        "line": 110,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_try",
+        "line": 127,
+        "type": "AsyncFunctionDef"
+      },
+      {
+        "name": "fetch_ohlcv",
+        "line": 153,
+        "type": "AsyncFunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "from predictor_core.data.aggregation import consensus_mean, consensus_median",
+      "from predictor_core.data.circuit_breaker import CircuitBreaker",
+      "from predictor_core.data.contracts import DataProvider, DataUnavailableError, MarketDataPoint",
+      "from predictor_core.kernel.obs import emit_event"
+    ]
+  },
+  {
+    "path": "src/predictor_core/data/source_quality.py",
+    "lines": 252,
+    "bytes": 8979,
+    "symbols": [
+      {
+        "name": "SourceQualityState",
+        "line": 18,
+        "type": "ClassDef"
+      },
+      {
+        "name": "SourceQualityThresholds",
+        "line": 25,
+        "type": "ClassDef"
+      },
+      {
+        "name": "SourceQualityScorecard",
+        "line": 60,
+        "type": "ClassDef"
+      },
+      {
+        "name": "_quantile99",
+        "line": 91,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_apply_thresholds",
+        "line": 98,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "source_quality_scorecard",
+        "line": 145,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__post_init__",
+        "line": 37,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "to_dict",
+        "line": 83,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "event_time",
+        "line": 161,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "ingested_time",
+        "line": 165,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import math",
+      "from collections import defaultdict",
+      "from collections.abc import Iterable, Mapping, Sequence",
+      "from dataclasses import asdict, dataclass",
+      "from datetime import datetime",
+      "from enum import StrEnum",
+      "from statistics import fmean, median",
+      "from typing import Any",
+      "from predictor_core.data.contracts import SignalPoint",
+      "from predictor_core.kernel.timeindex import to_utc"
+    ]
+  },
+  {
+    "path": "src/predictor_core/infra.py",
+    "lines": 9,
+    "bytes": 383,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.kernel import infra as _mod"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/__init__.py",
+    "lines": 6,
+    "bytes": 386,
+    "symbols": [],
+    "imports": []
+  },
+  {
+    "path": "src/predictor_core/kernel/infra.py",
+    "lines": 50,
+    "bytes": 1987,
+    "symbols": [
+      {
+        "name": "connect",
+        "line": 12,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "run_migrations",
+        "line": 22,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "config_hash",
+        "line": 47,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import hashlib",
+      "import json",
+      "import logging",
+      "import pathlib",
+      "import sqlite3"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/jsonable.py",
+    "lines": 60,
+    "bytes": 2686,
+    "symbols": [
+      {
+        "name": "stable_sorted",
+        "line": 26,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "to_jsonable",
+        "line": 41,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from types import MappingProxyType"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/jsonl_store.py",
+    "lines": 106,
+    "bytes": 4483,
+    "symbols": [
+      {
+        "name": "_json_immutable",
+        "line": 25,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "JsonlStore",
+        "line": 48,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__init__",
+        "line": 60,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "append",
+        "line": 63,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__iter__",
+        "line": 82,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "count",
+        "line": 99,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "tail",
+        "line": 102,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "import os",
+      "from pathlib import Path",
+      "from types import MappingProxyType",
+      "from predictor_core.kernel.jsonable import stable_sorted"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/meta.py",
+    "lines": 64,
+    "bytes": 2953,
+    "symbols": [
+      {
+        "name": "StaleModelError",
+        "line": 21,
+        "type": "ClassDef"
+      },
+      {
+        "name": "fingerprint",
+        "line": 26,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "validate",
+        "line": 42,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from predictor_core.kernel.infra import config_hash",
+      "import warnings"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/net.py",
+    "lines": 158,
+    "bytes": 5736,
+    "symbols": [
+      {
+        "name": "download_file",
+        "line": 25,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "sha256_file",
+        "line": 50,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "get_http_client",
+        "line": 77,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_status_of",
+        "line": 85,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "is_transient",
+        "line": 95,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "get_impersonating_session",
+        "line": 112,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "with_retry",
+        "line": 131,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "decorator",
+        "line": 134,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "wrapper",
+        "line": 136,
+        "type": "AsyncFunctionDef"
+      }
+    ],
+    "imports": [
+      "import asyncio",
+      "import functools",
+      "import hashlib",
+      "import logging",
+      "import pathlib",
+      "import random",
+      "import shutil",
+      "import time",
+      "import urllib.error",
+      "import urllib.request",
+      "import httpx",
+      "import httpx",
+      "from curl_cffi import requests as _cffi_requests"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/obs.py",
+    "lines": 131,
+    "bytes": 5368,
+    "symbols": [
+      {
+        "name": "setup_logging",
+        "line": 20,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "get_logger",
+        "line": 30,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "emit_event",
+        "line": 43,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "read_events",
+        "line": 113,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import json",
+      "import logging",
+      "import math",
+      "import os",
+      "import sys",
+      "from datetime import UTC, datetime",
+      "from pathlib import Path",
+      "from predictor_core.kernel.timeindex import NaiveDatetimeError, parse_iso"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/settings.py",
+    "lines": 67,
+    "bytes": 1950,
+    "symbols": [
+      {
+        "name": "MissingCredentialsError",
+        "line": 37,
+        "type": "ClassDef"
+      },
+      {
+        "name": "is_fake_secret",
+        "line": 41,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_fail_msg",
+        "line": 47,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "require_secrets",
+        "line": 55,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import os"
+    ]
+  },
+  {
+    "path": "src/predictor_core/kernel/timeindex.py",
+    "lines": 54,
+    "bytes": 2220,
+    "symbols": [
+      {
+        "name": "NaiveDatetimeError",
+        "line": 22,
+        "type": "ClassDef"
+      },
+      {
+        "name": "utcnow",
+        "line": 28,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "to_utc",
+        "line": 33,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "iso_z",
+        "line": 44,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "parse_iso",
+        "line": 50,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from datetime import UTC, datetime"
+    ]
+  },
+  {
+    "path": "src/predictor_core/measurement/__init__.py",
+    "lines": 8,
+    "bytes": 524,
+    "symbols": [],
+    "imports": []
+  },
+  {
+    "path": "src/predictor_core/measurement/bootstrap.py",
+    "lines": 149,
+    "bytes": 6228,
+    "symbols": [
+      {
+        "name": "_geom_sample",
+        "line": 44,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_resample_blocks",
+        "line": 52,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_resample_clusters",
+        "line": 66,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "bootstrap_ci",
+        "line": 75,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import logging",
+      "import math",
+      "import random",
+      "from collections.abc import Callable"
+    ]
+  },
+  {
+    "path": "src/predictor_core/measurement/metrics.py",
+    "lines": 200,
+    "bytes": 7629,
+    "symbols": [
+      {
+        "name": "_check",
+        "line": 26,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "brier",
+        "line": 33,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "log_loss",
+        "line": 46,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "rps",
+        "line": 56,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "calibration_table",
+        "line": 80,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_betacf",
+        "line": 112,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_betai",
+        "line": 148,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_t_two_sided_p",
+        "line": 161,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "diebold_mariano",
+        "line": 169,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "gamma",
+        "line": 189,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import math"
+    ]
+  },
+  {
+    "path": "src/predictor_core/measurement/replay.py",
+    "lines": 108,
+    "bytes": 4739,
+    "symbols": [
+      {
+        "name": "LookaheadError",
+        "line": 14,
+        "type": "ClassDef"
+      },
+      {
+        "name": "PastView",
+        "line": 18,
+        "type": "ClassDef"
+      },
+      {
+        "name": "replay",
+        "line": 58,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__init__",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "latest",
+        "line": 28,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "asof_index",
+        "line": 33,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__len__",
+        "line": 36,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__iter__",
+        "line": 39,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__getitem__",
+        "line": 42,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": []
+  },
+  {
+    "path": "src/predictor_core/measurement/stats.py",
+    "lines": 233,
+    "bytes": 8370,
+    "symbols": [
+      {
+        "name": "_ranks",
+        "line": 18,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "spearman",
+        "line": 34,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "spearman_block_ci",
+        "line": 49,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "sharpe",
+        "line": 76,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "sortino",
+        "line": 94,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "max_drawdown",
+        "line": 107,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_standardized_moments",
+        "line": 135,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_normal_cdf",
+        "line": 150,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "probabilistic_sharpe_ratio",
+        "line": 154,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "block_bootstrap_ci",
+        "line": 186,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "ci_mean",
+        "line": 214,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import math",
+      "import warnings",
+      "from collections.abc import Callable",
+      "from predictor_core.measurement.bootstrap import bootstrap_ci"
+    ]
+  },
+  {
+    "path": "src/predictor_core/measurement/trials.py",
+    "lines": 800,
+    "bytes": 35556,
+    "symbols": [
+      {
+        "name": "_parse_utc_z",
+        "line": 86,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "PowerAttestationMissingError",
+        "line": 96,
+        "type": "ClassDef"
+      },
+      {
+        "name": "attestation_path_for",
+        "line": 105,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_load_attestation",
+        "line": 111,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "load_trials",
+        "line": 125,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_pid_alive",
+        "line": 147,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_lock_owner_pid_dead",
+        "line": 174,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_acquire_trials_lock",
+        "line": 189,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_release_trials_lock",
+        "line": 251,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_find_non_finite_float",
+        "line": 258,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "validate_trials",
+        "line": 276,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "MetricMismatchError",
+        "line": 382,
+        "type": "ClassDef"
+      },
+      {
+        "name": "register_trial",
+        "line": 388,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_require_valid_attestation",
+        "line": 453,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_veredito_de",
+        "line": 530,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_register_trial_locked",
+        "line": 535,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "expected_max_sharpe",
+        "line": 666,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "DeflationNotEstimableError",
+        "line": 680,
+        "type": "ClassDef"
+      },
+      {
+        "name": "deflated_sharpe_ratio",
+        "line": 692,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "TrialRegistry",
+        "line": 748,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__init__",
+        "line": 757,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "register",
+        "line": 760,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "load",
+        "line": 786,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "validate",
+        "line": 789,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "sharpes",
+        "line": 792,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "deflated_sharpe",
+        "line": 795,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "import math",
+      "import os",
+      "import sys",
+      "import time",
+      "from collections.abc import Mapping",
+      "from datetime import UTC, datetime",
+      "from importlib.metadata import version",
+      "from pathlib import Path",
+      "from statistics import NormalDist, variance",
+      "from typing import Any",
+      "from predictor_core.measurement.stats import probabilistic_sharpe_ratio",
+      "import ctypes"
+    ]
+  },
+  {
+    "path": "src/predictor_core/net.py",
+    "lines": 10,
+    "bytes": 454,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.kernel import net as _mod"
+    ]
+  },
+  {
+    "path": "src/predictor_core/obs.py",
+    "lines": 9,
+    "bytes": 373,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.kernel import obs as _mod"
+    ]
+  },
+  {
+    "path": "src/predictor_core/replay.py",
+    "lines": 9,
+    "bytes": 398,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.measurement import replay as _mod"
+    ]
+  },
+  {
+    "path": "src/predictor_core/settings.py",
+    "lines": 9,
+    "bytes": 398,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.kernel import settings as _mod"
+    ]
+  },
+  {
+    "path": "src/predictor_core/stats.py",
+    "lines": 12,
+    "bytes": 627,
+    "symbols": [],
+    "imports": [
+      "from predictor_core.measurement import stats as _mod"
+    ]
+  },
+  {
+    "path": "src/predictor_core/testing/__init__.py",
+    "lines": 14,
+    "bytes": 929,
+    "symbols": [],
+    "imports": []
+  },
+  {
+    "path": "src/predictor_core/testing/harness.py",
+    "lines": 197,
+    "bytes": 8139,
+    "symbols": [
+      {
+        "name": "DirtyWorkingTreeError",
+        "line": 26,
+        "type": "ClassDef"
+      },
+      {
+        "name": "pipeline_fingerprint",
+        "line": 41,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_core_version",
+        "line": 72,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_atomic_write_json",
+        "line": 76,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "PipelineHasNoPowerError",
+        "line": 85,
+        "type": "ClassDef"
+      },
+      {
+        "name": "assert_pipeline_has_power",
+        "line": 90,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "attest_pipeline_power",
+        "line": 129,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "describe",
+        "line": 50,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import hashlib",
+      "import inspect",
+      "import json",
+      "from datetime import UTC, datetime, timedelta",
+      "from importlib.metadata import version",
+      "from pathlib import Path",
+      "from predictor_core.contracts.trial_v2 import current_code_version"
+    ]
+  },
+  {
+    "path": "src/predictor_core/testing/prequential.py",
+    "lines": 81,
+    "bytes": 3961,
+    "symbols": [
+      {
+        "name": "PrequentialEvaluator",
+        "line": 23,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__init__",
+        "line": 39,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "train_step",
+        "line": 45,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "predict_step",
+        "line": 50,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "run",
+        "line": 54,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import abc"
+    ]
+  },
+  {
+    "path": "src/predictor_core/testing/secrets.py",
+    "lines": 56,
+    "bytes": 2538,
+    "symbols": [
+      {
+        "name": "find_secrets",
+        "line": 33,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "assert_no_secrets_in_events",
+        "line": 45,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import re",
+      "from pathlib import Path"
+    ]
+  },
+  {
+    "path": "src/predictor_core/testing/synth.py",
+    "lines": 66,
+    "bytes": 2791,
+    "symbols": [
+      {
+        "name": "ar1_series",
+        "line": 11,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "edge_injected",
+        "line": 28,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "probabilistic_predictor",
+        "line": 44,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import random"
+    ]
+  },
+  {
+    "path": "sync_core.py",
+    "lines": 76,
+    "bytes": 2519,
+    "symbols": [
+      {
+        "name": "_sha256",
+        "line": 20,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "payload_files",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "manifest",
+        "line": 28,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "consumers",
+        "line": 34,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "audit",
+        "line": 42,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "main",
+        "line": 63,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import argparse",
+      "import hashlib",
+      "import json",
+      "from pathlib import Path"
+    ]
+  },
+  {
+    "path": "tests/__init__.py",
+    "lines": 0,
+    "bytes": 0,
+    "symbols": [],
+    "imports": []
+  },
+  {
+    "path": "tests/test_attestation_dirty_tree.py",
+    "lines": 116,
+    "bytes": 4009,
+    "symbols": [
+      {
+        "name": "_eval_mean",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_attest",
+        "line": 29,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_git",
+        "line": 41,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "repo_limpo",
+        "line": 46,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_arvore_suja_recusa_e_nao_grava_nada",
+        "line": 59,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_arvore_limpa_emite_e_grava_code_version",
+        "line": 70,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_allow_dirty_e_o_unico_escape_e_e_explicito",
+        "line": 81,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_arquivo_novo_nao_rastreado_tambem_suja",
+        "line": 94,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_fora_de_repositorio_nao_e_tratado_como_sujo",
+        "line": 105,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import subprocess",
+      "import pytest",
+      "from predictor_core.testing.harness import DirtyWorkingTreeError, attest_pipeline_power"
+    ]
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "lines": 106,
+    "bytes": 3580,
+    "symbols": [
+      {
+        "name": "_mean",
+        "line": 10,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_iid_brackets_mean",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_moving_brackets_mean_autocorrelated",
+        "line": 23,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_stationary_runs_and_brackets",
+        "line": 31,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_unknown_scheme_raises",
+        "line": 42,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_block_requires_min_length",
+        "line": 47,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_cluster_requires_key",
+        "line": 52,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_nonfinite_resamples_dropped",
+        "line": 57,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_cluster_widens_ci_under_intra_cluster_correlation",
+        "line": 72,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_cluster_singleton_brackets_mean",
+        "line": 88,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_bootstrap_ci_serie_vazia_e_valueerror_explicito",
+        "line": 103,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import math",
+      "import pytest",
+      "from predictor_core.measurement.bootstrap import bootstrap_ci"
+    ]
+  },
+  {
+    "path": "tests/test_contracts_facade.py",
+    "lines": 24,
+    "bytes": 989,
+    "symbols": [
+      {
+        "name": "test_points_facade_is_same_object",
+        "line": 12,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_registry_facade_is_same_object",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_package_facade_exports",
+        "line": 22,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from predictor_core import contracts",
+      "from predictor_core.contracts.points import MarketDataPoint, PredictionPoint",
+      "from predictor_core.contracts.registry import MetricMismatchError, TrialRegistry",
+      "from predictor_core.data.contracts import MarketDataPoint as PhysicalMDP",
+      "from predictor_core.data.contracts import PredictionPoint as PhysicalPP",
+      "from predictor_core.measurement.trials import MetricMismatchError as PhysicalMME",
+      "from predictor_core.measurement.trials import TrialRegistry as PhysicalTR"
+    ]
+  },
+  {
+    "path": "tests/test_data/conftest.py",
+    "lines": 9,
+    "bytes": 354,
+    "symbols": [
+      {
+        "name": "_events_to_tmp",
+        "line": 8,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_aggregation.py",
+    "lines": 53,
+    "bytes": 1625,
+    "symbols": [
+      {
+        "name": "_p",
+        "line": 13,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_consensus_median_fuses_per_timestamp",
+        "line": 28,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_consensus_published_at_is_max",
+        "line": 37,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_twap_uniform_grid_equals_mean_close",
+        "line": 46,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_twap_empty_raises",
+        "line": 51,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime, timedelta",
+      "import pytest",
+      "from predictor_core.data.aggregation import consensus_mean, consensus_median, twap",
+      "from predictor_core.data.contracts import MarketDataPoint"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_circuit_breaker.py",
+    "lines": 90,
+    "bytes": 3401,
+    "symbols": [
+      {
+        "name": "test_inicia_fechado_e_saudavel",
+        "line": 10,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_falhas_abaixo_do_limiar_seguem_fechado",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_atinge_limiar_abre",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_apos_timeout_vai_para_half_open",
+        "line": 33,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_sucesso_em_half_open_fecha_e_zera",
+        "line": 42,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_falha_em_half_open_reabre",
+        "line": 55,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_relogio_injetavel_controla_timeout",
+        "line": 63,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_half_open_libera_uma_sonda_por_vez",
+        "line": 73,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from predictor_core.data.circuit_breaker import CircuitBreaker"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_collection.py",
+    "lines": 139,
+    "bytes": 5477,
+    "symbols": [
+      {
+        "name": "envelope",
+        "line": 18,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_complete_flow_and_append_only_history",
+        "line": 41,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_duplicate_is_idempotent_but_changed_same_state_is_rejected",
+        "line": 73,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_retry_missing_result_stale_ambiguous_and_invalid_transition",
+        "line": 81,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_collection_cannot_be_scientific_or_reclassified_as_new",
+        "line": 101,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_funnel_filters_project_run_and_window",
+        "line": 116,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime, timedelta",
+      "import pytest",
+      "from predictor_core.contracts.collection import CollectionArchive, CollectionTransitionError, LifecycleState, ObservationEnvelope, ScientificPromotionError, aggregate_funnel"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_contracts.py",
+    "lines": 71,
+    "bytes": 1787,
+    "symbols": [
+      {
+        "name": "_mdp",
+        "line": 12,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_market_data_point_valid",
+        "line": 29,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_market_data_point_high_below_low_raises",
+        "line": 34,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_market_data_point_published_before_timestamp_raises",
+        "line": 39,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_market_data_point_rejects_naive_timestamp",
+        "line": 44,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_market_data_point_frozen",
+        "line": 49,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_signal_point_valid_with_vintage",
+        "line": 55,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_signal_point_published_before_timestamp_raises",
+        "line": 67,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime, timedelta",
+      "import pytest",
+      "from predictor_core.data.contracts import MarketDataPoint, SignalPoint"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_prediction_point.py",
+    "lines": 112,
+    "bytes": 4470,
+    "symbols": [
+      {
+        "name": "test_ciclo_basico",
+        "line": 12,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_maturacao_antes_da_emissao_e_lookahead",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_imutavel",
+        "line": 29,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_maturacao_instantanea_permitida",
+        "line": 35,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_metadata_mutada_apos_construcao_nao_vaza_para_o_objeto",
+        "line": 41,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_value_lista_mutada_apos_construcao_nao_vaza_para_o_objeto",
+        "line": 56,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_value_escalar_nao_e_afetado_pela_copia_defensiva",
+        "line": 63,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_predicted_at_string_e_rejeitado_com_typeerror_claro",
+        "line": 68,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_matures_at_string_e_rejeitado_com_typeerror_claro",
+        "line": 75,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_naive_e_rejeitado_com_valueerror_claro",
+        "line": 80,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_dois_naive_sao_rejeitados_na_fronteira_utc",
+        "line": 88,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_hash_sempre_funciona_independente_de_metadata_ou_value_serem_dict",
+        "line": 95,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_hash_consistente_com_eq_para_objetos_iguais",
+        "line": 108,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime, timedelta",
+      "import pytest",
+      "from predictor_core.data.contracts import PredictionPoint"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_quality.py",
+    "lines": 73,
+    "bytes": 2720,
+    "symbols": [
+      {
+        "name": "test_detect_jumps_flags_only_large_moves",
+        "line": 13,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_infer_split_factor_split_and_grouping",
+        "line": 20,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_infer_split_factor_none_when_not_round",
+        "line": 26,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_adjusted_closes_makes_series_continuous",
+        "line": 30,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_adjusted_closes_rejects_nonpositive_factor",
+        "line": 37,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_overnight_returns_skips_nonpositive_prev",
+        "line": 42,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_overnight_returns_com_close_anterior_nan_produz_ret_nan_em_vez_de_omitir",
+        "line": 47,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_detect_jumps_sempre_reporta_nan_independente_do_threshold",
+        "line": 60,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_detect_jumps_serie_normal_sem_nan_nao_regride",
+        "line": 69,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.data.quality import adjusted_closes, detect_jumps, infer_split_factor, overnight_returns",
+      "import math",
+      "import math"
+    ]
+  },
+  {
+    "path": "tests/test_data/test_router.py",
+    "lines": 84,
+    "bytes": 2802,
+    "symbols": [
+      {
+        "name": "_pt",
+        "line": 15,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_Provider",
+        "line": 30,
+        "type": "ClassDef"
+      },
+      {
+        "name": "test_fallback_uses_second_when_first_fails",
+        "line": 47,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_fallback_raises_when_all_fail",
+        "line": 54,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_fallback_skips_open_breaker_without_calling",
+        "line": 60,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_aggregation_consenso_funde_sobreviventes",
+        "line": 69,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_aggregation_raises_when_all_fail",
+        "line": 76,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_router_rejects_empty_providers",
+        "line": 82,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__init__",
+        "line": 31,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "fetch_ohlcv",
+        "line": 37,
+        "type": "AsyncFunctionDef"
+      },
+      {
+        "name": "health_check",
+        "line": 43,
+        "type": "AsyncFunctionDef"
+      }
+    ],
+    "imports": [
+      "import asyncio",
+      "from datetime import UTC, datetime",
+      "import pytest",
+      "from predictor_core.data.circuit_breaker import CircuitBreaker",
+      "from predictor_core.data.contracts import DataProvider, DataUnavailableError, MarketDataPoint",
+      "from predictor_core.data.router import AggregationRouter, FallbackRouter"
+    ]
+  },
+  {
+    "path": "tests/test_dsr_degeneration_is_visible.py",
+    "lines": 129,
+    "bytes": 5381,
+    "symbols": [
+      {
+        "name": "test_sem_sharpe_nenhum_a_degeneracao_e_declarada",
+        "line": 33,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_uma_so_tentativa_com_sharpe_ainda_nao_estima_variancia",
+        "line": 47,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_com_variancia_estimavel_o_desconto_acontece_e_e_declarado",
+        "line": 55,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_cobertura_expoe_a_fracao_do_registro_que_sustenta_o_desconto",
+        "line": 63,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_strict_recusa_devolver_numero_que_parece_descontado",
+        "line": 72,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_strict_nao_atrapalha_quando_o_desconto_e_estimavel",
+        "line": 78,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_registro_vazio_nao_divide_por_zero",
+        "line": 83,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_os_numeros_publicados_nao_mudaram",
+        "line": 90,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_a_sensibilidade_do_desconto_a_diversidade_das_tentativas",
+        "line": 111,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import math",
+      "import random",
+      "import pytest",
+      "from predictor_core import DeflationNotEstimableError, deflated_sharpe_ratio",
+      "from statistics import variance",
+      "from predictor_core.measurement.stats import probabilistic_sharpe_ratio",
+      "from predictor_core.measurement.trials import expected_max_sharpe"
+    ]
+  },
+  {
+    "path": "tests/test_finite_scientific_contracts.py",
+    "lines": 13,
+    "bytes": 475,
+    "symbols": [
+      {
+        "name": "test_nonfinite_scientific_scalar_is_rejected",
+        "line": 9,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.contracts.scientific import LatencySLA, ResourceBudget"
+    ]
+  },
+  {
+    "path": "tests/test_infra.py",
+    "lines": 30,
+    "bytes": 1195,
+    "symbols": [
+      {
+        "name": "test_connect_enables_wal_and_row_factory",
+        "line": 6,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_run_migrations_is_idempotent",
+        "line": 16,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_config_hash_deterministic_and_order_independent",
+        "line": 26,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from predictor_core import infra"
+    ]
+  },
+  {
+    "path": "tests/test_jsonable.py",
+    "lines": 42,
+    "bytes": 1589,
+    "symbols": [
+      {
+        "name": "test_round_trip_desfaz_o_freeze_recursivamente",
+        "line": 12,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_o_resultado_e_serializavel_sem_default",
+        "line": 23,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_conjunto_heterogeneo_tem_ordem_estavel",
+        "line": 31,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_valores_desconhecidos_passam_intactos",
+        "line": 37,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import json",
+      "import pytest",
+      "from predictor_core.contracts import to_jsonable",
+      "from predictor_core.data.contracts import _freeze",
+      "from predictor_core.kernel.jsonable import stable_sorted"
+    ]
+  },
+  {
+    "path": "tests/test_jsonl_store.py",
+    "lines": 99,
+    "bytes": 3624,
+    "symbols": [
+      {
+        "name": "test_append_and_iterate",
+        "line": 8,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_missing_file_iterates_empty",
+        "line": 15,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_count_and_tail",
+        "line": 19,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_corrupted_line_raises_with_line_number",
+        "line": 28,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_unserializable_record_fails_before_write",
+        "line": 35,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_append_rejeita_nan_antes_de_abrir_o_arquivo",
+        "line": 42,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_append_serializa_containers_congelados_do_core",
+        "line": 49,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_append_ainda_rejeita_objeto_realmente_nao_serializavel",
+        "line": 81,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_append_de_frozenset_heterogeneo_e_deterministico",
+        "line": 90,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.kernel.jsonl_store import JsonlStore",
+      "from predictor_core.data.contracts import _freeze"
+    ]
+  },
+  {
+    "path": "tests/test_lazy_facade.py",
+    "lines": 28,
+    "bytes": 824,
+    "symbols": [
+      {
+        "name": "test_root_import_does_not_load_optional_infrastructure",
+        "line": 5,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_all_legacy_exports_still_resolve",
+        "line": 19,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import subprocess",
+      "import sys",
+      "import predictor_core",
+      "from predictor_core import contracts"
+    ]
+  },
+  {
+    "path": "tests/test_meta.py",
+    "lines": 42,
+    "bytes": 1363,
+    "symbols": [
+      {
+        "name": "test_fingerprint_deterministic",
+        "line": 10,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_fingerprint_feature_order_matters",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_fingerprint_params_change_detected",
+        "line": 22,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_validate_ok_when_equal",
+        "line": 26,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_validate_raises_on_mismatch",
+        "line": 31,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_validate_warns_on_legacy_none",
+        "line": 38,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import warnings",
+      "import pytest",
+      "from predictor_core.kernel.meta import StaleModelError, fingerprint, validate"
+    ]
+  },
+  {
+    "path": "tests/test_metric_lock.py",
+    "lines": 69,
+    "bytes": 2151,
+    "symbols": [
+      {
+        "name": "_pipeline",
+        "line": 15,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_attest",
+        "line": 20,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_matching_metric_passes",
+        "line": 31,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_mismatched_metric_is_punished",
+        "line": 44,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_metric_omitted_is_rejected_for_new_trial",
+        "line": 57,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_attestation_requires_metric",
+        "line": 66,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.measurement.bootstrap import bootstrap_ci",
+      "from predictor_core.measurement.trials import MetricMismatchError, attestation_path_for, register_trial",
+      "from predictor_core.testing.harness import attest_pipeline_power",
+      "from predictor_core.testing.synth import ar1_series"
+    ]
+  },
+  {
+    "path": "tests/test_metrics.py",
+    "lines": 94,
+    "bytes": 2931,
+    "symbols": [
+      {
+        "name": "test_brier_perfect_is_zero",
+        "line": 19,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_brier_uniform_three_classes",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_log_loss_perfect_near_zero",
+        "line": 33,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_log_loss_penalizes_confident_wrong",
+        "line": 37,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_rps_perfect_is_zero",
+        "line": 46,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_rps_penalizes_distance_in_order",
+        "line": 50,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_rps_requires_two_classes",
+        "line": 58,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_calibration_well_calibrated",
+        "line": 66,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_dm_t_pvalue_matches_reference",
+        "line": 78,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_dm_detects_better_forecaster",
+        "line": 83,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_dm_nan_on_zero_variance",
+        "line": 92,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import math",
+      "import pytest",
+      "from predictor_core.measurement.metrics import _t_two_sided_p, brier, calibration_table, diebold_mariano, log_loss, rps"
+    ]
+  },
+  {
+    "path": "tests/test_net.py",
+    "lines": 32,
+    "bytes": 1164,
+    "symbols": [
+      {
+        "name": "_HttpError",
+        "line": 7,
+        "type": "ClassDef"
+      },
+      {
+        "name": "test_transient_status_codes",
+        "line": 13,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_daily_quota_is_not_transient",
+        "line": 19,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_message_markers_transient",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_status_of_extracts_code",
+        "line": 30,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__init__",
+        "line": 8,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from predictor_core import net"
+    ]
+  },
+  {
+    "path": "tests/test_obs.py",
+    "lines": 83,
+    "bytes": 3486,
+    "symbols": [
+      {
+        "name": "test_emit_event_writes_full_envelope",
+        "line": 8,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_emit_event_rejects_non_numeric_metrics",
+        "line": 24,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_emit_event_requires_domain_and_event",
+        "line": 29,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_read_events_missing_file_is_empty",
+        "line": 36,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_emit_event_rejeita_metric_nao_finita",
+        "line": 40,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_emit_event_rejeita_nan_escondido_no_metadata",
+        "line": 50,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_read_events_reports_line_context_on_truncated_jsonl",
+        "line": 55,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_emit_event_rejeita_timestamp_garbage",
+        "line": 66,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_emit_event_rejeita_timestamp_naive",
+        "line": 71,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_emit_event_aceita_timestamp_com_offset_nao_utc",
+        "line": 79,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core import obs"
+    ]
+  },
+  {
+    "path": "tests/test_public_api.py",
+    "lines": 35,
+    "bytes": 1904,
+    "symbols": [
+      {
+        "name": "test_public_facade_exact_snapshot",
+        "line": 27,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_temporary_flat_package_shims_import",
+        "line": 32,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import importlib",
+      "import predictor_core"
+    ]
+  },
+  {
+    "path": "tests/test_replay.py",
+    "lines": 99,
+    "bytes": 3228,
+    "symbols": [
+      {
+        "name": "test_pastview_blocks_future_index",
+        "line": 8,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_pastview_nao_carrega_futuro_nem_no_atributo_privado",
+        "line": 21,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_pastview_slice_clamps_to_past",
+        "line": 32,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_replay_drops_none_decisions",
+        "line": 44,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_replay_key_rejects_out_of_order",
+        "line": 49,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_replay_key_accepts_monotonic",
+        "line": 55,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_replay_rejects_data_available_after_cutoff_before_handler_runs",
+        "line": 61,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_replay_availability_check_requires_explicit_cutoff_key",
+        "line": 79,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_pastview_negativo_alem_do_inicio_e_indexerror_nao_lookahead",
+        "line": 84,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "handler",
+        "line": 11,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "handler",
+        "line": 25,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "handler",
+        "line": 35,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "handler",
+        "line": 65,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "handler",
+        "line": 89,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.measurement import replay"
+    ]
+  },
+  {
+    "path": "tests/test_scientific_golden.py",
+    "lines": 60,
+    "bytes": 1973,
+    "symbols": [
+      {
+        "name": "test_metrics_and_bootstrap_golden",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_anti_lookahead_and_experiment_registry_golden",
+        "line": 34,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime",
+      "import pytest",
+      "from predictor_core.data.contracts import PredictionPoint",
+      "from predictor_core.measurement.bootstrap import bootstrap_ci",
+      "from predictor_core.measurement.metrics import brier, log_loss, rps",
+      "from predictor_core.measurement.replay import LookaheadError, replay",
+      "from predictor_core.measurement.trials import load_trials, register_trial, validate_trials"
+    ]
+  },
+  {
+    "path": "tests/test_scientific_governance.py",
+    "lines": 111,
+    "bytes": 4183,
+    "symbols": [
+      {
+        "name": "test_charter_requires_auditable_scope",
+        "line": 19,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_freeze_is_deterministic_and_tamper_evident",
+        "line": 42,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_charter_rejects_missing_governance_fields",
+        "line": 69,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_scientific_transitions_cannot_skip_preregistration_or_freeze",
+        "line": 102,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime",
+      "import pytest",
+      "from predictor_core.contracts.scientific import DataAcquisitionCharter, DatasetFreeze, LatencySLA, ResourceBudget, ScientificState, ScientificTransitionError, TimestampSemantics, validate_scientific_transition"
+    ]
+  },
+  {
+    "path": "tests/test_settings.py",
+    "lines": 31,
+    "bytes": 1255,
+    "symbols": [
+      {
+        "name": "test_is_fake_secret_catches_bad_values",
+        "line": 9,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_require_secrets_returns_valid_dict",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_require_secrets_raises_listing_all_bad",
+        "line": 26,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core import settings"
+    ]
+  },
+  {
+    "path": "tests/test_source_quality.py",
+    "lines": 98,
+    "bytes": 3165,
+    "symbols": [
+      {
+        "name": "point",
+        "line": 13,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_healthy_source_scorecard",
+        "line": 34,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_gaps_and_latency_degrade_but_bad_provenance_quarantines",
+        "line": 49,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_revisions_and_reference_divergence_are_measured",
+        "line": 82,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime, timedelta",
+      "from predictor_core.contracts import SignalPoint",
+      "from predictor_core.data.source_quality import SourceQualityState, SourceQualityThresholds, source_quality_scorecard"
+    ]
+  },
+  {
+    "path": "tests/test_stats.py",
+    "lines": 104,
+    "bytes": 3828,
+    "symbols": [
+      {
+        "name": "test_spearman_perfect_monotonic",
+        "line": 12,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_spearman_none_when_undefined",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_ci_mean_brackets_the_mean",
+        "line": 25,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_block_bootstrap_brackets_mean_and_is_finite",
+        "line": 35,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_block_bootstrap_drops_nonfinite_resamples",
+        "line": 45,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_block_bootstrap_requires_min_length",
+        "line": 55,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_spearman_block_ci_returns_triple",
+        "line": 60,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_sharpe_constant_series_signals_direction",
+        "line": 70,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_max_drawdown_on_equity_curve",
+        "line": 79,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_max_drawdown_raises_on_nonpositive_equity",
+        "line": 84,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_psr_in_unit_interval_and_monotonic",
+        "line": 94,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_psr_nan_for_tiny_sample",
+        "line": 103,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import math",
+      "import pytest",
+      "from predictor_core import stats"
+    ]
+  },
+  {
+    "path": "tests/test_sync_core.py",
+    "lines": 36,
+    "bytes": 1147,
+    "symbols": [
+      {
+        "name": "_legacy_workspace",
+        "line": 7,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_audit_is_read_only",
+        "line": 14,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_audit_reports_drift_without_writing",
+        "line": 22,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_write_is_permanently_rejected",
+        "line": 29,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_no_legacy_vendor_is_success",
+        "line": 34,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from pathlib import Path",
+      "import pytest",
+      "import sync_core"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_harness.py",
+    "lines": 48,
+    "bytes": 1818,
+    "symbols": [
+      {
+        "name": "_mean",
+        "line": 10,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_good_pipeline",
+        "line": 14,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_edge_gen",
+        "line": 21,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_noise_gen",
+        "line": 26,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_harness_positive",
+        "line": 31,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_harness_catches_blind_pipeline",
+        "line": 36,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_harness_catches_credulous_pipeline",
+        "line": 43,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.measurement.bootstrap import bootstrap_ci",
+      "from predictor_core.testing.harness import PipelineHasNoPowerError, assert_pipeline_has_power",
+      "from predictor_core.testing.synth import ar1_series"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_prequential.py",
+    "lines": 80,
+    "bytes": 2336,
+    "symbols": [
+      {
+        "name": "_MeanEvaluator",
+        "line": 8,
+        "type": "ClassDef"
+      },
+      {
+        "name": "_obs",
+        "line": 27,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_run_pairs_prediction_with_actual",
+        "line": 31,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_train_never_sees_future",
+        "line": 39,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_predict_never_sees_target",
+        "line": 46,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_retrain_every_amortizes_training",
+        "line": 53,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_missing_target_raises",
+        "line": 60,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_invalid_config_raises",
+        "line": 68,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "__init__",
+        "line": 12,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "train_step",
+        "line": 17,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "predict_step",
+        "line": 22,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "NoTarget",
+        "line": 72,
+        "type": "ClassDef"
+      },
+      {
+        "name": "__init__",
+        "line": 73,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "train_step",
+        "line": 76,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "predict_step",
+        "line": 77,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.testing.prequential import PrequentialEvaluator"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_secrets.py",
+    "lines": 38,
+    "bytes": 1367,
+    "symbols": [
+      {
+        "name": "test_catches_known_prefixes",
+        "line": 8,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_clean_text_has_no_hits",
+        "line": 14,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_known_value_match_verbatim",
+        "line": 18,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_short_known_value_is_ignored",
+        "line": 23,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_absent_file_is_noop",
+        "line": 28,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_raises_on_leaked_secret",
+        "line": 32,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import pytest",
+      "from predictor_core.testing.secrets import assert_no_secrets_in_events, find_secrets"
+    ]
+  },
+  {
+    "path": "tests/test_testing/test_synth.py",
+    "lines": 48,
+    "bytes": 1840,
+    "symbols": [
+      {
+        "name": "test_ar1_deterministic_by_seed",
+        "line": 6,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_ar1_iid_when_phi_zero",
+        "line": 15,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_edge_injected_shifts_mean_by_known_amount",
+        "line": 21,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_edge_injected_specific_positions",
+        "line": 29,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_probabilistic_predictor_skill_extremes",
+        "line": 36,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_probabilistic_predictor_deterministic",
+        "line": 45,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from predictor_core.testing.synth import ar1_series, edge_injected, probabilistic_predictor"
+    ]
+  },
+  {
+    "path": "tests/test_timeindex.py",
+    "lines": 39,
+    "bytes": 1145,
+    "symbols": [
+      {
+        "name": "test_utcnow_is_aware_utc",
+        "line": 10,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_to_utc_converts_offset",
+        "line": 15,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_to_utc_rejects_naive",
+        "line": 20,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_iso_z_format_matches_trials_schema",
+        "line": 25,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_parse_iso_roundtrip",
+        "line": 32,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_parse_iso_rejects_naive_string",
+        "line": 37,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from datetime import UTC, datetime, timedelta, timezone",
+      "import pytest",
+      "from predictor_core.kernel.timeindex import NaiveDatetimeError, iso_z, parse_iso, to_utc, utcnow"
+    ]
+  },
+  {
+    "path": "tests/test_trial_v2.py",
+    "lines": 178,
+    "bytes": 6417,
+    "symbols": [
+      {
+        "name": "complete_trial",
+        "line": 22,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_complete_prospective_trial_validates",
+        "line": 62,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_prospective_writer_rejects_silently_incomplete_trial",
+        "line": 67,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_unknown_is_legacy_only_and_not_applicable_is_explicit",
+        "line": 75,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_not_applicable_cannot_hide_universal_prospective_provenance",
+        "line": 90,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_selection_path_and_relevant_selection_space_are_required",
+        "line": 94,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_registry_rejects_duplicate_trial_identity",
+        "line": 101,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_legacy_trial_migration_preserves_facts_and_marks_unknown",
+        "line": 108,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_legacy_missing_fields_remain_unknown",
+        "line": 126,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_invalid_legacy_value_is_not_silently_repaired",
+        "line": 133,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_registry_migration_is_non_destructive_and_idempotent",
+        "line": 138,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_migration_refuses_to_overwrite_original",
+        "line": 152,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_dataset_fingerprint_contract_covers_rows_fields_and_order",
+        "line": 159,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_code_version_reports_package_and_real_git_sha",
+        "line": 169,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_require_trial_rejects_non_json_result",
+        "line": 176,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import json",
+      "import tomllib",
+      "from pathlib import Path",
+      "import pytest",
+      "from predictor_core.contracts.trial_v2 import NOT_APPLICABLE, TRIAL_SCHEMA_VERSION, UNKNOWN, TrialRegistryV2, TrialSchemaError, current_code_version, dataset_fingerprint, migrate_legacy_registry, migrate_legacy_trial, require_trial_v2, validate_trial_v2"
+    ]
+  },
+  {
+    "path": "tests/test_trials.py",
+    "lines": 444,
+    "bytes": 16846,
+    "symbols": [
+      {
+        "name": "test_register_and_load",
+        "line": 29,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_reregister_same_name_updates_not_appends",
+        "line": 39,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_mudar_params_de_trial_existente_e_erro",
+        "line": 58,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_registro_invalido_nao_e_gravado",
+        "line": 66,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_campos_opcionais_do_schema",
+        "line": 73,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_periodo_com_um_lado_none_e_aceito",
+        "line": 96,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_periodo_com_os_dois_lados_none_e_rejeitado",
+        "line": 108,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_periodo_fechado_exige_iso8601_utc",
+        "line": 121,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_extra_desconhecido_e_rejeitado_antes_de_persistir",
+        "line": 133,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_validate_trials_rejeita_campos_desconhecidos_em_arquivo_legado",
+        "line": 140,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_schema_rejeita_campo_invalido",
+        "line": 162,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_eval_mean",
+        "line": 177,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_trial_nova_sem_atestado_e_barrada",
+        "line": 182,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_atestado_do_harness_destrava_o_registro",
+        "line": 189,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_harness_reprovado_nao_emite_atestado",
+        "line": 211,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_atestado_corrompido_nao_destrava",
+        "line": 229,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_expected_max_sharpe_grows_with_n",
+        "line": 239,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_dsr_decreases_with_more_trials",
+        "line": 246,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_registry_facade_deflates_by_registered_trials",
+        "line": 253,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_update_nao_pode_trocar_metric",
+        "line": 271,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_update_sem_metric_preserva_a_registrada",
+        "line": 280,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_update_pode_enriquecer_trial_sem_metric",
+        "line": 288,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_validate_trials_rejeita_sharpe_bool_e_metric_invalida",
+        "line": 295,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_load_trials_json_corrompido_da_erro_com_caminho",
+        "line": 305,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_load_trials_null_da_erro_claro_em_vez_de_typeerror_downstream",
+        "line": 312,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_register_trial_nao_perde_tentativa_sob_leitura_obsoleta_concorrente",
+        "line": 319,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_register_trial_lock_e_liberado_mesmo_apos_falha_de_validacao",
+        "line": 335,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_params_com_nan_e_rejeitado",
+        "line": 353,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_params_com_infinity_aninhado_e_rejeitado",
+        "line": 359,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_params_com_valor_nao_serializavel_da_erro_com_contexto",
+        "line": 365,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_entrada_legada_malformada_nao_bloqueia_silenciosamente_trial_nova_valida",
+        "line": 373,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_lock_reclama_imediatamente_quando_pid_dono_esta_morto",
+        "line": 386,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_lock_owner_pid_dead_e_false_quando_pid_esta_vivo",
+        "line": 400,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_lock_vivo_nao_e_roubado_por_idade",
+        "line": 411,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_lock_owner_pid_dead_e_false_quando_conteudo_ilegivel",
+        "line": 426,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_lock_grava_pid_do_processo_atual",
+        "line": 434,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import math",
+      "import pytest",
+      "from predictor_core.measurement.trials import PowerAttestationMissingError, TrialRegistry, attestation_path_for, deflated_sharpe_ratio, expected_max_sharpe, load_trials, register_trial, validate_trials",
+      "from predictor_core.testing.harness import attest_pipeline_power",
+      "from predictor_core.testing.harness import PipelineHasNoPowerError",
+      "import datetime as _dt",
+      "import json as _json",
+      "from predictor_core.measurement import trials as trials_mod",
+      "import json as _json",
+      "from predictor_core.measurement import trials as trials_mod",
+      "import json as _json",
+      "from predictor_core.measurement import trials as trials_mod",
+      "from predictor_core.measurement import trials as trials_mod",
+      "import json as _json",
+      "import os as _os",
+      "from predictor_core.measurement import trials as trials_mod"
+    ]
+  },
+  {
+    "path": "tests/test_verdict_change_requires_attestation.py",
+    "lines": 175,
+    "bytes": 5752,
+    "symbols": [
+      {
+        "name": "_eval_mean",
+        "line": 34,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "registro",
+        "line": 40,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "_atesta",
+        "line": 56,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_flip_de_veredito_sem_atestado_e_bloqueado",
+        "line": 67,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_sharpe_inflado_sem_atestado_e_bloqueado",
+        "line": 82,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_editar_apenas_notes_continua_livre",
+        "line": 96,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_com_atestado_valido_o_flip_passa_e_preserva_o_anterior",
+        "line": 113,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_o_historico_e_append_only",
+        "line": 137,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_atestado_expirado_nao_autoriza_flip",
+        "line": 155,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import pytest",
+      "from predictor_core import PowerAttestationMissingError, attestation_path_for, load_trials, register_trial, validate_trials",
+      "from predictor_core.testing.harness import attest_pipeline_power",
+      "import json"
+    ]
+  },
+  {
+    "path": "tests/test_version.py",
+    "lines": 12,
+    "bytes": 424,
+    "symbols": [
+      {
+        "name": "test_version_has_provenance_stamp",
+        "line": 9,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import re",
+      "import predictor_core"
+    ]
+  },
+  {
+    "path": "tools/check_installed_wheel.py",
+    "lines": 146,
+    "bytes": 6478,
+    "symbols": [
+      {
+        "name": "identity",
+        "line": 25,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "InstalledBehavior",
+        "line": 50,
+        "type": "ClassDef"
+      },
+      {
+        "name": "test_metrics_independent_formula",
+        "line": 51,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_bootstrap_constant_and_seed",
+        "line": 57,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_replay_visibility_order_and_availability",
+        "line": 66,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_temporal_contract",
+        "line": 82,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_nonfinite_contracts",
+        "line": 88,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_compatibility_settings_behavior",
+        "line": 96,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_compatibility_observation_roundtrip",
+        "line": 102,
+        "type": "FunctionDef"
+      },
+      {
+        "name": "test_root_import_has_no_io_or_optional_import",
+        "line": 118,
+        "type": "FunctionDef"
+      }
+    ],
+    "imports": [
+      "import argparse",
+      "import hashlib",
+      "import importlib.metadata",
+      "import json",
+      "import math",
+      "import subprocess",
+      "import sys",
+      "import tempfile",
+      "import unittest",
+      "import zipfile",
+      "from datetime import UTC, datetime",
+      "from pathlib import Path",
+      "import predictor_core",
+      "from predictor_core import obs, settings",
+      "from predictor_core.contracts.scientific import LatencySLA, ResourceBudget",
+      "from predictor_core.data.contracts import PredictionPoint",
+      "from predictor_core.measurement.bootstrap import bootstrap_ci",
+      "from predictor_core.measurement.metrics import brier, log_loss",
+      "from predictor_core.measurement.replay import LookaheadError, replay"
+    ]
+  },
+  {
+    "path": "tools/compatibility_candidate.json",
+    "lines": 44,
+    "bytes": 1662
+  },
+  {
+    "path": "uv.lock",
+    "lines": 835,
+    "bytes": 121743
+  }
+]

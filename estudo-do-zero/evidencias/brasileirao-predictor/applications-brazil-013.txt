@@ -1,0 +1,129 @@
+### brasileirao_predictor/ingest_fbref.py
+11: import re
+12: import sys
+13: import time
+14: import urllib.request
+15: from io import StringIO
+16: from pathlib import Path
+17: from typing import Any, cast
+19: import pandas as pd
+20: from bs4 import BeautifulSoup, Comment
+22: from . import db
+23: from .ingest import ROOT, load_config
+25: UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+28: COLUMN_MAP = {
+29:     "player": ["player"],
+30:     "team": ["squad", "team", "nation"],
+31:     "position": ["pos"],
+32:     "games": ["mp", "matches played"],
+33:     "minutes": ["min", "minutes"],
+34:     "goals": ["gls", "goals"],
+35:     "assists": ["ast", "assists"],
+36:     "xg": ["xg"],
+37:     "xag": ["xag", "xa"],
+38: }
+41: def fetch_html(url: str, cache_dir: Path, rate_limit: float) -> str:
+42:     cache_dir.mkdir(parents=True, exist_ok=True)
+43:     cached = cache_dir / (re.sub(r"\W+", "_", url).strip("_") + ".html")
+44:     if cached.exists():
+45:         return cached.read_text(encoding="utf-8")
+46:     req = urllib.request.Request(url, headers={"User-Agent": UA})
+47:     with urllib.request.urlopen(req, timeout=30) as r:
+48:         html = r.read().decode("utf-8", errors="replace")
+49:     cached.write_text(html, encoding="utf-8")
+50:     time.sleep(rate_limit)  # FBref pede gentileza: ~1 req a cada poucos segundos
+51:     return html
+54: def _uncomment_tables(html: str) -> BeautifulSoup:
+55:     soup = BeautifulSoup(html, "lxml")
+56:     for c in soup.find_all(string=lambda t: isinstance(t, Comment)):
+57:         if "<table" in c:
+58:             soup.append(BeautifulSoup(c, "lxml"))
+59:     return soup
+62: def _flatten(cols) -> list:
+63:     out = []
+64:     for c in cols:
+65:         out.append(str(c[-1]) if isinstance(c, tuple) else str(c))
+66:     return out
+69: def _resolve(columns: list[Any]) -> dict[str, Any]:
+70:     lower = {c.lower().strip(): c for c in columns}
+71:     found = {}
+72:     for canon, candidates in COLUMN_MAP.items():
+73:         for cand in candidates:
+74:             if cand in lower:
+75:                 found[canon] = lower[cand]
+76:                 break
+77:     return found
+80: def parse_player_stats(html: str, competition: str, season: str) -> list:
+81:     soup = _uncomment_tables(html)
+82:     table = soup.find("table", id=re.compile(r"stats_standard"))
+83:     if table is None:
+84:         raise ValueError(f"tabela stats_standard ausente em '{competition}'")
+86:     df = cast(pd.DataFrame, pd.read_html(StringIO(str(table)))[0])
+87:     df.columns = _flatten(df.columns)
+88:     cols = _resolve(list(df.columns))
+89:     if "player" not in cols:
+90:         raise ValueError(f"coluna de jogador não encontrada em '{competition}'")
+93:     player_col = cast(pd.Series, df[cols["player"]])
+94:     df = cast(pd.DataFrame, df[player_col.astype(str).str.lower() != "player"])
+95:     player_col = cast(pd.Series, df[cols["player"]])
+96:     df = cast(pd.DataFrame, df[player_col.notna()])
+98:     def num(value: Any) -> float | None:
+99:         try:
+100:             parsed = float(str(value).replace(",", ""))
+101:         except (TypeError, ValueError):
+102:             return None
+103:         return None if pd.isna(parsed) else parsed
+105:     rows = []
+106:     for _, r in df.iterrows():
+108:         def g(key, cast):
+109:             if key not in cols:
+110:                 return None
+111:             v = r[cols[key]]
+112:             if cast is int:
+113:                 parsed = num(v)
+114:                 return None if parsed is None else int(parsed)
+115:             if cast is float:
+116:                 parsed = num(v)
+117:                 return parsed
+118:             return None if bool(pd.isna(v)) else str(v)
+120:         player = g("player", str)
+121:         team = g("team", str)
+122:         if not player or not team:
+123:             continue
+124:         rows.append(
+125:             (
+126:                 player,
+127:                 team,
+128:                 competition,
+129:                 season,
+130:                 g("position", str),
+131:                 g("minutes", int),
+132:                 g("games", int),
+133:                 g("goals", int),
+134:                 g("assists", int),
+135:                 g("xg", float),
+136:                 g("xag", float),
+137:             )
+138:         )
+139:     return rows
+142: def run() -> None:
+143:     cfg = load_config()
+144:     pcfg = cfg.get("player_stats")
+145:     if not pcfg or not pcfg.get("competitions"):
+146:         sys.exit("nada em player_stats.competitions no config.yaml")
+148:     cache = ROOT / pcfg.get("cache_dir", "data/fbref_cache")
+149:     rate = float(pcfg.get("rate_limit_seconds", 4))
+150:     conn = db.connect(str(ROOT / cfg["database"]))
+152:     total = 0
+153:     for comp in pcfg["competitions"]:
+154:         try:
+155:             html = fetch_html(comp["url"], cache, rate)
+156:             rows = parse_player_stats(html, comp["name"], str(comp["season"]))
+157:             db.upsert_players(conn, rows)
+158:             total += len(rows)
+159:             print(f"  {comp['name']}: {len(rows)} jogadores")
+160:         except Exception as e:
+161:             print(f"  [falha] {comp['name']}: {e}")
+162:     print(f"player_comp_stats: {total} linhas processadas")
+165: if __name__ == "__main__":
+166:     sys.exit(run())

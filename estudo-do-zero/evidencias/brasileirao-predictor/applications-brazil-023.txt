@@ -1,0 +1,349 @@
+### brasileirao_predictor/research/pit_features/__init__.py
+3: from brasileirao_predictor.research.pit_features.contracts import (
+4:     ExternalResearchGate,
+5:     FeatureDeclaration,
+6:     PITFeatureEvidence,
+7:     PITFeatureExtractor,
+8:     assert_training_unlocked,
+9: )
+11: __all__ = [
+12:     "ExternalResearchGate",
+13:     "FeatureDeclaration",
+14:     "PITFeatureEvidence",
+15:     "PITFeatureExtractor",
+16:     "assert_training_unlocked",
+17: ]
+### brasileirao_predictor/research/pit_features/absences.py
+3: from brasileirao_predictor.research.pit_features.contracts import FeatureDeclaration
+5: DECLARATION = FeatureDeclaration(
+6:     feature_family="absences",
+7:     version="pit-absences/1",
+8:     mechanism_ex_ante=(
+9:         "Ausências alteram a força esperada da equipe pela indisponibilidade "
+10:         "declarada de jogadores, sem usar o resultado."
+11:     ),
+12:     required_source_fields=("team", "player_id", "status", "reason", "announced_at"),
+13:     output_contract=("team", "player_id", "availability_status", "reason_code"),
+14:     provenance_policy=(
+15:         "available_at é o timestamp real da publicação da fonte; coleta posterior não retroage a disponibilidade."
+16:     ),
+17: )
+### brasileirao_predictor/research/pit_features/contextual.py
+3: import math
+4: from datetime import datetime
+5: from numbers import Integral, Real
+7: from brasileirao_predictor.research.pit_features.contracts import FeatureDeclaration, PITFeatureEvidence
+9: REST = FeatureDeclaration(
+10:     feature_family="rest",
+11:     version="pit-rest/1",
+12:     mechanism_ex_ante="Days since each club's strictly previous kickoff proxy recovery and schedule congestion.",
+13:     required_source_fields=("home_previous_kickoff", "away_previous_kickoff"),
+14:     output_contract=("home_rest_days", "away_rest_days", "rest_days_delta"),
+15:     provenance_policy=(
+16:         "Previous kickoffs must originate from the immutable schedule vintage available before prediction."
+17:     ),
+18: )
+19: TRAVEL = FeatureDeclaration(
+20:     feature_family="travel",
+21:     version="pit-travel/1",
+22:     mechanism_ex_ante="Great-circle distance from the visitor origin to the match venue proxies travel burden.",
+23:     required_source_fields=("origin_lat", "origin_lon", "venue_lat", "venue_lon"),
+24:     output_contract=("away_travel_km",),
+25:     provenance_policy="Coordinates and venue assignment must carry an effective date no later than available_at.",
+26: )
+27: SURFACE = FeatureDeclaration(
+28:     feature_family="surface",
+29:     version="pit-surface/1",
+30:     mechanism_ex_ante=(
+31:         "Pre-declared synthetic versus natural surface may interact with team familiarity before kickoff."
+32:     ),
+33:     required_source_fields=("surface", "home_accustomed", "away_accustomed"),
+34:     output_contract=("synthetic_surface", "surface_familiarity_delta"),
+35:     provenance_policy="Surface registry version must be effective and observable strictly before the fixture kickoff.",
+36: )
+37: COACH = FeatureDeclaration(
+38:     feature_family="coach_tenure",
+39:     version="pit-coach-tenure/1",
+40:     mechanism_ex_ante="Matches completed under the announced coach proxy tactical continuity without future results.",
+41:     required_source_fields=("home_matches", "away_matches", "announced_at"),
+42:     output_contract=("home_coach_matches", "away_coach_matches", "coach_tenure_delta"),
+43:     provenance_policy="Coach announcements and prior-match counts must use only versions published before kickoff.",
+44: )
+47: def _dt(value: object) -> datetime:
+48:     parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+49:     if parsed.tzinfo is None or parsed.utcoffset() is None:
+50:         raise ValueError("context timestamp must be timezone-aware")
+51:     return parsed
+54: def materialize_context(evidence: PITFeatureEvidence) -> dict[str, float | int | bool]:
+55:     payload = evidence.payload
+56:     if evidence.feature_family == "rest":
+57:         evidence.assert_matches(REST)
+58:         home = (evidence.kickoff_at - _dt(payload["home_previous_kickoff"])).total_seconds() / 86400
+59:         away = (evidence.kickoff_at - _dt(payload["away_previous_kickoff"])).total_seconds() / 86400
+60:         if home <= 0 or away <= 0:
+61:             raise ValueError("previous kickoff must be strictly before current kickoff")
+62:         return {"home_rest_days": home, "away_rest_days": away, "rest_days_delta": home - away}
+63:     if evidence.feature_family == "travel":
+64:         evidence.assert_matches(TRAVEL)
+65:         if any(
+66:             isinstance(payload[name], bool) or not isinstance(payload[name], Real)
+67:             for name in TRAVEL.required_source_fields
+68:         ):
+69:             raise ValueError("travel coordinates must be numbers")
+70:         lat1, lon1, lat2, lon2 = (float(payload[name]) for name in TRAVEL.required_source_fields)
+71:         if not all(math.isfinite(value) for value in (lat1, lon1, lat2, lon2)):
+72:             raise ValueError("travel coordinates must be finite")
+73:         if not (-90 <= lat1 <= 90 and -90 <= lat2 <= 90 and -180 <= lon1 <= 180 and -180 <= lon2 <= 180):
+74:             raise ValueError("travel coordinates are outside latitude/longitude bounds")
+75:         phi1, phi2 = math.radians(lat1), math.radians(lat2)
+76:         dphi, dlambda = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+77:         a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+78:         a = min(1.0, max(0.0, a))  # Only floating-point roundoff after validating physical bounds.
+79:         return {"away_travel_km": 6371.0088 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))}
+80:     if evidence.feature_family == "surface":
+81:         evidence.assert_matches(SURFACE)
+82:         surface = str(payload["surface"]).casefold()
+83:         if surface not in {"natural", "synthetic"}:
+84:             raise ValueError("surface must be natural or synthetic")
+85:         home, away = payload["home_accustomed"], payload["away_accustomed"]
+86:         if not isinstance(home, bool) or not isinstance(away, bool):
+87:             raise ValueError("surface familiarity must be boolean")
+88:         return {"synthetic_surface": surface == "synthetic", "surface_familiarity_delta": int(home) - int(away)}
+89:     if evidence.feature_family == "coach_tenure":
+90:         evidence.assert_matches(COACH)
+91:         home, away = payload["home_matches"], payload["away_matches"]
+92:         if any(isinstance(value, bool) or not isinstance(value, Integral) for value in (home, away)):
+93:             raise ValueError("coach tenure must use integer counts")
+94:         home, away = int(home), int(away)
+95:         if min(home, away) < 0 or _dt(payload["announced_at"]) > evidence.available_at:
+96:             raise ValueError("coach tenure inputs violate point-in-time constraints")
+97:         return {"home_coach_matches": home, "away_coach_matches": away, "coach_tenure_delta": home - away}
+98:     raise ValueError(f"unsupported contextual feature family: {evidence.feature_family}")
+### brasileirao_predictor/research/pit_features/contracts.py
+3: from __future__ import annotations
+5: from datetime import UTC, datetime
+6: from typing import Any, Literal, Protocol, runtime_checkable
+8: from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
+10: FeatureFamily = Literal[
+11:     "absences",
+12:     "lineup",
+13:     "isolated_xg",
+14:     "hierarchical_home_advantage",
+15:     "rest",
+16:     "travel",
+17:     "surface",
+18:     "coach_tenure",
+19: ]
+22: class FeatureDeclaration(BaseModel):
+25:     model_config = ConfigDict(extra="forbid", frozen=True)
+27:     feature_family: FeatureFamily
+28:     version: str = Field(min_length=1)
+29:     mechanism_ex_ante: str = Field(min_length=20)
+30:     required_source_fields: tuple[str, ...] = Field(min_length=1)
+31:     output_contract: tuple[str, ...] = Field(min_length=1)
+32:     provenance_policy: str = Field(min_length=20)
+33:     training_status: Literal["SCAFFOLD_ONLY_TRAINING_BLOCKED"] = "SCAFFOLD_ONLY_TRAINING_BLOCKED"
+36: class PITFeatureEvidence(BaseModel):
+39:     model_config = ConfigDict(extra="forbid", frozen=True)
+41:     event_id: str = Field(min_length=1)
+42:     feature_family: FeatureFamily
+43:     declaration_version: str = Field(min_length=1)
+44:     source: str = Field(min_length=1)
+45:     source_record_id: str = Field(min_length=1)
+46:     observed_at: datetime
+47:     available_at: datetime
+48:     ingested_at: datetime
+49:     kickoff_at: datetime
+50:     payload: dict[str, Any]
+52:     @model_validator(mode="after")
+53:     def validate_point_in_time_clocks(self) -> PITFeatureEvidence:
+54:         clocks = ("observed_at", "available_at", "ingested_at", "kickoff_at")
+55:         for name in clocks:
+56:             value = getattr(self, name)
+57:             if value.tzinfo is None or value.utcoffset() is None:
+58:                 raise ValueError(f"{name} must be timezone-aware")
+59:             object.__setattr__(self, name, value.astimezone(UTC))
+60:         if self.available_at < self.observed_at:
+61:             raise ValueError("available_at cannot precede observed_at")
+62:         if self.ingested_at < self.available_at:
+63:             raise ValueError("ingested_at cannot precede available_at")
+64:         if self.available_at >= self.kickoff_at:
+65:             raise ValueError("feature information must be available strictly before kickoff")
+66:         if self.ingested_at >= self.kickoff_at:
+67:             raise ValueError("pre-match feature receipt must be strictly before kickoff")
+68:         return self
+70:     def assert_matches(self, declaration: FeatureDeclaration) -> None:
+71:         if self.feature_family != declaration.feature_family:
+72:             raise ValueError("evidence feature_family does not match declaration")
+73:         if self.declaration_version != declaration.version:
+74:             raise ValueError("evidence declaration_version does not match declaration")
+75:         missing = set(declaration.required_source_fields) - self.payload.keys()
+76:         if missing:
+77:             raise ValueError(f"payload missing declared source fields: {sorted(missing)}")
+80: @runtime_checkable
+81: class PITFeatureExtractor(Protocol):
+84:     declaration: FeatureDeclaration
+86:     def materialize(self, evidence: PITFeatureEvidence) -> dict[str, float | int | str | bool | None]: ...
+89: class ExternalResearchGate(BaseModel):
+90:     model_config = ConfigDict(extra="forbid", frozen=True)
+92:     phase0b_go: StrictBool = False
+93:     live_viability_go: StrictBool = False
+94:     evidence_reference: str | None = None
+97: def assert_training_unlocked(gate: ExternalResearchGate) -> None:
+99:     if not (gate.phase0b_go or gate.live_viability_go):
+100:         raise RuntimeError("PIT feature training blocked until Phase 0B or live viability produces GO")
+101:     if not gate.evidence_reference or not gate.evidence_reference.strip():
+102:         raise RuntimeError("training GO requires an immutable evidence reference")
+### brasileirao_predictor/research/pit_features/hierarchical_home_advantage.py
+3: from brasileirao_predictor.research.pit_features.contracts import FeatureDeclaration
+5: DECLARATION = FeatureDeclaration(
+6:     feature_family="hierarchical_home_advantage",
+7:     version="pit-hierarchical-home-advantage/1",
+8:     mechanism_ex_ante=(
+9:         "O efeito de mando específico da equipe é parcialmente agrupado ao "
+10:         "efeito da liga para controlar amostras pequenas."
+11:     ),
+12:     required_source_fields=("team", "venue_role", "eligible_match_ids", "asof_cutoff"),
+13:     output_contract=("team", "home_effect_input", "league_prior_input", "eligible_n"),
+14:     provenance_policy=(
+15:         "Somente jogos finalizados e publicados antes do corte PIT podem compor os agregados de equipe e da liga."
+16:     ),
+17: )
+### brasileirao_predictor/research/pit_features/isolated_xg.py
+3: from brasileirao_predictor.research.pit_features.contracts import FeatureDeclaration
+5: ARCHITECTURE_POLICY = {
+6:     "architecture": "ISOLATED_XG_NEW_LINEAGE",
+7:     "forbidden": ("H12_ENSEMBLE_REUSE", "PROBABILITY_BLEND", "GRID_BLEND_WITH_SERVING"),
+8:     "serving_integration": "PROHIBITED_IN_SCAFFOLD_PHASE",
+9: }
+11: DECLARATION = FeatureDeclaration(
+12:     feature_family="isolated_xg",
+13:     version="pit-isolated-xg/1",
+14:     mechanism_ex_ante=(
+15:         "xG PIT forma uma arquitetura causal independente para estimar criação "
+16:         "e concessão; não mistura grades ou saídas do H12."
+17:     ),
+18:     required_source_fields=("event_id", "team", "xg", "provider_published_at"),
+19:     output_contract=("team", "historical_xg_for", "historical_xg_against", "asof_cutoff"),
+20:     provenance_policy=(
+21:         "Cada xG só entra após o provedor publicá-lo e apenas em partidas cujo "
+22:         "kickoff e disponibilidade precedem o corte."
+23:     ),
+24: )
+### brasileirao_predictor/research/pit_features/lineup.py
+3: from brasileirao_predictor.research.pit_features.contracts import FeatureDeclaration
+5: DECLARATION = FeatureDeclaration(
+6:     feature_family="lineup",
+7:     version="pit-lineup/1",
+8:     mechanism_ex_ante=(
+9:         "A composição disponível antes do jogo representa força e continuidade "
+10:         "dos onze relacionados sem usar minutos pós-jogo."
+11:     ),
+12:     required_source_fields=("team", "players", "confirmed", "published_at"),
+13:     output_contract=("team", "player_ids", "lineup_confirmed", "continuity_inputs"),
+14:     provenance_policy=(
+15:         "available_at vem da primeira publicação observável da escalação; "
+16:         "confirmed deve refletir o estado daquela versão."
+17:     ),
+18: )
+### brasileirao_predictor/research/price_strength/__init__.py
+3: VERSION = "price-strength/1"
+### brasileirao_predictor/research/price_strength/__main__.py
+3: from __future__ import annotations
+5: import argparse
+6: import json
+7: import sys
+8: from pathlib import Path
+10: from .artifacts import read_hashed, write_artifacts
+11: from .demo import demo_inputs
+12: from .quotes import scan_quotes
+13: from .study import price_policy, run_study, timestamp
+16: def _parser() -> argparse.ArgumentParser:
+17:     parser = argparse.ArgumentParser(description="Pesquisa offline de preços e xG; sem apostas ou acesso operacional.")
+18:     commands = parser.add_subparsers(dest="command", required=True)
+19:     scan = commands.add_parser("scan", help="Comparar snapshots completos no horário informado")
+20:     scan.add_argument("--quotes", type=Path, required=True)
+21:     scan.add_argument("--policy", type=Path, required=True)
+22:     scan.add_argument("--as-of", required=True)
+23:     scan.add_argument("--output-dir", type=Path, required=True)
+24:     study = commands.add_parser("study", help="Executar protocolo exploratório explícito com candidato xG independente")
+25:     for name in ("protocol", "history", "fixtures", "quotes"):
+26:         study.add_argument(f"--{name}", type=Path, required=True)
+27:     study.add_argument("--baseline", type=Path, help="Previsões congeladas externas, sem ler modelo operacional")
+28:     study.add_argument("--output-dir", type=Path, required=True)
+29:     demo = commands.add_parser("demo", help="Demonstrar com dados fabricados, sem valor econômico")
+30:     demo.add_argument("--output-dir", type=Path, required=True)
+31:     return parser
+34: def _load(inputs: dict[str, Path]) -> tuple[dict, dict]:
+35:     content, hashes = {}, {}
+36:     for name, path in inputs.items():
+37:         content[name], hashes[name] = read_hashed(path, jsonl=name in {"history", "fixtures", "quotes", "baseline"})
+38:     return content, hashes
+41: def main(argv: list[str] | None = None) -> int:
+42:     args = _parser().parse_args(argv)
+43:     result: dict[str, object]
+44:     try:
+45:         if args.command == "demo":
+46:             manufactured = demo_inputs()
+47:             write_artifacts(
+48:                 args.output_dir,
+49:                 inputs={},
+50:                 artifacts=manufactured,
+51:                 metadata={"status": "SYNTHETIC_DEMONSTRATION", "profitability_established": False},
+52:             )
+53:             inputs = {
+54:                 name: args.output_dir / filename
+55:                 for name, filename in (
+56:                     ("protocol", "protocol.json"),
+57:                     ("history", "history.jsonl"),
+58:                     ("fixtures", "fixtures.jsonl"),
+59:                     ("quotes", "quotes.jsonl"),
+60:                 )
+61:             }
+62:             loaded, hashes = _load(inputs)
+63:             result = run_study(**loaded)
+64:             target = args.output_dir / "run"
+65:         elif args.command == "study":
+66:             inputs = {name: getattr(args, name) for name in ("protocol", "history", "fixtures", "quotes")}
+67:             if args.baseline is not None:
+68:                 inputs["baseline"] = args.baseline
+69:             loaded, hashes = _load(inputs)
+70:             result = run_study(**loaded)
+71:             target = args.output_dir
+72:         else:
+73:             inputs = {"quotes": args.quotes, "policy": args.policy}
+74:             loaded, hashes = _load(inputs)
+75:             result = {
+76:                 "scan.json": scan_quotes(
+77:                     loaded["quotes"], as_of=timestamp(args.as_of), policy=price_policy(loaded["policy"])
+78:                 )
+79:             }
+80:             target = args.output_dir
+81:         write_artifacts(
+82:             target,
+83:             inputs=inputs,
+84:             artifacts=result,
+85:             metadata={
+86:                 "status": "RESEARCH_ONLY",
+87:                 "input_hashes_used": hashes,
+88:                 "profitability_established": False,
+89:                 "real_capital_enabled": False,
+90:             },
+91:         )
+92:         print(
+93:             json.dumps(
+94:                 {
+95:                     "status": "RESEARCH_ONLY",
+96:                     "output_dir": str(target.resolve()),
+97:                     "manifest_path": str(target.resolve() / "manifest.json"),
+98:                     "profitability_established": False,
+99:                 },
+100:                 ensure_ascii=False,
+101:             )
+102:         )
+103:         return 0
+104:     except (ValueError, TypeError, KeyError, OSError) as exc:
+106:         print(f"Pesquisa recusada ({type(exc).__name__}): entrada, contrato ou saída inválidos.", file=sys.stderr)
+107:         return 2
+110: if __name__ == "__main__":
+111:     raise SystemExit(main())

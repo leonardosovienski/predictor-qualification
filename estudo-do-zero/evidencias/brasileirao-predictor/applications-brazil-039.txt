@@ -1,0 +1,389 @@
+### brasileirao_predictor/xg_model.py
+19: import math
+20: import sys
+21: from datetime import date
+23: import numpy as np
+24: from scipy.optimize import minimize
+26: from .model import (
+27:     _all_dc_factors_positive,
+28:     _dc_normalizer_nb,
+29:     _grid_stats,
+30:     _nb_logpmf,
+31:     _score_grid,
+32:     _tau,
+33:     clamp_dc_rho,
+34: )
+37: DEFAULTS = {
+38:     "blend_weight": 0.5,  # peso do BASELINE no ensemble
+39:     "w_xg": 0.85,  # peso do xG no alvo misto da etapa 1
+40:     "half_life_years": 0.75,  # meia-vida do peso temporal dos jogos
+41:     "ridge_reg": 1.0,  # L2 sobre as forças atk/def
+42: }
+45: def _cfg(cfg_xg):
+46:     out = dict(DEFAULTS)
+47:     out.update(cfg_xg or {})
+48:     return out
+51: def fit(matches, xg_map, fit_date, cfg_xg=None):
+59:     c = _cfg(cfg_xg)
+60:     matches = list(matches)
+61:     if not matches:
+62:         return None
+63:     teams = sorted({t for r in matches for t in (r[1], r[2])})
+64:     tix = {t: i for i, t in enumerate(teams)}
+65:     T = len(teams)
+66:     fd = date.fromisoformat(fit_date[:10])
+67:     hl_days = c["half_life_years"] * 365.25
+69:     hi = np.array([tix[r[1]] for r in matches])
+70:     ai = np.array([tix[r[2]] for r in matches])
+71:     hs = np.array([r[3] for r in matches], dtype=float)
+72:     as_ = np.array([r[4] for r in matches], dtype=float)
+73:     xg = [xg_map.get((r[0][:10], r[1], r[2])) for r in matches]
+74:     hx = np.array([x[0] if x and x[0] is not None else g for x, g in zip(xg, hs)])
+75:     ax = np.array([x[1] if x and x[1] is not None else g for x, g in zip(xg, as_)])
+76:     w_xg = c["w_xg"]
+77:     kh = w_xg * hx + (1 - w_xg) * hs
+78:     ka = w_xg * ax + (1 - w_xg) * as_
+79:     w = np.array([0.5 ** ((fd - date.fromisoformat(r[0][:10])).days / hl_days) for r in matches])
+83:     reg = c["ridge_reg"]
+84:     x0 = np.r_[math.log(max(np.r_[kh, ka].mean(), 1e-3)), 0.25, np.zeros(2 * T)]
+86:     def negll1(x):
+87:         mu, ha = x[0], x[1]
+88:         atk, dfn = x[2 : 2 + T], x[2 + T :]
+89:         lh = np.exp(mu + ha + atk[hi] - dfn[ai])
+90:         la = np.exp(mu + atk[ai] - dfn[hi])
+91:         ll = (kh * np.log(lh) - lh) + (ka * np.log(la) - la)
+92:         return -float((w * ll).sum()) + reg * float((x[2:] ** 2).sum())
+94:     b1 = [(-3, 3), (-1, 1)] + [(-2.5, 2.5)] * (2 * T)
+95:     r1 = minimize(negll1, x0, method="L-BFGS-B", bounds=b1, options={"maxiter": 800})
+96:     mu, ha = float(r1.x[0]), float(r1.x[1])
+97:     atk, dfn = r1.x[2 : 2 + T], r1.x[2 + T :]
+98:     lh = np.exp(mu + ha + atk[hi] - dfn[ai])
+99:     la = np.exp(mu + atk[ai] - dfn[hi])
+102:     def negll2(x):
+103:         log_alpha, rho = x
+104:         alpha = math.exp(log_alpha)
+105:         tau = _tau(hs, as_, lh, la, rho)
+106:         if np.any(tau <= 1e-12) or not np.all(_all_dc_factors_positive(lh, la, rho)):
+107:             return 1e12
+108:         normalizer = _dc_normalizer_nb(lh, la, alpha, rho)
+109:         if np.any(normalizer <= 1e-12) or not np.isfinite(normalizer).all():
+110:             return 1e12
+111:         ll = _nb_logpmf(hs, lh, alpha) + _nb_logpmf(as_, la, alpha) + np.log(tau) - np.log(normalizer)
+112:         return -float((w * ll).sum())
+114:     r2 = minimize(
+115:         negll2,
+116:         [math.log(0.1), -0.03],
+117:         method="L-BFGS-B",
+118:         bounds=[(math.log(1e-4), math.log(3)), (-0.35, 0.35)],
+119:     )
+121:     return {
+122:         "mu": mu,
+123:         "ha": ha,
+124:         "alpha": float(math.exp(r2.x[0])),
+125:         "rho": float(r2.x[1]),
+126:         "atk": {t: float(atk[tix[t]]) for t in teams},
+127:         "def": {t: float(dfn[tix[t]]) for t in teams},
+128:         "fit_date": fit_date[:10],
+129:         "n_matches": len(matches),
+130:         "hyper": {k: c[k] for k in DEFAULTS},
+131:         "ok": bool(r1.success and r2.success),
+132:     }
+135: def predict(xgp, home, away, neutral=False, max_goals=12):
+139:     ah = xgp["atk"].get(home, 0.0)
+140:     dh = xgp["def"].get(home, 0.0)
+141:     aa = xgp["atk"].get(away, 0.0)
+142:     da = xgp["def"].get(away, 0.0)
+143:     ha = 0.0 if neutral else xgp["ha"]
+144:     lam_h = math.exp(xgp["mu"] + ha + ah - da)
+145:     lam_a = math.exp(xgp["mu"] + aa - dh)
+146:     rho_used = clamp_dc_rho(float(xgp["rho"]), lam_h, lam_a)
+147:     grid = _score_grid(lam_h, lam_a, xgp["alpha"], rho_used, max_goals)
+148:     return {
+149:         "lambda_a": lam_h,
+150:         "lambda_b": lam_a,
+151:         "total_goals": lam_h + lam_a,
+152:         "rho": rho_used,
+153:         "rho_was_clamped": rho_used != float(xgp["rho"]),
+154:         **_grid_stats(grid, max_goals),
+155:     }
+158: def blend(r_base, r_xg, w_base=0.5):
+161:     grid = w_base * r_base["grid"] + (1 - w_base) * r_xg["grid"]
+162:     grid = grid / grid.sum()
+163:     max_goals = grid.shape[0] - 1
+164:     lam_h = w_base * r_base["lambda_a"] + (1 - w_base) * r_xg["lambda_a"]
+165:     lam_a = w_base * r_base["lambda_b"] + (1 - w_base) * r_xg["lambda_b"]
+166:     return {
+167:         "lambda_a": lam_h,
+168:         "lambda_b": lam_a,
+169:         "total_goals": lam_h + lam_a,
+170:         "ensemble": True,
+171:         **_grid_stats(grid, max_goals),
+172:     }
+175: def maybe_blend(r, conn, cfg, name_a, name_b, neutral):
+179:     ecfg = (cfg or {}).get("ensemble_xg") or {}
+180:     if not ecfg.get("enabled") or conn is None:
+181:         return r
+182:     try:
+183:         from . import db
+185:         row = db.load_xg_params(conn)
+186:         if not row:
+187:             print(
+188:                 "[ensemble_xg ligado mas sem cache — rode "
+189:                 "`python -m brasileirao_predictor.cron_update_models`; usando baseline]",
+190:                 file=sys.stderr,
+191:             )
+192:             return r
+193:         xgp = row[0]
+194:         max_goals = r["grid"].shape[0] - 1
+195:         rx = predict(xgp, name_a, name_b, neutral=neutral, max_goals=max_goals)
+196:         w = _cfg(ecfg)["blend_weight"]
+197:         return blend(r, rx, w_base=w)
+198:     except Exception as e:  # serving nunca cai por causa do ensemble
+199:         print(f"[ensemble_xg falhou ({e}) — usando baseline]", file=sys.stderr)
+200:         return r
+### tests/conftest.py
+4: import sys
+5: from pathlib import Path
+7: ROOT = Path(__file__).resolve().parent.parent
+8: if str(ROOT) not in sys.path:
+9:     sys.path.insert(0, str(ROOT))
+### tests/test_a1_phase0.py
+1: from __future__ import annotations
+3: import json
+4: from pathlib import Path
+6: import pytest
+8: from brasileirao_predictor.a1_phase0 import (
+9:     Phase0Ledger,
+10:     clv_required_sample_size,
+11:     conservative_reference,
+12:     phase0_report,
+13:     policy_fingerprint,
+14: )
+17: def _row(book: str, selection: str, odds: float) -> dict[str, object]:
+18:     return {
+19:         "event_id": "event-1",
+20:         "bookmaker": book,
+21:         "market": "ou2.5",
+22:         "line": 2.5,
+23:         "selection": selection,
+24:         "odds": odds,
+25:         "status": "active",
+26:         "captured_at": "2026-08-27T20:00:00Z",
+27:     }
+30: def test_fingerprint_changes_with_policy_or_code(tmp_path: Path) -> None:
+31:     policy = tmp_path / "policy.json"
+32:     code = tmp_path / "code.py"
+33:     policy.write_text('{"policy_id":"a1"}', encoding="utf-8")
+34:     code.write_text("x=1\n", encoding="utf-8")
+35:     first = policy_fingerprint(policy, [code])["fingerprint"]
+36:     code.write_text("x=2\n", encoding="utf-8")
+37:     assert policy_fingerprint(policy, [code])["fingerprint"] != first
+40: def test_phase0_ledger_is_append_only_and_rejects_labels(tmp_path: Path) -> None:
+41:     ledger = Phase0Ledger(tmp_path / "observations.jsonl", "abc")
+42:     ledger.append({"requests": 1, "latency_ms": 20})
+43:     ledger.append({"requests": 2, "availability": True})
+44:     assert ledger.verify() is True
+45:     with pytest.raises(ValueError, match="closing_odds"):
+46:         ledger.append({"nested": {"closing_odds": 1.9}})
+49: def test_phase0_ledger_detects_tampering(tmp_path: Path) -> None:
+50:     path = tmp_path / "observations.jsonl"
+51:     ledger = Phase0Ledger(path, "abc")
+52:     ledger.append({"requests": 1})
+53:     path.write_text(path.read_text(encoding="utf-8").replace('"requests": 1', '"requests": 9'), encoding="utf-8")
+54:     assert ledger.verify() is False
+57: def test_conservative_reference_uses_complete_pairs_and_multiple_devigs() -> None:
+58:     result = conservative_reference(
+59:         [_row("pinnacle", "over", 1.9), _row("pinnacle", "under", 2.0), _row("pinnacle", "over", 1.8)],
+60:         {"pinnacle"},
+61:     )
+62:     assert result is not None
+63:     assert result["complete_reference_pairs"] == 1
+64:     assert result["p_range"]["over"][0] <= result["p_range"]["over"][1]
+65:     assert "not a confidence interval" in result["method"]
+68: def test_reference_never_pairs_different_events() -> None:
+69:     over = _row("pinnacle", "over", 1.9)
+70:     under = _row("pinnacle", "under", 2.0)
+71:     under["event_id"] = "event-2"
+72:     assert conservative_reference([over, under], {"pinnacle"}) is None
+75: def test_report_contains_no_outcome_metrics() -> None:
+76:     policy = {"reference_books": ["pinnacle"], "soft_books": ["soft"], "threshold_frozen": False}
+77:     report = phase0_report([_row("pinnacle", "over", 1.9), _row("pinnacle", "under", 2.0)], policy)
+78:     assert report["contains_outcomes"] is False
+79:     assert {"roi", "clv", "pnl"}.isdisjoint(report)
+82: def test_clv_power_is_derived_not_magic_number() -> None:
+83:     assert clv_required_sample_size(0.10, 0.02) == 197
+84:     assert clv_required_sample_size(0.10, 0.02, design_effect=2) == 393
+85:     with pytest.raises(ValueError):
+86:         clv_required_sample_size(0, 0.02)
+89: def test_policy_is_label_free_and_capital_locked() -> None:
+90:     root = Path(__file__).resolve().parent.parent
+91:     policy = json.loads((root / "contracts" / "a1-ou25-phase0-policy.json").read_text(encoding="utf-8"))
+92:     assert policy["scientific_state"] == "OPERATIONAL_CALIBRATION_NO_LABELS"
+93:     assert policy["threshold_frozen"] is False
+94:     assert policy["capital_enabled"] is False
+95:     assert policy["kelly_enabled"] is False
+98: def test_each_fingerprint_uses_an_independent_append_only_ledger(tmp_path: Path) -> None:
+99:     first = Phase0Ledger(tmp_path / "observations-first.jsonl", "first")
+100:     second = Phase0Ledger(tmp_path / "observations-second.jsonl", "second")
+101:     first.append({"requests": 1})
+102:     second.append({"requests": 2})
+103:     assert first.verify() is True
+104:     assert second.verify() is True
+### tests/test_a1_recommendation.py
+1: import pytest
+3: from brasileirao_predictor.a1_recommendation import RecommendationInput, assess_recommendation
+6: def candidate(**changes):
+7:     values = {
+8:         "event_probability": 0.55,
+9:         "soft_odds": 2.0,
+10:         "probability_uncertainty": 0.01,
+11:         "friction_rate": 0.01,
+12:         "data_quality": 1.0,
+13:         "reference_complete": True,
+14:         "soft_complete": True,
+15:         "executable": True,
+16:         "reference_stale": False,
+17:     }
+18:     values.update(changes)
+19:     return RecommendationInput(**values)
+22: def test_probability_and_indication_are_separate() -> None:
+23:     result = assess_recommendation(candidate())
+24:     assert result.outcome_probability_pct == 55.0
+25:     assert result.indication_score == 10
+26:     assert result.score_cap == 10
+27:     assert result.action == "SHADOW_OBSERVE"
+28:     assert result.capital_enabled is False
+31: @pytest.mark.parametrize(
+32:     "change,reason",
+33:     [
+34:         ({"reference_complete": False}, "reference_incomplete"),
+35:         ({"soft_complete": False}, "soft_market_incomplete"),
+36:         ({"executable": False}, "not_executable"),
+37:         ({"reference_stale": True}, "reference_stale"),
+38:         ({"probability_uncertainty": 0.1}, "conservative_net_ev_not_positive"),
+39:     ],
+40: )
+41: def test_hard_gates_force_no_bet(change, reason) -> None:
+42:     result = assess_recommendation(candidate(**change))
+43:     assert result.indication_score == 0
+44:     assert result.action == "NO_BET"
+45:     assert reason in result.reasons
+48: def test_unconfirmed_shadow_cannot_look_like_ninety_percent() -> None:
+49:     result = assess_recommendation(candidate(evidence_stage="SHADOW", event_probability=0.7, soft_odds=2.0))
+50:     assert result.indication_score == 40
+51:     assert result.score_cap == 40
+54: def test_only_positive_clv_interval_can_reach_high_score() -> None:
+55:     result = assess_recommendation(
+56:         candidate(
+57:             evidence_stage="CLV_CONFIRMED",
+58:             clv_ci95_lower=0.01,
+59:             event_probability=0.6,
+60:             soft_odds=2.0,
+61:             probability_uncertainty=0.01,
+62:         )
+63:     )
+64:     assert result.indication_score == 100
+65:     assert result.action == "SHADOW_CANDIDATE"
+68: def test_claimed_confirmation_without_positive_clv_is_capped() -> None:
+69:     result = assess_recommendation(candidate(evidence_stage="CLV_CONFIRMED", clv_ci95_lower=0.0))
+70:     assert result.indication_score == 40
+71:     assert "clv_ci95_lower_not_positive" in result.reasons
+74: def test_invalid_inputs_fail_closed() -> None:
+75:     with pytest.raises(ValueError):
+76:         candidate(soft_odds=1.0)
+### tests/test_api_football_provider.py
+1: from datetime import UTC, datetime
+2: from urllib.parse import parse_qs, urlparse
+4: import pytest
+5: from predictor_core.data.contracts import DataUnavailableError
+7: from brasileirao_predictor.data.api_football_provider import ApiFootballProvider
+10: def test_api_football_normalizes_historical_fixture_and_hides_key():
+11:     seen = {}
+12:     payload = {
+13:         "errors": {},
+14:         "response": [
+15:             {
+16:                 "fixture": {"id": 123, "date": "2024-07-25T21:00:00Z", "status": {"short": "FT"}},
+17:                 "teams": {"home": {"name": "Bahia"}, "away": {"name": "Flamengo"}},
+18:                 "goals": {"home": 1, "away": 2},
+19:             }
+20:         ],
+21:     }
+23:     def fake(url, headers):
+24:         seen.update(headers)
+25:         seen["query"] = parse_qs(urlparse(url).query)
+26:         return payload
+28:     provider = ApiFootballProvider(api_key="synthetic-test-key", get_json=fake)
+29:     rows = provider.list_fixtures(season=2024, observed_at=datetime(2026, 7, 20, tzinfo=UTC))
+30:     assert seen["x-apisports-key"] == "synthetic-test-key"
+31:     assert seen["query"] == {"league": ["71"], "season": ["2024"]}
+32:     assert rows[0]["home_team"] == "Bahia"
+33:     assert rows[0]["home_goals"] == 1
+34:     assert rows[0]["shadow_only"] is True
+35:     assert "synthetic-test-key" not in repr(rows)
+38: def test_api_football_allows_2026_when_subscription_exposes_it():
+39:     seen = {}
+41:     def fake(url, _headers):
+42:         seen["query"] = parse_qs(urlparse(url).query)
+43:         return {"errors": {}, "response": []}
+45:     provider = ApiFootballProvider(api_key="synthetic", get_json=fake)
+46:     assert provider.list_fixtures(season=2026) == []
+47:     assert seen["query"]["season"] == ["2026"]
+50: def test_api_football_surfaces_provider_errors():
+51:     provider = ApiFootballProvider(
+52:         api_key="synthetic",
+53:         get_json=lambda *_: {"errors": {"plan": "season not available"}, "response": []},
+54:     )
+55:     with pytest.raises(DataUnavailableError, match="recusou a consulta"):
+56:         provider.brasileirao_seasons()
+59: def test_api_football_requires_environment_secret(monkeypatch):
+60:     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
+61:     with pytest.raises(DataUnavailableError, match="API_FOOTBALL_KEY"):
+62:         ApiFootballProvider(api_key="", get_json=lambda *_: {}).brasileirao_seasons()
+65: def test_api_football_validates_league_and_filters_malformed_fixtures():
+66:     league = {
+67:         "errors": {},
+68:         "response": [
+69:             {
+70:                 "league": {"name": "Serie A"},
+71:                 "country": {"name": "Brazil"},
+72:                 "seasons": [{"year": 2024}, {"year": None}, {"year": 2022}],
+73:             }
+74:         ],
+75:     }
+76:     provider = ApiFootballProvider(api_key="synthetic", get_json=lambda *_: league)
+77:     assert provider.brasileirao_seasons() == [2022, 2024]
+79:     malformed = {"errors": {}, "response": [{"fixture": {}}, {"fixture": {"id": 1, "date": "bad"}}]}
+80:     provider = ApiFootballProvider(api_key="synthetic", get_json=lambda *_: malformed)
+81:     assert provider.list_fixtures(season=2024, observed_at=datetime.now(UTC)) == []
+84: @pytest.mark.parametrize("payload", [[], {"response": None}, {"errors": "quota"}])
+85: def test_api_football_rejects_invalid_provider_payloads(payload):
+86:     provider = ApiFootballProvider(api_key="synthetic", get_json=lambda *_: payload)
+87:     with pytest.raises(DataUnavailableError):
+88:         provider.brasileirao_seasons()
+91: def test_api_football_rejects_naive_observation_time():
+92:     provider = ApiFootballProvider(api_key="synthetic", get_json=lambda *_: {"errors": {}, "response": []})
+93:     with pytest.raises(ValueError, match="timezone"):
+94:         provider.list_fixtures(season=2024, observed_at=datetime(2026, 1, 1))
+97: def test_api_football_normalizes_lineup_vintage():
+98:     payload = {
+99:         "errors": {},
+100:         "response": [
+101:             {
+102:                 "team": {"id": 10, "name": "Bahia"},
+103:                 "formation": "4-3-3",
+104:                 "coach": {"id": 20, "name": "Treinador"},
+105:                 "startXI": [{"player": {"id": 30, "name": "Goleiro", "pos": "G", "grid": "1:1"}}],
+106:                 "substitutes": [{"player": {"id": 31, "name": "Reserva", "pos": "G", "grid": None}}],
+107:             }
+108:         ],
+109:     }
+110:     provider = ApiFootballProvider(api_key="x", get_json=lambda *_: payload)
+111:     rows = provider.fixture_lineups(123, observed_at=datetime(2026, 8, 10, 19, tzinfo=UTC))
+112:     assert [(row["player_name"], row["role"]) for row in rows] == [
+113:         ("Goleiro", "starter"),
+114:         ("Reserva", "substitute"),
+115:     ]
+116:     assert rows[0]["scientific_state"] == "COLLECTION_ONLY"
+117:     assert rows[0]["quality_flags"] == ["published_at_unknown"]
+118:     assert len(rows[0]["content_hash"]) == 64

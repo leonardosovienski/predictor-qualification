@@ -1,0 +1,21 @@
+sequenceDiagram
+ participant O as Operador e política
+ participant D as Domínio produtor
+ participant F as JSON e arquivos hashados
+ participant C as CAIN ResearchService e BundleService
+ participant S as SQLite e objetos CAS
+ participant L as Ollama opcional
+ O->>D: Fonte admitida / hashes / export local
+ D->>F: SnapshotV1 ou BundleV1 e coverage
+ O->>C: Binding e grants / aprovar bundle
+ C->>F: Leitura confinada e validação contrato/hash
+ C->>S: Preservar raw e projeções / recibo
+ O->>C: Query / inspeção / workflow
+ C->>S: Reautorizar e recuperar versões
+ S-->>C: Recortes literal e proveniência
+ opt Geração explicitamente aprovada
+ C->>L: Contexto admitido e schema
+ L-->>C: Proposta de resposta
+ C->>S: Resultado e diagnóstico / checkpoint
+ end
+ C-->>O: Fatos recebidos e proposta / limites

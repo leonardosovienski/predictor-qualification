@@ -1,0 +1,458 @@
+### tests/test_kickoff_block_guard.py
+10: from __future__ import annotations
+12: from datetime import UTC, datetime, timedelta
+14: import pytest
+16: from brasileirao_predictor.evaluator import BrasileiraoDixonColesEvaluator
+18: TEAMS = ["flamengo", "palmeiras", "gremio", "santos"]
+21: def _round_robin_blocks(n_blocks: int, *, simultaneous: bool) -> list[dict]:
+24:     t0 = datetime(2021, 4, 3, 16, 0, tzinfo=UTC)
+25:     obs = []
+26:     for b in range(n_blocks):
+27:         block_start = t0 + timedelta(days=7 * b)
+28:         pairs = [(TEAMS[0], TEAMS[1]), (TEAMS[2], TEAMS[3])]
+29:         if b % 2:
+30:             pairs = [(a, h) for h, a in pairs]
+31:         for j, (home, away) in enumerate(pairs):
+32:             kickoff = block_start if simultaneous else block_start + timedelta(hours=2 * j)
+33:             obs.append(
+34:                 {
+35:                     "home": home,
+36:                     "away": away,
+37:                     "kickoff": kickoff,
+38:                     "result": {"home_goals": (b + j) % 4, "away_goals": (b + 2 * j) % 3},
+39:                 }
+40:             )
+41:     return obs
+44: class _SpyEvaluator(BrasileiraoDixonColesEvaluator):
+47:     def __init__(self, *a, **kw) -> None:
+48:         super().__init__(*a, **kw)
+49:         self.fit_horizons: list[tuple[datetime, datetime]] = []
+51:     def _fit(self, history, horizon):  # type: ignore[override]
+52:         super()._fit(history, horizon)
+53:         if self._trained_at is not None:
+54:             self.fit_horizons.append((self._trained_at, horizon))
+57: @pytest.mark.parametrize("retrain_every", [1, 4, 9])
+58: def test_treino_nunca_alcanca_o_kickoff_do_alvo(retrain_every: int) -> None:
+60:     obs = _round_robin_blocks(24, simultaneous=True)
+61:     ev = _SpyEvaluator(half_life_days=120, max_goals=4)
+62:     ev.run(obs, min_history=16, retrain_every=retrain_every)
+63:     assert ev.fit_horizons, "nenhum ajuste aconteceu"
+64:     for trained_at, horizon in ev.fit_horizons:
+65:         assert trained_at < horizon, f"treinou até {trained_at} para prever {horizon}"
+68: def test_bloco_simultaneo_e_efetivamente_descartado() -> None:
+70:     obs = _round_robin_blocks(24, simultaneous=True)
+71:     ev = BrasileiraoDixonColesEvaluator(half_life_days=120, max_goals=4)
+72:     ev.run(obs, min_history=16, retrain_every=1)
+73:     assert ev.blocked_observations > 0
+76: def test_kickoffs_distintos_nao_descartam_nada() -> None:
+79:     obs = _round_robin_blocks(24, simultaneous=False)
+80:     ev = BrasileiraoDixonColesEvaluator(half_life_days=120, max_goals=4)
+81:     ev.run(obs, min_history=16, retrain_every=1)
+82:     assert ev.blocked_observations == 0
+85: def test_predicted_at_e_estritamente_anterior_ao_matures_at() -> None:
+87:     obs = _round_robin_blocks(24, simultaneous=True)
+88:     ev = BrasileiraoDixonColesEvaluator(half_life_days=120, max_goals=4)
+89:     results = ev.run(obs, min_history=16, retrain_every=5)
+90:     assert results
+91:     for r in results:
+92:         pred = r["prediction"]
+93:         assert pred.predicted_at < pred.matures_at
+96: def test_cadencia_de_refit_continua_valendo() -> None:
+99:     obs = _round_robin_blocks(40, simultaneous=False)
+100:     frequente = _SpyEvaluator(half_life_days=120, max_goals=4)
+101:     frequente.run(obs, min_history=16, retrain_every=1)
+102:     raro = _SpyEvaluator(half_life_days=120, max_goals=4)
+103:     raro.run(obs, min_history=16, retrain_every=20)
+104:     assert len(frequente.fit_horizons) > len(raro.fit_horizons)
+105:     assert len(raro.fit_horizons) <= len(frequente.fit_horizons) // 5
+108: def test_primeiro_ajuste_sem_historico_utilizavel_falha_alto() -> None:
+111:     t0 = datetime(2021, 4, 3, 16, 0, tzinfo=UTC)
+112:     obs = [
+113:         {
+114:             "home": TEAMS[i % 2],
+115:             "away": TEAMS[(i % 2) + 2],
+116:             "kickoff": t0,  # TUDO no mesmo instante
+117:             "result": {"home_goals": 1, "away_goals": 0},
+118:         }
+119:         for i in range(24)
+120:     ]
+121:     ev = BrasileiraoDixonColesEvaluator(half_life_days=120, max_goals=4)
+122:     with pytest.raises(ValueError, match="insuficiente"):
+123:         ev.run(obs, min_history=16, retrain_every=1)
+### tests/test_ledger_consistency.py
+3: import json
+4: import threading
+5: from concurrent.futures import ThreadPoolExecutor
+7: import pytest
+9: from brasileirao_predictor import bet_log
+11: STAMP = "2024-01-01T12:00:00Z"
+14: @pytest.mark.parametrize("operation", ["settle", "add"])
+15: def test_concurrent_writers_cannot_duplicate_identity(tmp_path, monkeypatch, operation):
+16:     path = tmp_path / "bets.jsonl"
+17:     bet_log.add_bet("A", "B", "ou25", "over", 2, path=path, bet_id="first")
+18:     original_read = bet_log._read
+19:     entered, release = threading.Event(), threading.Event()
+20:     owner = []
+22:     def paused_read(*args, **kwargs):
+23:         rows = original_read(*args, **kwargs)
+24:         if threading.get_ident() == owner[0]:
+25:             entered.set()
+26:             assert release.wait(5), "contending writer did not finish"
+27:         return rows
+29:     def action():
+30:         if operation == "settle":
+31:             return bet_log.settle_bet("A", "B", 3, 0, path=path)
+32:         return bet_log.add_bet("C", "D", "ou25", "over", 2, path=path, bet_id="second")
+34:     def first():
+35:         owner.append(threading.get_ident())
+36:         return action()
+38:     monkeypatch.setattr(bet_log, "_read", paused_read)
+39:     with ThreadPoolExecutor(max_workers=1) as pool:
+40:         future = pool.submit(first)
+41:         assert entered.wait(5)
+42:         try:
+43:             with pytest.raises(OSError):
+44:                 action()
+45:         finally:
+46:             release.set()
+47:         future.result(timeout=5)
+48:     rows = original_read(path)
+49:     assert len(rows) == 2
+50:     assert len(bet_log.list_bets(path)) == (1 if operation == "settle" else 2)
+53: def test_append_preserves_unterminated_valid_record(tmp_path):
+54:     path = tmp_path / "bets.jsonl"
+55:     bet_log.add_bet("A", "B", "ou25", "over", 2, path=path)
+56:     original = path.read_bytes().rstrip(b"\r\n")
+57:     path.write_bytes(original)
+58:     bet_log.add_bet("C", "D", "ou25", "over", 2, path=path)
+59:     assert path.read_bytes().startswith(original)
+60:     assert len(bet_log.list_bets(path)) == 2
+63: def test_bank_uses_one_snapshot_for_profit_and_exposure(tmp_path, monkeypatch):
+64:     bank, bets = tmp_path / "bank.jsonl", tmp_path / "bets.jsonl"
+65:     bet_log.bank_init(100, 1, path=bank, at=STAMP)
+66:     bet_log.add_bet("A", "B", "ou25", "over", 2, path=bets, logged_at=STAMP)
+67:     snapshot = bet_log._read(bets)
+68:     bet_log.settle_bet("A", "B", 3, 0, path=bets, recorded_at=STAMP)
+69:     settled_snapshot = bet_log._read(bets)
+70:     calls = []
+72:     def changing_read(*args, **kwargs):
+73:         calls.append(1)
+74:         return snapshot if len(calls) == 1 else settled_snapshot
+76:     monkeypatch.setattr(bet_log, "_read", changing_read)
+77:     state = bet_log.bank_state(bank, bets)
+78:     assert state is not None
+79:     assert state["balance"] == 100 and state["open_units"] == 1
+80:     assert len(calls) == 1
+83: @pytest.mark.parametrize(
+84:     "change",
+85:     [
+86:         {"amount": -100},
+87:         {"amount": True},
+88:         {"unit": -1},
+89:         {"unit": float("nan")},
+90:         {"currency": ""},
+91:         {"kind": "typo"},
+92:         {"at": "2024-01-01T12:00:00"},
+93:     ],
+94: )
+95: def test_imported_invalid_bank_record_is_rejected(tmp_path, change):
+96:     bank = tmp_path / "bank.jsonl"
+97:     record = {"kind": "init", "amount": 100, "unit": 1, "currency": "BRL", "at": STAMP, **change}
+98:     bank.write_text(json.dumps(record) + "\n")
+99:     with pytest.raises(ValueError):
+100:         bet_log.bank_state(bank, tmp_path / "bets.jsonl")
+103: def test_bank_duplicate_json_key_is_rejected(tmp_path):
+104:     bank = tmp_path / "bank.jsonl"
+105:     bank.write_text('{"kind":"init","amount":100,"amount":500,"unit":1,"at":"' + STAMP + '"}\n')
+106:     with pytest.raises(ValueError):
+107:         bet_log.bank_state(bank, tmp_path / "bets.jsonl")
+110: @pytest.mark.parametrize("change", [{"period": "3T"}, {"line": 0.5}, {"selection": "anything"}])
+111: def test_invalid_imported_contract_cannot_be_settled(tmp_path, change):
+112:     path = tmp_path / "bets.jsonl"
+113:     record = bet_log.add_bet("A", "B", "ou25", "over", 2, path=path)
+114:     path.write_text(json.dumps({**record, **change}) + "\n")
+115:     original = path.read_bytes()
+116:     with pytest.raises(ValueError):
+117:         bet_log.settle_bet("A", "B", 3, 0, ht=(1, 0), path=path)
+118:     assert path.read_bytes() == original
+121: def test_reversed_team_input_keeps_score_in_recorded_home_order(tmp_path):
+122:     path = tmp_path / "bets.jsonl"
+123:     bet_log.add_bet("A", "B", "ou05_1t", "over", 2, path=path)
+124:     record = bet_log.settle_bet("B", "A", 3, 1, ht=(2, 0), path=path)[0]
+125:     assert record["home"] == "A" and record["away"] == "B"
+126:     assert record["score"] == "1-3" and record["ht"] == "0-2"
+129: @pytest.mark.parametrize("cap", ["NaN", "Infinity", "-1", ""])
+130: def test_invalid_configured_stake_cap_is_rejected(tmp_path, monkeypatch, cap):
+131:     monkeypatch.setenv("BETLOG_MAX_INFO_STAKE", cap)
+132:     with pytest.raises(ValueError):
+133:         bet_log.add_bet("A", "B", "ou15", "over", 2, path=tmp_path / "bets.jsonl")
+136: def test_stable_id_does_not_require_legacy_line_number(tmp_path):
+137:     path = tmp_path / "bets.jsonl"
+138:     bet_log.add_bet("A", "B", "ou25", "over", 2, path=path)
+139:     bet_log.settle_bet("A", "B", 3, 0, path=path)
+140:     rows = bet_log._read(path)
+141:     rows[-1].pop("bet_line_no")
+142:     path.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+143:     assert bet_log.settle_bet("A", "B", 3, 0, path=path) == []
+146: def test_cli_does_not_promote_legacy_market_flag(tmp_path, monkeypatch, capsys):
+147:     path = tmp_path / "bets.jsonl"
+148:     bet_log.add_bet("A", "B", "ou25", "over", 2, path=path)
+149:     bet_log.settle_bet("A", "B", 3, 0, path=path)
+150:     monkeypatch.setenv("BETS_LOG_PATH", str(path))
+151:     monkeypatch.setattr("sys.argv", ["bet_log", "summary"])
+152:     bet_log.main()
+153:     output = capsys.readouterr().out
+154:     assert "CLV comprovado" not in output
+155:     assert "relatos manuais brutos" in output.lower()
+158: def test_failed_append_releases_writer_lock(tmp_path, monkeypatch):
+159:     path = tmp_path / "bets.jsonl"
+160:     original = bet_log._append
+161:     with monkeypatch.context() as patch:
+163:         def fail(*args, **kwargs):
+164:             raise OSError("synthetic write failure")
+166:         patch.setattr(bet_log, "_append", fail)
+167:         with pytest.raises(OSError):
+168:             bet_log.add_bet("A", "B", "ou25", "over", 2, path=path)
+169:     assert bet_log._append is original
+170:     bet_log.add_bet("A", "B", "ou25", "over", 2, path=path)
+171:     assert len(bet_log.list_bets(path)) == 1
+### tests/test_lineup_archive.py
+1: import json
+3: from brasileirao_predictor.data.lineup_archive import persist_lineups
+6: def test_lineup_archive_is_append_only_and_idempotent_by_vintage(tmp_path):
+7:     path = tmp_path / "lineups.jsonl"
+8:     base = {
+9:         "source_event_id": "1",
+10:         "player_id": "2",
+11:         "role": "starter",
+12:         "content_hash": "a" * 64,
+13:     }
+14:     assert persist_lineups(path, [base]) == 1
+15:     assert persist_lineups(path, [base]) == 0
+16:     revised = {**base, "content_hash": "b" * 64, "role": "substitute"}
+17:     assert persist_lineups(path, [revised]) == 1
+18:     assert len([json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]) == 2
+### tests/test_lineup_inbox.py
+1: import json
+3: import pytest
+5: from brasileirao_scripts.lineup_inbox import INBOX_KEY, enqueue_lineup
+8: def test_enqueue_preserves_event_for_idempotent_retry_and_does_not_trim():
+9:     class Client:
+10:         def eval(self, script, count, key, capacity, raw):
+11:             assert (count, key, capacity) == (1, INBOX_KEY, 10000)
+12:             assert "MAXLEN" not in script and "XTRIM" not in script
+13:             assert json.loads(raw) == event
+14:             return b"100-1"
+16:     event = {"MatchId": "synthetic", "CapturedAt": "2026-09-08T00:00:00+00:00"}
+17:     assert enqueue_lineup(Client(), event) == "100-1"
+20: @pytest.mark.parametrize("event", [{"oversized": "x" * 65537}, {"nonfinite": float("nan")}])
+21: def test_invalid_serialization_is_not_sent_to_redis(event):
+22:     with pytest.raises(ValueError):
+23:         enqueue_lineup(None, event)
+### tests/test_lineup_inbox_redis.py
+7: import json
+8: import os
+9: from urllib.parse import urlparse
+10: from uuid import uuid4
+12: import pytest
+13: import redis
+15: from brasileirao_scripts.lineup_inbox import INBOX_KEY, MAX_PENDING, enqueue_lineup
+17: pytestmark = pytest.mark.integration
+20: @pytest.fixture
+21: def inbox_redis():
+22:     url = os.environ.get("LINEUP_TEST_REDIS_URL")
+23:     instance = os.environ.get("LINEUP_TEST_REDIS_RUN_ID")
+24:     if not url and not instance:
+25:         pytest.skip("explicit disposable Redis DB14 URL and run_id are required")
+26:     assert url and instance, "both disposable Redis URL and run_id are required"
+27:     target = urlparse(url)
+28:     assert target.scheme == "redis" and target.hostname in {"127.0.0.1", "localhost", "::1"}
+29:     assert target.port and target.port != 6379 and target.path == "/14"
+30:     assert target.username is None and target.password is None and not target.query and not target.fragment
+31:     assert len(instance) == 40 and all(char in "0123456789abcdefABCDEF" for char in instance)
+32:     client = redis.from_url(url, decode_responses=True, socket_connect_timeout=5, socket_timeout=5)
+33:     owns_inbox = False
+34:     try:
+35:         assert client.info("server")["run_id"] == instance, "test Redis identity differs"
+36:         assert client.dbsize() == 0, "DB14 must be empty; preexisting keys are preserved"
+37:         owns_inbox = True
+38:         yield client
+39:     finally:
+40:         try:
+41:             if owns_inbox:
+42:                 assert client.info("server")["run_id"] == instance, "refusing cleanup on a restarted Redis"
+43:                 client.delete(INBOX_KEY)
+44:                 assert client.dbsize() == 0, "unexpected keys are preserved, never globally deleted"
+45:         finally:
+46:             client.close()
+49: def _event():
+50:     return {
+51:         "MatchId": "synthetic-inbox-" + uuid4().hex,
+52:         "HomeTeam": "SYNTHETIC São Paulo",
+53:         "AwayTeam": "SYNTHETIC_AWAY",
+54:         "Side": "home",
+55:         "Starters": [f"SYNTHETIC_PLAYER_{index}" for index in range(11)],
+56:         "Subs": [],
+57:         "CapturedAt": "2030-01-01T12:34:56.123456+00:00",
+58:     }
+61: def test_capacity_10000_refuses_10001_without_trimming_pending_entries(inbox_redis):
+62:     client = inbox_redis
+63:     assert MAX_PENDING == 10000
+64:     event = _event()
+65:     entry_ids = [enqueue_lineup(client, event) for _ in range(MAX_PENDING)]
+66:     group = "synthetic-group-" + uuid4().hex
+67:     client.xgroup_create(INBOX_KEY, group, id="0-0")
+68:     claimed = client.xreadgroup(group, "synthetic-consumer", {INBOX_KEY: ">"}, count=7)
+69:     assert [entry_id for entry_id, _ in claimed[0][1]] == entry_ids[:7]
+70:     assert client.xpending(INBOX_KEY, group)["pending"] == 7
+72:     with pytest.raises(redis.ResponseError, match="lineup inbox full"):
+73:         enqueue_lineup(client, event)
+75:     contents = client.xrange(INBOX_KEY)
+76:     assert client.xlen(INBOX_KEY) == MAX_PENDING
+77:     assert [entry_id for entry_id, _ in contents] == entry_ids
+78:     expected = json.dumps(event, allow_nan=False, ensure_ascii=False)
+79:     assert all(fields == {"payload": expected} for _, fields in contents)
+80:     pending = client.xpending_range(INBOX_KEY, group, min="-", max="+", count=7)
+81:     assert [entry["message_id"] for entry in pending] == entry_ids[:7]
+82:     assert client.xpending(INBOX_KEY, group)["pending"] == 7
+85: def test_identical_retry_preserves_payload_and_capture_without_mutating_event(inbox_redis):
+86:     event = _event()
+87:     before = json.dumps(event, allow_nan=False, ensure_ascii=False)
+88:     first = enqueue_lineup(inbox_redis, event)
+89:     second = enqueue_lineup(inbox_redis, event)
+91:     assert first != second  # Producer stores both; Worker registration deduplicates.
+92:     assert inbox_redis.xrange(INBOX_KEY) == [
+93:         (first, {"payload": before}),
+94:         (second, {"payload": before}),
+95:     ]
+96:     assert json.dumps(event, allow_nan=False, ensure_ascii=False) == before
+99: def test_invalid_inbox_type_is_rejected_without_replacing_its_value(inbox_redis):
+100:     sentinel = "synthetic-owned-inbox-" + uuid4().hex
+101:     assert inbox_redis.set(INBOX_KEY, sentinel, nx=True)
+103:     with pytest.raises(redis.ResponseError, match="invalid inbox type"):
+104:         enqueue_lineup(inbox_redis, _event())
+106:     assert inbox_redis.type(INBOX_KEY) == "string"
+107:     assert inbox_redis.get(INBOX_KEY) == sentinel
+108:     assert inbox_redis.dbsize() == 1
+### tests/test_live_capture_admission.py
+1: from copy import deepcopy
+3: import pytest
+5: from brasileirao_predictor.research.price_strength.live_capture_admission import audit_capture
+8: def payload():
+9:     return {
+10:         "fixtureId": "id1",
+11:         "statusId": 0,
+12:         "hasOdds": True,
+13:         "startTime": "2026-09-12T00:00:00Z",
+14:         "bookmakerOdds": {
+15:             b: {
+16:                 "bookmakerIsActive": True,
+17:                 "suspended": False,
+18:                 "markets": {
+19:                     "101": {
+20:                         "marketActive": True,
+21:                         "outcomes": {
+22:                             o: {
+23:                                 "players": {
+24:                                     "0": {
+25:                                         "active": True,
+26:                                         "price": 3.0,
+27:                                         "limit": None,
+28:                                         "changedAt": "2026-09-09T10:00:00Z",
+29:                                         "bookmakerChangedAt": None,
+30:                                     }
+31:                                 }
+32:                             }
+33:                             for o in ("101", "102", "103")
+34:                         },
+35:                     }
+36:                 },
+37:             }
+38:             for b in ("pinnacle", "bet365.bet.br")
+39:         },
+40:     }
+43: def audit(obj):
+44:     return audit_capture(obj, {"requested_at": "2026-09-09T20:00:00Z", "received_at": "2026-09-09T20:00:01Z"}, "id1")
+47: def test_active_children_cannot_override_inactive_parent():
+48:     obj = payload()
+49:     obj["bookmakerOdds"]["bet365.bet.br"]["bookmakerIsActive"] = False
+50:     out = audit(obj)
+51:     assert not out["pair_api_state_admitted"]
+52:     assert "bookmaker_not_active" in out["bookmakers"]["bet365.bet.br"]["reasons"]
+55: @pytest.mark.parametrize("change", ["suspended", "market", "selection", "missing_suspension_flag"])
+56: def test_suspension_and_missing_flags_reject(change):
+57:     obj = payload()
+58:     book = obj["bookmakerOdds"]["bet365.bet.br"]
+59:     if change == "suspended":
+60:         book["suspended"] = True
+61:     elif change == "market":
+62:         book["markets"]["101"]["marketActive"] = False
+63:     elif change == "selection":
+64:         book["markets"]["101"]["outcomes"]["102"]["players"]["0"]["active"] = False
+65:     else:
+66:         del book["suspended"]
+67:     assert not audit(obj)["pair_api_state_admitted"]
+70: def test_network_receipt_is_not_bookmaker_change_or_execution():
+71:     out = audit(payload())
+72:     assert out["pair_api_state_admitted"]
+73:     assert out["round_trip_seconds"] == 1
+74:     assert not out["execution_admitted"]
+75:     assert out["bookmakers"]["bet365.bet.br"]["legs"]["home"]["limit_currency"] is None
+78: def test_generic_bet365_cannot_substitute_regional_book():
+79:     obj = payload()
+80:     obj["bookmakerOdds"]["bet365"] = obj["bookmakerOdds"].pop("bet365.bet.br")
+81:     assert not audit(obj)["pair_api_state_admitted"]
+84: def test_postkickoff_or_foreign_identity_cannot_be_admitted():
+85:     obj = payload()
+86:     obj["fixtureId"] = "id2"
+87:     assert audit(obj)["reason"] == "fixture_identity_mismatch"
+88:     obj = payload()
+89:     obj["startTime"] = "2026-09-09T19:00:00Z"
+90:     assert audit(obj)["reason"] == "not_pre_game"
+93: def test_payload_is_not_modified():
+94:     obj = payload()
+95:     old = deepcopy(obj)
+96:     audit(obj)
+97:     assert obj == old
+100: def test_boolean_status_cannot_masquerade_as_numeric_pre_game():
+101:     obj = payload()
+102:     obj["statusId"] = False
+103:     assert audit(obj)["reason"] == "not_pre_game"
+### tests/test_logic_registry.py
+1: from pathlib import Path
+3: ROOT = Path(__file__).resolve().parents[1]
+6: def test_project_logic_registry_preserves_all_hypothesis_families():
+7:     text = (ROOT / "docs" / "PROJECT_LOGIC_REGISTER.md").read_text(encoding="utf-8").lower()
+8:     families = (
+9:         "força das equipes",
+10:         "geração de gols",
+11:         "informação externa",
+12:         "tempo:",
+13:         "decisão:",
+14:         "mercado:",
+15:         "outros mercados",
+16:         "ciência:",
+17:         "operação:",
+18:     )
+19:     assert all(family in text for family in families)
+22: def test_draw_catalog_preserves_distinct_draw_hypotheses_and_controls():
+23:     text = (ROOT / "docs" / "DRAW_VARIABLE_CATALOG.md").read_text(encoding="utf-8")
+24:     required = (
+25:         "p_draw_1x2",
+26:         "modal_score_is_draw",
+27:         "draw_is_1x2_argmax",
+28:         "balanced_sides",
+29:         "low_scoring",
+30:         "lambda_total",
+31:         "lambda_gap",
+32:         "rho_dc",
+33:         "top_1x2_gap",
+34:         "side_probability_gap",
+35:         "draw_vs_best_side_gap",
+36:         "entropy_1x2",
+37:         "diagonal_concentration",
+38:         "Brier binário específico para `draw`",
+39:         "calibração/reliability de `p_draw`",
+40:         "não é regra validada",
+41:     )
+42:     assert all(item in text for item in required)

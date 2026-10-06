@@ -1,0 +1,7 @@
+# Caracterização preliminar — cain
+
+OD, árvore local: pacote `cain-research` 0.4.12, Python >=3.11, setuptools; dependências snapshot 1.0.1 e bundle 1.0.0. CLI cain, cain-mcp, cain-stream; API FastAPI opcional. `runtime.build_cain` compõe SQLiteIdentityStore, SQLiteDecisionLog, índice lexical, agentes conversação/resumo/código/busca e RuleRouter. `Cain.run` encadeia oito passos sequenciais, registra eventos mediated/completed/failed e hash da resposta; identidade explícita é atualizada separadamente. Falhas não têm retry implícito.
+
+`research.service`, `bundles`, `inspection`, `analysis`, `workflows` recebem e consultam pesquisas com políticas distintas de leitura/divulgação/geração. LLM Ollama POST /api/generate e FakeLLM teste; review exige provedor local, trechos/citações e validação JSON, devolve semantic_support=not_certified e não promove memória. Workflow inspect/search/entities/support/challenge/synthesis tem aprovação geração, fingerprint do corpus, lease 600s e tentativas duráveis SQLite. Arquivo não rastreado claim_tables.py é consumido pelo analysis.py modificado, logo árvore executável não coincide com HEAD.
+
+Escopo antes de confronto narrativo: 169 arquivos rastreados executáveis/configuração/testes, 25.175 linhas mecanicamente lidas/indexadas; módulos centrais acima revisados semanticamente. Arquivos não rastreados precisam complementar cobertura. Não há ET-RUN nem observação de modelo/serviço/instalação. Hashes e comandos em evidencias/cain e REGISTRO.log. Esta caracterização descreve a árvore local, não versão remota.

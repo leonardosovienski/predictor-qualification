@@ -1,0 +1,332 @@
+### brasileirao_predictor/research/verify_calibration.py
+15: import numpy as np
+17: from brasileirao_predictor import db
+18: from brasileirao_predictor.feature_builder import build_features
+19: from brasileirao_predictor.ingest import ROOT, load_config
+20: from brasileirao_predictor.model import fit_goal_model, predict_match
+21: from brasileirao_predictor.predict import _canon
+22: from brasileirao_predictor.ratings import ratings_asof
+25: def _required_feature_delta(features: dict, feature_name: str, event_id: int) -> float:
+26:     home = features.get(f"home_{feature_name}")
+27:     away = features.get(f"away_{feature_name}")
+28:     if home is None or away is None:
+29:         raise ValueError(f"feature {feature_name!r} is incomplete for event_id={event_id}; refusing zero imputation")
+30:     return float(home) - float(away)
+33: DB_PATH = str(ROOT / "data" / "matches.db")
+36: def brier_1x2(y_true, proba_matrix):
+38:     n = len(y_true)
+39:     y_onehot = np.zeros((n, 3))
+40:     y_onehot[np.arange(n), y_true] = 1.0
+41:     return float(np.mean(np.sum((proba_matrix - y_onehot) ** 2, axis=1)))
+44: def load_rows_with_forward_elo(conn, cfg, extra_where: str = ""):
+48:     base_rows = conn.execute(f"""
+49:         SELECT sm.event_id, sm.home_team, sm.away_team,
+50:                sm.home_score, sm.away_score, sm.date
+51:         FROM sofascore_matches sm
+52:         JOIN match_statistics ms ON sm.event_id = ms.event_id
+53:         WHERE sm.home_score IS NOT NULL {extra_where}
+54:         GROUP BY sm.event_id
+55:         ORDER BY sm.date
+56:     """).fetchall()
+58:     m_rows = conn.execute(
+59:         "SELECT date, home_team, away_team, home_score, away_score, "
+60:         "tournament, neutral FROM matches WHERE home_score IS NOT NULL "
+61:         "ORDER BY date"
+62:     ).fetchall()
+63:     dates = {r[5] for r in base_rows}
+64:     snaps = ratings_asof(m_rows, cfg["elo"], dates)
+65:     snaps = {d: {_canon(t): e for t, e in s.items()} for d, s in snaps.items()}
+67:     rows = []
+68:     for eid, home, away, hs, as_, d in base_rows:
+69:         snap = snaps.get(d, {})
+70:         rows.append(
+71:             (
+72:                 eid,
+73:                 home,
+74:                 away,
+75:                 hs,
+76:                 as_,
+77:                 d,
+78:                 snap.get(_canon(home or ""), 1500),
+79:                 snap.get(_canon(away or ""), 1500),
+80:             )
+81:         )
+82:     return rows
+85: def test_feature(conn, feature_name, train_rows, test_rows):
+92:     history = []
+93:     for r in train_rows:
+94:         elo_home = r[6] if r[6] is not None else 1500
+95:         elo_away = r[7] if r[7] is not None else 1500
+96:         history.append((elo_home - elo_away, r[3], r[4]))
+99:     delta_train = []
+100:     for r in train_rows:
+101:         feats = build_features(DB_PATH, r[0])
+102:         delta_train.append(_required_feature_delta(feats, feature_name, r[0]))
+105:     params_base = fit_goal_model(history)
+108:     params_feat = fit_goal_model(history, delta_xg=delta_train)
+109:     theta_xg = params_feat[4] if len(params_feat) == 5 else 0.0
+112:     y_true = []
+113:     proba_base = []
+114:     proba_feat = []
+116:     for r in test_rows:
+117:         if r[3] > r[4]:
+118:             y_true.append(0)
+119:         elif r[3] == r[4]:
+120:             y_true.append(1)
+121:         else:
+122:             y_true.append(2)
+124:         feats = build_features(DB_PATH, r[0])
+125:         delta = _required_feature_delta(feats, feature_name, r[0])
+127:         elo_home = r[6] if r[6] is not None else 1500
+128:         elo_away = r[7] if r[7] is not None else 1500
+130:         pred_base = predict_match(elo_home, elo_away, params_base)
+131:         proba_base.append([pred_base["p_win"], pred_base["p_draw"], pred_base["p_loss"]])
+133:         pred_feat = predict_match(elo_home, elo_away, params_feat, delta_xg=delta)
+134:         proba_feat.append([pred_feat["p_win"], pred_feat["p_draw"], pred_feat["p_loss"]])
+136:     proba_base = np.array(proba_base)
+137:     proba_feat = np.array(proba_feat)
+138:     y_true = np.array(y_true)
+140:     brier_base = brier_1x2(y_true, proba_base)
+141:     brier_feat = brier_1x2(y_true, proba_feat)
+143:     probmax_base = np.max(proba_base[:, [0, 2]], axis=1)
+144:     probmax_feat = np.max(proba_feat[:, [0, 2]], axis=1)
+146:     return {
+147:         "feature": feature_name,
+148:         "theta_xg": theta_xg,
+149:         "brier_base": brier_base,
+150:         "brier_feat": brier_feat,
+151:         "improvement": brier_base - brier_feat,
+152:         "probmax_p50_base": np.percentile(probmax_base, 50),
+153:         "probmax_p50_feat": np.percentile(probmax_feat, 50),
+154:         "probmax_p90_base": np.percentile(probmax_base, 90),
+155:         "probmax_p90_feat": np.percentile(probmax_feat, 90),
+156:         "probmax_max_base": np.max(probmax_base),
+157:         "probmax_max_feat": np.max(probmax_feat),
+158:     }
+161: def main():
+162:     cfg = load_config()
+164:     conn = db.connect(DB_PATH, read_only=True)
+166:     rows = load_rows_with_forward_elo(conn, cfg)
+169:     all_stats = conn.execute("""
+170:         SELECT DISTINCT stat_name FROM match_statistics
+171:         WHERE period = 'ALL'
+172:         ORDER BY stat_name
+173:     """).fetchall()
+174:     all_features = [r[0] for r in all_stats]
+176:     conn.close()
+178:     if len(rows) < 20:
+179:         print(f"Apenas {len(rows)} jogos com estatisticas. Precisa de >= 20.")
+180:         return
+182:     split_idx = int(len(rows) * 0.8)
+183:     train_rows = rows[:split_idx]
+184:     test_rows = rows[split_idx:]
+186:     print(f"Treino: {len(train_rows)} jogos, Teste: {len(test_rows)} jogos")
+187:     print(f"Features disponiveis: {len(all_features)}")
+188:     print()
+191:     results = []
+192:     for i, feat in enumerate(all_features):
+193:         print(f"[{i + 1}/{len(all_features)}] Testando: {feat}...", end=" ", flush=True)
+194:         try:
+195:             r = test_feature(None, feat, train_rows, test_rows)
+196:             results.append(r)
+197:             status = "^" if r["improvement"] > 0 else "v"
+198:             print(f"theta={r['theta_xg']:.4f} Brier={status}{abs(r['improvement']):.4f}")
+199:         except Exception as e:
+200:             print(f"ERRO: {e}")
+203:     results.sort(key=lambda r: r["improvement"], reverse=True)
+206:     print(
+207:         f"\n{'Feature':<30s} {'theta':>7s} {'Brier_base':>10s} {'Brier_feat':>10s} "
+208:         f"{'Melhora':>8s} {'p50_base':>8s} {'p50_feat':>8s} {'p90_base':>8s} "
+209:         f"{'p90_feat':>8s} {'max_base':>8s} {'max_feat':>8s}"
+210:     )
+211:     print("-" * 130)
+213:     for r in results:
+214:         print(
+215:             f"{r['feature']:<30s} {r['theta_xg']:>+7.4f} "
+216:             f"{r['brier_base']:>10.4f} {r['brier_feat']:>10.4f} "
+217:             f"{r['improvement']:>+8.4f} "
+218:             f"{r['probmax_p50_base']:>7.2%} {r['probmax_p50_feat']:>7.2%} "
+219:             f"{r['probmax_p90_base']:>7.2%} {r['probmax_p90_feat']:>7.2%} "
+220:             f"{r['probmax_max_base']:>7.2%} {r['probmax_max_feat']:>7.2%}"
+221:         )
+224:     best = results[0]
+225:     worst = results[-1]
+226:     improved = [r for r in results if r["improvement"] > 0]
+227:     print(f"\nMelhor feature: {best['feature']} (melhora={best['improvement']:.4f})")
+228:     print(f"Pior feature:   {worst['feature']} (melhora={worst['improvement']:.4f})")
+229:     print(f"Features que melhoraram o Brier: {len(improved)}/{len(results)}")
+230:     if improved:
+231:         print("Lista das que melhoraram:")
+232:         for r in improved:
+233:             print(f"  {r['feature']:<30s} +{r['improvement']:.4f}  theta={r['theta_xg']:.4f}")
+236: if __name__ == "__main__":
+237:     main()
+### brasileirao_predictor/research/vorp_ridge.py
+16: import argparse
+17: import json
+18: import sys
+19: from pathlib import Path
+21: import numpy as np
+22: from scipy.sparse import csr_matrix
+23: from scipy.sparse.linalg import lsqr
+25: from brasileirao_predictor import db
+26: from brasileirao_predictor.ingest import load_config
+27: from brasileirao_predictor.ratings import ratings_asof
+29: ROOT = Path(__file__).resolve().parents[2]
+35: def _load_matches(conn, seasons):
+38:     rows = conn.execute(
+39:         "SELECT event_id, date, home_team, away_team, home_xg, away_xg, season "
+40:         "FROM sofascore_matches "
+41:         "WHERE home_xg IS NOT NULL AND away_xg IS NOT NULL"
+42:     ).fetchall()
+43:     cfg = load_config()
+44:     history = conn.execute(
+45:         "SELECT date,home_team,away_team,home_score,away_score,tournament,neutral "
+46:         "FROM matches WHERE home_score IS NOT NULL ORDER BY date"
+47:     ).fetchall()
+48:     snapshots = ratings_asof(history, cfg["elo"], [r[1] for r in rows if r[1]])
+49:     result = []
+50:     for eid, date, home, away, hxg, axg, season in rows:
+51:         if season not in seasons:
+52:             continue
+53:         elo = snapshots.get(date, {})
+54:         elo_diff = elo.get(home, 1500.0) - elo.get(away, 1500.0)
+55:         result.append((eid, home, away, float(hxg), float(axg), elo_diff))
+56:     return result
+59: def _load_player_presence(conn, event_ids):
+61:     if not event_ids:
+62:         return {}
+63:     placeholders = ",".join("?" * len(event_ids))
+64:     rows = conn.execute(
+65:         f"SELECT event_id, player, team, minutes FROM sofascore_player_ratings "
+66:         f"WHERE event_id IN ({placeholders}) AND minutes > 0",
+67:         list(event_ids),
+68:     ).fetchall()
+69:     presence = {}
+70:     for eid, player, team, minutes in rows:
+71:         presence.setdefault(eid, {})[player] = (team, minutes)
+72:     return presence
+75: def _load_positions(conn):
+77:     rows = conn.execute("SELECT player, position FROM player_comp_stats WHERE position IS NOT NULL").fetchall()
+78:     pos_count = {}
+79:     for player, pos in rows:
+80:         pos_count.setdefault(player, {}).setdefault(pos, 0)
+81:         pos_count[player][pos] += 1
+82:     return {p: max(d, key=d.get) for p, d in pos_count.items()}
+90: def _build_matrix(matches, presence, player_index):
+97:     n_matches = len(matches)
+98:     n_players = len(player_index)
+100:     rows_i, cols_j, vals = [], [], []
+101:     y = np.zeros(n_matches)
+103:     for i, (eid, home, away, hxg, axg, elo_diff) in enumerate(matches):
+104:         y[i] = hxg - axg
+106:         rows_i.append(i)
+107:         cols_j.append(n_players)
+108:         vals.append(elo_diff / 400.0)
+110:         for player, (team, _) in presence.get(eid, {}).items():
+111:             if player not in player_index:
+112:                 continue
+113:             sign = +1.0 if team == home else -1.0
+114:             rows_i.append(i)
+115:             cols_j.append(player_index[player])
+116:             vals.append(sign)
+118:     X = csr_matrix((vals, (rows_i, cols_j)), shape=(n_matches, n_players + 1))
+119:     return X, y
+127: def _ridge_lsqr(X, y, alpha: float):
+131:     import scipy.sparse as sp
+133:     n, p = X.shape
+135:     sqrt_alpha = np.sqrt(alpha)
+136:     eye = sqrt_alpha * sp.eye(p, format="csr")
+137:     X_aug = sp.vstack([X, eye], format="csr")
+138:     y_aug = np.concatenate([y, np.zeros(p)])
+139:     result = lsqr(X_aug, y_aug, atol=1e-8, btol=1e-8, iter_lim=10_000)
+140:     return result[0]  # coeficientes β
+147: ROOKIE_PENALTY = 0.8
+148: REPLACEMENT_PERCENTILE = 0.20  # 20% inferiores definem o piso
+151: def _compute_replacement_levels(beta_players: dict, positions: dict) -> dict:
+155:     by_pos = {}
+156:     for player, vorp in beta_players.items():
+157:         pos = positions.get(player, "UNKNOWN")
+158:         by_pos.setdefault(pos, []).append(vorp)
+160:     replacement = {}
+161:     for pos, vorps in by_pos.items():
+162:         arr = np.sort(np.array(vorps))
+163:         cutoff = max(1, int(len(arr) * REPLACEMENT_PERCENTILE))
+164:         replacement[pos] = float(arr[:cutoff].mean()) * ROOKIE_PENALTY
+165:     return replacement
+173: def run(db_path: str, alpha: float = 1.0):
+181:     conn = db.connect(db_path, read_only=True)
+183:     TRAIN_SEASONS = {"2021", "2022"}
+184:     TEST_SEASONS = {"2023", "2024"}
+186:     print("[vorp_ridge] carregando partidas de treino…")
+187:     train_matches = _load_matches(conn, TRAIN_SEASONS)
+188:     test_matches = _load_matches(conn, TEST_SEASONS)
+190:     if not train_matches:
+191:         sys.exit(
+192:             "[vorp_ridge] ERRO: nenhuma partida de treino encontrada em "
+193:             f"sofascore_matches para seasons {TRAIN_SEASONS}. "
+194:             "Rode ingest_sofascore primeiro."
+195:         )
+197:     all_eids = {m[0] for m in train_matches} | {m[0] for m in test_matches}
+198:     presence = _load_player_presence(conn, all_eids)
+199:     positions = _load_positions(conn)
+202:     train_eids = {m[0] for m in train_matches}
+203:     players_in_train = sorted({p for eid, pmap in presence.items() if eid in train_eids for p in pmap})
+204:     player_index = {p: i for i, p in enumerate(players_in_train)}
+206:     print(
+207:         f"[vorp_ridge] {len(train_matches)} partidas treino | "
+208:         f"{len(test_matches)} reserva | {len(player_index)} jogadores únicos"
+209:     )
+211:     X_train, y_train = _build_matrix(train_matches, presence, player_index)
+213:     print(f"[vorp_ridge] X_train shape={X_train.shape}  nnz={X_train.nnz}")
+214:     print(f"[vorp_ridge] ajustando Ridge (alpha={alpha})…")
+216:     beta = _ridge_lsqr(X_train, y_train, alpha=alpha)
+218:     beta_players = {p: float(beta[i]) for p, i in player_index.items()}
+219:     beta_elo = float(beta[len(player_index)])  # última coluna
+221:     replacement_levels = _compute_replacement_levels(beta_players, positions)
+224:     vorps = np.array(list(beta_players.values()))
+225:     print(
+226:         f"[vorp_ridge] VORP: min={vorps.min():.3f}  p5={np.percentile(vorps, 5):.3f}  "
+227:         f"median={np.median(vorps):.3f}  p95={np.percentile(vorps, 95):.3f}  "
+228:         f"max={vorps.max():.3f}"
+229:     )
+230:     print(f"[vorp_ridge] beta_elo={beta_elo:.4f} (positivo = vantagem Elo -> mais xG)")
+232:     for pos, rv in sorted(replacement_levels.items()):
+233:         print(f"[vorp_ridge] replacement_level[{pos}] = {rv:.4f}")
+235:     artifact = {
+236:         "beta_players": beta_players,
+237:         "beta_elo": beta_elo,
+238:         "replacement_levels": replacement_levels,
+239:         "fallback_rule": (
+240:             f"Jogadores sem histórico (estreantes/transferências) recebem "
+241:             f"VORP = replacement_level[posição] × {ROOKIE_PENALTY} "
+242:             f"(já aplicado — média dos {int(REPLACEMENT_PERCENTILE * 100)}% "
+243:             f"inferiores da posição, penalidade Rookie incluída). "
+244:             f"Posição desconhecida -> chave 'UNKNOWN'."
+245:         ),
+246:         "train_seasons": list(TRAIN_SEASONS),
+247:         "test_seasons": list(TEST_SEASONS),
+248:         "ridge_alpha": alpha,
+249:         "n_players": len(player_index),
+250:         "n_train_matches": len(train_matches),
+251:     }
+252:     return artifact
+255: def main():
+256:     parser = argparse.ArgumentParser(description="VORP Ridge — extração causal de valor de jogador")
+257:     parser.add_argument("--db", default="data/matches.db")
+258:     parser.add_argument("--alpha", type=float, default=1.0, help="regularização Ridge")
+259:     parser.add_argument("--out", default=None, help="salvar artefato JSON neste caminho")
+260:     args = parser.parse_args()
+262:     artifact = run(str(ROOT / args.db), alpha=args.alpha)
+264:     if args.out:
+265:         out_path = Path(args.out)
+266:         out_path.parent.mkdir(parents=True, exist_ok=True)
+267:         out_path.write_text(json.dumps(artifact, indent=2, ensure_ascii=False), encoding="utf-8")
+268:         print(f"[vorp_ridge] artefato salvo em {out_path}")
+269:     else:
+271:         top = sorted(artifact["beta_players"].items(), key=lambda x: -x[1])[:10]
+272:         print("\nTop 10 VORP (contribuição ao xG diferencial):")
+273:         for player, v in top:
+274:             print(f"  {player:<30} {v:+.4f}")
+277: if __name__ == "__main__":
+278:     main()

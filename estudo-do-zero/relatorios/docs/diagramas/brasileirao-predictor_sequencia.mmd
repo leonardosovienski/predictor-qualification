@@ -1,0 +1,19 @@
+sequenceDiagram
+ participant U as Usuário (brasileirao-predict)
+ participant P as predict.build/show
+ participant DB as SQLite matches (read-only)
+ participant MO as model.predict_match (NB + Dixon-Coles)
+ participant MK as market_pricer
+ participant L as prediction_log (JSONL)
+ U->>P: times, data, flags
+ P->>DB: current_elo, model_parameters, cache_is_current
+ alt cache ausente/obsoleto
+  P->>P: recalcula em memória e avisa (não grava no banco)
+ end
+ P->>MO: diferenças de Elo + parâmetros
+ MO-->>P: grade de placares (1X2/OU/BTTS)
+ P->>MK: derivar mercados da grade
+ P->>DB: _market_probs (odds latest-state, sem prova de oferta executável)
+ P->>L: congela decisão antes do resultado (prediction_id)
+ L-->>U: saída formatada; PredictionReadiness capital=False
+ Note over U,L: settle casa prediction_id e grava results.jsonl; bet_log é manual/declarativo

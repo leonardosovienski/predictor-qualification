@@ -1,0 +1,493 @@
+### tests/test_market_0b_resolution.py
+1: from __future__ import annotations
+3: from brasileirao_predictor.research import market_0b_resolution as m
+6: def _rows(probabilities, odds=(1.9, 1.9)):
+7:     return [{"p_over": p, "p_btts": p, "market_odds_ou25": odds, "market_odds_btts": odds} for p in probabilities]
+10: def test_odds_invalidas_nao_contam_como_cobertura() -> None:
+11:     rows = _rows([0.4, 0.5, 0.6])
+12:     rows[0]["market_odds_ou25"] = (1.0, 2.0)
+13:     rows[1]["market_odds_ou25"] = (None, 2.0)
+14:     assert m.market_summary(rows, "p_over", "market_odds_ou25", threshold_var=0.02)["odds_complete_n"] == 1
+17: def test_probabilidade_quase_constante_falha_resolucao() -> None:
+18:     result = m.evaluate(_rows([0.499, 0.500, 0.501] * 20))
+19:     assert result["markets"]["ou25"]["structural_verdict"] == "NO_GO_LOW_MODEL_RESOLUTION"
+20:     assert result["full_protocol_candidates"] == []
+23: def test_histograma_range_e_threshold_ficam_no_relatorio() -> None:
+24:     summary = m.market_summary(_rows([0.10, 0.20, 0.30]), "p_over", "market_odds_ou25", threshold_var=0.02)
+25:     assert round(summary["probability_range"], 10) == 0.20
+26:     assert sum(item["n"] for item in summary["histogram"]) == 3
+27:     assert summary["threshold_var"] == 0.02
+30: def test_um_mercado_sem_variancia_produz_no_go_global() -> None:
+31:     rows = _rows([0.35, 0.45, 0.55, 0.65] * 20)
+32:     for row in rows:
+33:         row["p_btts"] = 0.5
+34:     assert m.evaluate(rows)["verdict"] == "NO_GO_STRUCTURAL"
+37: def test_variacao_e_cobertura_suficientes_liberam_protocolo_completo() -> None:
+38:     result = m.evaluate(_rows([0.35, 0.45, 0.55, 0.65] * 20))
+39:     assert result["verdict"] == "PROCEED_TO_FULL_0B"
+40:     assert result["full_protocol_candidates"] == ["ou25", "btts"]
+43: def test_resolucao_sem_odds_nao_e_confundida_com_no_go_estrutural() -> None:
+44:     result = m.evaluate(_rows([0.35, 0.45, 0.55, 0.65] * 20, odds=(1.0, 1.0)))
+45:     assert result["markets"]["ou25"]["resolution_pass"] is True
+46:     assert result["markets"]["ou25"]["odds_coverage_pass"] is False
+47:     assert result["full_protocol_candidates"] == []
+50: def test_protocolo_completo_declara_os_dois_lados_e_dez_celulas() -> None:
+51:     records = [
+52:         {
+53:             "date": f"2023-01-{i + 1:02d}",
+54:             "model_p": 0.35 + i * 0.02,
+55:             "market_p": 0.50,
+56:             "odds": [2.0, 2.0],
+57:             "actual": i % 2,
+58:             "effective_elo_diff": float(i),
+59:         }
+60:         for i in range(12)
+61:     ]
+62:     result = m.full_market_protocol(records, power_reference=records, permutations=2, seed=1)
+63:     assert result["declared_cells"] == 10
+64:     assert set(result["selections"]) == {"side_a", "side_b"}
+65:     assert all(item["permutation"]["n"] == 2 for item in result["selections"].values())
+68: def test_evaluate_reports_lambda_total_distribution() -> None:
+69:     rows = _rows([0.35, 0.45, 0.55])
+70:     for row, value in zip(rows, (2.0, 2.5, 3.0)):
+71:         row["lambda_total"] = value
+73:     summary = m.evaluate(rows)["lambda_total"]
+75:     assert summary["n"] == 3
+76:     assert summary["mean"] == 2.5
+77:     assert summary["min"] == 2.0
+78:     assert summary["max"] == 3.0
+79:     assert summary["range"] == 1.0
+### tests/test_market_anchor.py
+1: import pytest
+3: from brasileirao_predictor.data.market_anchor import consensus_anchor, persist_market_observations, remove_overround
+6: def test_remove_overround_returns_complete_distribution():
+7:     fair = remove_overround({"over": 1.90, "under": 1.90})
+8:     assert fair == pytest.approx({"over": 0.5, "under": 0.5})
+11: def test_remove_overround_rejects_incomplete_or_invalid_market():
+12:     with pytest.raises(ValueError, match="incompleto"):
+13:         remove_overround({"over": 1.9})
+14:     with pytest.raises(ValueError, match="invalida"):
+15:         remove_overround({"over": 1.0, "under": 2.0})
+18: def test_consensus_uses_complete_books_and_best_observed_price():
+19:     rows = [
+20:         {
+21:             "market": "ou2.5",
+22:             "bookmaker": "a",
+23:             "odds_captured_at": "t",
+24:             "line": 2.5,
+25:             "selection": "over",
+26:             "decimal_odds": 1.90,
+27:         },
+28:         {
+29:             "market": "ou2.5",
+30:             "bookmaker": "a",
+31:             "odds_captured_at": "t",
+32:             "line": 2.5,
+33:             "selection": "under",
+34:             "decimal_odds": 1.90,
+35:         },
+36:         {
+37:             "market": "ou2.5",
+38:             "bookmaker": "b",
+39:             "odds_captured_at": "t",
+40:             "line": 2.5,
+41:             "selection": "over",
+42:             "decimal_odds": 2.05,
+43:         },
+44:         {
+45:             "market": "ou2.5",
+46:             "bookmaker": "b",
+47:             "odds_captured_at": "t",
+48:             "line": 2.5,
+49:             "selection": "under",
+50:             "decimal_odds": 1.80,
+51:         },
+52:         {
+53:             "market": "ou2.5",
+54:             "bookmaker": "incomplete",
+55:             "odds_captured_at": "t",
+56:             "line": 2.5,
+57:             "selection": "over",
+58:             "decimal_odds": 9.0,
+59:         },
+60:     ]
+61:     rows = [
+62:         {**row, "source": "synthetic", "source_event_id": "e", "odds_captured_at": "2020-01-01T00:00:00Z"}
+63:         for row in rows
+64:     ]
+65:     anchor = consensus_anchor(rows, market="ou2.5")
+66:     assert anchor["books"] == ["a", "b"]
+67:     assert anchor["best_odds"] == {"over": 2.05, "under": 1.90}
+68:     assert sum(anchor["fair_probabilities"].values()) == pytest.approx(1.0)
+69:     assert anchor["method"] == "median-proportional-devig/v2"
+72: def test_research_persistence_marks_collection_only(tmp_path):
+73:     path = tmp_path / "market.jsonl"
+74:     row = {
+75:         "source": "the_odds_api",
+76:         "source_event_id": "e",
+77:         "canonical_match_id": "the_odds_api:e",
+78:         "bookmaker": "book",
+79:         "market": "ou2.5",
+80:         "selection": "over",
+81:         "line": 2.5,
+82:         "decimal_odds": 1.95,
+83:         "odds_captured_at": "2026-08-10T10:00:00+00:00",
+84:     }
+85:     assert persist_market_observations(path, [row]) == 1
+86:     assert '"scientific_state": "COLLECTION_ONLY"' in path.read_text(encoding="utf-8")
+### tests/test_market_edge_ordering.py
+1: from __future__ import annotations
+3: import pytest
+5: from brasileirao_predictor.research import market_edge_ordering as m
+8: def _record(date: str, outcome: int, *, elo: float = 20.0):
+9:     return {
+10:         "date": date,
+11:         "event_key": f"{date}|A|B",
+12:         "model": [0.25, 0.35, 0.40],
+13:         "market": [0.30, 0.30, 0.40],
+14:         "odds": [3.2, 3.3, 2.4],
+15:         "outcome": outcome,
+16:         "effective_elo_diff": elo,
+17:     }
+20: def test_grade_declara_sessenta_tentativas() -> None:
+21:     assert m.DECLARED_FAMILY_TRIALS == 60
+24: def test_devig_rejeita_placeholder_e_preserva_ordem_away_draw_home() -> None:
+25:     assert m.devig_1x2((2.0, 1.0, 4.0)) is None
+26:     probabilities = m.devig_1x2((2.0, 3.5, 4.0))
+27:     assert probabilities is not None
+28:     assert sum(probabilities) == pytest.approx(1.0)
+29:     assert probabilities[2] > probabilities[0]
+32: def test_bins_tem_fronteiras_deterministicas() -> None:
+33:     assert m.divergence_bin(-0.05) == "-5_0pp"
+34:     assert m.divergence_bin(0.0) == "0_5pp"
+35:     assert m.divergence_bin(0.10) == "ge_10pp"
+36:     assert m.odds_bin(2.0) == "2_3"
+37:     assert m.odds_bin(5.0) == "ge_5"
+40: def test_permutacao_preserva_resultados_dentro_de_cada_estrato() -> None:
+41:     records = [
+42:         _record("2024-01-01", 0, elo=20),
+43:         _record("2024-01-02", 1, elo=25),
+44:         _record("2024-02-01", 2, elo=150),
+45:         _record("2024-02-02", 1, elo=170),
+46:     ]
+47:     permuted = m.permute_outcomes(records, 7)
+48:     assert [row["date"] for row in permuted] == [row["date"] for row in records]
+49:     assert sorted(row["outcome"] for row in permuted[:2]) == [0, 1]
+50:     assert sorted(row["outcome"] for row in permuted[2:]) == [1, 2]
+53: def test_permutacao_nao_altera_previsoes_odds_ou_elo() -> None:
+54:     records = [_record("2024-01-01", 0), _record("2024-01-02", 1)]
+55:     permuted = m.permute_outcomes(records, 11)
+56:     for original, changed in zip(records, permuted):
+57:         assert changed["model"] == original["model"]
+58:         assert changed["market"] == original["market"]
+59:         assert changed["odds"] == original["odds"]
+60:         assert changed["effective_elo_diff"] == original["effective_elo_diff"]
+63: def test_power_cresce_com_variancia_e_recusa_amostra_inutil() -> None:
+64:     assert m.required_n_for_roi([]) is None
+65:     low = m.required_n_for_roi([-0.1, 0.1] * 20)
+66:     high = m.required_n_for_roi([-1.0, 1.0] * 20)
+67:     assert low is not None and high is not None and high > low
+70: def test_celula_pequena_serializa_psr_e_dsr_indefinidos_como_none() -> None:
+71:     cell = m.cells([_record("2024-01-01", 0)], [None])[0]
+72:     assert cell["psr"] is None
+73:     assert cell["dsr"]["dsr"] is None
+76: def test_validacao_pode_usar_referencia_de_poder_do_desenvolvimento() -> None:
+77:     development = [_record(f"2023-01-{i + 1:02d}", i % 3) for i in range(20)]
+78:     validation = [_record(f"2024-01-{i + 1:02d}", 1) for i in range(10)]
+79:     report = m.evaluate(
+80:         validation,
+81:         requested_n=10,
+82:         historical_trial_sharpes=[],
+83:         permutations=2,
+84:         seed=1,
+85:         power_reference=development,
+86:     )
+87:     assert report["draw_power_requirements_from_development"] == m.draw_power_requirements(development)
+90: def test_draw_ordering_exige_tres_faixas_e_monotonicidade() -> None:
+91:     rows = []
+92:     for divergence, outcomes in ((-0.06, [0, 0]), (0.02, [1, 0]), (0.12, [1, 1])):
+93:         for i, outcome in enumerate(outcomes):
+94:             market_draw = 0.30
+95:             model_draw = market_draw + divergence
+96:             rows.append(
+97:                 {
+98:                     "date": f"2024-01-{len(rows) + 1:02d}",
+99:                     "event_key": str(len(rows)),
+100:                     "model": [(1 - model_draw) / 2, model_draw, (1 - model_draw) / 2],
+101:                     "market": [0.35, market_draw, 0.35],
+102:                     "odds": [3.0, 3.0, 3.0],
+103:                     "outcome": outcome,
+104:                     "effective_elo_diff": float(i),
+105:                 }
+106:             )
+107:     assert m.draw_ordering(rows)["monotonic_roi"] is True
+110: def test_paired_records_nao_aceita_linha_sem_elo_pit() -> None:
+111:     row = {
+112:         "date": "2024-01-01",
+113:         "home": "A",
+114:         "away": "B",
+115:         "p_loss": 0.2,
+116:         "p_draw": 0.3,
+117:         "p_win": 0.5,
+118:         "market_odds_1x2": (2.0, 3.5, 4.0),
+119:         "actual_1x2": 2,
+120:         "effective_elo_diff": None,
+121:     }
+122:     assert m.paired_records([row], "2024-01-01", "2024-12-31") == []
+### tests/test_market_pricer.py
+11: import pytest
+13: from brasileirao_predictor.market_pricer import (
+14:     asian_handicap,
+15:     both_teams_to_score,
+16:     double_chance,
+17:     draw_no_bet,
+18:     exact_score,
+19:     over_under,
+20:     result_1x2,
+21: )
+24: GRID = [
+25:     [0.10, 0.10, 0.05],  # casa=0
+26:     [0.15, 0.20, 0.05],  # casa=1
+27:     [0.10, 0.10, 0.15],  # casa=2
+28: ]
+31: def test_grid_sums_to_one():
+32:     assert sum(sum(r) for r in GRID) == pytest.approx(1.0)
+35: def test_result_1x2():
+36:     o = result_1x2(GRID)
+37:     assert o["1"] == pytest.approx(0.35)  # i>j
+38:     assert o["X"] == pytest.approx(0.45)  # i==j
+39:     assert o["2"] == pytest.approx(0.20)  # i<j
+40:     assert o["1"] + o["X"] + o["2"] == pytest.approx(1.0)
+43: def test_double_chance():
+44:     dc = double_chance(GRID)
+45:     assert dc["1X"] == pytest.approx(0.80)
+46:     assert dc["X2"] == pytest.approx(0.65)
+47:     assert dc["12"] == pytest.approx(0.55)
+50: def test_btts():
+51:     b = both_teams_to_score(GRID)
+52:     assert b["Yes"] == pytest.approx(0.50)
+53:     assert b["No"] == pytest.approx(0.50)
+56: def test_over_under_half_line_no_push():
+57:     ou = over_under(GRID, 2.5)
+58:     assert ou["Over"] == pytest.approx(0.30)
+59:     assert ou["Under"] == pytest.approx(0.70)
+60:     assert ou["Push"] == pytest.approx(0.0)
+63: def test_over_under_other_half_line():
+64:     ou = over_under(GRID, 1.5)
+65:     assert ou["Over"] == pytest.approx(0.65)
+66:     assert ou["Under"] == pytest.approx(0.35)
+69: def test_over_under_integer_line_has_push():
+70:     ou = over_under(GRID, 2)
+71:     assert ou["Over"] == pytest.approx(0.30)  # totais 3,4
+72:     assert ou["Under"] == pytest.approx(0.35)  # totais 0,1
+73:     assert ou["Push"] == pytest.approx(0.35)  # total == 2
+74:     assert ou["Over"] + ou["Under"] + ou["Push"] == pytest.approx(1.0)
+77: def test_exact_score():
+78:     assert exact_score(GRID, 1, 1) == pytest.approx(0.20)
+79:     assert exact_score(GRID, 0, 2) == pytest.approx(0.05)
+80:     assert exact_score(GRID, 2, 0) == pytest.approx(0.10)
+83: def test_exact_score_out_of_range():
+84:     assert exact_score(GRID, 3, 0) == 0.0
+85:     assert exact_score(GRID, -1, 0) == 0.0
+88: def test_draw_no_bet_push_is_draw():
+89:     dnb = draw_no_bet(GRID)
+90:     assert dnb["1"]["win"] == pytest.approx(0.35)
+91:     assert dnb["1"]["push"] == pytest.approx(0.45)
+92:     assert dnb["1"]["lose"] == pytest.approx(0.20)
+93:     assert dnb["2"]["win"] == pytest.approx(0.20)
+94:     assert dnb["2"]["push"] == pytest.approx(0.45)
+96:     for side in ("1", "2"):
+97:         s = dnb[side]
+98:         assert s["win"] + s["push"] + s["lose"] == pytest.approx(1.0)
+101: def test_asian_handicap_level():
+102:     ah = asian_handicap(GRID, 0.0)
+103:     assert ah["win"] == pytest.approx(0.35)  # m>0
+104:     assert ah["push"] == pytest.approx(0.45)  # m==0
+105:     assert ah["lose"] == pytest.approx(0.20)  # m<0
+108: def test_asian_handicap_minus_one_integer_push():
+109:     ah = asian_handicap(GRID, -1.0)
+110:     assert ah["win"] == pytest.approx(0.10)  # m>1 → m=2
+111:     assert ah["push"] == pytest.approx(0.25)  # m==1
+112:     assert ah["lose"] == pytest.approx(0.65)  # m<=0
+113:     assert ah["win"] + ah["push"] + ah["lose"] == pytest.approx(1.0)
+116: def test_asian_handicap_half_line_no_push():
+117:     ah = asian_handicap(GRID, -0.5)
+118:     assert ah["win"] == pytest.approx(0.35)  # m>=1
+119:     assert ah["push"] == pytest.approx(0.0)
+120:     assert ah["lose"] == pytest.approx(0.65)  # m<=0
+123: def test_asian_handicap_plus_half():
+124:     ah = asian_handicap(GRID, 0.5)
+125:     assert ah["win"] == pytest.approx(0.80)  # m>=0
+126:     assert ah["lose"] == pytest.approx(0.20)  # m<=-1
+127:     assert ah["push"] == pytest.approx(0.0)
+130: def test_asian_handicap_quarter_line_splits():
+132:     ah = asian_handicap(GRID, -0.75)
+133:     assert ah["win"] == pytest.approx((0.35 + 0.10) / 2)  # 0.225
+134:     assert ah["push"] == pytest.approx((0.0 + 0.25) / 2)  # 0.125
+135:     assert ah["lose"] == pytest.approx((0.65 + 0.65) / 2)  # 0.65
+136:     assert ah["win"] + ah["push"] + ah["lose"] == pytest.approx(1.0)
+139: def test_non_square_grid_raises():
+140:     with pytest.raises(ValueError):
+141:         result_1x2([[0.5, 0.5]])
+### tests/test_market_probs_date.py
+9: import sqlite3
+11: import pytest
+13: from brasileirao_predictor.predict import _market_probs
+16: @pytest.fixture()
+17: def conn():
+18:     c = sqlite3.connect(":memory:")
+19:     c.execute("""CREATE TABLE sofascore_matches (
+20:         date TEXT, home_team TEXT, away_team TEXT,
+21:         odds_home REAL, odds_draw REAL, odds_away REAL,
+22:         odds_over REAL, odds_under REAL)""")
+24:     c.executemany(
+25:         "INSERT INTO sofascore_matches VALUES (?,?,?,?,?,?,?,?)",
+26:         [
+27:             ("2024-06-20", "Argentina", "Canada", 1.30, 5.00, 9.00, 1.70, 2.10),
+28:             ("2026-07-15", "Argentina", "Canada", 2.00, 3.20, 3.80, 1.95, 1.85),
+29:             ("2026-07-09", "France", "Morocco", 1.60, 4.00, 6.00, 2.00, 1.80),
+30:         ],
+31:     )
+32:     return c
+35: def test_com_data_escolhe_a_edicao_certa(conn):
+36:     mk_2026 = _market_probs(conn, "Argentina", "Canada", match_date="2026-07-15")
+37:     assert mk_2026["odds_home"] == 2.00
+38:     mk_2024 = _market_probs(conn, "Argentina", "Canada", match_date="2024-06-20")
+39:     assert mk_2024["odds_home"] == 1.30
+42: def test_tolerancia_de_3_dias(conn):
+44:     mk = _market_probs(conn, "Argentina", "Canada", match_date="2026-07-13")
+45:     assert mk["odds_home"] == 2.00
+47:     assert _market_probs(conn, "Argentina", "Canada", match_date="2026-01-01") is None
+50: def test_sem_data_fica_com_o_mais_recente(conn):
+52:     mk = _market_probs(conn, "Argentina", "Canada")
+53:     assert mk["odds_home"] == 2.00
+56: def test_orientacao_preservada(conn):
+58:     mk = _market_probs(conn, "Canada", "Argentina", match_date="2026-07-15")
+59:     assert mk["odds_home"] == 3.80 and mk["odds_away"] == 2.00
+62: def test_data_ilegivel_nao_seleciona_outro_jogo(conn):
+64:     with pytest.raises(ValueError, match="invalid match_date"):
+65:         _market_probs(conn, "France", "Morocco", match_date="quarta-feira")
+68: def test_confronto_inexistente(conn):
+69:     assert _market_probs(conn, "Brazil", "Germany") is None
+### tests/test_market_research_jobs_manifest.py
+3: import json
+4: from pathlib import Path
+7: def test_every_market_research_job_resolves_to_an_existing_script():
+8:     root = Path(__file__).resolve().parent.parent
+9:     document = json.loads((root / "jobs.market-research.example.json").read_text(encoding="utf-8"))
+10:     for job in document["jobs"]:
+11:         script = Path(job["command"][1])
+12:         assert not script.is_absolute()
+13:         assert script.parts[0] == "brasileirao_scripts"
+14:         assert (root / script).is_file(), job["id"]
+### tests/test_market_residual.py
+1: import numpy as np
+2: import pytest
+4: from brasileirao_predictor.research.economic_decision import choose_shadow_side, decide_shadow
+5: from brasileirao_predictor.research.market_residual import (
+6:     MarketResidualModel,
+7:     MultinomialMarketResidualModel,
+8:     ResidualPrediction,
+9: )
+12: def _sample(n=200):
+13:     rng = np.random.default_rng(13)
+14:     x = rng.normal(size=(n, 2))
+15:     market = np.full(n, 0.5)
+16:     probability = 1.0 / (1.0 + np.exp(-(1.5 * x[:, 0])))
+17:     y = rng.binomial(1, probability)
+18:     return x, y, market
+21: def test_residual_model_learns_signal_around_market_offset():
+22:     x, y, market = _sample()
+23:     model = MarketResidualModel(l2=1.0).fit(x, y, market, feature_names=("signal", "noise"))
+24:     high = model.predict(np.array([2.0, 0.0]), 0.5)
+25:     low = model.predict(np.array([-2.0, 0.0]), 0.5)
+26:     assert high.probability > 0.75
+27:     assert low.probability < 0.25
+28:     assert high.lower_probability < high.probability < high.upper_probability
+31: def test_residual_model_rejects_small_sample():
+32:     with pytest.raises(ValueError, match="insufficient"):
+33:         MarketResidualModel().fit(np.zeros((10, 2)), np.zeros(10), np.full(10, 0.5))
+36: def test_shadow_decision_uses_lower_confidence_bound_and_never_enables_capital():
+37:     uncertain = ResidualPrediction(0.60, 0.48, 0.72, 0.50, 0.4)
+38:     assert decide_shadow(uncertain, best_odds=2.0).action == "NO_BET"
+39:     strong = ResidualPrediction(0.65, 0.58, 0.72, 0.50, 0.6)
+40:     decision = decide_shadow(strong, best_odds=2.0)
+41:     assert decision.action == "SHADOW_BET"
+42:     assert 0 < decision.stake_units <= 0.25
+43:     assert decision.capital_enabled is False
+46: def test_shadow_decision_subtracts_friction_and_can_choose_under():
+47:     prediction = ResidualPrediction(0.35, 0.30, 0.40, 0.50, -0.6)
+48:     decision = choose_shadow_side(
+49:         prediction,
+50:         odds_over=2.0,
+51:         odds_under=1.90,
+52:         friction_rate=0.01,
+53:     )
+54:     assert decision.action == "SHADOW_BET"
+55:     assert decision.selection == "under"
+56:     assert decision.expected_value == pytest.approx(0.65 * 1.90 - 1.0 - 0.01)
+57:     assert decision.friction_rate == 0.01
+60: def test_friction_can_turn_apparent_edge_into_no_bet():
+61:     prediction = ResidualPrediction(0.53, 0.52, 0.54, 0.50, 0.12)
+62:     without_cost = decide_shadow(prediction, best_odds=2.0, minimum_conservative_edge=0.0)
+63:     with_cost = decide_shadow(
+64:         prediction,
+65:         best_odds=2.0,
+66:         minimum_conservative_edge=0.0,
+67:         friction_rate=0.05,
+68:     )
+69:     assert without_cost.action == "SHADOW_BET"
+70:     assert with_cost.action == "NO_BET"
+73: def test_fractional_kelly_uses_post_friction_win_and_loss_payoffs():
+74:     prediction = ResidualPrediction(0.60, 0.58, 0.62, 0.50, 0.4)
+75:     decision = decide_shadow(
+76:         prediction,
+77:         best_odds=2.0,
+78:         minimum_conservative_edge=0.0,
+79:         friction_rate=0.02,
+80:         kelly_fraction=0.10,
+81:         maximum_stake_units=1.0,
+82:     )
+83:     conservative_ev = 0.58 * 2.0 - 1.0 - 0.02
+84:     full_kelly = conservative_ev / ((2.0 - 1.0 - 0.02) * (1.0 + 0.02))
+85:     assert decision.stake_units == pytest.approx(0.10 * full_kelly)
+88: def test_residual_artifact_roundtrip_is_shadow_only():
+89:     x, y, market = _sample()
+90:     model = MarketResidualModel(l2=1.0).fit(x, y, market, feature_names=("signal", "noise"))
+91:     restored = MarketResidualModel.from_dict(model.to_dict())
+92:     before = model.predict(np.array([0.3, -0.1]), 0.52)
+93:     after = restored.predict(np.array([0.3, -0.1]), 0.52)
+94:     assert after.probability == pytest.approx(before.probability)
+95:     payload = model.to_dict()
+96:     payload["capital_enabled"] = True
+97:     with pytest.raises(ValueError, match="unsafe"):
+98:         MarketResidualModel.from_dict(payload)
+101: def test_multinomial_residual_learns_sports_signal_around_market():
+102:     rng = np.random.default_rng(17)
+103:     x = rng.normal(size=(600, 2))
+104:     market = np.tile([0.33, 0.30, 0.37], (len(x), 1))
+105:     logits = np.log(market)
+106:     logits[:, 0] += 1.2 * x[:, 0]
+107:     logits[:, 1] -= 0.8 * x[:, 1]
+108:     probabilities = np.exp(logits)
+109:     probabilities /= probabilities.sum(axis=1, keepdims=True)
+110:     y = np.array([rng.choice(3, p=p) for p in probabilities])
+111:     fitted = MultinomialMarketResidualModel(l2=1.0).fit(x, y, market)
+112:     high_away = fitted.predict_proba(np.array([2.0, 0.0]), market[0])
+113:     low_away = fitted.predict_proba(np.array([-2.0, 0.0]), market[0])
+114:     assert high_away[0] > low_away[0]
+115:     assert high_away.sum() == pytest.approx(1.0)
+118: def test_multinomial_residual_rejects_market_probabilities_not_normalized():
+119:     x = np.zeros((60, 2))
+120:     y = np.tile([0, 1, 2], 20)
+121:     invalid_market = np.tile([0.4, 0.3, 0.4], (60, 1))
+123:     with pytest.raises(ValueError, match="invalid values"):
+124:         MultinomialMarketResidualModel().fit(x, y, invalid_market)
+127: def test_multinomial_residual_rejects_invalid_prediction_market():
+128:     rng = np.random.default_rng(19)
+129:     x = rng.normal(size=(90, 2))
+130:     y = np.tile([0, 1, 2], 30)
+131:     market = np.tile([0.35, 0.30, 0.35], (90, 1))
+132:     fitted = MultinomialMarketResidualModel().fit(x, y, market)
+134:     with pytest.raises(ValueError, match="prediction values"):
+135:         fitted.predict_proba(np.zeros(2), np.array([0.4, 0.3, 0.4]))

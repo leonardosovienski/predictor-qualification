@@ -1,0 +1,379 @@
+### tests/test_evaluate_h15_prospective.py
+4: import json
+5: from pathlib import Path
+7: from brasileirao_predictor import db
+8: from brasileirao_scripts import evaluate_h15_prospective as job
+10: MIN_N = 21
+13: def _trials_json(path: Path, min_n: int = MIN_N) -> None:
+14:     path.write_text(
+15:         json.dumps(
+16:             [
+17:                 {
+18:                     "name": job.TRIAL,
+19:                     "params": {
+20:                         "min_n_avaliacao": min_n,
+21:                         "primary_metric": "rps",
+22:                         "guardrails": list(job.GUARDRAIL_METRICS),
+23:                     },
+24:                 }
+25:             ]
+26:         ),
+27:         encoding="utf-8",
+28:     )
+31: def _seed_db_and_ledger(tmp_path: Path, n: int) -> tuple[Path, Path]:
+32:     dbpath = tmp_path / "t.db"
+33:     conn = db.connect(str(dbpath))
+34:     ledger_path = tmp_path / "h15.jsonl"
+35:     lines = []
+36:     for i in range(n):
+37:         eid = 200 + i
+38:         home_score, away_score = (2, 0) if i % 2 else (0, 2)
+39:         conn.execute(
+40:             "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, "
+41:             "home_score, away_score) VALUES (?, 'T', '2027', '2027-01-01', 'A', 'B', ?, ?)",
+42:             (eid, home_score, away_score),
+43:         )
+44:         record = {
+45:             "event_id": eid,
+46:             "home": "A",
+47:             "away": "B",
+48:             "treatment_refit10": {"p_home": 0.6, "p_draw": 0.2, "p_away": 0.2},
+49:             "control_refit100": {"p_home": 0.5, "p_draw": 0.25, "p_away": 0.25},
+50:         }
+51:         lines.append(json.dumps(record))
+52:     conn.commit()
+53:     conn.close()
+54:     ledger_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+55:     return dbpath, ledger_path
+58: def test_abaixo_do_n_minimo_nao_calcula_nada(tmp_path):
+59:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=3)
+60:     trials_path = tmp_path / "trials.json"
+61:     _trials_json(trials_path, min_n=MIN_N)
+63:     result = job.evaluate(
+64:         trials_path=trials_path, ledger_path=ledger_path, db_path=dbpath, reports_dir=tmp_path / "reports"
+65:     )
+66:     assert result["status"] == "AGUARDANDO_N"
+67:     assert result["n"] == 3
+68:     assert result["faltam"] == MIN_N - 3
+69:     assert "primary_rps" not in result
+72: def test_no_n_minimo_calcula_e_reporta_veredito(tmp_path):
+73:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=MIN_N)
+74:     trials_path = tmp_path / "trials.json"
+75:     _trials_json(trials_path, min_n=MIN_N)
+77:     result = job.evaluate(
+78:         trials_path=trials_path, ledger_path=ledger_path, db_path=dbpath, reports_dir=tmp_path / "reports"
+79:     )
+80:     assert result["n"] == MIN_N
+81:     assert result["status"] in {"COMPROVADA", "REFUTADA", "INCONCLUSIVA"}
+82:     assert "primary_rps" in result
+83:     assert result["capital_enabled"] is False
+86: def test_main_recusa_sobrescrever_relatorio_existente(tmp_path, monkeypatch):
+87:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=MIN_N)
+88:     trials_path = tmp_path / "trials.json"
+89:     _trials_json(trials_path, min_n=MIN_N)
+90:     reports_dir = tmp_path / "reports"
+92:     monkeypatch.setattr(job, "TRIALS_PATH", trials_path)
+93:     monkeypatch.setattr(job, "LEDGER_PATH", ledger_path)
+94:     monkeypatch.setattr(job, "REPORTS_DIR", reports_dir)
+95:     monkeypatch.setattr(job, "load_config", lambda: {"database": str(dbpath)})
+97:     assert job.main() == 0
+98:     assert len(list(reports_dir.glob("h15_avaliacao_*.json"))) == 1
+100:     assert job.main() == 1
+101:     assert len(list(reports_dir.glob("h15_avaliacao_*.json"))) == 1
+104: def test_ignora_previsoes_sem_resultado_ainda(tmp_path):
+105:     dbpath, ledger_path = _seed_db_and_ledger(tmp_path, n=MIN_N)
+106:     with ledger_path.open("a", encoding="utf-8") as handle:
+107:         handle.write(
+108:             json.dumps(
+109:                 {
+110:                     "event_id": 999,
+111:                     "home": "C",
+112:                     "away": "D",
+113:                     "treatment_refit10": {"p_home": 0.5, "p_draw": 0.3, "p_away": 0.2},
+114:                     "control_refit100": {"p_home": 0.4, "p_draw": 0.3, "p_away": 0.3},
+115:                 }
+116:             )
+117:             + "\n"
+118:         )
+119:     trials_path = tmp_path / "trials.json"
+120:     _trials_json(trials_path, min_n=MIN_N)
+122:     result = job.evaluate(
+123:         trials_path=trials_path, ledger_path=ledger_path, db_path=dbpath, reports_dir=tmp_path / "reports"
+124:     )
+125:     assert result["n"] == MIN_N
+### tests/test_exp001_coverage_audit.py
+1: from brasileirao_scripts.exp001_coverage_audit import _summary
+4: def test_summary_keeps_missing_fixtures_in_denominator():
+5:     rows = [
+6:         {"requested_cutoff": horizon, "missing": missing, "snapshot_age_minutes": 10}
+7:         for horizon in ("H-24h", "H-6h", "H-1h")
+8:         for missing in (False, True)
+9:     ]
+10:     result = _summary(rows, 2)
+11:     assert all(value["coverage"] == 0.5 for value in result.values())
+12:     assert all(value["missing"] == 1 for value in result.values())
+### tests/test_exp001_cutoff_state_regression.py
+3: import traceback
+4: from copy import deepcopy
+5: from datetime import UTC, datetime
+7: import pytest
+8: import requests
+10: from brasileirao_scripts import exp001_data_pilot
+11: from brasileirao_scripts.exp001_data_pilot import _latest_at_cutoff
+13: CUTOFF = datetime(2020, 1, 1, 12, tzinfo=UTC)
+16: def _row(at, *, price=2.0, active=True):
+17:     return {"createdAt": f"2020-01-01T{at}Z", "price": price, "active": active}
+20: def _book(timeline):
+21:     return {
+22:         "markets": {"101": {"outcomes": {oid: {"players": {"0": deepcopy(timeline)}} for oid in ("101", "102", "103")}}}
+23:     }
+26: @pytest.mark.parametrize("reverse", [False, True])
+27: def test_latest_inactive_state_does_not_resurrect_older_quote(reverse):
+28:     rows = [_row("11:00:00"), _row("11:59:00", active=False)]
+29:     book = _book(list(reversed(rows)) if reverse else rows)
+30:     assert _latest_at_cutoff(book, CUTOFF) is None
+33: def test_future_reactivation_cannot_undo_suspension_at_cutoff():
+34:     rows = [_row("11:00:00"), _row("11:59:00", active=False), _row("12:01:00")]
+35:     assert _latest_at_cutoff(_book(rows), CUTOFF) is None
+38: def test_future_suspension_does_not_erase_current_quote():
+39:     rows = [_row("11:59:00"), _row("12:01:00", active=False)]
+40:     result = _latest_at_cutoff(_book(rows), CUTOFF)
+41:     assert result is not None
+42:     assert result["home_odds"] == 2.0
+43:     assert result["snapshot_age_minutes"] == 1.0
+46: def test_future_price_is_never_selected():
+47:     rows = [_row("11:59:00"), _row("12:01:00", price=99)]
+48:     result = _latest_at_cutoff(_book(rows), CUTOFF)
+49:     assert result is not None
+50:     assert [result[name] for name in ("home_odds", "draw_odds", "away_odds")] == [2.0] * 3
+53: def test_future_only_has_no_eligible_quote():
+54:     assert _latest_at_cutoff(_book([_row("12:01:00")]), CUTOFF) is None
+57: @pytest.mark.parametrize("reverse", [False, True])
+58: @pytest.mark.parametrize("conflict", ["active", "price"])
+59: def test_equal_timestamp_conflict_fails_closed_independent_of_order(reverse, conflict):
+60:     rows = [_row("11:59:00"), _row("11:59:00", active=False) if conflict == "active" else _row("11:59:00", price=3.0)]
+61:     assert _latest_at_cutoff(_book(list(reversed(rows)) if reverse else rows), CUTOFF) is None
+64: def test_equal_timestamp_identical_states_are_accepted():
+65:     result = _latest_at_cutoff(_book([_row("11:59:00"), _row("11:59:00")]), CUTOFF)
+66:     assert result is not None
+67:     assert result["home_odds"] == 2.0
+70: def test_missing_active_flag_is_not_proof_of_an_active_state():
+71:     rows = [_row("11:00:00"), _row("11:59:00")]
+72:     del rows[-1]["active"]
+73:     assert _latest_at_cutoff(_book(rows), CUTOFF) is None
+76: def test_suspension_of_one_leg_rejects_whole_1x2_quote():
+77:     book = _book([_row("11:59:00")])
+78:     book["markets"]["101"]["outcomes"]["102"]["players"]["0"].append(_row("12:00:00", active=False))
+79:     assert _latest_at_cutoff(book, CUTOFF) is None
+82: def test_missing_leg_fails_closed():
+83:     book = _book([_row("11:59:00")])
+84:     del book["markets"]["101"]["outcomes"]["102"]
+85:     assert _latest_at_cutoff(book, CUTOFF) is None
+88: def test_reactivation_before_cutoff_is_accepted():
+89:     rows = [_row("11:00:00"), _row("11:30:00", active=False), _row("12:00:00", price=2.5)]
+90:     result = _latest_at_cutoff(_book(rows), CUTOFF)
+91:     assert result is not None
+92:     assert result["home_odds"] == 2.5
+93:     assert result["snapshot_age_minutes"] == 0.0
+96: @pytest.mark.parametrize("error_class", [requests.ConnectionError, requests.Timeout])
+97: def test_transport_exception_never_exposes_key_or_url_in_traceback(monkeypatch, error_class):
+98:     key = "SYNTHETIC_SECRET_NOT_A_CREDENTIAL"
+100:     def unavailable(*args, **kwargs):
+101:         raise error_class(f"https://example.invalid/?apiKey={key}")
+103:     monkeypatch.setattr(exp001_data_pilot.requests, "get", unavailable)
+104:     with pytest.raises(RuntimeError, match="provider transport request failed") as caught:
+105:         exp001_data_pilot._get("historical-odds", key)
+106:     rendered = "".join(traceback.format_exception(caught.value))
+107:     assert key not in rendered
+108:     assert "example.invalid" not in rendered
+### tests/test_exp001_data_pilot.py
+1: from datetime import UTC, datetime
+3: from brasileirao_scripts.exp001_data_pilot import _latest_at_cutoff
+6: def test_pilot_rejects_snapshots_after_cutoff():
+7:     book = {"markets": {"101": {"outcomes": {}}}}
+8:     for outcome, price in (("101", 2.0), ("102", 3.0), ("103", 4.0)):
+9:         book["markets"]["101"]["outcomes"][outcome] = {
+10:             "players": {
+11:                 "0": [
+12:                     {"createdAt": "2026-01-01T11:59:00Z", "price": price, "active": True},
+13:                     {"createdAt": "2026-01-01T12:01:00Z", "price": 99, "active": True},
+14:                 ]
+15:             }
+16:         }
+17:     result = _latest_at_cutoff(book, datetime(2026, 1, 1, 12, tzinfo=UTC))
+18:     assert result is not None
+19:     assert result["home_odds"] == 2.0
+20:     assert result["draw_odds"] == 3.0
+21:     assert result["away_odds"] == 4.0
+24: def test_pilot_fails_closed_when_one_1x2_leg_is_missing():
+25:     book = {"markets": {"101": {"outcomes": {}}}}
+26:     assert _latest_at_cutoff(book, datetime(2026, 1, 1, 12, tzinfo=UTC)) is None
+### tests/test_feature_builder.py
+1: import sqlite3
+3: import pytest
+5: from brasileirao_predictor.feature_builder import build_features
+8: @pytest.fixture
+9: def db_path(tmp_path):
+10:     p = tmp_path / "test.db"
+11:     conn = sqlite3.connect(str(p))
+12:     conn.executescript("""
+13:         CREATE TABLE sofascore_matches (
+14:             event_id INTEGER PRIMARY KEY,
+15:             date TEXT,
+16:             home_team TEXT,
+17:             away_team TEXT,
+18:             home_score INTEGER,
+19:             away_score INTEGER
+20:         );
+21:         CREATE TABLE match_statistics (
+22:             event_id INTEGER,
+23:             team TEXT,
+24:             period TEXT,
+25:             stat_name TEXT,
+26:             value REAL,
+27:             PRIMARY KEY (event_id, team, period, stat_name)
+28:         );
+29:         INSERT INTO sofascore_matches VALUES
+30:             (1, '2026-06-10', 'Brazil', 'Argentina', 2, 0);
+31:         INSERT INTO sofascore_matches VALUES
+32:             (2, '2026-06-15', 'Brazil', 'Uruguay', 3, 1);
+33:         INSERT INTO sofascore_matches VALUES
+34:             (3, '2026-06-20', 'Brazil', 'Colombia', 1, 0);
+35:         INSERT INTO match_statistics VALUES
+36:             (1, 'home', 'ALL', 'Expected goals', 2.0);
+37:         INSERT INTO match_statistics VALUES
+38:             (2, 'home', 'ALL', 'Expected goals', 2.5);
+39:         INSERT INTO match_statistics VALUES
+40:             (3, 'home', 'ALL', 'Expected goals', 1.8);
+41:         INSERT INTO match_statistics VALUES
+42:             (1, 'home', 'ALL', 'Ball possession', 55.0);
+43:         INSERT INTO match_statistics VALUES
+44:             (2, 'home', 'ALL', 'Ball possession', 58.0);
+45:     """)
+46:     conn.commit()
+47:     conn.close()
+48:     return str(p)
+51: def test_build_features(db_path):
+52:     feats = build_features(db_path, event_id=3, window=2)
+53:     assert abs(feats["home_Expected goals"] - 2.25) < 0.01
+54:     assert abs(feats["home_Ball possession"] - 56.5) < 0.01
+55:     assert feats["home_Expected goals_n_valid"] == 2
+56:     assert feats["has_home_xg"] is True
+57:     assert feats["has_away_xg"] is False
+58:     assert feats["has_delta_xg"] is False
+59:     assert feats["delta_xg"] is None
+62: def test_build_features_empty(db_path):
+63:     feats = build_features(db_path, event_id=1, window=2)
+65:     assert feats["home_Expected goals"] is None
+66:     assert feats["away_Expected goals"] is None
+67:     assert feats["home_Expected goals_n_valid"] == 0
+68:     assert feats["away_Expected goals_n_valid"] == 0
+69:     assert feats["has_home_xg"] is False
+70:     assert feats["has_away_xg"] is False
+71:     assert feats["has_delta_xg"] is False
+72:     assert feats["delta_xg"] is None
+75: def test_delta_xg_so_existe_quando_os_dois_lados_tem_historico(db_path):
+76:     conn = sqlite3.connect(db_path)
+77:     conn.executescript("""
+78:         INSERT INTO sofascore_matches VALUES
+79:             (4, '2026-06-12', 'Colombia', 'Chile', 1, 1);
+80:         INSERT INTO match_statistics VALUES
+81:             (4, 'home', 'ALL', 'Expected goals', 1.25);
+82:     """)
+83:     conn.commit()
+84:     conn.close()
+86:     feats = build_features(db_path, event_id=3, window=2)
+87:     assert feats["home_Expected goals"] == pytest.approx(2.25)
+88:     assert feats["away_Expected goals"] == pytest.approx(1.25)
+89:     assert feats["has_home_xg"] is True
+90:     assert feats["has_away_xg"] is True
+91:     assert feats["has_delta_xg"] is True
+92:     assert feats["delta_xg"] == pytest.approx(1.0)
+95: def test_build_features_filtra_pelo_lado_do_time(db_path):
+99:     conn = sqlite3.connect(db_path)
+100:     conn.executescript("""
+101:         INSERT INTO match_statistics VALUES (1, 'away', 'ALL', 'Expected goals', 99.0);
+102:         INSERT INTO match_statistics VALUES (2, 'away', 'ALL', 'Expected goals', 99.0);
+103:     """)
+104:     conn.commit()
+105:     conn.close()
+106:     feats = build_features(db_path, event_id=3, window=2)
+109:     assert abs(feats["home_Expected goals"] - 2.25) < 0.01
+112: def test_build_features_ignora_periodos_parciais(db_path):
+114:     conn = sqlite3.connect(db_path)
+115:     conn.execute("INSERT INTO match_statistics VALUES (1, 'home', '1ST', 'Expected goals', 88.0)")
+116:     conn.commit()
+117:     conn.close()
+118:     feats = build_features(db_path, event_id=3, window=2)
+119:     assert abs(feats["home_Expected goals"] - 2.25) < 0.01
+### tests/test_find_odds.py
+8: from brasileirao_predictor.backtest import _find_odds
+9: from brasileirao_predictor.predict import _canon
+12: def _cand(
+13:     od_date="2022-12-18",
+14:     ch="argentina",
+15:     oh=2.0,
+16:     odr=3.0,
+17:     oa=4.0,
+18:     oov=1.8,
+19:     oun=2.1,
+20:     oh_o=2.1,
+21:     od_o=3.1,
+22:     oa_o=4.1,
+23:     oov_o=1.85,
+24:     oun_o=2.15,
+25: ):
+27:     return (od_date, ch, oh, odr, oa, oov, oun, oh_o, od_o, oa_o, oov_o, oun_o)
+30: def _odds(*cands, home="argentina", away="brazil"):
+31:     return {frozenset((_canon(home), _canon(away))): list(cands)}
+35: def test_sem_swap_quando_armazenado_bate_com_mando():
+37:     odds = _odds(_cand(ch="argentina"))
+38:     close_1x2, close_ou, open_1x2, open_ou = _find_odds(odds, "argentina", "brazil", "2022-12-18")
+39:     assert close_1x2 == (2.0, 3.0, 4.0)  # (home, empate, away) na ordem armazenada
+40:     assert open_1x2 == (2.1, 3.1, 4.1)
+43: def test_swap_quando_armazenado_invertido_vs_mando():
+45:     odds = _odds(_cand(ch="argentina"))
+46:     close_1x2, close_ou, open_1x2, open_ou = _find_odds(odds, "brazil", "argentina", "2022-12-18")
+48:     assert close_1x2 == (4.0, 3.0, 2.0)
+49:     assert open_1x2 == (4.1, 3.1, 2.1)
+52: def test_home_recebe_sempre_a_propria_odd_independente_da_orientacao():
+54:     odds = _odds(_cand(ch="argentina"))
+55:     arg_home, *_ = _find_odds(odds, "argentina", "brazil", "2022-12-18")
+56:     bra_home, *_ = _find_odds(odds, "brazil", "argentina", "2022-12-18")
+58:     assert arg_home[0] == 2.0
+59:     assert bra_home[0] == 4.0
+63: def test_over_under_independe_da_orientacao():
+64:     odds = _odds(_cand(oov=1.8, oun=2.1, oov_o=1.85, oun_o=2.15))
+65:     _, ou_a, _, ou_open_a = _find_odds(odds, "argentina", "brazil", "2022-12-18")
+66:     _, ou_b, _, ou_open_b = _find_odds(odds, "brazil", "argentina", "2022-12-18")
+67:     assert ou_a == ou_b == (1.8, 2.1)  # OU é simétrico — swap não pode mexer
+68:     assert ou_open_a == ou_open_b == (1.85, 2.15)
+72: def test_data_dentro_da_tolerancia_de_3_dias_casa():
+73:     odds = _odds(_cand(od_date="2022-12-18"))
+74:     assert _find_odds(odds, "argentina", "brazil", "2022-12-21") is not None  # dd=3, ok
+77: def test_data_fora_da_tolerancia_nao_casa():
+78:     odds = _odds(_cand(od_date="2022-12-18"))
+79:     assert _find_odds(odds, "argentina", "brazil", "2022-12-25") is None  # dd=7, fora
+82: def test_escolhe_candidato_de_data_mais_proxima():
+83:     perto = _cand(od_date="2022-12-18", oh=2.0)
+84:     longe = _cand(od_date="2022-12-16", oh=9.0)
+85:     odds = _odds(longe, perto)  # ordem proposital: o mais perto vem depois
+86:     close_1x2, *_ = _find_odds(odds, "argentina", "brazil", "2022-12-18")
+87:     assert close_1x2[0] == 2.0  # dd=0 vence dd=2
+91: def test_par_inexistente_devolve_none():
+92:     odds = _odds(_cand())
+93:     assert _find_odds(odds, "france", "england", "2022-12-18") is None
+96: def test_data_malformada_no_candidato_e_ignorada_sem_estourar():
+97:     odds = _odds(_cand(od_date="data-ruim"))
+98:     assert _find_odds(odds, "argentina", "brazil", "2022-12-18") is None
+102: def test_canon_aplica_alias():
+103:     assert _canon("South Korea") == "korea republic"
+104:     assert _canon("United States") == "usa"
+105:     assert _canon("Czechia") == "czech republic"
+108: def test_canon_reconcilia_bosnia_e_comercial():
+111:     assert _canon("Bosnia & Herzegovina") == _canon("Bosnia and Herzegovina")
+114: def test_canon_normaliza_caixa_e_espaco():
+115:     assert _canon("  Brazil  ") == "brazil"
+116:     assert _canon("ARGENTINA") == "argentina"
+119: def test_canon_passthrough_sem_alias():
+120:     assert _canon("Portugal") == "portugal"

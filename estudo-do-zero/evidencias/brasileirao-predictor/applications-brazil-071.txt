@@ -1,0 +1,471 @@
+### tests/test_resolution_curated_versions.py
+3: import sqlite3
+4: from pathlib import Path
+6: import pytest
+8: from brasileirao_predictor.data.pit_backfill import (
+9:     choose_closing,
+10:     connect_curated,
+11:     curate_match,
+12:     curate_odds,
+13:     evaluation_view,
+14: )
+17: def quote(**changes):
+18:     return {
+19:         "source": "synthetic",
+20:         "source_match_id": "m",
+21:         "kickoff_at": "2020-01-02T20:00:00Z",
+22:         "observed_at": "2020-01-02T18:00:00Z",
+23:         "available_at": "2020-01-02T18:00:00Z",
+24:         "captured_at": "2020-01-02T18:00:01Z",
+25:         "bookmaker": "A",
+26:         "market": "ou2.5",
+27:         "selection": "over",
+28:         "line": 2.5,
+29:         "period": "FT",
+30:         "status": "ACTIVE",
+31:         "raw_odds": 2.1,
+32:         **changes,
+33:     }
+36: def close(rows):
+37:     return choose_closing(rows, kickoff_at="2020-01-02T20:00:00Z", bookmaker="A", market="ou2.5", selection="over")
+40: def records(conn):
+41:     conn.row_factory = sqlite3.Row
+42:     return [dict(row) for row in conn.execute("SELECT * FROM curated_odds")]
+45: def test_curated_roundtrip_keeps_market_contract(tmp_path: Path) -> None:
+46:     with connect_curated(tmp_path / "new.db") as conn:
+47:         curate_odds(conn, quote(), canonical_match_id="canonical", batch_id="b1")
+48:         row = records(conn)[0]
+49:         assert (row["status"], row["period"], row["line"]) == ("ACTIVE", "FT", 2.5)
+50:         closing = close([row])
+51:         assert closing is not None and closing["raw_odds"] == 2.1
+54: def test_curated_tied_conflicts_are_preserved_and_cannot_be_selected(tmp_path: Path) -> None:
+55:     with connect_curated(tmp_path / "new.db") as conn:
+56:         for odds in (2.1, 2.2):
+57:             curate_odds(conn, quote(raw_odds=odds), canonical_match_id="canonical", batch_id="b1")
+58:         rows = records(conn)
+59:         assert len(rows) == 2
+60:         assert close(rows) is None
+63: def test_curated_suspension_survives_roundtrip_and_prevents_resurrection(tmp_path: Path) -> None:
+64:     with connect_curated(tmp_path / "new.db") as conn:
+65:         curate_odds(conn, quote(), canonical_match_id="canonical", batch_id="b1")
+66:         curate_odds(
+67:             conn,
+68:             quote(status="SUSPENDED", raw_odds=None, captured_at="2020-01-02T19:00:00Z"),
+69:             canonical_match_id="canonical",
+70:             batch_id="b2",
+71:         )
+72:         assert len(records(conn)) == 2
+73:         assert close(records(conn)) is None
+76: def test_curated_exact_retry_is_idempotent(tmp_path: Path) -> None:
+77:     with connect_curated(tmp_path / "new.db") as conn:
+78:         for _ in range(2):
+79:             curate_odds(conn, quote(), canonical_match_id="canonical", batch_id="b1")
+80:         assert len(records(conn)) == 1
+83: def test_curated_does_not_implicitly_mutate_old_schema(tmp_path: Path) -> None:
+84:     path = tmp_path / "legacy.db"
+85:     with sqlite3.connect(path) as conn:
+86:         conn.execute("CREATE TABLE curated_matches (legacy TEXT)")
+87:     before = path.read_bytes()
+88:     with pytest.raises(ValueError, match="schema"):
+89:         connect_curated(path)
+90:     assert path.read_bytes() == before
+93: def match(**changes):
+94:     return {
+95:         "source": "synthetic",
+96:         "source_match_id": "m",
+97:         "canonical_match_id": "canonical",
+98:         "kickoff_at": "2020-02-02T20:00:00Z",
+99:         "home_team": "A",
+100:         "away_team": "B",
+101:         **changes,
+102:     }
+105: def put_match(conn, at, **changes):
+106:     return curate_match(conn, match(**changes), aliases={}, known={"A", "B", "C"}, batch_id="b", ingested_at=at)
+109: def test_match_revision_does_not_erase_earlier_as_of_state(tmp_path: Path) -> None:
+110:     with connect_curated(tmp_path / "new.db") as conn:
+111:         put_match(conn, "2020-01-01T00:00:00Z")
+112:         put_match(conn, "2020-01-03T00:00:00Z", kickoff_at="2020-02-03T20:00:00Z")
+113:         assert conn.execute("SELECT COUNT(*) FROM curated_matches").fetchone()[0] == 2
+114:         earlier = evaluation_view(conn, predicted_at="2020-01-02T00:00:00Z")
+115:         later = evaluation_view(conn, predicted_at="2020-01-04T00:00:00Z")
+116:         assert earlier[0]["kickoff_at"] == "2020-02-02T20:00:00+00:00"
+117:         assert later[0]["kickoff_at"] == "2020-02-03T20:00:00+00:00"
+120: def test_match_conflicting_revision_at_same_receipt_is_not_arbitrated(tmp_path: Path) -> None:
+121:     with connect_curated(tmp_path / "new.db") as conn:
+122:         put_match(conn, "2020-01-01T00:00:00Z")
+123:         put_match(conn, "2020-01-01T00:00:00Z", away_team="C")
+124:         with pytest.raises(ValueError, match="conflit"):
+125:             evaluation_view(conn, predicted_at="2020-01-02T00:00:00Z")
+128: def test_cancelled_latest_match_does_not_resurrect_scheduled_version(tmp_path: Path) -> None:
+129:     with connect_curated(tmp_path / "new.db") as conn:
+130:         put_match(conn, "2020-01-01T00:00:00Z", match_status="SCHEDULED")
+131:         put_match(conn, "2020-01-03T00:00:00Z", match_status="CANCELLED")
+132:         assert evaluation_view(conn, predicted_at="2020-01-04T00:00:00Z") == []
+135: @pytest.mark.parametrize("field", ["observed_at", "available_at", "published_at"])
+136: def test_closing_rejects_future_information_even_for_direct_rows(field: str) -> None:
+137:     with pytest.raises(ValueError, match="captur"):
+138:         close([quote(**{field: "2020-01-02T19:00:00Z"})])
+### tests/test_resolution_gate_dependence.py
+1: import pytest
+3: from brasileirao_predictor.research.residual_gate import evaluate_economic_gate
+6: def rows():
+7:     return [{"event_id": str(i), "pnl": 0.1 if i % 2 else 0.2, "clv": 0.03} for i in range(20)]
+10: def test_repeated_snapshots_cannot_satisfy_independent_sample_floor():
+11:     sample = [{"event_id": "one", "pnl": 0.1 if i % 2 else 0.2, "clv": 0.03} for i in range(30)]
+12:     result = evaluate_economic_gate(sample, dsr=1, minimum_sample=20, n_boot=20)
+13:     assert result["verdict"] == "PENDING_SAMPLE"
+14:     assert result["n_events"] == 1
+17: def test_declared_dsr_cannot_promote_unregistered_experiment():
+18:     result = evaluate_economic_gate(rows(), dsr=1, minimum_sample=10, n_boot=20)
+19:     assert result["verdict"] == "PENDING_DESIGN"
+20:     assert result["dsr_used_for_promotion"] is False
+23: def test_psr_uses_event_returns_and_is_invariant_to_snapshot_repetition():
+24:     sample = [{**row, "pnl": 0.2 if i % 2 else -0.15} for i, row in enumerate(rows())]
+25:     once = evaluate_economic_gate(sample, dsr=1, minimum_sample=10, n_boot=20)
+26:     twice = evaluate_economic_gate(sample * 10, dsr=1, minimum_sample=10, n_boot=20)
+27:     assert once["psr"] == pytest.approx(twice["psr"])
+28:     assert once["n_events"] == twice["n_events"] == 20
+### tests/test_resolution_historical_import.py
+3: import csv
+4: import sqlite3
+6: import pytest
+8: from brasileirao_scripts import import_ou25_historical_backfill as importer
+11: def fixture(tmp_path, changes=None):
+12:     database = tmp_path / "matches.db"
+13:     with sqlite3.connect(database) as conn:
+14:         conn.execute(
+15:             "CREATE TABLE matches(event_id INTEGER,date TEXT,home_team TEXT,away_team TEXT,home_score INTEGER)"
+16:         )
+17:         conn.execute("INSERT INTO matches VALUES(123,'2022-05-01','Home','Away',1)")
+18:     source = tmp_path / "raw.csv"
+19:     row = dict(
+20:         Season="2022",
+21:         Date="01/05/2022",
+22:         Home="Home",
+23:         Away="Away",
+24:         **{
+25:             "AvgOver2.5": "2.1",
+26:             "AvgUnder2.5": "1.9",
+27:             "HighOver2.5": "2.2",
+28:             "HighUnder2.5": "2.0",
+29:             "NumBookmakers2.5": "3",
+30:         },
+31:     )
+32:     row.update(changes or {})
+33:     with source.open("w", newline="", encoding="utf-8") as handle:
+34:         writer = csv.DictWriter(handle, fieldnames=list(row))
+35:         writer.writeheader()
+36:         writer.writerow(row)
+37:     return source, database
+40: def test_existing_output_is_rejected_without_touching_bytes(tmp_path):
+41:     source, database = fixture(tmp_path)
+42:     before = database.read_bytes()
+43:     with pytest.raises(FileExistsError):
+44:         importer.import_backfill(source, database, database)
+45:     assert database.read_bytes() == before
+48: @pytest.mark.parametrize(
+49:     "field,value",
+50:     [
+51:         ("AvgOver2.5", "inf"),
+52:         ("AvgUnder2.5", "1"),
+53:         ("HighOver2.5", "nan"),
+54:         ("NumBookmakers2.5", "3.5"),
+55:         ("NumBookmakers2.5", "-2"),
+56:     ],
+57: )
+58: def test_bad_price_or_count_is_quarantined(tmp_path, field, value):
+59:     source, database = fixture(tmp_path, {field: value})
+60:     output = tmp_path / "research.sqlite"
+61:     report = importer.import_backfill(source, database, output)
+62:     assert report["imported"] == 0
+63:     assert report["missing_price"] == 1
+64:     with sqlite3.connect(output) as conn:
+65:         assert conn.execute("SELECT count(*) FROM ou25_historical_backfill").fetchone()[0] == 0
+66:         assert conn.execute("SELECT reason FROM unmatched_rows").fetchone()[0] == "invalid_price_or_bookmaker_count"
+69: def test_failed_import_does_not_publish_partial_database(tmp_path):
+70:     source, database = fixture(tmp_path, {"Date": "invalid"})
+71:     output = tmp_path / "research.sqlite"
+72:     with pytest.raises(ValueError):
+73:         importer.import_backfill(source, database, output)
+74:     assert not output.exists()
+77: def test_valid_import_preserves_raw_and_keeps_economics_disabled(tmp_path):
+78:     source, database = fixture(tmp_path)
+79:     before = source.read_bytes(), database.read_bytes()
+80:     report = importer.import_backfill(source, database, tmp_path / "research.sqlite")
+81:     assert report["imported"] == 1
+82:     assert report["capital_enabled"] is False
+83:     assert report["clv_eligible"] is False
+84:     assert before == (source.read_bytes(), database.read_bytes())
+### tests/test_resolution_kernel_lifecycle.py
+1: import asyncio
+2: import builtins
+3: import importlib
+4: import sys
+5: import tomllib
+6: from pathlib import Path
+7: from types import SimpleNamespace
+9: from brasileirao_predictor import kernel_daemon as kernel
+10: from brasileirao_predictor import kernel_redis_v2 as protocol
+13: def test_installed_health_entrypoint_needs_no_numeric_or_database_import(monkeypatch, tmp_path):
+14:     config = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
+15:     module_name, function = config["project"]["scripts"]["brasileirao-kernel"].split(":")
+16:     monkeypatch.delitem(sys.modules, module_name, raising=False)
+17:     original = builtins.__import__
+19:     def lightweight_import(name, *args, **kwargs):
+20:         if name.split(".")[0] in {"numpy", "numba", "scipy"} or name == "brasileirao_predictor.db":
+21:             raise AssertionError("healthcheck attempted an expensive model dependency import")
+22:         return original(name, *args, **kwargs)
+24:     monkeypatch.setattr(builtins, "__import__", lightweight_import)
+25:     client = SimpleNamespace(eval=lambda *args: 1, close=lambda: None)
+26:     monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=lambda *args, **kwargs: client))
+27:     monkeypatch.setattr(
+28:         sys,
+29:         "argv",
+30:         [
+31:             "brasileirao-kernel",
+32:             "--healthcheck",
+33:             "--db",
+34:             str(tmp_path / "sports.db"),
+35:             "--redis",
+36:             "redis://127.0.0.1:1/15",
+37:         ],
+38:     )
+39:     entrypoint = getattr(importlib.import_module(module_name), function)
+40:     assert entrypoint() == 0
+43: def test_pubsub_burst_has_bounded_handlers_and_cancels_them_on_shutdown(monkeypatch):
+44:     import redis.asyncio as redis_asyncio
+46:     async def exercise():
+47:         stop = asyncio.Event()
+48:         active = 0
+49:         maximum = 0
+51:         class PubSub:
+52:             async def subscribe(self, *args):
+53:                 pass
+55:             async def unsubscribe(self, *args):
+56:                 pass
+58:             async def aclose(self):
+59:                 pass
+61:             async def listen(self):
+62:                 for _ in range(protocol.POLL_LIMIT * 4):
+63:                     yield {"type": "message", "data": b"durably registered synthetic request"}
+64:                 await asyncio.sleep(0)
+65:                 stop.set()
+66:                 await asyncio.Event().wait()
+68:         class Client:
+69:             def pubsub(self):
+70:                 return PubSub()
+72:             async def eval(self, *args):
+73:                 return 1
+75:             async def aclose(self):
+76:                 pass
+78:         async def handle(*args):
+79:             nonlocal active, maximum
+80:             active += 1
+81:             maximum = max(maximum, active)
+82:             try:
+83:                 await asyncio.Event().wait()
+84:             finally:
+85:                 active -= 1
+87:         async def recover(*args):
+88:             await stop.wait()
+90:         monkeypatch.setattr(redis_asyncio, "from_url", lambda *args, **kwargs: Client())
+91:         monkeypatch.setattr(kernel, "_handle_invoke", handle)
+92:         monkeypatch.setattr(kernel, "_poll_pending", recover)
+93:         await asyncio.wait_for(kernel._serve_sessions((0.2, 1.0, 0.1, 0.0, 0.0, 12), "redis://127.0.0.1:1/15", stop), 5)
+94:         assert 0 < maximum <= protocol.POLL_LIMIT
+95:         assert active == 0
+97:     asyncio.run(exercise())
+100: def test_healthcheck_connection_failure_closes_client_and_does_not_log_credentials(monkeypatch, tmp_path, caplog):
+101:     import redis
+103:     from brasileirao_predictor import kernel_cli
+105:     options = {}
+106:     closed = []
+108:     def unavailable(*args):
+109:         raise redis.ConnectionError("redis://user:<REDACTED_EMAIL>/15")
+111:     def client_factory(url, **kwargs):
+112:         options.update(kwargs)
+113:         return SimpleNamespace(eval=unavailable, close=lambda: closed.append(True))
+115:     monkeypatch.setattr(redis, "from_url", client_factory)
+116:     monkeypatch.setattr(
+117:         sys,
+118:         "argv",
+119:         [
+120:             "brasileirao-kernel",
+121:             "--healthcheck",
+122:             "--db",
+123:             str(tmp_path / "absent.db"),
+124:             "--redis",
+125:             "redis://127.0.0.1:1/15",
+126:         ],
+127:     )
+128:     assert kernel_cli.main() == 1
+129:     assert options["socket_connect_timeout"] == options["socket_timeout"] == 1
+130:     assert options["retry_on_timeout"] is False
+131:     assert closed == [True]
+132:     assert "synthetic-secret" not in caplog.text
+### tests/test_resolution_kernel_params.py
+1: import pytest
+3: from brasileirao_predictor import kernel_daemon as kernel
+6: @pytest.mark.parametrize(
+7:     "index,value", [(0, float("inf")), (1, float("nan")), (2, -0.1), (4, True), (5, 0), (5, -1), (5, 1.5), (5, 101)]
+8: )
+9: def test_invalid_kernel_parameters_never_reach_numba(monkeypatch, index, value):
+10:     params = [0.2, 1.0, 0.1, 0.0, 0.0, 12]
+11:     params[index] = value
+13:     def unsafe_jit(*args):
+14:         raise AssertionError("invalid parameters reached the numerical kernel")
+16:     monkeypatch.setattr(kernel, "_compute_grid_jit", unsafe_jit)
+17:     with pytest.raises(ValueError):
+18:         kernel._warmup_jit(tuple(params))
+21: def test_supported_kernel_parameters_keep_two_warmup_calls(monkeypatch):
+22:     calls = []
+23:     monkeypatch.setattr(kernel, "_compute_grid_jit", lambda *args: calls.append(args))
+24:     assert kernel._warmup_jit((0.2, 1.0, 0.1, -0.05, 0.0, 12)) >= 0
+25:     assert len(calls) == 2
+26:     assert calls[0] == calls[1]
+### tests/test_resolution_lineup_envelopes.py
+1: from concurrent.futures import ThreadPoolExecutor
+3: import pytest
+5: from brasileirao_predictor.research.residual_features import lineup_state_asof
+8: def envelope(**updates):
+9:     return {
+10:         "schema_version": "lineup-envelope/2",
+11:         "source": "synthetic",
+12:         "source_event_id": "event-1",
+13:         "team_id": "team-1",
+14:         "observed_at": "2024-01-01T10:00:00Z",
+15:         "received_at": "2024-01-01T10:00:01Z",
+16:         "published_at": None,
+17:         "status": "COMPLETE",
+18:         "raw_sha256": "a" * 64,
+19:         "parser_version": "synthetic/1",
+20:         "players": [{"player_id": "p1", "role": "starter"}],
+21:         **updates,
+22:     }
+25: def test_envelope_is_consumed_without_flattening_away_empty_state():
+26:     old = envelope()
+27:     empty = envelope(status="EMPTY", players=[], received_at="2024-01-01T11:00:00Z", raw_sha256="b" * 64)
+28:     assert lineup_state_asof([old, empty], event_id="event-1", asof="2024-01-01T10:30:00Z") == {"team-1": {"p1"}}
+29:     assert lineup_state_asof([old, empty], event_id="event-1", asof="2024-01-01T11:30:00Z") == {"team-1": set()}
+32: def test_same_receipt_conflict_cannot_choose_a_lineup():
+33:     with pytest.raises(ValueError, match="conflict"):
+34:         lineup_state_asof(
+35:             [envelope(), envelope(status="REMOVED", players=[])], event_id="event-1", asof="2024-01-01T12:00:00Z"
+36:         )
+39: def test_later_snapshot_resolves_old_conflict_independent_of_input_order():
+40:     old, conflict = envelope(), envelope(status="REMOVED", players=[])
+41:     newer = envelope(received_at="2024-01-01T11:00:00Z")
+42:     for rows in ([old, conflict, newer], [newer, conflict, old]):
+43:         assert lineup_state_asof(rows, event_id="event-1", asof="2024-01-01T12:00:00Z") == {"team-1": {"p1"}}
+46: @pytest.mark.parametrize("status", ["INVALID", "UNAVAILABLE"])
+47: def test_unknown_lineup_is_not_an_empty_lineup(status):
+48:     rows = [envelope(), envelope(status=status, players=[], received_at="2024-01-01T11:00:00Z")]
+49:     assert lineup_state_asof(rows, event_id="event-1", asof="2024-01-01T12:00:00Z") == {}
+52: def test_atomic_envelopes_preserve_empty_and_concurrent_writes(tmp_path):
+53:     from brasileirao_predictor.data.lineup_envelopes import persist_snapshot, read_snapshots
+55:     rows = [envelope(received_at=f"2024-01-01T10:{i:02d}:01Z") for i in range(12)]
+56:     with ThreadPoolExecutor(max_workers=4) as pool:
+57:         list(pool.map(lambda row: persist_snapshot(tmp_path, row), rows * 2))
+58:     assert len(read_snapshots(tmp_path, source="synthetic", event_id="event-1")) == 12
+59:     empty = envelope(status="EMPTY", players=[], received_at="2024-01-01T11:00:00Z")
+60:     persist_snapshot(tmp_path, empty)
+61:     read = read_snapshots(tmp_path, source="synthetic", event_id="event-1")
+62:     assert lineup_state_asof(read, event_id="event-1", asof="2024-01-01T12:00:00Z") == {"team-1": set()}
+65: def test_corrupt_envelope_fails_closed(tmp_path):
+66:     from brasileirao_predictor.data.lineup_envelopes import persist_snapshot, read_snapshots
+68:     path = persist_snapshot(tmp_path, envelope())
+69:     path.write_text('{"broken":', encoding="utf-8")
+70:     with pytest.raises(ValueError, match="corrupt"):
+71:         read_snapshots(tmp_path, source="synthetic", event_id="event-1")
+74: @pytest.mark.parametrize(
+75:     "updates", [{"received_at": "2024-01-01T09:00:00Z"}, {"status": "EMPTY"}, {"raw_sha256": "bad"}]
+76: )
+77: def test_invalid_envelope_is_rejected_before_writing(tmp_path, updates):
+78:     from brasileirao_predictor.data.lineup_envelopes import persist_snapshot
+80:     with pytest.raises(ValueError):
+81:         persist_snapshot(tmp_path, envelope(**updates))
+82:     assert list(tmp_path.iterdir()) == []
+### tests/test_resolution_live_settlement.py
+1: import json
+2: import sys
+3: from copy import deepcopy
+4: from datetime import UTC, datetime, timedelta
+6: import pytest
+8: from brasileirao_scripts.settle_live_prediction import append_settlement, build_settlement
+11: def inputs():
+12:     return (
+13:         {
+14:             "prediction_id": "synthetic-1",
+15:             "source_event_id": "123",
+16:             "prediction": {"p_home": 0.5, "p_draw": 0.3, "p_away": 0.2},
+17:         },
+18:         {"id": 123, "status": {"type": "finished"}, "homeScore": {"current": 2}, "awayScore": {"current": 1}},
+19:         datetime(2024, 1, 1, tzinfo=UTC),
+20:     )
+23: def test_rejects_wrong_event():
+24:     p, e, at = inputs()
+25:     e["id"] = 124
+26:     with pytest.raises(ValueError, match="identity"):
+27:         build_settlement(p, e, at)
+30: @pytest.mark.parametrize("value", [True, -1])
+31: def test_rejects_invalid_score(value):
+32:     p, e, at = inputs()
+33:     e["homeScore"]["current"] = value
+34:     with pytest.raises(ValueError, match="score"):
+35:         build_settlement(p, e, at)
+38: @pytest.mark.parametrize("value", [float("nan"), -0.1, 1.1, True, 0.2])
+39: def test_rejects_invalid_probability_vector(value):
+40:     p, e, at = inputs()
+41:     p["prediction"]["p_home"] = value
+42:     with pytest.raises(ValueError, match="probab"):
+43:         build_settlement(p, e, at)
+46: def test_retry_retains_first_receipt_and_changed_result_conflicts(tmp_path):
+47:     p, e, at = inputs()
+48:     path = tmp_path / "synthetic.jsonl"
+49:     row = build_settlement(p, e, at)
+50:     assert append_settlement(path, row)
+51:     original = path.read_bytes()
+52:     assert not append_settlement(path, build_settlement(p, e, at + timedelta(minutes=1)))
+53:     assert path.read_bytes() == original
+54:     other = deepcopy(e)
+55:     other["awayScore"]["current"] = 3
+56:     with pytest.raises(ValueError, match="conflict"):
+57:         append_settlement(path, build_settlement(p, other, at))
+60: def test_writer_lock_is_respected(tmp_path):
+61:     from brasileirao_predictor.bet_log import _writer_lock
+63:     path = tmp_path / "synthetic.jsonl"
+64:     with _writer_lock(path), pytest.raises(BlockingIOError):
+65:         append_settlement(path, build_settlement(*inputs()))
+68: def test_cli_retry_reports_persisted_receipt_in_stdout_and_run_log(tmp_path, monkeypatch, capsys):
+69:     from brasileirao_scripts import settle_live_prediction as cli
+71:     prediction, event, at = inputs()
+72:     predictions = tmp_path / "predictions.jsonl"
+73:     settlements = tmp_path / "settlements.jsonl"
+74:     run_log = tmp_path / "run.jsonl"
+75:     predictions.write_text(json.dumps(prediction) + "\n", encoding="utf-8")
+76:     first = build_settlement(prediction, event, at)
+77:     assert append_settlement(settlements, first)
+78:     original = settlements.read_bytes()
+80:     class Client:
+81:         def _get(self, *args, **kwargs):
+82:             return {"event": event}
+84:     monkeypatch.setattr(cli, "Sofascore", lambda **kwargs: Client())
+85:     monkeypatch.setattr(
+86:         sys,
+87:         "argv",
+88:         [
+89:             "settlement",
+90:             prediction["prediction_id"],
+91:             "--predictions",
+92:             str(predictions),
+93:             "--settlements",
+94:             str(settlements),
+95:             "--run-log",
+96:             str(run_log),
+97:         ],
+98:     )
+99:     cli.main(now=lambda: at + timedelta(minutes=5))
+100:     reported = json.loads(capsys.readouterr().out)
+101:     assert reported == {"settlement_appended": False, **first}
+102:     assert json.loads(run_log.read_text(encoding="utf-8")) == reported
+103:     assert settlements.read_bytes() == original

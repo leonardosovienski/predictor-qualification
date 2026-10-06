@@ -1,0 +1,264 @@
+### tests/test_bookmaker_stability.py
+1: from pathlib import Path
+3: from brasileirao_predictor.data.bookmaker_stability import append_smoke, stability_report, summarize_smoke
+6: def _row(key, executed, coverage=10, seen=10, lag=10):
+7:     return {
+8:         "executed_at": executed,
+9:         "bookmaker_key": key,
+10:         "events_seen": seen,
+11:         "events_with_totals": coverage,
+12:         "valid_quotes": coverage * 2,
+13:         "update_lag_seconds": lag,
+14:     }
+17: def test_append_only_and_exchange_is_not_recommended(tmp_path: Path):
+18:     ledger = tmp_path / "smokes.jsonl"
+19:     append_smoke(ledger, [_row("matchbook", "2026-01-01T00:00:00+00:00")])
+20:     append_smoke(ledger, [_row("matchbook", "2026-01-02T00:00:00+00:00")])
+21:     assert len(ledger.read_text().splitlines()) == 2
+22:     assert stability_report(ledger)["bookmakers"][0]["classification"] == "BOOKMAKER_REJECTED"
+25: def test_stable_and_insufficient_coverage_are_deterministic(tmp_path: Path):
+26:     ledger = tmp_path / "smokes.jsonl"
+27:     rows = []
+28:     for day in range(1, 4):
+29:         stamp = f"2026-01-0{day}T00:00:00+00:00"
+30:         rows += [_row("pinnacle", stamp), _row("thinbook", stamp, coverage=1)]
+31:     append_smoke(ledger, rows)
+32:     states = {r["bookmaker_key"]: r["classification"] for r in stability_report(ledger)["bookmakers"]}
+33:     assert states == {"pinnacle": "BOOKMAKER_STABLE", "thinbook": "BOOKMAKER_INSUFFICIENT_COVERAGE"}
+34:     assert stability_report(ledger)["recommended_bookmaker"] == "pinnacle"
+37: def test_smoke_uses_retrieval_time_not_bookmaker_update_time():
+38:     rows = [
+39:         {
+40:             "retrieved_at": "2026-01-01T01:00:00+00:00",
+41:             "odds_captured_at": f"2026-01-01T00:0{minute}:00+00:00",
+42:             "bookmaker": "pinnacle",
+43:             "source_event_id": str(minute),
+44:             "market": "ou2.5",
+45:         }
+46:         for minute in range(2)
+47:     ]
+48:     smoke = summarize_smoke(rows)
+49:     assert len(smoke) == 1
+50:     assert smoke[0]["executed_at"] == "2026-01-01T01:00:00+00:00"
+51:     assert smoke[0]["events_with_totals"] == 2
+54: def test_three_smokes_inside_24_hours_remain_pending(tmp_path: Path):
+55:     ledger = tmp_path / "smokes.jsonl"
+56:     append_smoke(
+57:         ledger,
+58:         [_row("pinnacle", f"2026-01-01T0{hour}:00:00+00:00") for hour in range(3)],
+59:     )
+60:     report = stability_report(ledger)
+61:     assert report["smokes"] == 3
+62:     assert report["recommendation"] == "BOOKMAKER_STABILITY_PENDING"
+### tests/test_bootstrap.py
+5: import numpy as np
+6: import pytest
+8: from brasileirao_predictor.bootstrap import ci_mean
+11: def test_ic_contem_a_media_amostral():
+12:     rng = np.random.default_rng(13)
+13:     mean, lo, hi = ci_mean([1.0, 2.0, 3.0, 4.0, 5.0], 1000, rng)
+14:     assert mean == 3.0
+15:     assert lo <= mean <= hi
+18: def test_amostra_constante_colapsa_o_ic():
+20:     rng = np.random.default_rng(13)
+21:     mean, lo, hi = ci_mean([0.07] * 20, 1000, rng)
+22:     assert mean == lo == hi == pytest.approx(0.07)
+25: def test_n_igual_a_1_nao_estoura():
+26:     rng = np.random.default_rng(13)
+27:     mean, lo, hi = ci_mean([-0.04], 1000, rng)
+28:     assert mean == lo == hi == pytest.approx(-0.04)
+31: def test_determinismo_sob_seed_fixa():
+33:     a = ci_mean([0.1, -0.2, 0.3, 0.05], 1000, np.random.default_rng(13))
+34:     b = ci_mean([0.1, -0.2, 0.3, 0.05], 1000, np.random.default_rng(13))
+35:     assert a == b
+38: def test_seeds_diferentes_divergem():
+42:     pop = np.random.default_rng(7).normal(0.05, 0.10, size=60).tolist()
+43:     a = ci_mean(pop, 1000, np.random.default_rng(13))
+44:     b = ci_mean(pop, 1000, np.random.default_rng(99))
+45:     assert a[0] == b[0]
+46:     assert (a[1], a[2]) != (b[1], b[2])
+49: def test_amostra_vazia_estoura_em_voz_alta():
+54:     with pytest.raises(ValueError):
+55:         ci_mean([], 1000, np.random.default_rng(13))
+58: def test_ic_ordenado_e_estreita_com_n():
+61:     rng = np.random.default_rng(13)
+62:     pop = np.random.default_rng(7).normal(0.05, 0.10, size=200).tolist()
+63:     _, lo_s, hi_s = ci_mean(pop[:10], 1000, rng)
+64:     _, lo_l, hi_l = ci_mean(pop, 1000, rng)
+65:     assert lo_s <= hi_s and lo_l <= hi_l
+66:     assert (hi_l - lo_l) < (hi_s - lo_s)
+### tests/test_brasileirao_domain.py
+10: import importlib.util
+11: import json
+12: import sys
+13: from pathlib import Path
+15: import yaml
+17: ROOT = Path(__file__).resolve().parents[1]
+18: sys.path.insert(0, str(ROOT))
+20: from brasileirao_predictor import db, model, predict, ratings  # noqa: E402
+21: from brasileirao_predictor.settle import record_result  # noqa: E402
+23: _CFG_ELO = {
+24:     "initial_rating": 1500,
+25:     "home_advantage": 100,
+26:     "k_factors": {"Brasileirão Série A": 30, "default": 30, "Friendly": 20},
+27: }
+30: def test_config_identidade_do_dominio():
+31:     cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+32:     assert "Brasileirão" in cfg["league"]
+33:     assert cfg["tournament_name"] == "Brasileirão Série A"
+34:     comps = cfg["sofascore"]["competitions"]
+35:     assert comps and all(c["ut_id"] == 325 for c in comps)
+36:     assert {str(c["season"]) for c in comps} >= {"2024", "2025"}
+39: def test_k_factor_brasileirao():
+40:     assert ratings.k_factor("Brasileirão Série A", _CFG_ELO["k_factors"]) == 30
+42:     assert ratings.k_factor("Copa do Brasil", _CFG_ELO["k_factors"]) == 30
+45: def test_modelo_com_dois_clubes():
+48:     clubes = ["Flamengo", "Palmeiras", "São Paulo", "Grêmio"]
+49:     ms = []
+50:     day = 0
+51:     for rodada in range(30):
+52:         for i, h in enumerate(clubes):
+53:             for j, a in enumerate(clubes):
+54:                 if i >= j:
+55:                     continue
+56:                 day += 1
+58:                 hs = max(0, 2 - i + (rodada + i + j) % 2)
+59:                 as_ = max(0, 1 - j + (rodada + i) % 2)
+60:                 ms.append(
+61:                     (
+62:                         f"2024-{1 + day // 28:02d}-{1 + day % 28:02d}",
+63:                         h,
+64:                         a,
+65:                         hs,
+66:                         as_,
+67:                         "Brasileirão Série A",
+68:                         0,
+69:                     )
+70:                 )
+71:     ms.sort(key=lambda m: m[0])
+72:     elo, history = ratings.compute_ratings(ms, _CFG_ELO)
+73:     assert set(clubes) <= set(elo)
+74:     params = model.fit_goal_model(history)
+75:     r = model.predict_match(elo["Flamengo"], elo["Palmeiras"], params, home_adv=100, max_goals=10)
+76:     total = r["p_win"] + r["p_draw"] + r["p_loss"]
+77:     assert 0.99 <= total <= 1.01
+78:     assert r["lambda_a"] > 0 and r["lambda_b"] > 0
+79:     assert 0.0 < r["over"][2.5] < 1.0
+82: def test_settle_resultado_real_brasileirao(tmp_path):
+85:     pred = {
+86:         "home": "Bahia",
+87:         "away": "Flamengo",
+88:         "p_home": 0.30,
+89:         "p_draw": 0.28,
+90:         "p_away": 0.42,
+91:         "lambda_home": 1.1,
+92:         "lambda_away": 1.5,
+93:         "over": {"1.5": 0.70, "2.5": 0.45, "3.5": 0.22},
+94:         "btts_yes": 0.52,
+95:         "btts_no": 0.48,
+96:         "top_scores": [[[0, 2], 0.08]],
+97:         "logged_at": "2024-06-20T00:00:00+00:00",
+98:     }
+99:     pred_p = tmp_path / "predictions.jsonl"
+100:     pred_p.write_text(json.dumps(pred) + "\n", encoding="utf-8")
+101:     rec = record_result("Bahia", "Flamengo", 0, 2, path=tmp_path / "results.jsonl", pred_path=pred_p)
+102:     assert rec["prediction"] is not None
+103:     assert rec["grades"]["winner"]["pick"] == "Flamengo"
+104:     assert rec["grades"]["winner"]["correct"] is True
+105:     assert rec["grades"]["over_under_2.5"]["actual"] == "Under"
+106:     assert rec["grades"]["exact_score"]["correct"] is True
+109: def test_espelho_sofascore_para_matches():
+116:     spec = importlib.util.spec_from_file_location(
+117:         "sync_matches", ROOT / "brasileirao_scripts" / "sync_matches_from_sofascore.py"
+118:     )
+119:     mod = importlib.util.module_from_spec(spec)
+120:     spec.loader.exec_module(mod)
+122:     conn = db.connect(":memory:")
+123:     conn.execute(
+124:         "INSERT INTO sofascore_matches (event_id, competition, season, date, "
+125:         "home_team, away_team, home_score, away_score) VALUES "
+126:         "(1, 'Brasileirão Série A 2024', '2024', '2024-04-13', "
+127:         "'Criciúma', 'Corinthians', 2, 4)"
+128:     )
+129:     conn.execute(
+130:         "INSERT INTO sofascore_matches (event_id, competition, season, date, "
+131:         "home_team, away_team) VALUES "
+132:         "(2, 'Brasileirão Série A 2026', '2026', '2026-07-20', "
+133:         "'Flamengo', 'Palmeiras')"
+134:     )  # fixture futuro, sem placar
+135:     conn.commit()
+137:     comps = ["Brasileirão Série A 2024", "Brasileirão Série A 2026"]
+138:     played, fixtures = mod.sync(conn, "Brasileirão Série A", comps)
+139:     assert (played, fixtures) == (1, 1)
+140:     row = conn.execute("SELECT tournament, neutral, home_score FROM matches WHERE home_team='Criciúma'").fetchone()
+141:     assert row == ("Brasileirão Série A", 0, 2)
+143:     played2, fixtures2 = mod.sync(conn, "Brasileirão Série A", comps)
+144:     assert (played2, fixtures2) == (1, 1)
+147: def test_espelho_marca_e_remove_linha_orfa_de_adiamento():
+148:     spec = importlib.util.spec_from_file_location(
+149:         "sync_matches_postponed", ROOT / "brasileirao_scripts" / "sync_matches_from_sofascore.py"
+150:     )
+151:     mod = importlib.util.module_from_spec(spec)
+152:     spec.loader.exec_module(mod)
+153:     conn = db.connect(":memory:")
+154:     conn.executemany(
+155:         "INSERT INTO sofascore_matches "
+156:         "(event_id, competition, season, date, home_team, away_team, home_score, away_score) "
+157:         "VALUES (?, 'Serie A', '2022', ?, 'Casa', 'Fora', ?, ?)",
+158:         [(10, "2022-10-03", None, None), (11, "2022-10-20", 3, 1)],
+159:     )
+161:     conn.execute(
+162:         "INSERT INTO matches (date,home_team,away_team,tournament,neutral) "
+163:         "VALUES ('2022-10-03','Casa','Fora','Serie A',0)"
+164:     )
+165:     conn.commit()
+167:     assert mod.sync(conn, "Serie A", ["Serie A"]) == (1, 0)
+168:     assert conn.execute("SELECT superseded_by_event_id FROM sofascore_matches WHERE event_id=10").fetchone() == (11,)
+169:     assert conn.execute("SELECT event_id,date FROM matches").fetchall() == [(11, "2022-10-20")]
+172: def test_espelho_remove_fixture_legado_sem_event_id_quando_data_muda():
+173:     spec = importlib.util.spec_from_file_location(
+174:         "sync_matches_fixture", ROOT / "brasileirao_scripts" / "sync_matches_from_sofascore.py"
+175:     )
+176:     mod = importlib.util.module_from_spec(spec)
+177:     spec.loader.exec_module(mod)
+178:     conn = db.connect(":memory:")
+179:     conn.execute(
+180:         "INSERT INTO matches (date,home_team,away_team,tournament,neutral) "
+181:         "VALUES ('2026-09-05','Casa','Fora','Serie A',0)"
+182:     )
+183:     conn.execute(
+184:         "INSERT INTO sofascore_matches (event_id,competition,season,date,home_team,away_team) "
+185:         "VALUES (20,'Serie A','2026','2026-09-06','Casa','Fora')"
+186:     )
+187:     conn.commit()
+188:     assert mod.sync(conn, "Serie A", ["Serie A"]) == (0, 1)
+189:     assert conn.execute("SELECT event_id,date FROM matches").fetchall() == [(20, "2026-09-06")]
+192: def test_odds_shop_sport_key_do_config():
+193:     spec = importlib.util.spec_from_file_location("odds_shop_dom", ROOT / "brasileirao_scripts" / "odds_shop.py")
+194:     mod = importlib.util.module_from_spec(spec)
+195:     spec.loader.exec_module(mod)
+196:     assert mod.SPORT == "soccer_brazil_campeonato"
+199: def test_proximos_fixtures_excluem_eventos_passados_sem_placar():
+202:     conn = db.connect(":memory:")
+203:     conn.executemany(
+204:         "INSERT INTO matches (date, home_team, away_team, tournament, neutral) VALUES (?, ?, ?, ?, 0)",
+205:         [
+206:             ("2024-04-17", "Stale FC", "Old FC", "Brasileirão Série A"),
+207:             ("2026-07-16", "Hoje FC", "Visitante FC", "Brasileirão Série A"),
+208:             ("2026-07-17", "Amanhã FC", "Outro FC", "Brasileirão Série A"),
+209:         ],
+210:     )
+211:     rows = predict.upcoming_fixtures(conn, 10, as_of="2026-07-16")
+212:     assert [(row[0], row[1]) for row in rows] == [
+213:         ("2026-07-16", "Hoje FC"),
+214:         ("2026-07-17", "Amanhã FC"),
+215:     ]
+218: def test_ht_fraction_forward_only():
+220:     spec = importlib.util.spec_from_file_location("wf", ROOT / "brasileirao_scripts" / "backtest_walkforward.py")
+221:     mod = importlib.util.module_from_spec(spec)
+222:     spec.loader.exec_module(mod)
+225:     rows = [("2024-01-01", 1, 1, 1, 0)] * 60 + [("2025-01-01", 3, 3, 0, 0)] * 40
+226:     frac, n = mod._ht_fraction(rows, "2024-12-31")
+227:     assert n == 60 and abs(frac - 0.5) < 1e-9
+229:     frac2, n2 = mod._ht_fraction(rows[:30], "2024-12-31")
+230:     assert frac2 is None and n2 == 30

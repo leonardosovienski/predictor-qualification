@@ -1,0 +1,402 @@
+### tests/test_info_stake_cap.py
+7: import pytest
+9: from brasileirao_predictor import bet_log
+12: @pytest.fixture()
+13: def livro(tmp_path):
+14:     return str(tmp_path / "bets.jsonl")
+17: def test_sem_env_var_nada_muda(livro, monkeypatch):
+18:     monkeypatch.delenv("BETLOG_MAX_INFO_STAKE", raising=False)
+19:     rec = bet_log.add_bet("A", "B", "ou15_1t", "under", 1.5, stake=2.0, path=livro)
+20:     assert rec["stake"] == 2.0
+23: def test_teto_bloqueia_informativa_acima(livro, monkeypatch):
+24:     monkeypatch.setenv("BETLOG_MAX_INFO_STAKE", "0.5")
+25:     with pytest.raises(ValueError, match="SEM CLV"):
+26:         bet_log.add_bet("A", "B", "ou15_1t", "under", 1.5, stake=1.0, path=livro)
+29: def test_teto_permite_informativa_dentro(livro, monkeypatch):
+30:     monkeypatch.setenv("BETLOG_MAX_INFO_STAKE", "0.5")
+31:     rec = bet_log.add_bet("A", "B", "ou15_1t", "under", 1.5, stake=0.5, path=livro)
+32:     assert rec["stake"] == 0.5
+35: def test_mercado_validado_ignora_teto(livro, monkeypatch):
+36:     monkeypatch.setenv("BETLOG_MAX_INFO_STAKE", "0.5")
+37:     rec = bet_log.add_bet("A", "B", "ou25", "under", 1.9, stake=1.0, path=livro)
+38:     assert rec["stake"] == 1.0
+### tests/test_ingest_typing_boundaries.py
+1: import pandas as pd
+3: from brasileirao_predictor.ingest import load_config, normalize
+4: from brasileirao_predictor.ingest_fbref import parse_player_stats
+7: def test_load_config_honors_explicit_runtime_path(monkeypatch, tmp_path) -> None:
+8:     path = tmp_path / "runtime.yaml"
+9:     path.write_text("league: runtime-league\n", encoding="utf-8")
+10:     monkeypatch.setenv("BRASILEIRAO_CONFIG_PATH", str(path))
+12:     assert load_config() == {"league": "runtime-league"}
+15: def test_normalize_keeps_dataframe_shape_and_nullable_scores():
+16:     raw = pd.DataFrame(
+17:         [
+18:             {
+19:                 "date": "2026-08-22",
+20:                 "home_team": "Flamengo",
+21:                 "away_team": "Palmeiras",
+22:                 "home_score": "2",
+23:                 "away_score": "",
+24:                 "tournament": "Brasileirão Série A",
+25:                 "city": "Rio de Janeiro",
+26:                 "country": "Brazil",
+27:                 "neutral": "false",
+28:             }
+29:         ]
+30:     )
+32:     result = normalize(raw)
+34:     assert isinstance(result, pd.DataFrame)
+35:     assert result.iloc[0]["home_score"] == 2
+36:     assert pd.isna(result.iloc[0]["away_score"])
+37:     assert result.iloc[0]["neutral"] == 0
+40: def test_parse_player_stats_preserves_fbref_numeric_semantics():
+41:     html = """
+42:     <table id="stats_standard_24">
+43:       <thead><tr><th>Player</th><th>Squad</th><th>Pos</th><th>MP</th><th>Min</th>
+44:       <th>Gls</th><th>Ast</th><th>xG</th><th>xAG</th></tr></thead>
+45:       <tbody>
+46:         <tr><td>Jogador A</td><td>Flamengo</td><td>FW</td><td>12</td><td>1,234</td>
+47:         <td>5</td><td>3</td><td>4.7</td><td>--</td></tr>
+48:       </tbody>
+49:     </table>
+50:     """
+52:     rows = parse_player_stats(html, "Brasileirão Série A", "2026")
+54:     assert rows == [("Jogador A", "Flamengo", "Brasileirão Série A", "2026", "FW", 1234, 12, 5, 3, 4.7, None)]
+### tests/test_integral_review_admission.py
+3: import json
+4: from pathlib import Path
+6: import pytest
+7: from test_followup_capture_contract import audit_result, rig  # noqa: F401
+8: from test_live_capture_admission import audit, payload
+11: @pytest.mark.parametrize(
+12:     "field,value",
+13:     [
+14:         ("trueStartTime", "2026-09-09T19:00:00Z"),
+15:         ("trueEndTime", "2026-09-09T19:00:00Z"),
+16:         ("hasOdds", False),
+17:     ],
+18: )
+19: def test_contradictory_fixture_state_cannot_admit_pre_game_prices(field, value):
+20:     obj = payload()
+21:     obj[field] = value
+22:     assert not audit(obj).get("pair_api_state_admitted", False)
+25: def test_missing_required_change_clock_is_not_verified_state():
+26:     obj = payload()
+27:     del obj["bookmakerOdds"]["bet365.bet.br"]["markets"]["101"]["outcomes"]["101"]["players"]["0"]["changedAt"]
+28:     assert not audit(obj)["pair_api_state_admitted"]
+31: def test_duplicate_conflicting_active_keys_are_rejected(rig):  # noqa: F811
+32:     body = json.dumps(rig.state.odds).replace(
+33:         '"bookmakerIsActive": true', '"bookmakerIsActive": false, "bookmakerIsActive": true'
+34:     )
+35:     rig.state.odds = body.encode()
+36:     rig.collector.main()
+37:     rig.auditor.main()
+38:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+41: def test_duplicate_receipt_keys_are_rejected(rig):  # noqa: F811
+42:     rig.collector.main()
+43:     p = rig.root / "followup/receipt.json"
+44:     p.write_text(p.read_text().replace('"http_status": 200', '"http_status": 503, "http_status": 200'))
+45:     rig.auditor.main()
+46:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+49: def test_nonfinite_payload_metadata_cannot_be_admitted(rig):  # noqa: F811
+50:     rig.state.odds["updatedAt"] = float("nan")
+51:     rig.collector.main()
+52:     rig.auditor.main()
+53:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+56: def test_hash_integrity_does_not_authorize_swapped_participants(rig):  # noqa: F811
+57:     rig.state.odds.update(participant1Id=1967, participant2Id=1982, sportId=10, tournamentId=325, seasonId=137706)
+58:     rig.collector.main()
+59:     rig.auditor.main()
+60:     assert not audit_result(rig)["prospective_price_observation_admitted"]
+63: def test_concurrent_publisher_cannot_overwrite_completed_audit(rig, monkeypatch):  # noqa: F811
+64:     rig.collector.main()
+65:     original_write = Path.write_text
+66:     competing = {"status": "ALREADY_FROZEN_BY_ANOTHER_PROCESS"}
+68:     def publish_competitor(path, text, *args, **kwargs):
+69:         result = original_write(path, text, *args, **kwargs)
+70:         if path.parent == rig.auditor.OUTPUT and path.suffix == ".tmp":
+71:             original_write(rig.auditor.OUTPUT / "audit.json", json.dumps(competing), encoding="utf-8")
+72:         return result
+74:     monkeypatch.setattr(Path, "write_text", publish_competitor)
+75:     rig.auditor.main()
+76:     assert audit_result(rig) == competing
+### tests/test_integral_review_domain.py
+3: import pytest
+5: from brasileirao_predictor import db, ingest, simulator
+8: def test_league_simulator_rejects_before_database_connection(monkeypatch):
+9:     monkeypatch.setattr(
+10:         ingest, "load_config", lambda: {"database": "unused.db", "tournament_name": "Brasileirão Série A"}
+11:     )
+13:     def forbidden_connect(*args, **kwargs):
+14:         raise AssertionError("unsupported_simulation_opened_database")
+16:     monkeypatch.setattr(db, "connect", forbidden_connect)
+17:     with pytest.raises(SystemExit, match="simulação de liga não implementada"):
+18:         simulator.monte_carlo(n=1)
+### tests/test_integral_review_event_backtest.py
+3: from copy import deepcopy
+5: import pytest
+7: from brasileirao_predictor import backtest_event as engine
+10: def row(i, day, line=8.5):
+11:     return {
+12:         "event_id": i,
+13:         "date": day,
+14:         "home": f"h{i}",
+15:         "away": f"a{i}",
+16:         "line": line,
+17:         "elo_home": 1500,
+18:         "elo_away": 1500,
+19:         "home_event": i,
+20:         "away_event": 1,
+21:         "total_events": i + 1,
+22:         "open_a": 2.0,
+23:         "open_b": 2.0,
+24:         "close_a": 2.0,
+25:         "close_b": 2.0,
+26:     }
+29: def run(monkeypatch, rows, probs=None):
+30:     trained = []
+31:     monkeypatch.setattr(engine, "load_config", lambda: {"elo": {}})
+32:     monkeypatch.setattr(engine, "load_event_data", lambda *a, **kw: deepcopy(rows))
+34:     def fit(history, *a, **kw):
+35:         trained.extend(history)
+36:         return {"a": 0.0, "b": 0.0}
+38:     monkeypatch.setattr(engine, "fit_event_model", fit)
+39:     monkeypatch.setattr(engine, "predict_event", lambda *a: (4.0, 4.0, {"over_8.5": 0.6} if probs is None else probs))
+40:     return engine.backtest_event("corners", conn=object()), trained
+43: def test_split_cannot_train_on_any_outcome_from_first_test_day(monkeypatch):
+44:     rows = [row(i, "2030-01-01" if i <= 3 else "2030-01-02" if i <= 6 else "2030-01-03") for i in range(1, 8)]
+45:     _, trained = run(monkeypatch, rows)
+46:     assert {r["home_event"] for r in trained} == {1, 2, 3}
+49: def test_multiple_price_lines_do_not_reweight_training_targets(monkeypatch):
+50:     rows = [row(i, f"2030-01-0{i}") for i in range(1, 6)]
+51:     rows.insert(1, {**rows[0], "line": 9.5})
+52:     _, trained = run(monkeypatch, rows)
+53:     assert len([r for r in trained if r["home_team"] == "h1"]) == 1
+56: @pytest.mark.parametrize("line,probs", [(8.0, {"over_8.0": 0.6}), (8.5, {})])
+57: def test_unsupported_line_or_missing_probability_abstains(monkeypatch, line, probs):
+58:     rows = [row(i, f"2030-01-0{i}", line) for i in range(1, 6)]
+59:     result, _ = run(monkeypatch, rows, probs)
+60:     assert result["n_trades"] == 0
+61:     assert result.get("abstentions") == [{"event_id": 5, "line": line, "reason": "unsupported_line_or_probability"}]
+64: def test_one_day_cannot_supply_both_training_and_evaluation(monkeypatch):
+65:     result, trained = run(monkeypatch, [row(i, "2030-01-01") for i in range(1, 6)])
+66:     assert not trained
+67:     assert result["reason"] == "no_prior_training_day"
+68:     assert result["n_trades"] == 0
+71: def test_conflicting_targets_for_one_event_are_rejected(monkeypatch):
+72:     rows = [row(i, f"2030-01-0{i}") for i in range(1, 6)]
+73:     rows.append({**rows[0], "home_event": 999})
+74:     with pytest.raises(ValueError, match="conflicting_event_training_identity"):
+75:         run(monkeypatch, rows)
+78: @pytest.mark.parametrize("bad_odd", [0.0, 1.0, float("nan"), float("inf"), True])
+79: def test_invalid_odds_cannot_be_settled_as_a_trade(monkeypatch, bad_odd):
+80:     rows = [row(i, f"2030-01-0{i}") for i in range(1, 6)]
+81:     rows[-1]["open_a"] = bad_odd
+82:     result, _ = run(monkeypatch, rows)
+83:     assert result["n_trades"] == 0
+84:     assert result["abstentions"][0]["reason"] == "invalid_decimal_odds"
+### tests/test_inventario_dados.py
+8: from __future__ import annotations
+10: import ast
+11: import pathlib
+12: import re
+13: import sqlite3
+14: import tempfile
+16: import pytest
+18: from brasileirao_predictor import db
+19: from brasileirao_scripts import inventario_dados as inv
+22: def _base(monkeypatch, com_open: bool = True, open_igual: bool = False) -> pathlib.Path:
+23:     path = pathlib.Path(tempfile.mkdtemp()) / "m.db"
+24:     conn = db.connect(str(path))
+25:     for i, (ano, n) in enumerate([("2021", 6), ("2025", 4)]):
+26:         for j in range(n):
+27:             d = f"{ano}-05-{j + 1:02d}"
+28:             eid = i * 100 + j
+29:             conn.execute(
+30:                 "INSERT INTO matches (date, home_team, away_team, home_score, away_score, tournament, neutral)"
+31:                 " VALUES (?,?,?,?,?,?,0)",
+32:                 (d, f"A{j}", f"B{j}", 1, 0, "Brasileirão Série A"),
+33:             )
+34:             flat = 2.1
+35:             abertura = flat if open_igual else 2.0
+36:             conn.execute(
+37:                 "INSERT INTO sofascore_matches (event_id, date, kickoff_at, home_team, away_team,"
+38:                 " home_score, away_score, home_xg, odds_home, odds_home_open)"
+39:                 " VALUES (?,?,?,?,?,?,?,?,?,?)",
+40:                 (
+41:                     eid,
+42:                     d,
+43:                     d + "T20:00:00+00:00",
+44:                     f"A{j}",
+45:                     f"B{j}",
+46:                     1,
+47:                     0,
+48:                     1.2 if j % 2 == 0 else None,
+49:                     flat,
+50:                     abertura if com_open else None,
+51:                 ),
+52:             )
+53:     conn.commit()
+54:     conn.close()
+55:     monkeypatch.setattr(inv, "DB", path)
+56:     return path
+59: def test_conta_jogos_e_cobertura_por_ano(monkeypatch) -> None:
+60:     _base(monkeypatch)
+61:     conn = sqlite3.connect(f"file:{inv.DB}?mode=ro", uri=True)
+62:     dados = inv.coletar(conn)
+63:     conn.close()
+65:     por_ano = {linha["ano"]: linha for linha in dados["por_ano"]}
+66:     assert por_ano["2021"]["jogos"] == 6
+67:     assert por_ano["2025"]["jogos"] == 4
+69:     assert por_ano["2021"]["xG"] == 3
+70:     assert por_ano["2025"]["xG"] == 2
+71:     assert por_ano["2021"]["1x2"] == 6
+74: def test_espelho_matches_entra_separado(monkeypatch) -> None:
+77:     _base(monkeypatch)
+78:     conn = sqlite3.connect(f"file:{inv.DB}?mode=ro", uri=True)
+79:     dados = inv.coletar(conn)
+80:     conn.close()
+81:     assert dados["matches_por_ano"]["2021"] == 6
+84: def test_detecta_abertura_identica_ao_flat(monkeypatch) -> None:
+88:     _base(monkeypatch, open_igual=True)
+89:     conn = sqlite3.connect(f"file:{inv.DB}?mode=ro", uri=True)
+90:     dados = inv.coletar(conn)
+91:     conn.close()
+92:     assert dados["abertura_vs_flat"]["pares"] == 10
+93:     assert dados["abertura_vs_flat"]["diferentes"] == 0
+96: def test_detecta_movimento_de_linha(monkeypatch) -> None:
+97:     _base(monkeypatch, open_igual=False)
+98:     conn = sqlite3.connect(f"file:{inv.DB}?mode=ro", uri=True)
+99:     dados = inv.coletar(conn)
+100:     conn.close()
+101:     assert dados["abertura_vs_flat"]["diferentes"] == 10
+104: def test_somente_leitura() -> None:
+110:     fonte = pathlib.Path(inv.__file__).read_text(encoding="utf-8")
+111:     assert "mode=ro" in fonte, "conexão sem mode=ro"
+113:     arvore = ast.parse(fonte)
+114:     queries = [
+115:         no.args[0].value
+116:         for no in ast.walk(arvore)
+117:         if isinstance(no, ast.Call)
+118:         and isinstance(no.func, ast.Attribute)
+119:         and no.func.attr == "execute"
+120:         and no.args
+121:         and isinstance(no.args[0], ast.Constant)
+122:         and isinstance(no.args[0].value, str)
+123:     ]
+124:     assert queries, "nenhuma query encontrada — o teste deixou de exercitar algo"
+125:     for q in queries:
+126:         primeira = q.strip().split()[0].upper()
+127:         assert primeira in {"SELECT", "PRAGMA"}, f"query de escrita no inventário: {q[:60]}"
+130: def test_queries_f_string_tambem_sao_leitura() -> None:
+133:     fonte = pathlib.Path(inv.__file__).read_text(encoding="utf-8")
+134:     for trecho in re.findall(r'f"(SELECT[^"]*|PRAGMA[^"]*)"', fonte):
+135:         assert trecho.split()[0].upper() in {"SELECT", "PRAGMA"}
+136:     assert 'f"PRAGMA table_info' in fonte or "PRAGMA table_info" in fonte
+139: def test_banco_ausente_falha_limpo(monkeypatch, capsys) -> None:
+140:     monkeypatch.setattr(inv, "DB", pathlib.Path(tempfile.mkdtemp()) / "nao_existe.db")
+141:     assert inv.main([]) == 1
+142:     assert "banco ausente" in capsys.readouterr().err
+145: def test_saida_json(monkeypatch, capsys) -> None:
+146:     import json
+148:     _base(monkeypatch)
+149:     assert inv.main(["--json"]) == 0
+150:     dados = json.loads(capsys.readouterr().out)
+151:     assert {"por_ano", "dimensoes", "matches_por_ano"} <= set(dados)
+154: @pytest.mark.parametrize("ano", ["2021", "2025"])
+155: def test_ano_do_holdout_aparece_como_qualquer_outro(monkeypatch, ano: str) -> None:
+159:     _base(monkeypatch)
+160:     conn = sqlite3.connect(f"file:{inv.DB}?mode=ro", uri=True)
+161:     dados = inv.coletar(conn)
+162:     conn.close()
+163:     assert any(linha["ano"] == ano for linha in dados["por_ano"])
+### tests/test_kernel_cli_redis.py
+3: import json
+4: import os
+5: import subprocess
+6: import sys
+7: import time
+8: from pathlib import Path
+9: from urllib.parse import urlparse
+10: from uuid import uuid4
+12: import pytest
+13: import redis
+15: from brasileirao_predictor import kernel_redis_v2 as protocol
+17: pytestmark = pytest.mark.integration
+20: @pytest.fixture
+21: def health_redis():
+22:     url = os.environ.get("LINEUP_TEST_REDIS_URL")
+23:     instance = os.environ.get("LINEUP_TEST_REDIS_RUN_ID")
+24:     if not url and not instance:
+25:         pytest.skip("explicit disposable Redis DB14 URL and run_id are required")
+26:     assert url and instance, "both disposable Redis URL and run_id are required"
+27:     target = urlparse(url)
+28:     assert target.scheme == "redis" and target.hostname in {"127.0.0.1", "localhost", "::1"}
+29:     assert target.port and target.port != 6379 and target.path == "/14"
+30:     assert target.username is None and target.password is None and not target.query and not target.fragment
+31:     assert len(instance) == 40 and all(char in "0123456789abcdefABCDEF" for char in instance)
+32:     client = redis.from_url(url, decode_responses=True, socket_connect_timeout=5, socket_timeout=5)
+33:     owns_health = False
+34:     try:
+35:         assert client.info("server")["run_id"] == instance, "test Redis identity differs"
+36:         assert client.dbsize() == 0, "DB14 must be empty; preexisting keys are preserved"
+37:         owns_health = True
+38:         yield client, url
+39:     finally:
+40:         try:
+41:             if owns_health:
+42:                 assert client.info("server")["run_id"] == instance, "refusing cleanup on a restarted Redis"
+43:                 client.delete(protocol.HEALTH_KEY)
+44:                 assert client.dbsize() == 0, "unexpected keys are preserved, never globally deleted"
+45:         finally:
+46:             client.close()
+49: @pytest.mark.parametrize("health,expected", [("missing", 1), ("healthy", 0), ("expired", 1)])
+50: def test_healthcheck_module_process_returns_status(health_redis, tmp_path, health, expected):
+51:     client, url = health_redis
+52:     payload = json.dumps({"protocol_version": protocol.PROTOCOL_VERSION, "session_id": uuid4().hex})
+53:     if health != "missing":
+54:         assert client.eval(protocol.HEARTBEAT_SCRIPT, 1, protocol.HEALTH_KEY, payload, protocol.HEALTH_MS, "start") == 1
+55:     if health == "expired":
+56:         assert client.pexpire(protocol.HEALTH_KEY, 1)
+57:         deadline = time.monotonic() + 2
+58:         while client.exists(protocol.HEALTH_KEY) and time.monotonic() < deadline:
+59:             time.sleep(0.01)
+60:         assert client.exists(protocol.HEALTH_KEY) == 0
+61:     elif health == "missing":
+62:         assert client.exists(protocol.HEALTH_KEY) == 0
+65:     absent_db = tmp_path / "synthetic-never-opened.db"
+66:     process = subprocess.Popen(
+67:         [
+68:             sys.executable,
+69:             "-m",
+70:             "brasileirao_predictor.kernel_daemon",
+71:             "--healthcheck",
+72:             "--db",
+73:             str(absent_db),
+74:             "--redis",
+75:             url,
+76:         ],
+77:         cwd=Path(__file__).resolve().parents[1],
+78:         env=os.environ.copy(),  # Inherits the caller's isolation guard and explicit test endpoint.
+79:         stdout=subprocess.PIPE,
+80:         stderr=subprocess.PIPE,
+81:         text=True,
+82:         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+83:     )
+84:     try:
+85:         deadline = time.monotonic() + 30
+86:         while process.poll() is None and time.monotonic() < deadline:
+87:             if health == "healthy":
+89:                 assert (
+90:                     client.eval(protocol.HEARTBEAT_SCRIPT, 1, protocol.HEALTH_KEY, payload, protocol.HEALTH_MS, "renew")
+91:                     == 1
+92:                 )
+93:             time.sleep(0.05)
+94:         stdout, stderr = process.communicate(timeout=1)
+95:         assert process.returncode == expected, f"exit={process.returncode}; stdout={stdout}; stderr={stderr}"
+96:         assert not absent_db.exists()
+97:     finally:
+98:         if process.poll() is None:
+99:             process.kill()
+100:         process.communicate()

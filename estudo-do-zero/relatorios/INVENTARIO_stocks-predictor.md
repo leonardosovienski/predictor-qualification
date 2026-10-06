@@ -1,0 +1,56 @@
+# Inventário técnico — stocks-predictor
+
+Estado: estudo central do conteúdo local com cobertura explícita, com revisão semântica integral dos executáveis próprios selecionados concluída. Não é qualificação científica, recomputação de lucros ou ativação.
+
+## Identidade e confronto
+
+Fonteforense `C:/STOCKS/stocks-predictor`, HEAD`5cf27f44f579cb40d8b873c0f10005360427a2d0`, árvore limpa no baseline. Versão0.2.0, Python>=3.13,<3.15, hatchling1.32.0. Baseline, hashes por arquivo e fonte remota estão em evidencias/stocks-predictor. A cópia independente gitclone--no-hardlinks foi criada após baseline apenas para smoke e seuHEADguardado; não representa remotoatual.
+
+`PRELIMINAR_stocks-predictor.md` foi salva antes confrontoREADME/AGENTS/HANDOFF/estado. Limitação de cegamento: o Anexo foi lido junto ao mandato inicial; suas identidades não foram adotadas como premissas. README local0.2.0 e exportSnapshotV1/Bundle concordam comcódigo. StagingEXTERNAL_INTELLIGENCE_V1 descrito coincide com módulo; não prova dadosvivos. Anexo0.3.0rc4/adapterV2/Opsrunner diverge destaárvore: pyproject sóPyYAML+Core e pluginadapterv1, sem pacotev2 nos rastreados. Não atualizar clones para ocultar diferença.
+
+## A–L
+
+**A — Responsabilidades.** Pesquisa de açõesB3 por fatores/hipóteses/backtests e eventos, linhaRJ, carteira/paper, catálogo versionado e ingestão públicaexterna. `ecosystem_plugin` declara scientificDISCOVERY_INCONCLUSIVE, predictiveNO_VALIDATED_NET_EDGE, economicNO_GO, capitalFORBIDDEN. Plugin capacidades são introspecção estática, não saída recomputada nem healthdeumserviço. Consumidores CLI, relatórios/paper eexportadoresCAIN; instalaçãoativada NV.
+
+**B — Estrutura.** Pacote stocks_predictor; main.py legado; __main__ →operations CLI offline; research scripts históricos separados; experiments BIG_WINNER programas próprios; tests/fixtures; tools audits/transfers/exporters; vendor/predictor_core terceiro preservado. Pacote não declara [project.scripts], entrada via `python -m`. `predictor.plugins` stocks→StocksPredictorPlugin. `source-index.json` registra estrutura/símbolos/imports.
+
+**C — Ambiente e dependências.** PyYAML>=6,<7 eCore>=3.2,<4. `tool.uv.sources` fixaURLreleasev3.2.1 wheel; uv.lockCore3.2.1 sha256`10ef42f34ace8bb2df5f83ff7de2ceec79b035a25ea0a690e8942bd60d2fb4e3`. Dependência código importada predictor_core bootstrap/stats/trials/kernelinfra; wheelversão não confirma metadatainstalado. Devpytest/ruff/pyright/build/coverage. Pythonbundled3.12.14 smokeinicial não satisfazcontrato; rerun3.13.14feito e anterior preservado. Sem instalação novasdependências.
+
+**D — Interfaces.** main.pytraz ingestão/scan/quarentena/fatores/backtests/paper/RJ; operations tem doctor/init/inspect/ingest/snapshot/restore/profile/evidence/simulate-selected/external. JSONoperacional rejeita dupkeys/nonfinite/typesunknown eoutputs capitalfalse. doctor consulta metadatainstalada eDBmode=ro seexplicit; `external status/verify`, apesar nomesconsulta, conectam escrevendo egravamexternal_receipts ao success. Não executar originais.
+
+**E — Configuração.** config.yamlsectionsuniverse/factor/portfolio/execution/backtest/bootstrap/jumpdetector/hypothesiscriteria/economics/data; config_rjfamilies/rally/episodes/judge/influence/paths. config.pycongela parâmetros eidentifica hipóteses, leitura semântica ainda pendente. OverridesDB_PATH_ENV/PREDICTOR_TRIALS_PATH/reportpaths eargs explícitos; pathsdefault podem usar raizoriginal em código, por isso smoke apenas imports4primitivasstdlib. Nenhum segredovalueimpresso; B3/CVM públicoscontém caminhosURLs conhecidos, acessoexterno não executado.
+
+**F — Persistência.** DBlegado migrationsprices_raw,adjustments,quarantine,universe_snapshots,decisions,runs,fundamentals/dividends/cash_events/stock_bonus ePITfundamentals_pit/shares_pit/source_docs, RJuniverso/events/episodes/scores/companyobservations. operational_storeé físico separadocomapplication_id0x53544B50,version1,source_versions+prices_raw,foreignkeys eappendonlytriggers; DBlegado rejeita managedstore para impedir mistura. external contémrawobjects/sourceversions/observations/securitylinks/rejections/receipts/holdings/deliveries. Bancoarquivo original não aberto. Trialregistry JSON eattestationarquivo são escritasruntimeversionadas; estudo não os altera.
+
+Catálogo source_idhashdepublisher/dataset/version/policy/content, ingestcopia arquivoemtemp antes parsing, SHAexpected,Savepointatomic. Conflictsepayloaddiferente mesmaversão declarado recusados. `observed_at` conhecimento catálogo, não publicaçãohistórica. DatasetSelectionsourcesexplícitas cutoff/start/end ehash, materializeusaDBmode=ro numaSnapshotSQL eviewmemory; conflitosbarversões não escolhem latestimplicit.
+
+**G — Algoritmos científicos.** Factor momentum252skip21, realizedvol252, quintiltop/bottom, inversevol/doublefilter. Currentaccruals/E/P/B/M usamcvm_pit, pathslegacy de hipótesesjulgadas conservam embargoestimado; umaembargo90dias não prova disponibilidadereal. Revenuegrowthpega2refdates elegíveis sem exigir distânciade12meses. Universe usa pregõescalendário antesasof, volumezerosessõesausentes, quarentena resolução timestamp, dedup4letrasticker é heurísticaemissor, nãoCNPJ/ISIN. Materializesnapshotdate recusa composição conflitante.
+
+Simulationtemmotorcausal D+1; legacy_walk_forward explicitamentepreservado para hipóteseshistóricas. Legacy mantémretornozero tickersemcotação (convenção assumida, não preço executável),benchmarkmédia presentdata eturnoverreal; conhecimento deeventos/source não se deduz depricecutoff. judge retornasemdata/amostracurta/IC95Sharpe; defaultbootstrap10kblock21seed42, PSRdescritivo, COMPROVADA seIClower>0. TrialsGate acrescenta DSRthreshold0.95,deflationapplied eextra_failures, harnessplantado/null efingerprintnewtrial. Todas tentativas registry emdenominador; dadosfaltantes/trialssemsharpe exigem limites decoverage. Gate estatístico não autoriza capital.
+
+EconomicRebalanceGate usa mean-zSEM e custos de turnover paraHOLD/REBALANCE,capitalfalse; normalapproximation eindependência não comprovada. DatedOutcome rejeita duplicados/futuro/maturidadecontraditória, masdatasfornecidas não verdadecertificada. ResearchProfile validaDecimal/capital/custos/tempo ecompletude, semlucronegativo/positivo certificado.
+
+RJ: candidatesfirstcausaltrough, outcome futuro rallyversuscontrol/censored/invalid; unidadeprimária umaempresa, secundáriasrepetidas bloqueiam inferência semclusterpermutation. 9famílias sendo contemporaneousvolume sódescritiva,8predictive; ownershipNone nopipeline por cobertura desconhecida. Judge usa bootstrapcluster epermutationplusone, BH-FDR, categoricalCramersV; LOCO influência nãoOOS. RobustjointmaxT usa sharedpermutationslabels, nomelegadoromano_wolf_stepdown é aliasjointmaxT, haircut0.36 não holdoutreal. Power é simulaçãoGaussiana planted, não poderempírico. Persist_run atualiza episodes/scores poridentitysemrun_id,portanto banco não guarda épocasdeexecução distintas automaticamente.
+
+**IA.** Pacote examinado usa cálculoregras/estatísticas; não encontrou dependênciaLLM nosimports próprios selecionados e não chama modelo nofluxoexport. Não seprova ausência absoluta em todo acervo histórico. `external_intelligence` é ingestão/normalização, nomeintelligence não implicaLLM. ServiçoCAINexterno é consumidor separado.
+
+**H — Fluxos completos.** COTAHISTZIP/hash→sourcecatalogstrict/spotfilter→prices_raw versão→selectionexplícita→barsnormalizedfatcot→targets+eventoscorp/custos→simulationD+1→receiptengine/inputsSHA semverdicteconômico. LegadoCSV/CVM→migrationsfundamentals/adjustments/quarantine→universe/factor/portfolio→pairedbacktest→judge/DSRtrial→report/paper. RJmanualapproveduniverse→candidatePIT→rallyfuture/censoring→featuresfamilies→companyinferenceFDR→report+persist. ExternalB3/CVM→rawCASversions→contractschema/temporal/identitychecks→observations/rejections→verify/status+receipts; rawpayloadgravado antes metadata, órfãos podem exigirreconcile. ExportCAINSnapshot/bundle lêfontesadmitidas porhash efornecemetadata/exactstates semreplicarpreçoslicensed.
+
+**I — Testes.** 97arquivos sobtests e812funções test_ extraídasET-SRC; não contagemcoleção completa incluindoexperiments/tools/history. `test-contracts.json` preserva asserts/raises. ET-RUN smoke11checksstdlibruntime3.13.14copiagitindependente: D+1/ausênciafuture,turnovernormalização/inicial,quintilweights,hold/rebalancecapitalfalse,ISOdate/bool/nonfinite rejeitados. Anterior3.12preservado. Nenhum pytest/Core/PyYAML/suite/persistencereal/HTTP/backtest foi executado; CIhistórica não érunagora.
+
+**J — Operação.** CIdeclara uvsync--locked,lint/type/coverage77%,testsarchived selecionados, build/wheelsmoke isolado, docsprojectchecks, gitleaks+synthcontroles eoperationalR8verify. Não inferir statusremoto peloyaml; consulteci-head-local/mainremoto. sqlitewal singlehost,BEGINIMMEDIATE eclonebackup. snapshots comINCOMPLETE atécomplete,restore destnovo exclusiveSHA. CLI external recebe receiptpaths, errosclasses exit2/3/4 e não prova scientificstatus.
+
+**K — Documentação.** README/HANDOFF/STOCKS_CURRENT_STATE lidos para confrontoDD, arquivodatadohistórico catalogado. Relatoslucroamostras/fontes/CIhistórica permanecem declarações não números atuaisrecomputados. Verifieroperational fonte lido/símbolos, nenhum lacre refeitonooriginal. ASTvendorcatalogado como terceiro, não assumir defaultvendoréimportreal.
+
+**L — Fonte/build/uso.** Versão0.2.0 eHEADforenses; wheelrelease3.2.1Core URL/hash configura packagefutureinstall, não instalação atual. Plugin não confirmaativo. Nenhuma ordem/brokerfoiobservado nosfluxos centrais; todos caminhosoperacionais específicos retornamcapitalfalse/FORBIDDEN, ausênciaabsoluta brokeremacervocompleto não demonstrada.
+
+## Cobertura e limites finais
+
+A cobertura consolidada está em `evidencias/stocks-predictor/coverage.json` e as notas por módulo em `module-notes.json`. Todos os executáveis próprios selecionados foram revisados semanticamente. Lock, fixtures estáticas e código de terceiros são catalogados com essa profundidade distinta. Histórico e fontes remotas não recebem certificação por transferência desta revisão. Nenhum banco original, modelo vivo ou serviço externo foi acionado.
+
+Leitura de testes (ET-SRC), execuções isoladas (ET-RUN), CI por commit e declarações históricas permanecem separados. Consulte `SUPLEMENTO_CAIN_STOCKS_COBERTURA_FINAL.md` para a contagem exata e limites das execuções.
+
+
+## Épocas remotas observadas
+
+Os manifests do main remoto e os assets do Anexo foram verificados separadamente, por SHA/versão. Veja [confronto do Anexo](CONFRONTO_ANEXO_REMOTO.md). Essas identidades não ampliam automaticamente a cobertura semântica da raiz primária nem provam integração runtime.

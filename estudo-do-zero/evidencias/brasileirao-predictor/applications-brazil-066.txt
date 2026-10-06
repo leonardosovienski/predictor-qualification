@@ -1,0 +1,488 @@
+### tests/test_prospective_evaluation_guard.py
+3: import json
+4: import shutil
+5: from concurrent.futures import ThreadPoolExecutor
+6: from pathlib import Path
+7: from threading import Barrier
+8: from unittest.mock import Mock
+10: import pytest
+12: from brasileirao_scripts import _prospective_evaluation_guard as guard
+13: from brasileirao_scripts import evaluate_h14_prospective as h14
+14: from brasileirao_scripts import evaluate_h15_prospective as h15
+16: JOBS = [(h14, "h14"), (h15, "h15")]
+17: WAITING = {"status": "AGUARDANDO_N", "n": 3, "min_n_avaliacao": 900, "faltam": 897}
+18: COMPLETE = {"status": "INCONCLUSIVA", "n": 900, "capital_enabled": False, "synthetic": True}
+21: @pytest.fixture(autouse=True)
+22: def isolate_default_cohorts(tmp_path, monkeypatch):
+23:     for job, prefix in JOBS:
+24:         monkeypatch.setattr(job, "_require_supported_protocol", lambda path: None)
+25:         monkeypatch.setattr(job, "LEDGER_PATH", tmp_path / "inputs" / prefix / "ledger.jsonl")
+26:         monkeypatch.setattr(job, "TRIALS_PATH", tmp_path / "inputs" / prefix / "trials.json")
+27:         monkeypatch.setattr(job, "REPORTS_DIR", tmp_path / "defaults" / prefix / "reports")
+30: def claim_file(job, prefix):
+31:     directory = guard.claim_directory(trial=job.TRIAL, ledger_path=job.LEDGER_PATH)
+32:     return directory / f".{prefix}_evaluation.claim.json"
+35: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+36: def test_existing_report_blocks_cli_before_dispatch_and_stdout(job, prefix, tmp_path, monkeypatch, capsys):
+37:     report = tmp_path / f"{prefix}_avaliacao_2027-01-01T000000Z.json"
+38:     report.write_text('{"synthetic": true}\n', encoding="utf-8")
+39:     original = report.read_bytes()
+40:     calculate = Mock(side_effect=AssertionError("must not evaluate"))
+41:     monkeypatch.setattr(job, "REPORTS_DIR", tmp_path)
+42:     monkeypatch.setattr(job, "evaluate", calculate)
+43:     assert job.main() == 1
+44:     calculate.assert_not_called()
+45:     captured = capsys.readouterr()
+46:     assert captured.out == ""
+47:     assert "Nenhuma avaliação foi executada" in captured.err
+48:     assert report.read_bytes() == original
+49:     assert list(tmp_path.iterdir()) == [report]
+52: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+53: def test_existing_report_blocks_direct_api_before_any_input_reads(job, prefix, tmp_path, monkeypatch):
+54:     (tmp_path / f"{prefix}_avaliacao_old.json").write_text("{}", encoding="utf-8")
+55:     calculate = Mock(side_effect=AssertionError("must not read registry, DB or ledger"))
+56:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+57:     with pytest.raises(guard.EvaluationBlocked):
+58:         job.evaluate(reports_dir=tmp_path)
+59:     calculate.assert_not_called()
+62: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+63: def test_direct_success_persists_report_and_blocks_repeat(job, prefix, tmp_path, monkeypatch):
+64:     calculate = Mock(return_value=dict(COMPLETE))
+65:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+66:     assert job.evaluate(reports_dir=tmp_path) == COMPLETE
+67:     reports = list(tmp_path.glob(f"{prefix}_avaliacao_*.json"))
+68:     assert len(reports) == 1
+69:     assert json.loads(reports[0].read_text(encoding="utf-8")) == COMPLETE
+70:     assert claim_file(job, prefix).is_file()
+71:     with pytest.raises(guard.EvaluationBlocked):
+72:         job.evaluate(reports_dir=tmp_path)
+73:     calculate.assert_called_once_with(trials_path=None, ledger_path=None, db_path=None)
+76: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+77: def test_below_threshold_releases_claim_without_report_and_can_check_later(job, prefix, tmp_path, monkeypatch):
+78:     reports = tmp_path / "reports"
+79:     calculate = Mock(return_value=dict(WAITING))
+80:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+81:     assert job.evaluate(reports_dir=reports) == WAITING
+82:     assert job.evaluate(reports_dir=reports) == WAITING
+83:     assert calculate.call_count == 2
+84:     assert not reports.exists()
+87: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+88: @pytest.mark.parametrize("failure", [ValueError("synthetic failure"), SystemExit("synthetic interruption")])
+89: def test_error_or_interruption_keeps_claim_and_forbids_retry(job, prefix, failure, tmp_path, monkeypatch):
+90:     calculate = Mock(side_effect=failure)
+91:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+92:     with pytest.raises(type(failure)):
+93:         job.evaluate(reports_dir=tmp_path)
+94:     assert claim_file(job, prefix).is_file()
+95:     assert not list(tmp_path.glob(f"{prefix}_avaliacao_*.json"))
+96:     with pytest.raises(guard.EvaluationBlocked):
+97:         job.evaluate(reports_dir=tmp_path)
+98:     assert calculate.call_count == 1
+101: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+102: def test_truncated_crash_claim_blocks_without_parsing_or_opening_inputs(job, prefix, tmp_path, monkeypatch):
+103:     claim = claim_file(job, prefix)
+104:     claim.parent.mkdir(parents=True)
+105:     claim.write_bytes(b'{"trial":')
+106:     calculate = Mock(side_effect=AssertionError("must not evaluate"))
+107:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+108:     with pytest.raises(guard.EvaluationBlocked):
+109:         job.evaluate(reports_dir=tmp_path)
+110:     calculate.assert_not_called()
+111:     assert claim.read_bytes() == b'{"trial":'
+114: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+115: def test_report_write_failure_does_not_disclose_or_allow_another_attempt(job, prefix, tmp_path, monkeypatch, capsys):
+116:     calculate = Mock(return_value=dict(COMPLETE))
+117:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+118:     monkeypatch.setattr(job, "REPORTS_DIR", tmp_path)
+119:     original_open = Path.open
+121:     class PartialWriteFailure:
+122:         def __init__(self, path, stream):
+123:             self.path = path
+124:             self.stream = stream
+126:         def __enter__(self):
+127:             return self
+129:         def __exit__(self, *args):
+130:             return self.stream.__exit__(*args)
+132:         def fileno(self):
+133:             return self.stream.fileno()
+135:         def write(self, payload):
+136:             self.stream.write(payload[: max(1, len(payload) // 2)])
+137:             self.stream.flush()
+138:             assert not list(tmp_path.glob(f"{prefix}_avaliacao_*.json"))
+139:             raise OSError("synthetic full disk after partial write")
+141:     def fail_report(path, mode="r", *args, **kwargs):
+142:         if path.name.startswith(f".{prefix}_avaliacao_") and path.suffix == ".pending" and mode == "x":
+143:             return PartialWriteFailure(path, original_open(path, mode, *args, **kwargs))
+144:         return original_open(path, mode, *args, **kwargs)
+146:     monkeypatch.setattr(Path, "open", fail_report)
+147:     with pytest.raises(OSError, match="synthetic"):
+148:         job.main()
+149:     assert capsys.readouterr().out == ""
+150:     assert job.main() == 1
+151:     assert capsys.readouterr().out == ""
+152:     assert calculate.call_count == 1
+153:     assert not list(tmp_path.glob(f"{prefix}_avaliacao_*.json"))
+154:     assert not list(tmp_path.glob("*.pending"))
+157: @pytest.mark.parametrize("collision", [False, True], ids=["link-unsupported", "existing-destination"])
+158: def test_atomic_publication_failure_keeps_claim_without_overwriting_report(collision, tmp_path, monkeypatch):
+159:     calculate = Mock(return_value=dict(COMPLETE))
+160:     original_link = guard.os.link
+161:     targets = []
+163:     def fail_link(source, target):
+164:         assert json.loads(source.read_text(encoding="utf-8")) == COMPLETE
+165:         assert not target.exists()
+166:         targets.append(target)
+167:         if collision:
+168:             target.write_bytes(b"preexisting report: do not overwrite")
+169:             return original_link(source, target)
+170:         raise OSError("synthetic filesystem without hardlink support")
+172:     monkeypatch.setattr(guard.os, "link", fail_link)
+173:     with pytest.raises(OSError):
+174:         guard.evaluate_once(
+175:             calculate, reports_dir=tmp_path, claim_dir=tmp_path / "claims", prefix="h14", trial="synthetic"
+176:         )
+177:     assert (tmp_path / "claims/.h14_evaluation.claim.json").is_file()
+178:     assert not list(tmp_path.glob("*.pending"))
+179:     if collision:
+180:         assert targets[0].read_bytes() == b"preexisting report: do not overwrite"
+181:     else:
+182:         assert not targets[0].exists()
+183:     with pytest.raises(guard.EvaluationBlocked):
+184:         guard.evaluate_once(
+185:             calculate, reports_dir=tmp_path, claim_dir=tmp_path / "claims", prefix="h14", trial="synthetic"
+186:         )
+187:     assert calculate.call_count == 1
+190: def test_simultaneous_attempts_only_one_crosses_the_atomic_claim(tmp_path, monkeypatch):
+191:     start = Barrier(2)
+192:     original = guard.require_available
+193:     calculate = Mock(return_value=dict(COMPLETE))
+195:     def precheck(reports_dir, prefix, *, claim_dir):
+196:         original(reports_dir, prefix, claim_dir=claim_dir)
+197:         start.wait(timeout=5)  # both pass the non-atomic check, then compete
+199:     monkeypatch.setattr(guard, "require_available", precheck)
+201:     def attempt():
+202:         try:
+203:             guard.evaluate_once(
+204:                 calculate, reports_dir=tmp_path, claim_dir=tmp_path / "claims", prefix="h14", trial="synthetic"
+205:             )
+206:             return "completed"
+207:         except guard.EvaluationBlocked:
+208:             return "blocked"
+210:     with ThreadPoolExecutor(max_workers=2) as executor:
+211:         results = list(executor.map(lambda _: attempt(), range(2)))
+212:     assert sorted(results) == ["blocked", "completed"]
+213:     assert calculate.call_count == 1
+214:     assert len(list(tmp_path.glob("h14_avaliacao_*.json"))) == 1
+217: def test_claims_are_scoped_to_the_trial(tmp_path):
+218:     guard.evaluate_once(
+219:         lambda: dict(COMPLETE), reports_dir=tmp_path, claim_dir=tmp_path / "claims", prefix="h14", trial="synthetic-14"
+220:     )
+221:     guard.evaluate_once(
+222:         lambda: dict(COMPLETE), reports_dir=tmp_path, claim_dir=tmp_path / "claims", prefix="h15", trial="synthetic-15"
+223:     )
+224:     assert len(list(tmp_path.glob("*_avaliacao_*.json"))) == 2
+227: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+228: def test_changing_report_directory_cannot_repeat_the_same_cohort(job, prefix, tmp_path, monkeypatch):
+229:     calculate = Mock(return_value=dict(COMPLETE))
+230:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+231:     first = tmp_path / "first-output"
+232:     second = tmp_path / "different-output"
+233:     assert job.evaluate(reports_dir=first) == COMPLETE
+234:     with pytest.raises(guard.EvaluationBlocked):
+235:         job.evaluate(reports_dir=second)
+236:     assert calculate.call_count == 1
+237:     assert not second.exists()
+238:     assert len(list(first.glob(f"{prefix}_avaliacao_*.json"))) == 1
+241: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+242: @pytest.mark.parametrize("alternate_registry", [False, True], ids=["same-registry", "alternate-registry"])
+243: def test_legacy_default_report_blocks_an_alternate_output_directory(
+244:     job, prefix, alternate_registry, tmp_path, monkeypatch
+245: ):
+246:     job.REPORTS_DIR.mkdir(parents=True)
+247:     (job.REPORTS_DIR / f"{prefix}_avaliacao_old.json").write_text("{}", encoding="utf-8")
+248:     calculate = Mock(side_effect=AssertionError("must not read the already evaluated cohort"))
+249:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+250:     with pytest.raises(guard.EvaluationBlocked):
+251:         job.evaluate(
+252:             trials_path=tmp_path / "alternate-registry.json" if alternate_registry else None,
+253:             reports_dir=tmp_path / "alternate",
+254:         )
+255:     calculate.assert_not_called()
+258: def test_path_identity_is_canonical_without_reading_files(tmp_path):
+259:     direct = guard.claim_directory(trial="h14", ledger_path=tmp_path / "cohort/ledger.jsonl")
+260:     redundant = guard.claim_directory(trial="h14", ledger_path=tmp_path / "cohort/../cohort/ledger.jsonl")
+261:     assert direct == redundant
+262:     assert not direct.exists()
+265: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+266: def test_registry_path_change_does_not_reopen_the_same_ledger(job, prefix, tmp_path, monkeypatch):
+267:     calculate = Mock(return_value=dict(COMPLETE))
+268:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+269:     assert job.evaluate(reports_dir=tmp_path / "first") == COMPLETE
+270:     with pytest.raises(guard.EvaluationBlocked):
+271:         job.evaluate(trials_path=tmp_path / "different-registry.json", reports_dir=tmp_path / "second")
+272:     assert calculate.call_count == 1
+275: @pytest.mark.parametrize(("job", "prefix"), JOBS)
+276: def test_moving_ledger_and_claim_state_to_new_root_preserves_single_evaluation(job, prefix, tmp_path, monkeypatch):
+277:     old_root = tmp_path / "old-computer"
+278:     new_root = tmp_path / "new-computer"
+279:     ledger = old_root / "data/ledger.jsonl"
+280:     ledger.parent.mkdir(parents=True)
+281:     ledger.write_bytes(b'{"synthetic":true}\n')
+282:     calculate = Mock(return_value=dict(COMPLETE))
+283:     monkeypatch.setattr(job, "_evaluate_claimed", calculate)
+284:     assert (
+285:         job.evaluate(ledger_path=ledger, trials_path=old_root / "trials.json", reports_dir=tmp_path / "first-report")
+286:         == COMPLETE
+287:     )
+288:     original_claim_dir = guard.claim_directory(trial=job.TRIAL, ledger_path=ledger)
+289:     assert original_claim_dir.is_dir()
+291:     assert old_root.resolve().is_relative_to(tmp_path.resolve())
+292:     assert new_root.resolve().is_relative_to(tmp_path.resolve())
+293:     shutil.move(str(old_root), str(new_root))
+294:     relocated = new_root / "data/ledger.jsonl"
+295:     migrated_claim_dir = guard.claim_directory(trial=job.TRIAL, ledger_path=relocated)
+296:     assert original_claim_dir.relative_to(old_root) == migrated_claim_dir.relative_to(new_root)
+297:     assert migrated_claim_dir.is_dir()
+298:     with pytest.raises(guard.EvaluationBlocked):
+299:         job.evaluate(ledger_path=relocated, trials_path=new_root / "trials.json", reports_dir=tmp_path / "new-report")
+300:     assert calculate.call_count == 1
+301:     assert not (tmp_path / "new-report").exists()
+### tests/test_prospective_readiness.py
+1: from brasileirao_scripts import prospective_readiness
+4: def test_readiness_fails_closed_without_credentials(monkeypatch, tmp_path):
+5:     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
+6:     monkeypatch.delenv("ODDS_API_KEY", raising=False)
+7:     monkeypatch.setattr(prospective_readiness, "ROOT", tmp_path)
+8:     result = prospective_readiness.report()
+9:     assert result["h9_can_emit"] is False
+10:     assert result["capital_enabled"] is False
+11:     assert result["bookmaker_persistence_gate"] == "PENDING"
+12:     assert result["collection_runs"] == 0
+15: def test_readiness_does_not_require_unrelated_v3_settings(monkeypatch, tmp_path):
+16:     monkeypatch.setenv("ODDS_API_KEY", "configured")
+17:     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
+18:     monkeypatch.setattr(prospective_readiness, "ROOT", tmp_path)
+20:     result = prospective_readiness.report()
+22:     assert result["odds_api_configured"] is True
+23:     assert result["api_football_configured"] is False
+24:     assert result["h9_can_emit"] is False  # demais gates continuam fail-closed
+### tests/test_prospective_validation_scaffold.py
+1: from __future__ import annotations
+3: from datetime import UTC, datetime, timedelta
+5: import pytest
+6: from pydantic import ValidationError
+8: from brasileirao_predictor.research.prospective_validation import (
+9:     CohortPolicy,
+10:     PaperPick,
+11:     PaperSettlement,
+12:     evaluate_cohort,
+13:     required_sample_size,
+14: )
+15: from brasileirao_predictor.research.prospective_validation.ledger import append_pick, append_settlement
+17: KICKOFF = datetime(2026, 9, 1, 22, tzinfo=UTC)
+20: def pick(index: int = 1, **changes) -> PaperPick:
+21:     row = {
+22:         "pick_id": f"pick-{index}",
+23:         "cohort_id": "market04-prospective",
+24:         "event_id": str(index),
+25:         "market": "ou25",
+26:         "selection": "over",
+27:         "model_probability": 0.55,
+28:         "predicted_at": KICKOFF - timedelta(hours=2),
+29:         "kickoff_at": KICKOFF,
+30:         "odds_captured_at": KICKOFF - timedelta(hours=2, minutes=5),
+31:         "captured_odds": 2.0,
+32:         "bookmaker": "named-book",
+33:     }
+34:     row.update(changes)
+35:     return PaperPick.model_validate(row)
+38: def settlement(index: int = 1, won: bool = True, **changes) -> PaperSettlement:
+39:     row = {
+40:         "pick_id": f"pick-{index}",
+41:         "settled_at": KICKOFF + timedelta(hours=2),
+42:         "closing_odds": 1.9,
+43:         "closing_captured_at": KICKOFF - timedelta(minutes=1),
+44:         "won": won,
+45:         "result_source": "official",
+46:     }
+47:     row.update(changes)
+48:     return PaperSettlement.model_validate(row)
+51: def test_pick_exige_stake_flat_e_relogios_pre_kickoff() -> None:
+52:     assert pick().stake_units == 1.0
+53:     with pytest.raises(ValidationError):
+54:         pick(stake_units=0.5)
+55:     with pytest.raises(ValidationError, match="before kickoff"):
+56:         pick(predicted_at=KICKOFF)
+59: def test_closing_line_pos_kickoff_e_rejeitada() -> None:
+60:     with pytest.raises(ValueError, match="strictly before kickoff"):
+61:         settlement(closing_captured_at=KICKOFF).assert_matches(pick())
+64: def test_ledger_e_append_only_e_recusa_duplicatas(tmp_path) -> None:
+65:     path = tmp_path / "paper.jsonl"
+66:     item, result = pick(), settlement()
+67:     append_pick(path, item)
+68:     append_settlement(path, result, item)
+69:     with pytest.raises(ValueError, match="duplicate"):
+70:         append_pick(path, item)
+71:     with pytest.raises(ValueError, match="duplicate"):
+72:         append_settlement(path, result, item)
+73:     assert len(path.read_text(encoding="utf-8").splitlines()) == 2
+76: def _dsr_stub(valor: float):
+84:     return lambda *_args, **_kwargs: {
+85:         "dsr": valor,
+86:         "sr0": 0.5,
+87:         "n_trials": 6,
+88:         "n_sharpes": 4,
+89:         "sr0_estimable": True,
+90:         "deflation_applied": True,
+91:         "sharpe_coverage": 4 / 6,
+92:     }
+95: def test_metricas_e_gate_so_tem_duas_saidas(monkeypatch) -> None:
+96:     import brasileirao_predictor.research.prospective_validation.metrics as metrics
+98:     rows = [pick(i) for i in range(1, 11)]
+99:     results = [settlement(i, won=i <= 6) for i in range(1, 11)]
+100:     policy = CohortPolicy(min_matured=10, declared_trials=5, bootstrap_iterations=100)
+101:     monkeypatch.setattr(metrics.registry_module, "deflated_sharpe_ratio", _dsr_stub(0.96))
+102:     report = evaluate_cohort(rows, results, policy)
+103:     assert report["capital_gate"] == "CAPITAL_GATE: ELIGIBLE_FOR_REVIEW"
+104:     assert report["capital_decision_authority"] == "HUMAN_REVIEW_OUTSIDE_CODE"
+105:     assert report["coverage"] == 1.0
+106:     assert report["roi_bootstrap_ci95"] is not None
+107:     assert report["calibration"]["n"] == 10
+110: def test_dsr_abaixo_do_gate_mantem_capital_locked(monkeypatch) -> None:
+111:     import brasileirao_predictor.research.prospective_validation.metrics as metrics
+113:     monkeypatch.setattr(metrics.registry_module, "deflated_sharpe_ratio", _dsr_stub(0.949))
+114:     report = evaluate_cohort(
+115:         [pick(1), pick(2)],
+116:         [settlement(1), settlement(2, won=False)],
+117:         CohortPolicy(min_matured=2, declared_trials=1, bootstrap_iterations=100),
+118:     )
+119:     assert report["capital_gate"] == "CAPITAL_GATE: LOCKED"
+122: def test_power_analysis_depende_da_odd_media() -> None:
+123:     assert required_sample_size(3.0) > required_sample_size(1.9)
+124:     with pytest.raises(ValueError):
+125:         required_sample_size(1.01)
+128: def test_gate_de_capital_trava_quando_o_desconto_nao_e_estimavel() -> None:
+140:     policy = CohortPolicy(
+141:         min_matured=2,
+142:         declared_trials=5,
+143:         historical_trial_sharpes=(),
+144:         bootstrap_iterations=100,
+145:     )
+146:     report = evaluate_cohort([pick(1), pick(2)], [settlement(1), settlement(2, won=False)], policy)
+148:     assert report["capital_gate"] == "CAPITAL_GATE: LOCKED"
+149:     assert report["dsr"] is None
+150:     assert report["dsr_sr0_estimable"] is False
+151:     assert report["dsr_deflation_applied"] is False
+154:     assert report["dsr_not_estimable_reason"]
+157: def test_o_desconto_aplicado_aparece_no_relatorio() -> None:
+161:     policy = CohortPolicy(
+162:         min_matured=2,
+163:         declared_trials=5,
+164:         historical_trial_sharpes=(0.1, 0.4, -0.2),
+165:         bootstrap_iterations=100,
+166:     )
+167:     report = evaluate_cohort([pick(1), pick(2)], [settlement(1), settlement(2, won=False)], policy)
+169:     assert report["dsr_sr0_estimable"] is True
+170:     assert report["dsr_deflation_applied"] is True
+171:     assert report["dsr_not_estimable_reason"] is None
+172:     assert report["dsr_sharpe_coverage"] == 3 / 8
+### tests/test_ratings.py
+6: from datetime import date
+8: import pytest
+10: from brasileirao_predictor.ratings import compute_ratings, k_factor, margin_multiplier, temporal_keys
+12: CFG = {
+13:     "initial_rating": 1500,
+14:     "home_advantage": 100,
+15:     "k_factors": {"default": 30, "FIFA World Cup": 60, "Friendly": 20},
+16: }
+19: def _m(d, home, away, hs, as_, tournament="Friendly", neutral=1):
+20:     return (d, home, away, hs, as_, tournament, neutral)
+24: def test_troca_conserva_pontos():
+26:     ratings, _ = compute_ratings([_m("2026-06-01", "A", "B", 2, 0)], CFG)
+27:     assert ratings["A"] + ratings["B"] == pytest.approx(2 * 1500)
+28:     assert ratings["A"] > 1500 > ratings["B"]
+31: def test_conservacao_em_serie_longa():
+32:     ms = [
+33:         _m(f"2026-06-{d:02d}", h, a, hs, as_)
+34:         for d, (h, a, hs, as_) in enumerate(
+35:             [
+36:                 ("A", "B", 3, 1),
+37:                 ("B", "C", 0, 0),
+38:                 ("C", "A", 2, 2),
+39:                 ("A", "C", 1, 0),
+40:                 ("B", "A", 4, 2),
+41:             ],
+42:             start=1,
+43:         )
+44:     ]
+45:     ratings, _ = compute_ratings(ms, CFG)
+46:     assert sum(ratings.values()) == pytest.approx(3 * 1500)
+50: def test_zebra_move_mais_que_favorito():
+53:     prep = _m("2026-06-01", "A", "C", 3, 0)
+55:     r_zebra, _ = compute_ratings([prep, _m("2026-06-10", "B", "A", 1, 0)], CFG)
+56:     r_favo, _ = compute_ratings([prep, _m("2026-06-10", "B", "A", 0, 1)], CFG)
+58:     move_zebra = abs(r_zebra["B"] - 1500)
+59:     move_favorito = abs(r_favo["B"] - 1500)
+60:     assert move_zebra > move_favorito
+64: def test_decay_regride_a_media():
+67:     cfg = dict(CFG, form_half_life_years=4.0)
+68:     ms = [_m("2010-06-01", "A", "B", 3, 0, "FIFA World Cup"), _m("2020-06-01", "A", "C", 0, 0)]
+70:     _, hist_decay = compute_ratings(ms, cfg)
+71:     _, hist_sem = compute_ratings(ms, CFG)
+73:     ganho_2010 = hist_sem[1][0]  # diff pré-jogo vs C (1500), sem decay
+74:     years = (date(2020, 6, 1) - date(2010, 6, 1)).days / 365.25
+75:     esperado = ganho_2010 * 0.5 ** (years / 4.0)
+76:     assert hist_decay[1][0] == pytest.approx(esperado)
+77:     assert 0 < hist_decay[1][0] < ganho_2010  # regrediu, não cruzou a média
+80: def test_decay_nulo_e_identidade():
+81:     cfg = dict(CFG, form_half_life_years=None)
+82:     ms = [_m("2010-06-01", "A", "B", 3, 0), _m("2020-06-01", "A", "C", 1, 1)]
+83:     _, h1 = compute_ratings(ms, cfg)
+84:     _, h2 = compute_ratings(ms, CFG)
+85:     assert h1 == h2
+88: def test_decay_terminal_chega_ao_horizonte_da_previsao():
+89:     cfg = dict(CFG, form_half_life_years=4.0)
+90:     ms = [_m("2020-01-01", "A", "B", 3, 0)]
+91:     immediate, history_immediate = compute_ratings(ms, cfg)
+92:     at_horizon, history_horizon = compute_ratings(ms, cfg, asof="2024-01-01")
+93:     years = (date(2024, 1, 1) - date(2020, 1, 1)).days / 365.25
+94:     expected = 1500 + (immediate["A"] - 1500) * 0.5 ** (years / 4.0)
+95:     assert at_horizon["A"] == pytest.approx(expected)
+96:     assert history_horizon == history_immediate
+99: def test_decay_terminal_rejeita_horizonte_anterior_ao_historico():
+100:     with pytest.raises(ValueError, match="asof"):
+101:         compute_ratings([_m("2026-01-02", "A", "B", 1, 0)], CFG, asof="2026-01-01")
+105: def test_k_fallback_de_eliminatoria():
+107:     assert k_factor("AFC Asian Cup qualification", CFG["k_factors"]) == 40
+110: def test_k_de_torneio_nulo_nao_estoura():
+111:     assert k_factor(None, CFG["k_factors"]) == 30
+114: def test_margem_cresce_monotonicamente():
+115:     mults = [margin_multiplier(d) for d in range(6)]
+116:     assert mults == sorted(mults)
+117:     assert mults[0] == mults[1] == 1.0
+120: def test_same_date_is_updated_as_one_batch_and_is_order_invariant():
+121:     matches = [
+122:         _m("2026-06-01", "A", "B", 2, 0),
+123:         _m("2026-06-01", "C", "D", 0, 1),
+124:     ]
+125:     ratings_a, history_a = compute_ratings(matches, CFG)
+126:     ratings_b, history_b = compute_ratings(list(reversed(matches)), CFG)
+127:     assert ratings_a == pytest.approx(ratings_b)
+128:     assert sorted(history_a) == sorted(history_b)
+131: def test_reliable_kickoff_allows_multiple_sequential_games_on_same_date():
+132:     matches = [
+133:         (*_m("2026-06-01", "A", "B", 2, 0), "2026-06-01T16:00:00Z"),
+134:         (*_m("2026-06-01", "A", "C", 0, 1), "2026-06-01T20:00:00Z"),
+135:     ]
+136:     _ratings, history = compute_ratings(matches, CFG)
+137:     assert history[1][0] != 0.0
+140: def test_duplicate_team_in_date_fallback_batch_uses_same_pre_batch_state():
+141:     matches = [_m("2026-06-01", "A", "B", 1, 0), _m("2026-06-01", "A", "C", 0, 1)]
+142:     _ratings, history = compute_ratings(matches, CFG)
+143:     assert history[0][0] == history[1][0] == 0.0
+146: def test_mixed_precision_collapses_the_whole_date_conservatively():
+147:     rows = [
+148:         (*_m("2026-06-01", "A", "B", 1, 0), "2026-06-01T16:00:00Z"),
+149:         _m("2026-06-01", "C", "D", 0, 1),
+150:     ]
+151:     assert temporal_keys(rows) == ["2026-06-01T00:00:00+00:00|date"] * 2

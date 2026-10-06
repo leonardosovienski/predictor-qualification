@@ -1,0 +1,1051 @@
+[
+  {
+    "path": "tests/api/test_api.py",
+    "sha256": "71cdf8eadcf322b18c22cb14ad116b276e5549c58fe18cee335e739641a56da1",
+    "review": "integral-semantic-read",
+    "notes": "API TestClient/FakeLLM: saúde e oito etapas; rejeição de entrada/intenção; preferências antes da geração, reabertura e isolamento; busca indisponível não bloqueia perfil.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_api_request_scoped_persistence",
+      "test_unknown_intent_is_client_error_not_provider_outage",
+      "test_profile_learns_before_generation_and_can_be_corrected_and_removed",
+      "test_profile_controls_survive_missing_search_source"
+    ]
+  },
+  {
+    "path": "tests/cli/test_cli.py",
+    "sha256": "d38ffece73f3085fd3d73b5c03e33fe162f628e5a7599db77abd2ac4ef745962",
+    "review": "integral-semantic-read",
+    "notes": "CLI subprocesso DB inacessível: exit1, mensagem CAIN sem traceback.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_unwritable_database_reports_error_without_traceback"
+    ]
+  },
+  {
+    "path": "tests/cli/test_settings.py",
+    "sha256": "e5be5c04ffb7310b63b35f27b9226c2041a2d0765e5efefa921107d0b85b2aed",
+    "review": "integral-semantic-read",
+    "notes": "Config monkeypatch ambiente: resolução relativa, provider instanciado sem inferência, tipos/chaves inválidos rejeitados.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_configuration_resolves_data_and_sources_from_its_own_directory",
+      "test_explicit_missing_config_fails_instead_of_using_other_settings",
+      "test_invalid_configuration_is_not_coerced_into_permissions"
+    ]
+  },
+  {
+    "path": "tests/evaluation/test_functional.py",
+    "sha256": "35715ed79a153fb676e80f81bf1c24c93a9516e26210b4409f90082eb2fbca3a",
+    "review": "integral-semantic-read",
+    "notes": "Functional FakeLLM seis etapas e correções: real_llm=false/qualidade humana desconhecida; falha auditada sem resposta nem retry; fake via CLI bloqueado.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_functional_persistence_correction_isolation_and_source",
+      "test_functional_cli_does_not_silently_run_fake",
+      "test_functional_failure_retains_attempt_and_does_not_invent_remaining_outputs",
+      "test_format_vector_never_infers_preference_from_generated_style",
+      "test_missing_stages_are_visible_failures"
+    ]
+  },
+  {
+    "path": "tests/evaluation/test_harness.py",
+    "sha256": "6c26c70816c53f77e381bb5ed19933379722de0655877c8af294ea522ddea2ed",
+    "review": "integral-semantic-read",
+    "notes": "Harness matriz smoke 324 respostas sintéticas: comparabilidade de entradas, cegamento metadata, isolamento A/B/C, orçamento caracteres, falhas e metadados detached; não mede convergência real/validade embedding nem qualidade humana.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_design_has_disjoint_surfaces_and_prior_ground_truth",
+      "test_smoke_preserves_complete_matrix_and_reports_missing_evidence",
+      "test_baseline_has_no_memory_and_control_uses_only_completed_prior_sessions",
+      "test_blinding_removes_arm_metadata_and_keeps_longitudinal_pairing",
+      "test_existing_run_is_never_overwritten",
+      "test_formal_and_fake_pilot_are_blocked",
+      "test_metrics_measure_direction_and_reject_invented_or_invalid_vectors",
+      "test_unknown_router_predictions_are_errors_in_denominator",
+      "test_character_counter_is_explicitly_not_tokenizer",
+      "test_failed_generation_keeps_attempted_context_and_smoke_preserves_audit",
+      "test_provider_metadata_is_snapshotted_without_inventing_fake_counts"
+    ]
+  },
+  {
+    "path": "tests/evaluation/test_packaged_resources.py",
+    "sha256": "7861a4310027bde394c0814a41629fa4b5ce631155bbc2b8fdaf55f1970de9a8",
+    "review": "integral-semantic-read",
+    "notes": "Recursos empacotados: bytes iguais, cwd independente, identidade de código executado/hash dependência; git_commit não adivinhado.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_default_design_survives_unrelated_working_directory",
+      "test_identity_describes_executed_files_not_a_guessed_checkout"
+    ]
+  },
+  {
+    "path": "tests/evaluation/test_quality.py",
+    "sha256": "b1f3ea2dc2c14547cdfc370564acef16ff16ffeade474807d0731ed0033524a4",
+    "review": "integral-semantic-read",
+    "notes": "Quality dataset 14 casos dev/holdout: dois braços entrada idêntica, JSON estrito/rotas/fatos por heurística/citações; código somente AST, inclusive retorno errado aceita sintaxe, nunca execução; winner/humanquality desconhecidos, falhas retidas.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_dataset_has_predetermined_dev_and_holdout_with_required_task_types",
+      "test_comparison_preserves_identical_inputs_and_never_calls_fake_real",
+      "test_json_checks_reject_wrong_schema_duplicate_keys_and_wrong_labels",
+      "test_fact_presence_is_heuristic_and_source_marker_membership_is_limited",
+      "test_code_is_only_parsed_and_algorithm_correctness_is_not_claimed",
+      "test_language_stays_unrated_and_format_checks_are_explicit",
+      "test_errors_and_truncation_remain_visible_without_retry_or_lost_cases",
+      "test_cli_has_no_fake_option_and_injection_cannot_be_mislabeled",
+      "test_adapter_truncation_exception_preserves_partial_response",
+      "test_existing_runs_are_never_replaced"
+    ]
+  },
+  {
+    "path": "tests/evaluation/test_v2.py",
+    "sha256": "16e5d333afe018adf5e2700a74dd0efcf19568a732288d9d2d2d4e638007df59",
+    "review": "integral-semantic-read",
+    "notes": "EvaluationV2 tipos/duplicatas/NaN e literalidade; semântica requer revisão; isolamento saída sem overwrite; attestation loopback precede mutação; controles e catálogo congelado. run v2_integrity é assertion declarada, não executada aqui.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_json_contract",
+      "test_literal_does_not_repair",
+      "test_semantics_not_certified_by_presence",
+      "test_design_and_isolation",
+      "test_origin_never_infers_llm_from_style",
+      "test_observer_timeout_is_not_zero_inference",
+      "test_integrity_evaluator_accepts_cancelled_idempotent_return",
+      "test_attestation_rejects_wrong_server_before_mutable_requests",
+      "test_auxiliary_http_adapters_require_storage_attestation",
+      "test_report_uses_frozen_confirmation_cases"
+    ]
+  },
+  {
+    "path": "tests/integration/test_agent_capabilities.py",
+    "sha256": "41a6a1deeee3701465386ec6cab617b690673587ce620b3b3681a7c22f956761",
+    "review": "integral-semantic-read",
+    "notes": "Capabilities fixtures ResearchService e modelo instrumentado: etapas/idempotência/aprovação/retomada/revogação/cancelamento/lease expirado; relações literais; MCP allowlist e stdio subprocesso; API compartilhada e streaming mock. Não exercício real LLM.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_workflow_resume_no_repeated_steps_and_backup",
+      "test_workflow_rejects_changed_prompt_protocol",
+      "test_explicit_abstention_preserves_failure_and_allows_continuation",
+      "test_revocation_blocks_results_and_entity_output",
+      "test_invalid_relations_never_promoted",
+      "test_cancel_running_generation_discards_result_and_records_failure",
+      "test_relevance_identifier_baseline_pt_en",
+      "test_mcp_lifecycle_allowlist_and_scope_injection",
+      "test_api_tool_and_workflow_shared_services",
+      "test_generation_revoked_during_extraction_is_not_returned",
+      "test_hybrid_never_embeds_generation_denied_evidence",
+      "test_expired_lease_requires_explicit_recovery",
+      "test_mcp_stdio_subprocess",
+      "test_api_stream_has_incremental_tokens_and_terminal_event"
+    ]
+  },
+  {
+    "path": "tests/integration/test_architecture_permissions.py",
+    "sha256": "cc3862ee64cc82b0d3a613d0cf366f5f0f654fcfe4c8bf1285115e1011657ca6",
+    "review": "integral-semantic-read",
+    "notes": "Permissions Path.open guard: revogação impede leitura da fonte; history redige sob política atual.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_revoked_scope_is_rejected_before_source_file_open",
+      "test_history_questions_are_redacted_after_source_revocation"
+    ]
+  },
+  {
+    "path": "tests/integration/test_archive.py",
+    "sha256": "2906e20dc6d495b82dc97a1cde0e76de86dac35ac64f755715d15ab19eadc98c",
+    "review": "integral-semantic-read",
+    "notes": "Archive DBs/documentos temporários: backup/restore identidade e unicode, sem overwrite; hash adulterado/missing document rejeitados antes conclusão.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_backup_restores_documents_ids_and_rejects_tampering",
+      "test_missing_document_never_completes_backup"
+    ]
+  },
+  {
+    "path": "tests/integration/test_compound_decision_lookup.py",
+    "sha256": "7c39b3a97c1a46753534d3c9181d35ffe2d76a3545e4ff0f50afb3c5fc5686d8",
+    "review": "integral-semantic-read",
+    "notes": "Compound field lookup sem inferência: estado/trial/motivo/amostra completos e condicionais; identidade A72 versus A720, unicode; campos ausentes e revisões conflitantes explícitos; interpretação não redefinida como lookup.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_explicit_compound_retains_all_fields_and_conditions",
+      "test_interpretation_is_not_redefined_as_field_lookup",
+      "test_compound_missing_fields_and_conflicts_are_explicit"
+    ]
+  },
+  {
+    "path": "tests/integration/test_conversation_regressions.py",
+    "sha256": "7ef4d5a1e61ace2619cc3016dbdfaaecd9db6d9d6ccfd9873dc4f45cb695f344",
+    "review": "integral-semantic-read",
+    "notes": "Conversation modelos dublês: cotidiano evita retrieval; aritmética exata frações e limites sem execução; informação antiga não vira citação; hipotéticos/literal output encaminhados intactos, não avalia qualidade desses outputs simulados.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_everyday_conversation_does_not_search_old_turns",
+      "test_search_does_not_cite_history_on_articles_alone",
+      "test_api_accepts_explicit_conversation_and_persists_it",
+      "test_arithmetic_exact_without_float_rounding",
+      "test_arithmetic_rejects_unbounded_or_executable_input",
+      "test_hypothetical_exercise_reaches_conversation_without_classifier",
+      "test_literal_output_reaches_model_without_classifier"
+    ]
+  },
+  {
+    "path": "tests/integration/test_delivery_architecture.py",
+    "sha256": "0f77d14348e018a2c90507bd272c7b7b23f44826a725b41998594d693d1f4457",
+    "review": "integral-semantic-read",
+    "notes": "Delivery DB temporário: record_turn falha antes/depois commit recuperável sem nova geração; completion/outcome transação única; processing abandonado bloqueia rerun; dois apps concorrentes geram uma vez; os._exit subprocesso três checkpoints. Não queda física de energia.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_history_failure_reopens_and_replays_without_generation_or_identity_duplication",
+      "test_conversation_read_recovers_missing_projection",
+      "test_completion_and_outcome_roll_back_together",
+      "test_abandoned_processing_receipt_is_not_silently_reexecuted",
+      "test_two_app_instances_cannot_generate_the_same_receipt",
+      "test_profile_controls_and_cli_do_not_read_historical_documents",
+      "test_abrupt_process_exit_preserves_commit_boundary"
+    ]
+  },
+  {
+    "path": "tests/integration/test_evidence_selection.py",
+    "sha256": "64d84ed2c181d5195649996436066b01d1422c49a5234e4899ef286c2f1930bb",
+    "review": "integral-semantic-read",
+    "notes": "Evidence selection: offsets e chaves tardias, negadores e condições inteiros, identidades unicode sem substring; JSON duplicado abstém; limite indivisível omite; mock paginação; revogação impede entrega.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_g01_short_reason",
+      "test_g02_g03_long_prose",
+      "test_g04_g05_late_field",
+      "test_g06_long_value",
+      "test_g07_ambiguity",
+      "test_g08_exact_identity",
+      "test_g09_negation",
+      "test_g10_missing_identity",
+      "test_indivisible_condition_is_not_truncated",
+      "test_review_api_uses_relevant_late_field",
+      "test_review_rechecks_revocation_after_inference",
+      "test_budget_and_search_limits_are_explicit",
+      "test_review_paginates_generation_candidates",
+      "test_scope_revocation_before_generation_has_no_call"
+    ]
+  },
+  {
+    "path": "tests/integration/test_full_audit.py",
+    "sha256": "b101ca212cc8254bf7caba5b8ec1e173b1774e1f02aaba45c2d0f8e69beab7fb",
+    "review": "integral-semantic-read",
+    "notes": "Full audit: tipos config estritos; perfil/código lazy sem embedding; limite transport 4MiB; documento alterado rejeitado; caminhos absolutos sobrevivem cwd; servidor loopback redirect bloqueado sem segunda chamada.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_invalid_configuration_is_rejected_at_load",
+      "test_code_and_profile_do_not_initialize_unrelated_embedding",
+      "test_provider_transport_reads_with_a_byte_limit",
+      "test_uploaded_document_mutation_is_detected_before_retrieval",
+      "test_workspace_paths_survive_reopening_from_another_working_directory",
+      "test_cli_code_works_without_search_dependencies",
+      "test_generation_oversized_transport_is_rejected",
+      "test_generation_redirect_is_not_followed"
+    ]
+  },
+  {
+    "path": "tests/integration/test_generation_language_preference.py",
+    "sha256": "0fb36ab0a376c73cac3989204fbaa7d102e6c72e32ba05328c1161136f1445cd",
+    "review": "integral-semantic-read",
+    "notes": "Language preference CaptureLLM: en/pt instrução chega prompt, payload original preservado, scope session/user; não comprova que modelo obedece idioma.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_agents_forward_effective_language_without_rewriting_output",
+      "test_no_preference_preserves_provider_prompt",
+      "test_followup_requests_additional_reasoning_without_changing_user_input",
+      "test_scoped_language_reaches_model_but_does_not_pollute_saved_request"
+    ]
+  },
+  {
+    "path": "tests/integration/test_greetings.py",
+    "sha256": "d0a529d6e863ae6356e48d044cfdc71b6db531ffcac7b93b6dc35324a07525f8",
+    "review": "integral-semantic-read",
+    "notes": "Greetings modelo proibido: respostas determinísticas seis saudações auditadas; conteúdos adicionais/intenção explícita não engolidos.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_greeting_avoids_model_and_retrieval_and_is_logged",
+      "test_greeting_does_not_swallow_other_content"
+    ]
+  },
+  {
+    "path": "tests/integration/test_grounded_analysis.py",
+    "sha256": "e1c775ae3115009c5e973632b2856ed6185b6420b09aa1ffbe2aa750dcbade20",
+    "review": "integral-semantic-read",
+    "notes": "Grounded analysis PLAN fixtures e PointerModel: lexemas JSON escaped/offsets literais, paths identidade exata, extração sem inferência/permissão geração; unlabelled tables e duplicatas abstêm; revisão gerada não certifica semântica. Orçamento inclui provenance/preamble/header inteiros; separa seções/publicações; prior proposals omitidas antes evidência; excesso resposta rejeitado.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_frozen_structured_cases",
+      "test_escaped_json_uses_received_lexemes_not_invented_quotes",
+      "test_literal_extraction_works_without_model_or_generation_permission",
+      "test_review_resolves_offsets_and_no_evidence_has_zero_calls",
+      "test_unknown_pointer_is_rejected",
+      "test_individual_hypothesis_excerpts_exclude_other_identities_and_keep_paths",
+      "test_duplicate_json_cannot_bypass_structured_ambiguity_via_review",
+      "test_review_payload_retains_exact_key_paths",
+      "test_multicolumn_claim_row_is_literal_without_invented_column_meanings",
+      "test_review_passes_scientific_clocks_and_slice_boundaries",
+      "test_unlabelled_rows_abstain_without_free_generation",
+      "test_workflow_keeps_abstention_visible_and_does_not_mix_protocols",
+      "test_review_budgets_provenance_and_keeps_whole_excerpts",
+      "test_question_identifier_outranks_unrelated_structured_notes",
+      "test_table_header_is_literal_and_does_not_cross_another_table",
+      "test_mixed_markdown_does_not_hide_relevant_prose_behind_table",
+      "test_question_phrase_beats_unrelated_historical_state_label",
+      "test_multiple_unlabelled_rows_do_not_enable_generation",
+      "test_row_context_excludes_other_subjects_and_resolves_labels",
+      "test_other_hypothesis_section_does_not_override_question_subject",
+      "test_document_preamble_qualifies_later_top_level_historical_heading",
+      "test_leading_sibling_hypothesis_is_not_another_hypothesis_preamble",
+      "test_specific_question_does_not_fill_budget_with_one_generic_word",
+      "test_document_preamble_is_not_silently_dropped_when_over_budget",
+      "test_json_observation_fields_keep_root_identity_and_revision",
+      "test_json_root_identity_does_not_leak_another_record",
+      "test_section_owner_survives_contiguous_chunks_but_not_another_publication",
+      "test_explicit_table_subject_wins_over_group_heading_and_header_can_be_in_previous_part",
+      "test_code_comment_is_not_a_hypothesis_heading",
+      "test_previous_proposal_is_whole_or_explicitly_omitted",
+      "test_context_budget_discards_prior_proposals_before_source_evidence",
+      "test_oversized_review_is_rejected_instead_of_accepted_as_a_grammar_cut_fragment"
+    ]
+  },
+  {
+    "path": "tests/integration/test_historian_quote_choices.py",
+    "sha256": "9ff47f1f620e2cd1682544c92df25a72ee610227385eb2bae681a1e8cc3d974a",
+    "review": "integral-semantic-read",
+    "notes": "Historian quote choices enum somente campos completos literais e limitados; duplicatas/fragmentos não viram escolhas; revogação durante inferência descarta output.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_compound_choices_preserve_fields_identity_and_qualifiers",
+      "test_incomplete_ambiguous_or_unstructured_candidates_do_not_limit_choices",
+      "test_quote_choices_do_not_bypass_revocation"
+    ]
+  },
+  {
+    "path": "tests/integration/test_historian_quote_serialization.py",
+    "sha256": "3a86bca49f96efaeb640f97b110af65a27d455b53926c96cfb69f941437f6560",
+    "review": "integral-semantic-read",
+    "notes": "Quote serialization: substring JSON exata aceita; aspas adicionadas/campo omitido/reconstrução rejeitados, sem reparação automática.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_serialization_does_not_repair_or_rewrite_source_quotes"
+    ]
+  },
+  {
+    "path": "tests/integration/test_hybrid_runtime.py",
+    "sha256": "656fd5037d11a9e317f6f2d5a502aafa7e263e805b88fd9c15e4aa7bfa8010b2",
+    "review": "integral-semantic-read",
+    "notes": "Hybrid runtime modelo duas chamadas: classifier resumo depois agente; razão llm_classifier registrada. Modelo sintético.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_configured_router_can_classify_a_request_outside_rules_before_agent_generation"
+    ]
+  },
+  {
+    "path": "tests/integration/test_independent_review.py",
+    "sha256": "a169b72444c179a43f46cd47134a9224a1173213e4efea7c484752f250c48270",
+    "review": "integral-semantic-read",
+    "notes": "Independent review: CRLF/unicode e pointer escaped verificáveis; ausência/ambiguidade sem fallback; condições multilinha inteiras; protocolos antigos leitura/cancel idempotente, sem nova execução; orçamento abstém explicitamente.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_table_line_endings_preserve_literal_offsets",
+      "test_object_identity_is_focused_by_exact_json_path",
+      "test_missing_identity_does_not_fall_back_to_other_identities",
+      "test_table_inline_code_without_pipe_is_literal_and_header_is_not_data",
+      "test_ambiguous_pipe_does_not_fall_back_to_other_rows",
+      "test_escaped_identity_path_is_not_substring_match",
+      "test_continuation_keeps_negation_with_claim",
+      "test_shared_markdown_heading_focus_excludes_other_sections",
+      "test_old_workflow_remains_readable_cancellable_and_completed_is_idempotent",
+      "test_omitted_oversize_block_is_not_reported_as_absent_source"
+    ]
+  },
+  {
+    "path": "tests/integration/test_mandate_completion.py",
+    "sha256": "fbec233f596e148a7577ed69c2dd5b7fa3149392004e3427d3d690bb5ed7fff6",
+    "review": "integral-semantic-read",
+    "notes": "Mandate completion API lookup estado/trial/missing sem LLM; historian bundle metadata sem conteúdo; selection subprocesso source-first e receipt adulterado/policy revoked/pointer errado impedem verification.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_historian_route_covers_explicit_fields_without_inference",
+      "test_procedure_failed_verification_never_becomes_success_on_resume",
+      "test_procedure_detects_edited_success_receipt",
+      "test_procedure_rechecks_current_policy_on_resume",
+      "test_procedure_rejects_literal_quote_with_wrong_pointer"
+    ]
+  },
+  {
+    "path": "tests/integration/test_persistence.py",
+    "sha256": "375d681d9a1869b08959825a7f7aaee5c2f4c2989debecc811ed702321d8ac11",
+    "review": "integral-semantic-read",
+    "notes": "Persistence SQLite reopen: índice lexical reconstruído reproduz ranking/filtros; snapshots detached; user mismatch rejeitado; decision SQL triggers impedem UPDATE/DELETE/REPLACE e reabertura mantém append.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_drop_rebuild_preserves_fixed_queries_and_filters_after_sqlite_reopen",
+      "test_identity_snapshots_and_documents_are_detached_from_callers",
+      "test_decision_log_is_append_only_and_reopens"
+    ]
+  },
+  {
+    "path": "tests/integration/test_plug_new_agent.py",
+    "sha256": "60725e5aa700a40feb5492363153ca57a1f9659fa7fab5be15c8f4b83507f6a5",
+    "review": "integral-semantic-read",
+    "notes": "Plugin UppercaseAgent registro dinâmico e intenção uppercase oito etapas/log; registry congela após execução, nova inscrição rejeitada.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_plug_new_agent_without_changing_core"
+    ]
+  },
+  {
+    "path": "tests/integration/test_preference_persistence.py",
+    "sha256": "c30eeee50e792c9f184e1b1da7fe189e5677c54742d829cb56903c6d471f4e58",
+    "review": "integral-semantic-read",
+    "notes": "Preference persistence: correção/provenance sobrevive reopen; forget não ressurge de memória legacy; fontes retidas; index failure mantém canônico; duplicate signal rollback/revision stale; legacy JSON migra compatível; top_k/user/currentrequest isolados.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_preference_correction_and_provenance_survive_process_style_reopen",
+      "test_forget_does_not_resurrect_from_rebuilt_or_legacy_memory",
+      "test_clear_preferences_is_inspectable_and_not_raw_history_deletion",
+      "test_profile_and_source_remain_canonical_after_index_failure",
+      "test_atomic_duplicate_signal_rollback_and_stale_revision_rejection",
+      "test_existing_v01_json_without_provenance_is_read_compatibly",
+      "test_context_budget_top_k_and_user_isolation",
+      "test_transcript_already_observed_does_not_apply_preferences_twice",
+      "test_current_request_is_excluded_from_historical_context"
+    ]
+  },
+  {
+    "path": "tests/integration/test_recent_conversation_context.py",
+    "sha256": "5a96a5e57ac43642a6b7984e60f4af606bf25a4709923303e034278a3c579ba4",
+    "review": "integral-semantic-read",
+    "notes": "Recent context: fatos sobrevivem reopen sem overlap lexical; usuário/projeto/sessão isolados e prefs antigas excluídas; followup usa conversa sem classifier; comandos saída não puxam resposta antiga; ordem cronológica. Modelos assertions de contexto, não qualidade geral.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_recent_exchange_survives_no_keyword_overlap_and_restart",
+      "test_recent_exchange_does_not_cross_scope_or_restore_preferences",
+      "test_followup_uses_recent_context_without_reclassifying_as_document_search",
+      "test_explicit_conversation_is_real_provider_path_even_for_social_messages",
+      "test_unrelated_old_conversation_is_not_prompt_context_from_stopwords",
+      "test_output_instructions_do_not_retrieve_unrelated_previous_answers",
+      "test_selected_recent_exchanges_are_presented_in_conversation_order",
+      "test_one_sentence_request_does_not_erase_facts_for_followup"
+    ]
+  },
+  {
+    "path": "tests/integration/test_research_completion.py",
+    "sha256": "86c8845380d4bea056fbeaecdc2967ec011e94ad5298df14f89f00f44ead1ce2",
+    "review": "integral-semantic-read",
+    "notes": "Research completion: política revoked antes/depois model failure não retorna fatos; API history reabre session própria; corrupção filtros/membership não falseia ausência e rebuild restaura; duplicate JSON output rejeita; braços synthetic duas chamadas utility INCONCLUSIVE.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_provider_failure_after_read_revocation_does_not_return_old_facts",
+      "test_api_history_reopens_in_existing_workspace_session",
+      "test_corrupt_filter_column_cannot_become_false_absence",
+      "test_missing_membership_cannot_become_false_absence",
+      "test_history_reopens_and_isolates_session_project_and_current_policy",
+      "test_revocation_during_generation_withholds_answer_and_revoked_facts",
+      "test_duplicate_json_keys_from_provider_are_rejected",
+      "test_comparative_harness_executes_both_model_arms_with_same_provider"
+    ]
+  },
+  {
+    "path": "tests/integration/test_research_failures.py",
+    "sha256": "bb3dbfc4e2b6ff8434e38305c9c14c27b6225cd84e66e23dcc8b9dce688f5b9a",
+    "review": "integral-semantic-read",
+    "notes": "Research failures: projeção OSError rollback com receipt separado; audit unavailable erro explícito; JSON quotas/depth; origin adulterada rejeitada; backup WAL snapshot comprometido apenas. Windows launcher skipif fora Windows, fake python impede provider startup e serviço estranho não parado.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_process_failure_retains_separate_receipt",
+      "test_failure_audit_unavailable_is_reported",
+      "test_transport_limits_and_duplicate_json",
+      "test_publication_metadata_corruption_is_not_authority",
+      "test_online_backup_sees_committed_snapshot_with_active_wal_writer",
+      "test_api_launcher_does_not_prepare_ollama",
+      "test_windows_launcher_refuses_other_service_without_stopping_it"
+    ]
+  },
+  {
+    "path": "tests/integration/test_research_inspection.py",
+    "sha256": "6bda279e265141bff2d68237777a98e100509ebced78058465c039d1a56edea7",
+    "review": "integral-semantic-read",
+    "notes": "Inspection synthetic: namespaces/revisões/supersession declarada apenas, missing/cycle/status findings e UTC ordering; política scope e recheck, sem escrever histórico/LLM; offline API/CLI; quotas e corrupção explícitas.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_namespaces_supersession_and_comparison",
+      "test_cycle_and_timezone_order_without_invented_dates",
+      "test_policy_revocation_scope_and_no_history_write",
+      "test_api_and_cli_offline",
+      "test_duplicate_publications_do_not_inflate_record_count",
+      "test_projection_corruption_fails_closed",
+      "test_response_limit_is_explicit",
+      "test_record_limit_is_explicit"
+    ]
+  },
+  {
+    "path": "tests/integration/test_research_l0.py",
+    "sha256": "6609098b49edf43e5511524ff5ea13a84d0898a1ab512bdd85e7bdcd5036f209",
+    "review": "integral-semantic-read",
+    "notes": "ResearchL0 fixture define grants/publications synthetic: idempotência, namespaces e concorrência 8 imports/1admitted; conflito rollback; ordenação revisões e ambiguidade preservadas; malformations/path/symlink, quotas, corruption/rebuild/backup, SQL pagination. QuoteProvider só extração literal e síntese livre rejeitada; Fake simulation explícita. Symlink test skip se privilégio indisponível.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_reimport_increment_and_namespaces",
+      "test_concurrent_ingestion_and_receipts",
+      "test_conflict_rolls_back_every_new_record_and_preserves_failure",
+      "test_revisions_out_of_order_and_omission",
+      "test_ambiguous_identity_is_not_promoted_to_independent_trials",
+      "test_invalid_packages_never_promoted",
+      "test_optional_extension_opaque_and_reference_only",
+      "test_scope_and_revocation_apply_to_preserved_evidence",
+      "test_path_rejection_before_read",
+      "test_symlink_import_escape",
+      "test_rebuild_backup_restore_and_corruption",
+      "test_pagination_and_sql_are_bounded",
+      "test_provider_invalid_outputs_are_explicit",
+      "test_provider_errors_never_fallback",
+      "test_exact_support_and_malicious_text_stays_data",
+      "test_fabricated_quote_and_remote_provider_rejected",
+      "test_literal_quotes_do_not_license_unsupported_paraphrases",
+      "test_shared_evidence_retains_selected_identity_and_literal_erratum",
+      "test_empty_extraction_is_abstention_not_success",
+      "test_complete_source_context_preserves_erratum_without_model_paraphrase",
+      "test_context_never_silently_decodes_or_truncates",
+      "test_http_and_cli_share_service_without_provider",
+      "test_research_disabled_preserves_legacy",
+      "test_read_permission_survives_generation_denial",
+      "test_archive_corruption_never_served",
+      "test_hash_identity_excludes_receipt_time"
+    ]
+  },
+  {
+    "path": "tests/integration/test_research_roots.py",
+    "sha256": "a89b94c1e2dba1753af9d6ea82881668962af2e3f68d34e01e8780af7a0a6666",
+    "review": "integral-semantic-read",
+    "notes": "Research roots policyV2 scope-bound dois roots mesmos filenames, consulta offline após remoção produtor; root inválido/nonobject rejeita antes DB; imports duplicados ambiguous.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_scope_bound_roots_and_offline_query",
+      "test_bad_root_rejected_before_storage",
+      "test_nonobject_policy_is_reported_as_invalid"
+    ]
+  },
+  {
+    "path": "tests/integration/test_runtime.py",
+    "sha256": "c75e195906458b201301c4030ead0ac7891a4f126504dc5f4fa49673d72873f2",
+    "review": "integral-semantic-read",
+    "notes": "Runtime RecordingLLM: oito etapas/log duplo, persistência/isolamento; falhas LLM uma chamada sem retry e index mantém fonte; corpus local sem inferência; intenção inválida auditada; preferência atual antes modelo e assistant text não aprendido; confirmação sem LLM.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_eight_steps_persistence_across_sessions_and_users",
+      "test_llm_failure_is_audited_once_and_not_retried",
+      "test_index_failure_retains_authoritative_data_for_rebuild",
+      "test_search_uses_local_corpus_without_calling_llm",
+      "test_unknown_intent_is_audited",
+      "test_current_user_preference_reaches_first_inference_without_learning_assistant_text",
+      "test_preference_only_correction_and_removal_confirm_current_state_without_model",
+      "test_quoted_preferences_do_not_learn_or_trigger_confirmation",
+      "test_informational_question_routes_then_retrieves_without_imperative"
+    ]
+  },
+  {
+    "path": "tests/integration/test_scoped_preferences.py",
+    "sha256": "ad8f5d8833e9a89cc4a85584324f162e923d5d4db7e7378644537e5b3d526fe6",
+    "review": "integral-semantic-read",
+    "notes": "Scoped preferences clock2030 controlado: turn>session>project>user, remoção fallback; endereços exatos, expiração UTC após reopen e sem mutar revision; scope/expiry inválidos sem writes; tombstones/provenance/rebuild; legacy tabela migração sem reescrever JSON; transação rollback e stale rejection.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_scope_precedence_does_not_overwrite_global_and_removal_falls_back",
+      "test_exact_user_project_session_and_turn_addresses",
+      "test_expiration_is_utc_deterministic_and_reveals_lower_layer_after_restart",
+      "test_invalid_expiration_writes_nothing",
+      "test_invalid_scope_never_silently_becomes_global",
+      "test_explicit_scope_text_applies_before_context_and_only_current_turn",
+      "test_scoped_correction_removal_and_source_are_canonical_after_rebuild",
+      "test_project_and_legacy_history_boundaries_survive_rebuild",
+      "test_old_database_without_scoped_table_keeps_original_json_and_globals",
+      "test_scoped_transaction_rolls_back_profile_overlay_signal_and_snapshot",
+      "test_invalid_observation_scope_rejects_entire_batch_before_writes",
+      "test_inspection_is_detached_and_scoped_output_is_never_learned",
+      "test_observed_scoped_imperative_transcript_cannot_resurrect_as_history"
+    ]
+  },
+  {
+    "path": "tests/integration/test_selection_procedure.py",
+    "sha256": "7c3efeab57ac87a9d3849bbd97f74de42410b7d1c91bf289fa11e0ff52ca99a5",
+    "review": "integral-semantic-read",
+    "notes": "Selection procedure subprocesso start/resume/checkpoint sem repetir efeitos/modelo; missing pointer impede verification; offline audit boundary bloqueia socket e escrita externa em filho. Não prova sandbox universal do sistema.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_procedure_resumes_and_does_not_repeat_effects",
+      "test_procedure_refuses_missing_pointer",
+      "test_offline_boundary_blocks_network_and_external_write"
+    ]
+  },
+  {
+    "path": "tests/integration/test_system_expansion.py",
+    "sha256": "590d7cf5d11e8e8a41066b9999e1a0e961c25e24a9f96d4e1390441401ec3084",
+    "review": "integral-semantic-read",
+    "notes": "System expansion: SummaryAgent texto curto preserva literalmente negação/prazo sem modelo; historian grandes JSON relevantes identidade Unicode; policy recheck e oversized indivisible abstain, quote fora recorte rejeitado.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_short_summary_preserves_negation_conditions_and_dates",
+      "test_general_historian_selects_relevant_fields_from_large_source",
+      "test_general_historian_rechecks_policy_after_resolving_quotes",
+      "test_oversized_indivisible_evidence_abstains_without_inference",
+      "test_unselected_quote_from_same_large_source_is_rejected"
+    ]
+  },
+  {
+    "path": "tests/integration/test_v03_context_budget.py",
+    "sha256": "445849fc8c57fdec9b4ff89d8c5625191ec9573962d5571329e3bce75d876484",
+    "review": "integral-semantic-read",
+    "notes": "Context budget UTF8+JSON: defaults2000 bytes, prefs intactas, history truncation indicada, auditoria separada/retida; perfil essencial maior rejeita sem truncar; char bound legacy e scopes isolados.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_three_preferences_and_common_history_fit_default_bytes_without_losing_audit",
+      "test_prompt_projection_preserves_personality_and_active_model_fields",
+      "test_unicode_and_json_escaping_are_counted_in_the_actual_serialized_budget",
+      "test_legacy_character_limit_also_applies_when_byte_budget_is_larger",
+      "test_essential_profile_is_rejected_instead_of_silently_truncated",
+      "test_compact_context_keeps_effective_scope_and_history_isolation",
+      "test_essential_header_must_fit_both_limits"
+    ]
+  },
+  {
+    "path": "tests/integration/test_v03_review_fixes.py",
+    "sha256": "382ccaf83e9b2f5b629d406692868e48f38097f3e2e1e80d1036137bc842e160",
+    "review": "integral-semantic-read",
+    "notes": "Review fixes threading events: delayed missing read não sobrescreve perfil recém criado; trigger snapshot rollback criação; turn_id igual decision e prefs temporárias/feedback/history; profile leitura não cria/reassign sessão alheia.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_stale_first_read_cannot_replace_a_concurrently_created_profile",
+      "test_atomic_creation_rolls_back_identity_when_baseline_snapshot_fails",
+      "test_turn_id_addresses_preferences_feedback_and_reopened_history",
+      "test_profile_read_rejects_unknown_session_without_creating_a_conversation",
+      "test_profile_read_cannot_create_or_reassign_another_project_or_users_session"
+    ]
+  },
+  {
+    "path": "tests/integration/test_v03_workspace_api.py",
+    "sha256": "63d26f86befc23d789dec0d86e1514e3bb4775d2f1bc7831b55885a7d31ac43c",
+    "review": "integral-semantic-read",
+    "notes": "Workspace API CaptureModel: upload path não confiável descartado, hash/dedupe/reopen, tamanho UTF8/extensions; search projeto exclusivo sem modelo; feedback owned/reason não treina prefs; perfil deterministic; origens maliciosas/Host rejeitados antes persistência, CSP/nosniff.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_project_documents_persist_deduplicate_and_do_not_use_supplied_path",
+      "test_rejected_document_does_not_enter_catalog_or_create_file",
+      "test_search_uses_only_the_selected_projects_uploaded_evidence",
+      "test_feedback_requires_owned_response_and_does_not_update_preferences",
+      "test_profile_answer_uses_effective_state_without_calling_the_model",
+      "test_cross_origin_mutations_are_rejected_before_persistence",
+      "test_same_origin_browser_and_originless_local_client_are_allowed",
+      "test_untrusted_host_header_is_rejected"
+    ]
+  },
+  {
+    "path": "tests/integration/test_verified_field_review.py",
+    "sha256": "b21f8b5c3c3ee77e51e56d8c1ce01adac6c814f022f43b06c148822f4d771fda",
+    "review": "integral-semantic-read",
+    "notes": "Verified fields lookup sem LLM estado/trial/ausentes; interpretações continuam unverified geração; identidade exata sample não migra vizinho; versões conflitantes preservadas; API job literal completo zero chamadas; revogação impede resolução e condições/unidades íntegras.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_explicit_fields_cover_trial_and_report_missing_fields",
+      "test_interpretive_question_keeps_unverified_generation",
+      "test_sample_is_not_taken_from_another_identity",
+      "test_interpretation_negation_and_other_identities_do_not_enter_lookup",
+      "test_conflicting_selected_versions_are_not_silently_resolved",
+      "test_api_delivers_verified_fields_without_model",
+      "test_revocation_during_literal_resolution_blocks_response",
+      "test_literal_result_preserves_conditions_and_units"
+    ]
+  },
+  {
+    "path": "tests/test_bundle_remediation.py",
+    "sha256": "5dfce5bf47e8652d12669d96a7571bf13dfd448097d8b72f42827b2e460ad829",
+    "review": "integral-semantic-read",
+    "notes": "Bundle remediation fixture: unauthorized guess indistinguishable sem SQL entities/reservations; approval reservation antes membership; verify revogado antes CAS; external relation não concede papel; descriptor revision resolve; fsync failure no commit; raw variants quota/integrity/backup; evidência metadata sem CAS; conflitos administrativos concorrentes atomic.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_unapproved_guess_indistinguishable",
+      "test_admin_reservation_precedes_membership",
+      "test_verify_denies_entire_scope_before_object_io",
+      "test_external_is_not_role_permission",
+      "test_descriptor_revision_disambiguates_and_unresolved_hidden",
+      "test_directory_sync_failure_prevents_metadata_commit",
+      "test_raw_variants_backup_integrity",
+      "test_raw_variant_quota_does_not_change_first_raw",
+      "test_evidence_only_fact_retrievable_and_revoked",
+      "test_concurrent_administrative_conflicts_are_atomic",
+      "test_backup_checks_administrative_ledger"
+    ]
+  },
+  {
+    "path": "tests/test_hypothesis_catalog.py",
+    "sha256": "155f2d9668f4282cea100bbb22fdd2dce6a7a19f05b2978215b288dbfb7958bc",
+    "review": "integral-semantic-read",
+    "notes": "Hypothesis catalog temp produtor: spans JSON/JSONL literais, chunks exaustivos, source clocks não adivinhados; Git revision mock fixture; duplicate import/drift/newrevision, output fora produtor; duplicatas/não finite rejeita antes publicação, grande objeto JSON indivisível.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_literal_trial_spans_and_duplicate_identity",
+      "test_document_chunks_are_exhaustive_and_literal",
+      "test_source_clocks_are_not_guessed",
+      "test_jsonl_observations_are_separate_literal_objects",
+      "test_jsonl_rejects_ambiguous_and_non_object_lines",
+      "test_roundtrip_duplicate_drift_and_new_revision",
+      "test_rejects_malformed_ledger",
+      "test_large_json_document_remains_one_literal_parseable_object",
+      "test_json_document_rejects_ambiguous_or_non_object_input",
+      "test_ambiguous_or_nonfinite_ledger_is_rejected_before_publication"
+    ]
+  },
+  {
+    "path": "tests/test_packaged_evaluation_resources.py",
+    "sha256": "b2ae3f0db1bdf05e932851261b5102ef40c5f828c050ef428ea41841df2a2c86",
+    "review": "integral-semantic-read",
+    "notes": "Packaged resources byte SHA original=package, loaders default data_root e source identity não vazia/commitNone.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_fixture_bytes_equal_repository_originals",
+      "test_default_loaders_use_packaged_resources_and_nonempty_identity"
+    ]
+  },
+  {
+    "path": "tests/test_project_coverage.py",
+    "sha256": "d5a330ec4668a06f77169009947a872f12a4a3be15c7961717e4782c9581c244",
+    "review": "integral-semantic-read",
+    "notes": "Project coverage snapshot/bundle contagens separadas e repository not_established/workflow snapshots_only; revogação scope/role; corruption não empty; CLI/API; input drift hash e clocks/receipt time não currenttruth.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_bundle_only_is_not_empty_or_a_whole_repository",
+      "test_mixed_bridges_and_duplicate_import_counts",
+      "test_generation_revocation_and_resource_visibility",
+      "test_corrupt_bundle_is_not_reported_as_empty",
+      "test_api_and_cli_include_bundle_coverage",
+      "test_source_drift_keeps_missing_unknown_and_history_separate",
+      "test_publication_diagnostic_does_not_promote_receipt_time_or_other_scope"
+    ]
+  },
+  {
+    "path": "tests/test_research_bundle.py",
+    "sha256": "668133f58523387c84516ff8101230cb594d7ae1372fefb1e612bfc53bef6836",
+    "review": "integral-semantic-read",
+    "notes": "Research bundle fixture pré-aprova synthetic entity/artifact15bytes: CAS dedupe/offline materialize, scopes/revocation/caps/reference no fetch; hash/truncation/missing corruption; projection rebuild; injectedDB fail orphan/reencontro; concurrent1admitted1duplicate; junction; backup modes/tamper; metadata-only historian etémero DERIVED; childos._exit promoção/projeção e ENOSPC. Legacy gitshow baseline skip se shallow.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_roundtrip_duplicate_and_offline",
+      "test_scopes_and_revocation",
+      "test_dedupe_independent_memberships",
+      "test_cas_corruption",
+      "test_rebuild_projection",
+      "test_conflict_atomicity_and_orphan",
+      "test_concurrent",
+      "test_legacy_denied_before_artifact_open",
+      "test_reference_no_io",
+      "test_policy_caps_before_copy",
+      "test_junction_rejected",
+      "test_backup_restore",
+      "test_bad_backup_never_complete",
+      "test_historian_metadata_no_object_io",
+      "test_missing_received_rejected_without_projection",
+      "test_staging_leftovers_reported_not_deleted",
+      "test_cli_api_same_scope_service",
+      "test_new_tables_legacy_snapshot_read",
+      "test_detail_filters_keep_metadata_selection_scoped",
+      "test_historian_bundle_generation_is_extractive_and_ephemeral",
+      "test_historian_bundle_revocation_during_inference_discards_all_output",
+      "test_historian_denies_ungranted_generation_and_remote_provider",
+      "test_process_death_leaves_no_false_received_record_and_retry_recovers",
+      "test_disk_full_copy_failure_cleans_stage_without_metadata"
+    ]
+  },
+  {
+    "path": "tests/test_structural_diagnostics.py",
+    "sha256": "49003ffeba38d03159150aeff6cf28d185c954ff225c949627c8aa85cbbb2aa3",
+    "review": "integral-semantic-read",
+    "notes": "Structural diagnostics: restart idempotência, generate/role revocation, scope denial, payload tamper campos actor/scope/assertion/id reject; mock total51 demonstra paginação mesma transação, não 51 bundles reais.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_restart_idempotence_and_revocation",
+      "test_role_revocation_hides_old_diagnostic",
+      "test_other_scope_cannot_read_diagnostics",
+      "test_tampered_payload_rejected",
+      "test_paginated_inputs_share_transaction"
+    ]
+  },
+  {
+    "path": "tests/unit/test_agent_evidence_routing.py",
+    "sha256": "f83573f8788a62101427659d3c91911839b8bd80a08708ace9c423bedf8b7620",
+    "review": "integral-semantic-read",
+    "notes": "Agent evidence routing dublês: operação solicitada versus material citado, intenção explícita evita classifier; ambiguous clarification; classifier JSON invalid falha1call; context autorizado intacto; SearchAgent evidence real corpus+citações pós geração, marker inventado bloqueado; nohit0call; isolamento/current/prefs; budget2400char e fonte precede memória, não semantic truth.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_requested_operation_wins_over_words_in_material",
+      "test_ambiguous_or_quoted_material_requires_clarification",
+      "test_explicit_intent_does_not_call_optional_classifier",
+      "test_explicit_subject_questions_route_by_rule_without_classifier",
+      "test_vague_or_conflicting_questions_require_clarification_without_classifier",
+      "test_quoted_informational_question_remains_document_content",
+      "test_pure_preference_uses_confirmation_without_calling_classifier",
+      "test_llm_router_invalid_output_fails_without_retry",
+      "test_llm_router_preserves_user_supplied_body_as_classification_data",
+      "test_classifier_keeps_objects_negation_scope_and_tail",
+      "test_elliptical_question_can_be_classified_with_authorized_context",
+      "test_session_context_does_not_override_explicit_document_route",
+      "test_search_synthesis_receives_actual_evidence_and_appends_traceable_sources",
+      "test_search_no_hits_never_invents_evidence_or_calls_llm",
+      "test_search_excludes_current_input_and_other_users_but_keeps_previous_same_run",
+      "test_search_filters_preference_memories",
+      "test_search_rejects_model_citation_markers_without_remapping_or_retry",
+      "test_evidence_shared_budget_prioritizes_sources_and_identifies_clipping",
+      "test_preference_confirmation_uses_observed_profile_without_model_generation",
+      "test_document_facts_are_not_mixed_with_conflicting_conversation"
+    ]
+  },
+  {
+    "path": "tests/unit/test_arithmetic_sequences.py",
+    "sha256": "fec9853402cb478d615299dcf5b1eefe37b7c88fb85614ad4cce068e820c8087",
+    "review": "integral-semantic-read",
+    "notes": "Arithmetic sequences frações/negativos/decimais cinco casos determinísticos; ação misturada/código/ambiguidade recusada; divisão zero/número enorme limites explícitos.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_exact_sequential_calculation",
+      "test_not_a_complete_numeric_sequence",
+      "test_sequence_limits_do_not_fabricate_numeric_results"
+    ]
+  },
+  {
+    "path": "tests/unit/test_embeddings.py",
+    "sha256": "250fc66d0538f05894f5db6d3fded213e89b597efc42d0c934848cb1f295055f",
+    "review": "integral-semantic-read",
+    "notes": "Embeddings FakeOpener: batches2+1 truncatefalse normalize, NaN/zero/types/dims recusados1call; inputguard0call; cache hash/reopen/digest/text invalidation e corrupção/dimchange fail, sem avaliar embedding real.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_ollama_embed_uses_bounded_batches_no_truncation_and_normalizes",
+      "test_invalid_embedding_vectors_fail_explicitly_without_retry",
+      "test_embedding_input_limit_and_external_failure_are_visible",
+      "test_cache_reuses_vectors_and_invalidates_changed_text_and_model",
+      "test_cache_does_not_mask_corruption_or_dimension_changes",
+      "test_cached_and_fresh_vectors_must_share_dimension"
+    ]
+  },
+  {
+    "path": "tests/unit/test_explicit_preferences.py",
+    "sha256": "a34730e73623f0b34ffb28a22cf7766cbfd87fdda764db64195398f2429fa46c",
+    "review": "integral-semantic-read",
+    "notes": "Explicit preference pureadapter: NFC/valores canônicos, quotes/docs/thirdparty/ambiguidade não aprende; correção última vence personalidade fixa; negation remove matching sem inferir opposite, tombstones; assistant/transcript notlearning; pastedbody não prefs.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_explicit_preferences_unicode_and_canonical_values",
+      "test_quotes_documents_third_parties_and_ambiguous_text_are_not_learned",
+      "test_conflict_latest_explicit_wins_and_personality_stays_fixed",
+      "test_negation_removes_only_matching_value_and_never_infers_opposite",
+      "test_forget_text_creates_explicit_removal_tombstone",
+      "test_transcript_and_model_output_are_never_learning_sources",
+      "test_preference_before_pasted_data_survives_but_body_is_not_learned"
+    ]
+  },
+  {
+    "path": "tests/unit/test_functional_generation_controls.py",
+    "sha256": "74fdfc663ba6342784dcf184b43288ceeef3e49d08cbeef1f25bba34f2a9d460",
+    "review": "integral-semantic-read",
+    "notes": "Functional generation controls dataclass serialization conserva think/ctx/predict/bytes/timeout na instancia Ollama, nenhuma inferência.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_worker_round_trip_preserves_explicit_generation_controls"
+    ]
+  },
+  {
+    "path": "tests/unit/test_hybrid_search.py",
+    "sha256": "edff777b9888d70960b4cb3385821e8cfa64eb315ef09450516ee9f3cc779a5d",
+    "review": "integral-semantic-read",
+    "notes": "Hybrid search vetores injetados fabricam similaridade: lexical nohit+semanticmatch; identificador exato vence score maior vizinho; tie sorting estável; arquivo edit/hash/cache refreshed; scopes/offsets/hashes/clipping; falha embedding não fallback. Não valida semântica dos embeddings reais.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_paraphrase_without_lexical_overlap_is_retrieved_by_semantics",
+      "test_exact_error_identifier_wins_over_semantic_neighbor_and_ties_are_stable",
+      "test_file_edit_refreshes_hash_and_embeddings_while_reusing_unchanged_query",
+      "test_only_configured_files_are_read_and_limits_fail_before_embedding",
+      "test_embedding_failure_never_falls_back_to_lexical",
+      "test_search_history_is_scoped_by_user_and_project",
+      "test_evidence_metadata_contains_exact_clipped_text_hashes_and_offsets",
+      "test_search_result_legacy_constructor_remains_supported"
+    ]
+  },
+  {
+    "path": "tests/unit/test_literal_command_route.py",
+    "sha256": "91c372c698bc9eb140b23a1340d8e5c0db020067c67f1dcdc3eedceb4415a9b7",
+    "review": "integral-semantic-read",
+    "notes": "Literal command route conversa por instrução explícita inteira; vazio clarification, comando citado não override busca. Testa rota, não fidelidade de geração.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_explicit_literal_command_routes_without_losing_content",
+      "test_missing_literal_still_needs_clarification",
+      "test_quoted_command_does_not_override_search"
+    ]
+  },
+  {
+    "path": "tests/unit/test_literal_json_schema.py",
+    "sha256": "9572910f6ffbfabf9789157087c8fcff3041c1f6054ece93a5f5b1a42eb0e073",
+    "review": "integral-semantic-read",
+    "notes": "Literal JSON schema chaves limitadas/escaped/unicode, ambiguidades/depth recusados; tipo explícito sem constvalue; Model estruturado uma chamada/originaloutput sem retry, não semântica dos valores.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_explicit_keys_only",
+      "test_ambiguous_or_unbounded_declarations_are_not_inferred",
+      "test_explicit_assignment_types_without_constant_values",
+      "test_conflicting_explicit_types_do_not_produce_schema",
+      "test_non_json_assignment_is_not_guessed",
+      "test_deep_json_does_not_crash_or_become_a_key",
+      "test_decoder_recursion_limit_is_handled",
+      "test_conversation_uses_one_structured_call_and_returns_original_output",
+      "test_structured_failure_is_not_hidden_by_retry"
+    ]
+  },
+  {
+    "path": "tests/unit/test_llm.py",
+    "sha256": "53db667012a779d82f9602be826d57a56f9e59ee089f3aaa3cc4807886a5fc9b",
+    "review": "integral-semantic-read",
+    "notes": "LLM fixtureHTTP loopback socket real backend simulado: Fake marcado/determinístico; /api/generate body/options; oversized antes request; erro503/missing/partial1call sem fake fallback. Não servidor Ollama real.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_fake_is_deterministic_and_clearly_marked",
+      "test_ollama_http_contract",
+      "test_oversized_context_fails_before_transport_and_is_not_silently_truncated",
+      "test_ollama_fails_without_retry_or_fake_fallback"
+    ]
+  },
+  {
+    "path": "tests/unit/test_preference_scopes.py",
+    "sha256": "1d967410fabb295178036fcf74e1fa7628e993054a49bfe20e679baf53488886",
+    "review": "integral-semantic-read",
+    "notes": "Preference scopes marcações explícitas/localized e negação extraída; untrusted quotes/docs excluídos; pureadapter scoped exigeIdentityService e striprouting mantém tarefa.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_explicit_markers_address_the_preference",
+      "test_scope_markers_inside_untrusted_text_do_not_become_preferences",
+      "test_pure_adapter_refuses_scoped_global_mutation_and_routing_helper_keeps_task",
+      "test_scoped_negation_remains_removal_not_opposite_inference"
+    ]
+  },
+  {
+    "path": "tests/unit/test_provider_composition.py",
+    "sha256": "24e745042c3607763df2f042c430119ab5a72ee474462bc9fa892a13b2a9eb87",
+    "review": "integral-semantic-read",
+    "notes": "Provider composition AST proíbe import cli factory em dois arquivos, fake config instanciado sem modelo. Restrição sintática específica não prova arquitetura completa.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_api_and_research_do_not_import_cli_factories",
+      "test_offline_provider_configuration_does_not_require_a_model"
+    ]
+  },
+  {
+    "path": "tests/unit/test_recording_provider.py",
+    "sha256": "d16ab6bea831f5a991a5195f80eb0c5e196fd049c4c6dbf626b19e5778f4d117",
+    "review": "integral-semantic-read",
+    "notes": "Recording provider tool import, isinstance Ollama e model_identity HTTP resposta mock conserva digest/ctx/think. Digest real-digest é fixture literal, não verificação modelo instalado.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_recording_provider_retains_real_model_identity_checks"
+    ]
+  },
+  {
+    "path": "tests/unit/test_routing_identity.py",
+    "sha256": "330f8a6a158b0b8e6f4880ab813c971cc55fb311ec8aa2d0d176e7a687366cce",
+    "review": "integral-semantic-read",
+    "notes": "Routing identity prioridade keyword versus explicit auditada; feedback não atribuído preserva fonte sem treino; contexto só usuário proprietário.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_rule_priority_and_explicit_intent_are_auditable",
+      "test_unattributed_transcript_does_not_train_profile_and_signal_is_retained",
+      "test_identity_context_does_not_retrieve_another_user"
+    ]
+  },
+  {
+    "path": "tests/unit/test_search_providers.py",
+    "sha256": "f591bdd43e8a34268c9067988cf688852e82e053e1a2ac4d77af419a26c80951",
+    "review": "integral-semantic-read",
+    "notes": "Search providers tempdocs/serverloopback: leitura bounded/HTML strip; private IP/credentials blocked; redirects revalidated DNS pinned via socket mocks; errors/size/nontext sem retry; AutoRetriever web failure nunca vira localhit. Não internet real.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_local_files_are_real_bounded_sources_and_not_demo_data",
+      "test_corpus_compatibility_and_passage_size",
+      "test_private_or_credential_urls_are_rejected",
+      "test_http_fixture_with_explicit_private_test_opt_in",
+      "test_http_errors_size_and_nontext_are_explicit_without_retry",
+      "test_web_destination_is_pinned_and_redirect_is_revalidated",
+      "test_auto_retriever_never_turns_a_web_failure_into_local_result"
+    ]
+  },
+  {
+    "path": "tests/unit/test_streaming.py",
+    "sha256": "ffaeadd29894a2b6f6e406589157e3f1d3d30407a42ac4f63b4d99bb605be78a",
+    "review": "integral-semantic-read",
+    "notes": "Streaming BytesIO mockNDJSON incremental provisional→done/metadata, falta terminal/truncation/error nunca done; localbudget/NDJSON validation; close libera stream; PIL importorskip imagens e base64/pixel limits, forwarding. Não multimodal quality.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_real_incremental_transport_and_terminal_metadata",
+      "test_failed_stream_never_emits_success",
+      "test_redirect_remote_and_input_budget",
+      "test_image_validation_and_forwarding",
+      "test_stream_close_releases_response"
+    ]
+  },
+  {
+    "path": "tests/unit/test_v03_chat_scope.py",
+    "sha256": "59308c97419ab2c1f66e97a67a56c2a4c5ad3ac1f7703651cc4d4dbfba5c03f7",
+    "review": "integral-semantic-read",
+    "notes": "CLI chat stdin simulado session preference mantém global e reabre session exata, literal resumo sem LLM.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_chat_session_flag_persists_only_in_selected_session"
+    ]
+  },
+  {
+    "path": "tests/unit/test_v03_evidence_byte_budget.py",
+    "sha256": "65dc7f0e5125209f3d3d20ef5fde6348405c58dc46dd9e9bde50dc0aeb3c0337",
+    "review": "integral-semantic-read",
+    "notes": "Evidence byte budget serializedUTF8 inclui idioma/instruções e reserve ctx; Unicode/escaping labels clipping auditado hashes/offsets; lowerrankomit counts, fixedinput oversize0retrieval0generation; fallback legacy chars declarado sem byteattr.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_active_language_instruction_is_included_in_evidence_budget",
+      "test_unicode_evidence_fits_bytes_and_context_reserve_without_changing_user_input",
+      "test_json_escaping_and_long_labels_preserve_reproducible_excerpts",
+      "test_tight_budget_omits_lower_ranked_sources_and_records_exact_counts",
+      "test_oversized_fixed_input_fails_before_retrieval_or_generation",
+      "test_budget_too_small_for_one_textual_source_fails_without_generation",
+      "test_short_normal_evidence_is_preserved_and_not_marked_truncated",
+      "test_provider_without_budget_attributes_preserves_legacy_character_allowance"
+    ]
+  },
+  {
+    "path": "tests/unit/test_v03_llm_contract.py",
+    "sha256": "9868890c31089b1eb9911f51e8412cca9051c05402f9c9e2e2ccf04938c83b7e",
+    "review": "integral-semantic-read",
+    "notes": "LLM contract mockurlopen: schema/options/think/timeout forward, plain sem format; malJSON/invalidschema/truncationmetadata/resetfailure/inputUTF8/reserve guard explícitos uma chamada, sem servidor real.",
+    "execution": "not-executed-in-this-study",
+    "tests": [
+      "test_json_schema_think_and_generation_options_reach_transport",
+      "test_plain_generation_does_not_send_json_format",
+      "test_invalid_schema_is_rejected_before_any_transport",
+      "test_malformed_generated_json_fails_once_and_retains_reported_metadata",
+      "test_truncation_preserves_partial_response_and_backend_evidence",
+      "test_failed_transport_does_not_reuse_metadata_from_previous_generation",
+      "test_utf8_byte_guard_and_generation_reserve_fail_without_silent_cutting"
+    ]
+  },
+  {
+    "path": ".ci/cain-supply/test_posix_gate.py",
+    "sha256": "b54e04c02894aebb2c54574ece24549ed1e24712069b6935417feed98a3d5dcd",
+    "review": "integral-semantic-read",
+    "notes": "POSIX ordinaryLinux explicitassert/euid; unsafe nodes FIFO/symlink, dirswap TOCTOU, permission revoked before CAS, unreadableblob, injection7durabilitypoints, actual syscall ordering fsync/link/COMMIT with trace, source mutation/delete duringtransfer and hardlinkcopyindependence. Requires CAIN_CANDIDATE_ROOT; not executed Windows.",
+    "execution": "not-executed-in-this-study"
+  },
+  {
+    "path": ".ci/completion/test_posix_gate.py",
+    "sha256": "b54e04c02894aebb2c54574ece24549ed1e24712069b6935417feed98a3d5dcd",
+    "review": "integral-semantic-read",
+    "notes": "POSIX ordinaryLinux explicitassert/euid; unsafe nodes FIFO/symlink, dirswap TOCTOU, permission revoked before CAS, unreadableblob, injection7durabilitypoints, actual syscall ordering fsync/link/COMMIT with trace, source mutation/delete duringtransfer and hardlinkcopyindependence. Requires CAIN_CANDIDATE_ROOT; not executed Windows.",
+    "execution": "not-executed-in-this-study"
+  }
+]

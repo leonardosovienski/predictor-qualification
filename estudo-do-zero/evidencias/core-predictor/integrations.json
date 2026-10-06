@@ -1,0 +1,47 @@
+[
+  {
+    "origin": "consumidor Python",
+    "destination": "core",
+    "mechanism": "import/chamada síncrona",
+    "path": "src/predictor_core/__init__.py",
+    "payload": "contratos, dados, métricas",
+    "required": "opcional conforme consumidor",
+    "permissions_auth": "sem autenticação própria; callbacks/providers do consumidor",
+    "errors": "erros tipados de validação",
+    "evidence": "OD/ET-SRC; leaf ET-RUN",
+    "head": "9bf43efe92459a0b484cac00f51170b2c70d420f",
+    "scope": "observado-apenas-localmente",
+    "sha256": "172f0b30af694e5f2e4e9a3ce9154eca753e9917e93c9b9a8efa9c45c30df490",
+    "synchronism": "síncrono local salvo subprocesso/heartbeat"
+  },
+  {
+    "origin": "core download",
+    "destination": "HTTP externo",
+    "mechanism": "urllib/HTTPX/curl-cffi",
+    "path": "src/predictor_core/kernel/net.py",
+    "payload": "bytes para arquivo destino",
+    "required": "rede opcional",
+    "permissions_auth": "headers/URL injetados pelo chamador",
+    "errors": "retry transitório e arquivo temporário",
+    "evidence": "OD/ET-SRC; rede NV",
+    "head": "9bf43efe92459a0b484cac00f51170b2c70d420f",
+    "scope": "observado-apenas-localmente",
+    "sha256": "cbc64c72d9c8a6bbdb8c767500903dc64d06bff74512c7f2c5a25c2a73efe079",
+    "synchronism": "síncrono local salvo subprocesso/heartbeat"
+  },
+  {
+    "origin": "core registro",
+    "destination": "filesystem/SQLite",
+    "mechanism": "leitura e gravação local",
+    "path": "src/predictor_core/kernel/jsonl_store.py",
+    "payload": "JSONL, JSON trials, SQLite",
+    "required": "por API",
+    "permissions_auth": "permissões do processo; sem grants de capital",
+    "errors": "fsync/replace; lock V1; V2 sem lock",
+    "evidence": "OD/ET-SRC; banco real NV",
+    "head": "9bf43efe92459a0b484cac00f51170b2c70d420f",
+    "scope": "observado-apenas-localmente",
+    "sha256": "d3b0281c20eb40d32e6444c9810509bc2d59d307b4dad6d47c85a67242cc01dd",
+    "synchronism": "síncrono local salvo subprocesso/heartbeat"
+  }
+]

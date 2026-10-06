@@ -1,0 +1,438 @@
+### tests/test_serving_evaluator.py
+10: from __future__ import annotations
+12: from datetime import UTC, datetime, timedelta
+14: import pytest
+16: from brasileirao_predictor import model, xg_model
+17: from brasileirao_predictor.serving_evaluator import H9FrozenPolicyEvaluator, ServingStackEvaluator
+19: TIMES = ["flamengo", "palmeiras", "gremio", "santos"]
+21: CFG = {
+22:     "tournament_name": "Brasileirão Série A",
+23:     "elo": {
+24:         "initial_rating": 1500,
+25:         "home_advantage": 100,
+26:         "window_years": 6,
+27:         "form_half_life_years": 4.0,
+28:         "k_factors": {"Brasileirão Série A": 30, "default": 30},
+29:     },
+30:     "model": {"calibration_window_years": 4, "goal_half_life_days": 360, "max_goals": 6},
+31:     "ensemble_xg": {"enabled": True, "blend_weight": 0.5, "w_xg": 0.85, "half_life_years": 0.75, "ridge_reg": 1.0},
+32: }
+35: def _obs(n_rodadas: int = 60, *, simultaneo: bool = False, com_xg: bool = True) -> list[dict]:
+36:     t0 = datetime(2021, 4, 3, 16, 0, tzinfo=UTC)
+37:     out = []
+38:     for r in range(n_rodadas):
+39:         dia = t0 + timedelta(days=7 * r)
+40:         pares = [(TIMES[0], TIMES[1]), (TIMES[2], TIMES[3])]
+41:         if r % 2:
+42:             pares = [(a, h) for h, a in pares]
+43:         for j, (casa, fora) in enumerate(pares):
+44:             kickoff = dia if simultaneo else dia + timedelta(hours=2 * j)
+45:             hg, ag = (r + j) % 3, r % 3
+46:             out.append(
+47:                 {
+48:                     "home": casa,
+49:                     "away": fora,
+50:                     "kickoff": kickoff,
+51:                     "date": kickoff.strftime("%Y-%m-%d"),
+52:                     "tournament": "Brasileirão Série A",
+53:                     "neutral": 0,
+54:                     "result": {
+55:                         "home_goals": hg,
+56:                         "away_goals": ag,
+57:                         "home_xg": (hg + 0.4) if com_xg else None,
+58:                         "away_xg": (ag + 0.2) if com_xg else None,
+59:                     },
+60:                 }
+61:             )
+62:     return out
+65: def _cfg_sem_ensemble() -> dict:
+66:     c = {k: (dict(v) if isinstance(v, dict) else v) for k, v in CFG.items()}
+67:     c["ensemble_xg"] = dict(CFG["ensemble_xg"], enabled=False)
+68:     return c
+74: def test_predicted_at_e_estritamente_anterior_ao_matures_at() -> None:
+75:     ev = ServingStackEvaluator(CFG)
+76:     results = ev.run(_obs(simultaneo=True), min_history=30, retrain_every=10)
+77:     assert results
+78:     for r in results:
+79:         assert r["prediction"].predicted_at < r["prediction"].matures_at
+82: def test_bloco_simultaneo_e_descartado_do_ajuste() -> None:
+83:     ev = ServingStackEvaluator(CFG)
+84:     ev.run(_obs(simultaneo=True), min_history=30, retrain_every=1)
+85:     assert ev.blocked_observations > 0
+88: def test_kickoffs_distintos_nao_cobram_pedagio() -> None:
+89:     ev = ServingStackEvaluator(CFG)
+90:     ev.run(_obs(simultaneo=False), min_history=30, retrain_every=1)
+91:     assert ev.blocked_observations == 0
+94: def test_xg_do_jogo_previsto_nao_chega_ao_predict_step() -> None:
+98:     ev = ServingStackEvaluator(CFG)
+99:     vistos: list[set[str]] = []
+100:     inner = ev.predict_step
+102:     def espiao(features):
+103:         vistos.append(set(features))
+104:         return inner(features)
+106:     ev.predict_step = espiao  # type: ignore[method-assign]
+107:     ev.run(_obs(), min_history=30, retrain_every=10)
+108:     assert vistos
+109:     for chaves in vistos:
+110:         assert "result" not in chaves
+111:         assert not {"home_xg", "away_xg"} & chaves
+114: def test_ajuste_ignora_jogos_futuros_mesmo_recebendo_historico_maior() -> None:
+117:     obs = _obs()
+118:     ev_cedo = ServingStackEvaluator(CFG)
+119:     ev_cedo._fit(obs, obs[40]["kickoff"])
+120:     ev_tarde = ServingStackEvaluator(CFG)
+121:     ev_tarde._fit(obs, obs[100]["kickoff"])
+122:     assert ev_cedo.elo != ev_tarde.elo
+123:     assert ev_cedo._trained_at is not None and ev_cedo._trained_at < obs[40]["kickoff"]
+126: def test_serving_passa_peso_exponencial_por_recencia(monkeypatch) -> None:
+127:     obs = _obs(n_rodadas=20)
+128:     captured = {}
+129:     original = model.fit_goal_model
+131:     def spy(history, delta_xg=None, sample_weights=None):
+132:         captured["weights"] = sample_weights
+133:         return original(history, delta_xg=delta_xg, sample_weights=sample_weights)
+135:     monkeypatch.setattr(model, "fit_goal_model", spy)
+136:     ev = ServingStackEvaluator(_cfg_sem_ensemble())
+137:     ev._fit(obs, obs[-1]["kickoff"] + timedelta(days=1))
+138:     weights = captured["weights"]
+139:     assert weights is not None
+140:     assert weights[-1] == pytest.approx(1.0)
+141:     assert weights[0] < weights[-1]
+142:     assert weights[0] == pytest.approx(0.5 ** ((19 * 7) / 360))
+145: def test_serving_usa_pesos_uniformes_quando_politica_e_null(monkeypatch) -> None:
+146:     obs = _obs(n_rodadas=20)
+147:     captured = {}
+148:     original = model.fit_goal_model
+150:     def spy(history, delta_xg=None, sample_weights=None):
+151:         captured["weights"] = sample_weights
+152:         return original(history, delta_xg=delta_xg, sample_weights=sample_weights)
+154:     cfg = _cfg_sem_ensemble()
+155:     cfg["model"] = dict(cfg["model"], goal_half_life_days=None)
+156:     monkeypatch.setattr(model, "fit_goal_model", spy)
+157:     ServingStackEvaluator(cfg)._fit(obs, obs[-1]["kickoff"] + timedelta(days=1))
+158:     assert captured["weights"] == [1.0] * len(captured["weights"])
+161: def test_serving_rejeita_half_life_nao_positiva() -> None:
+162:     cfg = _cfg_sem_ensemble()
+163:     cfg["model"] = dict(cfg["model"], goal_half_life_days=0)
+164:     with pytest.raises(ValueError, match="goal_half_life_days"):
+165:         ServingStackEvaluator(cfg)
+168: def test_h9_evaluator_mantem_params_congelados_e_elo_asof() -> None:
+169:     obs = _obs(n_rodadas=20)
+170:     cfg = _cfg_sem_ensemble()
+171:     frozen = (0.1, 0.2, 0.03, -0.04)
+172:     cfg["h9_frozen_policy"] = {"params": frozen, "max_goals": 6}
+173:     evaluator = H9FrozenPolicyEvaluator(cfg)
+174:     evaluator._fit(obs, obs[-1]["kickoff"] + timedelta(days=1))
+175:     assert evaluator.params == frozen
+176:     assert evaluator.elo
+177:     assert evaluator.ensemble_enabled is False
+183: def test_previsao_bate_com_a_pilha_do_serving_recomposta_a_mao() -> None:
+187:     obs = _obs()
+188:     ev = ServingStackEvaluator(CFG)
+189:     ev._fit(obs[:100], obs[100]["kickoff"])
+190:     alvo = obs[100]
+192:     ponto = ev.predict_step({k: v for k, v in alvo.items() if k != "result"})
+194:     base = model.predict_match(
+195:         ev.elo[alvo["home"]],
+196:         ev.elo[alvo["away"]],
+197:         ev.params,
+198:         CFG["elo"]["home_advantage"],
+199:         max_goals=CFG["model"]["max_goals"],
+200:     )
+201:     rx = xg_model.predict(ev.xg_params, alvo["home"], alvo["away"], max_goals=CFG["model"]["max_goals"])
+202:     esperado = xg_model.blend(base, rx, w_base=CFG["ensemble_xg"]["blend_weight"])
+204:     assert ponto.value["home"] == pytest.approx(esperado["p_win"])
+205:     assert ponto.value["draw"] == pytest.approx(esperado["p_draw"])
+206:     assert ponto.value["away"] == pytest.approx(esperado["p_loss"])
+209: def test_ensemble_ligado_marca_o_modelo_no_metadata() -> None:
+210:     ev = ServingStackEvaluator(CFG)
+211:     r = ev.run(_obs(), min_history=30, retrain_every=10)
+212:     assert r[0]["prediction"].metadata["model"] == "Ensemble(NB+DC, AtkDef-xG)"
+213:     assert r[0]["prediction"].metadata["ensemble"] is True
+216: def test_ensemble_desligado_cai_no_baseline_nb_dc() -> None:
+219:     ev = ServingStackEvaluator(_cfg_sem_ensemble())
+220:     r = ev.run(_obs(), min_history=30, retrain_every=10)
+221:     assert ev.xg_params is None
+222:     assert r[0]["prediction"].metadata["model"] == "NegBin+DixonColes"
+225: def test_sem_xg_na_base_o_ajuste_ainda_roda() -> None:
+228:     ev = ServingStackEvaluator(CFG)
+229:     r = ev.run(_obs(com_xg=False), min_history=30, retrain_every=10)
+230:     assert r
+231:     assert ev.xg_fit_failures == 0
+237: def test_time_estreante_nao_derruba_a_avaliacao() -> None:
+241:     obs = _obs()
+242:     estreante = dict(obs[-1])
+243:     estreante["home"] = "novorizontino"
+244:     ev = ServingStackEvaluator(CFG)
+245:     ev._fit(obs[:100], obs[100]["kickoff"])
+246:     ponto = ev.predict_step({k: v for k, v in estreante.items() if k != "result"})
+247:     assert sum(ponto.value.values()) == pytest.approx(1.0)
+250: def test_probabilidades_somam_um() -> None:
+251:     ev = ServingStackEvaluator(CFG)
+252:     for r in ev.run(_obs(), min_history=30, retrain_every=10):
+253:         assert sum(r["prediction"].value.values()) == pytest.approx(1.0)
+256: def test_primeiro_ajuste_sem_historico_utilizavel_falha_alto() -> None:
+257:     t0 = datetime(2021, 4, 3, 16, 0, tzinfo=UTC)
+258:     obs = [
+259:         {
+260:             "home": TIMES[i % 2],
+261:             "away": TIMES[(i % 2) + 2],
+262:             "kickoff": t0,
+263:             "date": "2021-04-03",
+264:             "tournament": "Brasileirão Série A",
+265:             "neutral": 0,
+266:             "result": {"home_goals": 1, "away_goals": 0, "home_xg": 1.2, "away_xg": 0.3},
+267:         }
+268:         for i in range(24)
+269:     ]
+270:     with pytest.raises(ValueError, match="insuficiente"):
+271:         ServingStackEvaluator(CFG).run(obs, min_history=10, retrain_every=1)
+### tests/test_settings.py
+1: from pathlib import Path
+3: import pytest
+4: from pydantic import ValidationError
+6: from brasileirao_predictor.settings import Settings
+9: def _valid(tmp_path: Path) -> dict[str, object]:
+10:     return {
+11:         "REDIS_URL": "redis://redis:6379/0",
+12:         "SPORTS_DB_PATH": tmp_path / "sports.db",
+13:         "MARKET_DB_PATH": tmp_path / "market.db",
+14:         "VORP_ARTIFACT_PATH": tmp_path / "vorp.json",
+15:         "TITULARIDADE_PATH": tmp_path / "titularidade.json",
+16:         "RUNTIME_DIR": tmp_path / "runtime",
+17:     }
+20: def test_settings_require_absolute_isolated_paths(tmp_path: Path) -> None:
+21:     settings = Settings(**_valid(tmp_path))
+22:     assert settings.SPORTS_DB_PATH.is_absolute()
+23:     with pytest.raises(ValidationError, match="must be isolated"):
+24:         Settings(**(_valid(tmp_path) | {"MARKET_DB_PATH": tmp_path / "sports.db"}))
+25:     with pytest.raises(ValidationError, match="absolute"):
+26:         Settings(**(_valid(tmp_path) | {"RUNTIME_DIR": Path("relative/runtime")}))
+29: def test_settings_require_redis_url(tmp_path: Path, monkeypatch) -> None:
+30:     monkeypatch.delenv("REDIS_URL", raising=False)
+31:     values = _valid(tmp_path)
+32:     values.pop("REDIS_URL")
+33:     with pytest.raises(ValidationError):
+34:         Settings(_env_file=None, **values)
+35:     with pytest.raises(ValidationError, match="redis://"):
+36:         Settings(**(_valid(tmp_path) | {"REDIS_URL": "http://redis:6379"}))
+### tests/test_settle.py
+1: import json
+3: from brasileirao_predictor.settle import grade, record_result, summary
+5: _PRED = {
+6:     "home": "France",
+7:     "away": "Paraguay",
+8:     "p_home": 0.745,
+9:     "p_draw": 0.168,
+10:     "p_away": 0.087,
+11:     "lambda_home": 2.52,
+12:     "lambda_away": 0.62,
+13:     "over": {"1.5": 0.78, "2.5": 0.573, "3.5": 0.38},
+14:     "btts_yes": 0.397,
+15:     "btts_no": 0.603,
+16:     "top_scores": [[[2, 0], 0.125]],
+17:     "logged_at": "2026-07-03T00:00:00+00:00",
+18: }
+21: def test_grade_marks_each_market():
+22:     g = grade(_PRED, 1, 0)  # França 1-0
+23:     assert g["winner"]["pick"] == "France" and g["winner"]["correct"] is True
+24:     assert g["over_under_2.5"]["pick"] == "Over"  # 0.573 >= 0.5
+25:     assert g["over_under_2.5"]["actual"] == "Under" and g["over_under_2.5"]["correct"] is False
+26:     assert g["btts"]["pick"] == "Não" and g["btts"]["correct"] is True  # 1-0, visitante não marcou
+27:     assert g["exact_score"]["pick"] == "2x0" and g["exact_score"]["correct"] is False
+30: def test_record_and_summary_roundtrip(tmp_path):
+31:     pred_p = tmp_path / "predictions.jsonl"
+32:     pred_p.write_text(json.dumps(_PRED) + "\n", encoding="utf-8")
+33:     res_p = tmp_path / "results.jsonl"
+34:     rec = record_result(
+35:         "France",
+36:         "Paraguay",
+37:         1,
+38:         0,
+39:         match_date=None,
+40:         stats={"corners": [12, 2], "yellow": [3, 0]},
+41:         path=res_p,
+42:         pred_path=pred_p,
+43:     )
+44:     assert rec["actual"]["stats"]["corners"] == [12, 2]  # stat cru guardado
+45:     assert rec["grades"]["winner"]["correct"] is True
+46:     tally = summary(path=res_p)
+47:     assert tally["winner"] == [1, 1]
+50: def test_record_without_prediction_warns(tmp_path):
+51:     res_p = tmp_path / "results.jsonl"
+52:     rec = record_result("Xland", "Yland", 2, 2, path=res_p, pred_path=tmp_path / "nope.jsonl")
+53:     assert rec["prediction"] is None and "warning" in rec
+54:     assert rec["actual"]["result"] == "draw"
+57: def test_finds_prediction_with_swapped_home_away(tmp_path):
+60:     pred_p = tmp_path / "predictions.jsonl"
+61:     pred_p.write_text(json.dumps(_PRED) + "\n", encoding="utf-8")
+62:     res_p = tmp_path / "results.jsonl"
+64:     rec = record_result("Paraguay", "France", 0, 2, path=res_p, pred_path=pred_p)
+65:     assert rec["prediction"] is not None, "não pode sumir por causa da ordem invertida"
+66:     assert rec["grades"]["winner"]["correct"] is True  # França ganhou, palpite era França
+67:     assert rec["grades"]["exact_score"]["correct"] is True  # 2x0 é o placar top do palpite
+70: def test_finds_prediction_with_team_alias(tmp_path):
+73:     pred = dict(_PRED, home="South Korea", away="Japan")
+74:     pred_p = tmp_path / "predictions.jsonl"
+75:     pred_p.write_text(json.dumps(pred) + "\n", encoding="utf-8")
+76:     res_p = tmp_path / "results.jsonl"
+77:     rec = record_result("Korea Republic", "Japan", 1, 0, path=res_p, pred_path=pred_p)
+78:     assert rec["prediction"] is not None, "alias South Korea/Korea Republic deve reconciliar"
+### tests/test_settle_h9_shadow.py
+4: import json
+5: from datetime import UTC, datetime, timedelta
+6: from pathlib import Path
+8: import pytest
+10: from brasileirao_predictor import db
+11: from brasileirao_predictor.research.h9_shadow import emit
+12: from brasileirao_scripts import settle_h9_shadow as job
+14: KICKOFF = datetime(2027, 3, 1, 19, 0, tzinfo=UTC)
+17: def _quote(source_event_id="e1", bookmaker="williamhill", selection="over", odds=1.9, captured=None):
+18:     captured = captured or (KICKOFF - timedelta(minutes=100))
+19:     return {
+20:         "source_event_id": source_event_id,
+21:         "bookmaker": bookmaker,
+22:         "market": "ou2.5",
+23:         "selection": selection,
+24:         "decimal_odds": odds,
+25:         "odds_captured_at": captured.isoformat(timespec="seconds"),
+26:         "retrieved_at": captured.isoformat(timespec="seconds"),
+27:         "home_team": "Casa",
+28:         "away_team": "Fora",
+29:         "kickoff_at": KICKOFF.isoformat(timespec="seconds"),
+30:     }
+33: def _write_quotes(path: Path, quotes: list[dict]) -> None:
+34:     path.write_text("\n".join(json.dumps(q) for q in quotes) + "\n", encoding="utf-8")
+37: @pytest.fixture
+38: def ambiente(tmp_path, monkeypatch):
+39:     dbpath = tmp_path / "t.db"
+40:     conn = db.connect(str(dbpath))
+41:     conn.execute(
+42:         "INSERT INTO sofascore_matches (event_id, competition, season, date, home_team, away_team, kickoff_at) "
+43:         "VALUES (1, 'T', '2027', ?, 'Casa', 'Fora', ?)",
+44:         (KICKOFF.date().isoformat(), KICKOFF.isoformat(timespec="seconds")),
+45:     )
+46:     conn.commit()
+47:     conn.close()
+48:     monkeypatch.setattr(job, "load_config", lambda: {"database": str(dbpath)})
+50:     market_obs_path = tmp_path / "market_observations.jsonl"
+51:     ledger_path = tmp_path / "h9.jsonl"
+52:     emit(
+53:         prediction={
+54:             "event_id": "e1",
+55:             "kickoff_at": KICKOFF.isoformat(timespec="seconds"),
+56:             "predicted_at": (KICKOFF - timedelta(minutes=90)).isoformat(timespec="seconds"),
+57:             "p_over": 0.55,
+58:         },
+59:         quotes=[_quote(odds=2.0)],
+60:         approved_bookmaker="williamhill",
+61:         ledger=ledger_path,
+62:     )
+63:     return {"db_path": dbpath, "market_obs_path": market_obs_path, "ledger_path": ledger_path}
+66: def _set_score(dbpath, home, away):
+67:     conn = db.connect(str(dbpath))
+68:     conn.execute("UPDATE sofascore_matches SET home_score=?, away_score=? WHERE event_id=1", (home, away))
+69:     conn.commit()
+70:     conn.close()
+73: def test_no_open_decisions_returns_empty(tmp_path):
+74:     outcomes = job.run(ledger_path=tmp_path / "empty.jsonl", market_obs_path=tmp_path / "mo.jsonl")
+75:     assert outcomes == []
+78: def test_pending_result_when_match_not_finished(ambiente):
+79:     _write_quotes(ambiente["market_obs_path"], [_quote(odds=2.0)])
+80:     outcomes = job.run(
+81:         now=KICKOFF + timedelta(hours=3),
+82:         db_path=ambiente["db_path"],
+83:         market_obs_path=ambiente["market_obs_path"],
+84:         ledger_path=ambiente["ledger_path"],
+85:     )
+86:     assert outcomes == [{"event_id": "e1", "status": "PENDING_RESULT"}]
+89: def test_settles_once_result_and_closing_quote_exist(ambiente):
+90:     _set_score(ambiente["db_path"], 2, 1)
+91:     _write_quotes(
+92:         ambiente["market_obs_path"],
+93:         [_quote(odds=2.0), _quote(odds=1.8, captured=KICKOFF - timedelta(minutes=5))],
+94:     )
+95:     outcomes = job.run(
+96:         now=KICKOFF + timedelta(hours=3),
+97:         db_path=ambiente["db_path"],
+98:         market_obs_path=ambiente["market_obs_path"],
+99:         ledger_path=ambiente["ledger_path"],
+100:     )
+101:     assert len(outcomes) == 1
+102:     assert outcomes[0]["status"] == "SETTLED"
+103:     assert outcomes[0]["won"] is True  # 2+1 > 2.5
+104:     assert outcomes[0]["closing_odds_same_book"] == pytest.approx(1.8)
+106:     again = job.run(
+107:         now=KICKOFF + timedelta(hours=4),
+108:         db_path=ambiente["db_path"],
+109:         market_obs_path=ambiente["market_obs_path"],
+110:         ledger_path=ambiente["ledger_path"],
+111:     )
+112:     assert again == []
+115: def test_quote_history_missing_is_reported(ambiente):
+118:     outcomes = job.run(
+119:         now=KICKOFF + timedelta(hours=3),
+120:         db_path=ambiente["db_path"],
+121:         market_obs_path=ambiente["market_obs_path"],
+122:         ledger_path=ambiente["ledger_path"],
+123:     )
+124:     assert outcomes == [{"event_id": "e1", "status": "QUOTE_HISTORY_MISSING"}]
+### tests/test_settle_live_prediction.py
+1: from __future__ import annotations
+3: import json
+4: from datetime import UTC, datetime
+6: import pytest
+8: from brasileirao_scripts.settle_live_prediction import append_settlement, build_settlement, load_prediction
+11: def prediction():
+12:     return {
+13:         "prediction_id": "LIVE-2026-08-22-001",
+14:         "source_event_id": "15235430",
+15:         "prediction": {"p_home": 0.57, "p_draw": 0.25, "p_away": 0.18},
+16:     }
+19: def event(status="finished"):
+20:     return {
+21:         "id": 15235430,
+22:         "status": {"type": status, "description": "Ended"},
+23:         "homeScore": {"current": 0},
+24:         "awayScore": {"current": 1},
+25:     }
+28: def test_settlement_is_separate_linked_append_only_and_diagnostic(tmp_path):
+29:     row = build_settlement(prediction(), event(), datetime(2026, 8, 22, 22, tzinfo=UTC))
+30:     assert row["prediction_id"] == "LIVE-2026-08-22-001"
+31:     assert row["final_score"] == [0, 1]
+32:     assert row["actual_1x2"] == "away"
+33:     assert row["diagnostic_hit"] is False
+34:     assert row["capital_enabled"] is False
+35:     path = tmp_path / "settlements.jsonl"
+36:     assert append_settlement(path, row) is True
+37:     assert append_settlement(path, row) is False
+38:     assert len(path.read_text(encoding="utf-8").splitlines()) == 1
+41: def test_settlement_refuses_unfinished_event_and_naive_clock():
+42:     with pytest.raises(ValueError, match="not finished"):
+43:         build_settlement(prediction(), event("inprogress"), datetime.now(UTC))
+44:     with pytest.raises(ValueError, match="timezone-aware"):
+45:         build_settlement(prediction(), event(), datetime(2026, 8, 22))
+48: def test_load_prediction_requires_exactly_one_original(tmp_path):
+49:     path = tmp_path / "live.jsonl"
+50:     path.write_text(json.dumps(prediction()) + "\n", encoding="utf-8")
+51:     assert load_prediction(path, "LIVE-2026-08-22-001")["prediction_id"] == "LIVE-2026-08-22-001"
+52:     with pytest.raises(ValueError, match="found 0"):
+53:         load_prediction(path, "missing")
+### tests/test_settlement_input_integrity.py
+3: import pytest
+5: from brasileirao_predictor.settle import grade, record_result
+8: @pytest.mark.parametrize("score", [True, False, 1.9, -0.5, float("nan"), float("inf")])
+9: def test_invalid_score_never_creates_result(tmp_path, score):
+10:     destination = tmp_path / "results.jsonl"
+11:     with pytest.raises(ValueError, match="placar"):
+12:         record_result("A", "B", score, 0, path=destination, pred_path=tmp_path / "absent.jsonl")
+13:     assert not destination.exists()
+16: @pytest.mark.parametrize("score", [True, 1.9, -0.5])
+17: def test_grading_validates_score_before_prediction(score):
+18:     with pytest.raises(ValueError, match="placar"):
+19:         grade({}, 0, score)
+22: def test_missing_explicit_prediction_never_creates_result(tmp_path):
+23:     destination = tmp_path / "results.jsonl"
+24:     with pytest.raises(ValueError, match="prediction_id not found"):
+25:         record_result("A", "B", 1, 0, prediction_id="absent", path=destination, pred_path=tmp_path / "absent.jsonl")
+26:     assert not destination.exists()

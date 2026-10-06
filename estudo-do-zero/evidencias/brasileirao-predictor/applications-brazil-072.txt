@@ -1,0 +1,452 @@
+### tests/test_resolution_odds_shop.py
+3: import copy
+4: from datetime import UTC, datetime, timedelta
+6: import pytest
+8: from brasileirao_scripts import odds_shop as shop
+11: def event():
+12:     return {
+13:         "home_team": "Home",
+14:         "away_team": "Away",
+15:         "commence_time": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+16:         "bookmakers": [
+17:             {
+18:                 "key": "book",
+19:                 "title": "Book",
+20:                 "last_update": datetime.now(UTC).isoformat(),
+21:                 "markets": [
+22:                     {
+23:                         "key": "totals",
+24:                         "outcomes": [
+25:                             {"name": "Over", "price": 2.5, "point": 2.5},
+26:                             {"name": "Under", "price": 1.8, "point": 2.5},
+27:                         ],
+28:                     }
+29:                 ],
+30:             }
+31:         ],
+32:     }
+35: @pytest.mark.parametrize("clock", [None, "invalid", "2026-01-01T00:00:00", "2099-01-01T00:00:00+00:00"])
+36: def test_unknown_invalid_or_future_clock_is_not_fresh(clock):
+37:     assert shop._stale({"last_update": clock}, 900) is True
+40: @pytest.mark.parametrize("price", [float("nan"), float("inf"), True, 0.9])
+41: def test_bad_prices_cannot_become_consensus(price):
+42:     sample = event()
+43:     sample["bookmakers"][0]["markets"][0]["outcomes"][0]["price"] = price
+44:     assert shop.consensus(sample, "totals", point=2.5, max_stale_s=900) == {}
+47: def test_duplicate_books_do_not_manufacture_consensus_strength():
+48:     sample = event()
+49:     sample["bookmakers"] *= 4
+50:     result = shop.consensus(sample, "totals", point=2.5, max_stale_s=900)
+51:     assert result == {} or result["Over"]["n_books"] == 1
+54: def test_incomplete_market_is_excluded():
+55:     sample = event()
+56:     sample["bookmakers"][0]["markets"][0]["outcomes"][1]["name"] = "Over"
+57:     assert shop.consensus(sample, "totals", point=2.5, max_stale_s=900) == {}
+60: def test_diagnostic_output_does_not_call_unproven_window_validated(monkeypatch, capsys):
+61:     sample = event()
+62:     for index in range(1, 4):
+63:         book = copy.deepcopy(sample["bookmakers"][0])
+64:         book["key"] = f"book{index}"
+65:         sample["bookmakers"].append(book)
+66:     monkeypatch.setattr(
+67:         shop, "model_probs_for", lambda *args: {"home": 0.5, "draw": 0.2, "away": 0.3, "over25": 0.5, "under25": 0.5}
+68:     )
+69:     shop.analyze([sample], None, 0.03, max_stale_s=900)
+70:     shop._footer(0.03)
+71:     output = capsys.readouterr().out
+72:     assert "JANELA VALIDADA" not in output
+73:     assert "bet_log add" not in output
+74:     assert "zona confiavel" not in output
+77: @pytest.mark.parametrize("clock", [None, "bad", "2026-01-01T00:00:00"])
+78: def test_missing_kickoff_cannot_be_treated_as_future(clock):
+79:     assert shop._started({"commence_time": clock}) is True
+### tests/test_resolution_player_stats.py
+1: import json
+2: import sqlite3
+3: from datetime import UTC, datetime
+5: import pytest
+7: from brasileirao_scripts import backfill_player_comp_stats_from_sofascore as backfill
+10: def inputs(tmp_path, stats):
+11:     conn = sqlite3.connect(":memory:")
+12:     conn.execute("CREATE TABLE sofascore_matches (event_id, competition, season, kickoff_at, home_team, away_team)")
+13:     conn.execute("INSERT INTO sofascore_matches VALUES (1,'synthetic','2024','2024-01-01T00:00:00Z','A','B')")
+14:     payload = {"home": {"players": [{"player": {"name": "P"}, "statistics": stats}]}, "away": {"players": []}}
+15:     (tmp_path / "event_1_lineups.json").write_text(json.dumps(payload), encoding="utf-8")
+16:     return conn
+19: def test_postmatch_player_stats_are_not_backdated_to_kickoff(tmp_path):
+20:     with inputs(tmp_path, {"minutesPlayed": 90, "goals": 1}) as conn:
+21:         before = datetime.now(UTC)
+22:         row = backfill.aggregate(conn, tmp_path)[0]
+23:         assert before <= datetime.fromisoformat(row[-1]) <= datetime.now(UTC)
+26: def test_missing_xg_is_unknown_instead_of_zero(tmp_path):
+27:     with inputs(tmp_path, {"minutesPlayed": 90}) as conn:
+28:         row = backfill.aggregate(conn, tmp_path)[0]
+29:         assert row[9] is None and row[10] is None
+32: @pytest.mark.parametrize("count", [True, 1.9, -1, "2"])
+33: def test_player_counts_are_not_coerced_or_truncated(tmp_path, count):
+34:     with inputs(tmp_path, {"goals": count}) as conn, pytest.raises(ValueError):
+35:         backfill.aggregate(conn, tmp_path)
+38: def test_corrupt_player_file_does_not_silently_shrink_the_aggregate(tmp_path):
+39:     with inputs(tmp_path, {"goals": 1}) as conn:
+40:         (tmp_path / "event_1_lineups.json").write_text("{broken", encoding="utf-8")
+41:         with pytest.raises(ValueError):
+42:             backfill.aggregate(conn, tmp_path)
+### tests/test_resolution_promotions.py
+1: import json
+3: import pytest
+5: from brasileirao_predictor.data.promotions import load_promotions, load_relegations
+8: def dataset():
+9:     return {
+10:         "schema_version": "promotions-brasileirao/v1",
+11:         "sources": [{"serie_b_season": 2019, "url": "https://www.cbf.com.br/synthetic/b"}],
+12:         "relegation_sources": [{"serie_a_season": 2019, "url": "https://www.cbf.com.br/synthetic/a"}],
+13:         "entries": [
+14:             dict(serie_a_season=2020, serie_b_season=2019, position=i, team_id=f"up-{i}", team_name=f"Synthetic {i}")
+15:             for i in range(1, 5)
+16:         ],
+17:         "relegations": [
+18:             dict(serie_a_season=2019, position=i, team_id=f"down-{i}", team_name=f"Synthetic {i}")
+19:             for i in range(17, 21)
+20:         ],
+21:     }
+24: @pytest.mark.parametrize("field,loader", [("entries", load_promotions), ("relegations", load_relegations)])
+25: @pytest.mark.parametrize("defect", ["extra_position", "fractional_position", "duplicate_team", "invalid_identity"])
+26: def test_invalid_season_roster_is_not_accepted_as_complete(tmp_path, field, loader, defect):
+27:     value = dataset()
+28:     rows = value[field]
+29:     if defect == "extra_position":
+30:         rows.append({**rows[0], "team_id": "unexpected-fifth-team"})
+31:     elif defect == "fractional_position":
+32:         rows[0]["position"] += 0.5
+33:     elif defect == "duplicate_team":
+34:         rows[1]["team_id"] = rows[0]["team_id"]
+35:     else:
+36:         rows[0]["team_id"] = None
+37:     path = tmp_path / "synthetic.json"
+38:     path.write_text(json.dumps(value), encoding="utf-8")
+39:     with pytest.raises(ValueError):
+40:         loader(path)
+43: def test_valid_four_club_rosters_preserve_their_identity_and_order(tmp_path):
+44:     path = tmp_path / "synthetic.json"
+45:     path.write_text(json.dumps(dataset()), encoding="utf-8")
+46:     assert [row.team_id for row in load_promotions(path)] == [f"up-{i}" for i in range(1, 5)]
+47:     assert [row.team_id for row in load_relegations(path)] == [f"down-{i}" for i in range(17, 21)]
+### tests/test_resolution_residual_dataset.py
+1: import pytest
+3: from brasileirao_predictor.research.residual_dataset import materialize_total_market_records
+6: def quotes():
+7:     return [
+8:         {
+9:             "source_event_id": "e",
+10:             "source": "synthetic",
+11:             "market": "ou2.5",
+12:             "period": "FT",
+13:             "line": 2.5,
+14:             "selection": side,
+15:             "bookmaker": book,
+16:             "decimal_odds": odd,
+17:             "status": "ACTIVE",
+18:             "observed_at": "2024-01-01T11:59:00Z",
+19:             "available_at": "2024-01-01T11:59:01Z",
+20:             "retrieved_at": "2024-01-01T11:59:02Z",
+21:             "odds_captured_at": "2024-01-01T11:59:00Z",
+22:             "kickoff_at": "2024-01-02T12:00:00Z",
+23:         }
+24:         for book, side, odd in [("a", "over", 1.9), ("a", "under", 1.9), ("b", "over", 2.5), ("b", "under", 1.5)]
+25:     ]
+28: def result():
+29:     return [{"source_event_id": "e", "home_goals": 2, "away_goals": 1, "settled_at": "2024-01-02T14:00:00Z"}]
+32: def materialize(rows, outcomes):
+33:     return materialize_total_market_records(
+34:         rows,
+35:         outcomes,
+36:         context={
+37:             "e": {
+38:                 "available_at": "2024-01-01T11:58:00Z",
+39:                 "xg_form_delta": 0.1,
+40:                 "rest_days_delta": 0,
+41:                 "current_starters": [str(i) for i in range(11)],
+42:                 "expected_starters": [str(i) for i in range(11)],
+43:             }
+44:         },
+45:         offer_bookmaker="b",
+46:     )
+49: def test_offer_book_is_excluded_from_its_own_probability_reference():
+50:     row = materialize(quotes(), result())[0]
+51:     assert row["market_probability"] == pytest.approx(0.5)
+52:     assert row["best_odds_by_selection"] == {"over": 2.5, "under": 1.5}
+53:     assert row["reference_books"] == ["a"]
+56: def test_unfinished_event_is_preserved_without_fabricated_label():
+57:     row = materialize(quotes(), [])[0]
+58:     assert row["outcome"] is None and row["settled_at"] is None
+61: def test_late_receipt_cannot_become_historical_offer():
+62:     rows = quotes()
+63:     for row in rows:
+64:         if row["bookmaker"] == "b":
+65:             row["retrieved_at"] = "2024-01-02T11:00:00Z"
+66:     row = materialize(rows, result())[0]
+67:     assert row["data_status"] == "ABSTAIN_DATA"
+68:     assert row["best_odds_by_selection"] is None
+71: def test_suspension_cannot_resurrect_old_quote():
+72:     rows = quotes()
+73:     rows.append({**rows[-2], "status": "SUSPENDED", "retrieved_at": "2024-01-01T11:59:30Z"})
+74:     row = materialize(rows, result())[0]
+75:     assert row["data_status"] == "ABSTAIN_DATA"
+78: def test_reference_and_offer_must_satisfy_cross_book_clock_skew():
+79:     rows = quotes()
+80:     for row in rows:
+81:         if row["bookmaker"] == "a":
+82:             row.update(
+83:                 observed_at="2024-01-01T11:58:01Z",
+84:                 available_at="2024-01-01T11:58:02Z",
+85:                 retrieved_at="2024-01-01T11:58:03Z",
+86:             )
+87:         else:
+88:             row.update(
+89:                 observed_at="2024-01-01T11:59:59Z",
+90:                 available_at="2024-01-01T11:59:59Z",
+91:                 retrieved_at="2024-01-01T11:59:59Z",
+92:             )
+93:     assert materialize(rows, result())[0]["data_status"] == "ABSTAIN_DATA"
+96: @pytest.mark.parametrize("score", [True, 1.9, -1, "2"])
+97: def test_scores_must_be_nonnegative_integer_counts(score):
+98:     outcomes = result()
+99:     outcomes[0]["home_goals"] = score
+100:     with pytest.raises(ValueError, match="goals"):
+101:         materialize(quotes(), outcomes)
+### tests/test_resolution_restore.py
+1: import json
+2: import sqlite3
+4: import pytest
+6: from brasileirao_predictor import backup_restore as backup
+9: def fixture(tmp_path):
+10:     source = tmp_path / "source"
+11:     (source / "data").mkdir(parents=True)
+12:     with sqlite3.connect(source / "data" / "matches.db") as conn:
+13:         conn.execute("CREATE TABLE synthetic (id INTEGER PRIMARY KEY, value TEXT)")
+14:         conn.execute("INSERT INTO synthetic VALUES (1, 'only-synthetic-data')")
+15:     (source / "data" / "teams_brasileirao.json").write_text('["synthetic"]', encoding="utf-8")
+16:     return backup.create_backup(tmp_path / "backup", root=source)
+19: def test_restored_copy_keeps_manifest_and_is_independently_verifiable(tmp_path):
+20:     source = fixture(tmp_path)
+21:     restored = backup.restore_backup(source, tmp_path / "restored")
+22:     assert backup.verify_backup(restored)["files"] == backup.verify_backup(source)["files"]
+23:     with sqlite3.connect(restored / "data" / "matches.db") as conn:
+24:         assert conn.execute("SELECT * FROM synthetic").fetchall() == [(1, "only-synthetic-data")]
+27: def test_restore_detects_copy_corruption_before_reporting_success(tmp_path, monkeypatch):
+28:     source = fixture(tmp_path)
+29:     copytree = backup.shutil.copytree
+31:     def broken_copy(src, dst, *args, **kwargs):
+32:         result = copytree(src, dst, *args, **kwargs)
+33:         if src == source.resolve():
+34:             (dst / "data" / "teams_brasileirao.json").write_text('["corrupt"]', encoding="utf-8")
+35:         return result
+37:     monkeypatch.setattr(backup.shutil, "copytree", broken_copy)
+38:     with pytest.raises(backup.BackupError):
+39:         backup.restore_backup(source, tmp_path / "restored")
+40:     assert json.loads((source / "data" / "teams_brasileirao.json").read_text()) == ["synthetic"]
+43: def test_backup_restore_accepts_literal_uri_characters_in_paths(tmp_path):
+44:     directory = tmp_path / "literal # percent %"
+45:     source = fixture(directory)
+46:     restored = backup.restore_backup(source, directory / "restored # copy")
+47:     assert backup.verify_backup(restored)["files"] == backup.verify_backup(source)["files"]
+50: def test_backup_restore_does_not_decode_literal_percent_sequences(tmp_path):
+51:     directory = tmp_path / "literal %23 %3f"
+52:     source = fixture(directory)
+53:     restored = backup.restore_backup(source, directory / "restored %23")
+54:     assert backup.verify_backup(restored)["files"] == backup.verify_backup(source)["files"]
+57: def test_create_refuses_destination_inside_a_copied_tree_before_copying(tmp_path, monkeypatch):
+58:     fixture(tmp_path)
+59:     root = tmp_path / "source"
+60:     (root / "reports").mkdir()
+62:     def forbidden_copy(*args, **kwargs):
+63:         raise AssertionError("recursive backup destination was not rejected")
+65:     monkeypatch.setattr(backup.shutil, "copytree", forbidden_copy)
+66:     with pytest.raises(backup.BackupError):
+67:         backup.create_backup(root / "reports" / "recursive-backup", root=root)
+70: def test_create_checks_source_links_before_copying_external_content(tmp_path, monkeypatch):
+71:     fixture(tmp_path)
+72:     root = tmp_path / "source"
+73:     reports = root / "reports"
+74:     reports.mkdir()
+76:     original = type(reports).is_symlink
+77:     monkeypatch.setattr(type(reports), "is_symlink", lambda path: path == reports or original(path))
+79:     def forbidden_copy(*args, **kwargs):
+80:         raise AssertionError("source link was followed before validation")
+82:     monkeypatch.setattr(backup.shutil, "copytree", forbidden_copy)
+83:     with pytest.raises(backup.BackupError):
+84:         backup.create_backup(tmp_path / "second-backup", root=root)
+### tests/test_resolution_structural_edge.py
+1: from dataclasses import replace
+2: from datetime import UTC, datetime, timedelta
+3: from typing import Any, cast
+5: import pytest
+7: from brasileirao_predictor.research.structural_edge import (
+8:     MarketSnapshot,
+9:     StructuralEdgePolicy,
+10:     detect_structural_edges,
+11:     power_probabilities,
+12: )
+14: NOW = datetime(2020, 1, 1, 12, tzinfo=UTC)
+17: def snapshot(book, **changes):
+18:     base = MarketSnapshot(
+19:         "synthetic",
+20:         book,
+21:         "match_odds",
+22:         None,
+23:         NOW - timedelta(seconds=1),
+24:         NOW + timedelta(hours=1),
+25:         {"home": 2.0, "draw": 3.4, "away": 4.0},
+26:         "synthetic-v1",
+27:     )
+28:     return replace(base, **changes)
+31: def test_stale_offer_cannot_be_compared_with_fresh_reference():
+32:     with pytest.raises(ValueError, match="stale"):
+33:         detect_structural_edges(
+34:             snapshot("pinnacle"), snapshot("soft", captured_at=NOW - timedelta(seconds=301)), evaluated_at=NOW
+35:         )
+38: @pytest.mark.parametrize(
+39:     "changes",
+40:     [
+41:         dict(devig_method="typo"),
+42:         dict(max_reference_staleness_seconds=float("nan")),
+43:         dict(max_reference_staleness_seconds=True),
+44:         dict(reference_book=" "),
+45:     ],
+46: )
+47: def test_invalid_policy_is_not_silently_interpreted(changes: dict[str, Any]):
+48:     with pytest.raises(ValueError):
+49:         StructuralEdgePolicy(**changes)
+52: def test_snapshot_does_not_change_when_callers_mutate_original_odds():
+53:     odds = {"home": 2.0, "draw": 3.4, "away": 4.0}
+54:     value = snapshot("pinnacle", odds=odds)
+55:     odds["home"] = float("nan")
+56:     assert value.odds["home"] == 2.0
+57:     with pytest.raises(TypeError):
+58:         cast(Any, value.odds)["home"] = 0.0
+61: def test_power_devig_brackets_valid_high_margin_prices():
+62:     probabilities, exponent, margin = power_probabilities([1.0001, 1.0001])
+63:     assert probabilities.tolist() == pytest.approx([0.5, 0.5])
+64:     assert exponent > 20 and margin > 0
+67: def test_nonfinite_market_line_is_rejected():
+68:     with pytest.raises(ValueError):
+69:         snapshot("pinnacle", line=float("nan"))
+### tests/test_resolution_walkforward.py
+1: from datetime import UTC, datetime, timedelta
+3: import pytest
+5: from brasileirao_predictor.research import residual_walkforward as wf
+6: from brasileirao_predictor.research.economic_decision import ShadowDecision
+7: from brasileirao_predictor.research.market_residual import ResidualPrediction
+10: def records():
+11:     base = datetime(2024, 1, 1, tzinfo=UTC)
+12:     return [
+13:         {
+14:             "event_id": str(i),
+15:             "predicted_at": (base + timedelta(days=i)).isoformat(),
+16:             "kickoff_at": (base + timedelta(days=i, hours=1)).isoformat(),
+17:             "settled_at": (base + timedelta(days=i, hours=3)).isoformat(),
+18:             "features": [0.0] * 7,
+19:             "market_probability": 0.5,
+20:             "best_odds": 2.0,
+21:             "outcome": i % 2,
+22:         }
+23:         for i in range(24)
+24:     ]
+27: @pytest.fixture
+28: def fixed_model(monkeypatch):
+29:     class FixedModel:
+30:         def __init__(self, **kwargs):
+31:             pass
+33:         def fit(self, *args, **kwargs):
+34:             return self
+36:         def predict(self, *args):
+37:             return ResidualPrediction(0.8, 0.7, 0.9, 0.5, 0.0)
+39:     monkeypatch.setattr(wf, "MarketResidualModel", FixedModel)
+40:     monkeypatch.setattr(
+41:         wf,
+42:         "decide_shadow",
+43:         lambda *args, **kwargs: ShadowDecision("SHADOW_BET", "over", 0.5, 0.4, 2.0, 0.1, 0.75),
+44:     )
+47: @pytest.mark.parametrize("invalid", [1.9, -0.1, True, "1", float("nan")])
+48: def test_replay_rejects_invalid_label_before_training(invalid, fixed_model):
+49:     rows = records()
+50:     rows[-1]["outcome"] = invalid
+51:     with pytest.raises(ValueError, match="outcome"):
+52:         wf.evaluate_walkforward(rows, minimum_train=20)
+55: @pytest.mark.parametrize("field", ["predicted_at", "settled_at"])
+56: def test_replay_rejects_impossible_chronology(field, fixed_model):
+57:     rows = records()
+58:     rows[-1][field] = rows[-1]["kickoff_at"]
+59:     with pytest.raises(ValueError, match="chronology"):
+60:         wf.evaluate_walkforward(rows, minimum_train=20)
+63: def test_replay_preserves_missing_quote_and_unsettled_games(fixed_model):
+64:     rows = records()
+65:     rows[-1].pop("best_odds")
+66:     rows[20]["outcome"] = rows[21]["outcome"] = 1
+67:     rows[-2]["outcome"] = None
+68:     rows[-2]["settled_at"] = None
+69:     result = wf.evaluate_walkforward(rows, minimum_train=20)
+70:     assert len(result["universe"]) == len(rows)
+71:     assert result["universe"][-1]["action"] == "NO_QUOTE"
+72:     assert result["n_unsettled_predictions"] == 1
+73:     assert result["portfolio"]["open_stakes"] > 0
+76: def test_replay_reserves_capital_and_uses_requested_stake(fixed_model):
+77:     rows = records()[:22]
+78:     rows[-1].update({key: rows[-2][key] for key in ("predicted_at", "kickoff_at", "settled_at")})
+79:     rows[-2]["outcome"] = 1
+80:     rows[-1]["outcome"] = 0
+81:     result = wf.evaluate_walkforward(rows, minimum_train=20, friction_rate=0.1)
+82:     portfolio = result["portfolio"]
+84:     assert portfolio["total_stakes"] == 75
+85:     assert portfolio["total_costs"] == 7.5
+86:     assert portfolio["returns_including_principal"] == 150
+87:     assert portfolio["final_cash"] == 167.5
+88:     assert portfolio["net_pnl"] == 67.5
+89:     assert result["roi"] == 0.9
+90:     assert result["selected"] == 1
+91:     assert result["universe"][-1]["action"] == "NO_CAPITAL"
+94: def test_replay_rejects_duplicate_events(fixed_model):
+95:     rows = records()
+96:     rows[-1]["event_id"] = rows[-2]["event_id"]
+97:     with pytest.raises(ValueError, match="duplicate"):
+98:         wf.evaluate_walkforward(rows, minimum_train=20)
+101: def test_replay_rejects_future_feature_availability(fixed_model):
+102:     rows = records()
+103:     rows[-1]["features_available_at"] = rows[-1]["kickoff_at"]
+104:     with pytest.raises(ValueError, match="available"):
+105:         wf.evaluate_walkforward(rows, minimum_train=20)
+108: def test_portfolio_rejects_nonfinite_output_from_finite_inputs():
+109:     from brasileirao_predictor.research.shadow_portfolio import replay_shadow_portfolio
+111:     order = {
+112:         "event_id": "huge",
+113:         "predicted_at": "2024-01-01T00:00:00Z",
+114:         "settled_at": "2024-01-02T00:00:00Z",
+115:         "outcome": 1,
+116:         "stake_fraction": 0.5,
+117:         "odds": 1e308,
+118:         "friction_rate": 0.0,
+119:         "selection": "over",
+120:     }
+121:     with pytest.raises(ValueError, match="finite"):
+122:         replay_shadow_portfolio([order], reference_bankroll=1e308)
+### tests/test_rho_stability.py
+1: from brasileirao_predictor.research.rho_stability import evaluate_rho
+4: def test_rho_diagnostic_blocks_without_holdout_data() -> None:
+5:     assert evaluate_rho([(0.0, 1, 0)] * 20)["status"] == "BLOCKED_DATA"
+8: def test_rho_diagnostic_returns_finite_oos_metrics() -> None:
+9:     history = [((index % 7 - 3) * 40.0, (index * 3) % 4, (index * 5 + 1) % 3) for index in range(140)]
+10:     groups = [f"round-{index // 10}" for index in range(len(history))]
+11:     report = evaluate_rho(history, group_keys=groups, minimum_matches=100)
+12:     assert report["status"] == "PASS_STABLE"
+13:     assert set(report["metrics"]) == {
+14:         "rps_delta",
+15:         "rps_delta_ci95",
+16:         "log_loss_delta",
+17:         "log_loss_delta_ci95",
+18:     }
+19:     assert report["verdict"] in {"GO_CANDIDATE", "NO_GO"}
+20:     assert report["bootstrap_unit"] == "consecutive_kickoff_group"
+23: def test_rho_rejects_misaligned_temporal_groups() -> None:
+24:     import pytest
+26:     with pytest.raises(ValueError, match="align"):
+27:         evaluate_rho([(0.0, 1, 0)] * 100, group_keys=["one"])

@@ -1,0 +1,845 @@
+[
+  {
+    "path": "posix_integration/test_signals_real.py",
+    "name": "test_sigterm_reaches_cli_and_kills_child",
+    "line": 11,
+    "assertions": [
+      "assert heartbeat.exists()",
+      "assert process.returncode == 130"
+    ],
+    "raises": [
+      "pytest.raises(ProcessLookupError)"
+    ]
+  },
+  {
+    "path": "tests_v2/test_architecture_safety.py",
+    "name": "test_nonfinite_risk_is_rejected",
+    "line": 11,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError)",
+      "pytest.raises(ValidationError)"
+    ]
+  },
+  {
+    "path": "tests_v2/test_architecture_safety.py",
+    "name": "test_identity_separator_cannot_create_a_collision",
+    "line": 18,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError, match='separator')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_architecture_safety.py",
+    "name": "test_generic_v3_job_does_not_need_economic_identity",
+    "line": 23,
+    "assertions": [
+      "assert JobsFile(schema_version='3', jobs=[JobConfig(id='backup', command=['echo'])]).jobs"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_architecture_safety.py",
+    "name": "test_defaults_never_authorize_execution",
+    "line": 27,
+    "assertions": [
+      "assert set(kill_switch_reasons(job)) >= {'risk_snapshot_incomplete', 'risk_source_unverified', 'risk_freshness_missing', 'risk_limits_incomplete', 'economic_key_missing'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_architecture_safety.py",
+    "name": "test_freshness_is_checked_at_execution_time",
+    "line": 45,
+    "assertions": [
+      "assert reason in kill_switch_reasons(job, now=now)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_cli.py",
+    "name": "test_cli_validate_and_run_outside_checkout",
+    "line": 12,
+    "assertions": [
+      "assert validate.returncode == 0 and json.loads(validate.stdout)['valid']",
+      "assert run.returncode == 0, run.stderr",
+      "assert json.loads((runtime / 'smoke' / 'heartbeat.json').read_text())['run_status'] == 'SUCCEEDED'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_cli.py",
+    "name": "test_no_tools_namespace_required",
+    "line": 45,
+    "assertions": [
+      "assert result.returncode == 0, result.stderr"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_cli.py",
+    "name": "test_cli_main_paths",
+    "line": 53,
+    "assertions": [
+      "assert cli.main(['validate', str(config)]) == 0",
+      "assert json.loads(capsys.readouterr().out)['valid']",
+      "assert cli.main(['run', '--config', str(config), '--job', 'x', '--runtime-root', str(runtime)]) == 0",
+      "assert seen[-1].runtime.root == runtime",
+      "assert cli.main(['run', '--command', sys.executable, '-V']) == 0",
+      "assert seen[-1].command[-1] == '-V'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_cli.py",
+    "name": "test_cli_provenance_is_strict_and_machine_readable",
+    "line": 73,
+    "assertions": [
+      "assert cli.main(['provenance', '--source-root', str(tmp_path)]) == 0",
+      "assert seen == [(True, tmp_path)]",
+      "assert json.loads(capsys.readouterr().out) == {'identity_status': 'VALIDATED', 'kind': 'source'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_cli.py",
+    "name": "test_cli_provenance_fails_closed",
+    "line": 89,
+    "assertions": [
+      "assert cli.main(['provenance']) == 3",
+      "assert error == {'error': 'identity unavailable', 'status': 'CONFIGURATION_ERROR'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_cli.py",
+    "name": "test_cli_configuration_errors",
+    "line": 99,
+    "assertions": [
+      "assert cli.main(['run', '--config', str(missing), '--job', 'x']) == 3",
+      "assert json.loads(capsys.readouterr().err)['status'] == 'CONFIGURATION_ERROR'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_health.py",
+    "name": "test_recent_success_is_healthy_and_deterministic",
+    "line": 22,
+    "assertions": [
+      "assert first == second and first['status'] is RunStatus.SUCCEEDED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_health.py",
+    "name": "test_scheduler_failure_wins_and_expected_disabled_is_skipped",
+    "line": 30,
+    "assertions": [
+      "assert failed['status'] is RunStatus.FAILED",
+      "assert skipped['status'] is RunStatus.SKIPPED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_health.py",
+    "name": "test_absence_and_degraded_states_are_never_success",
+    "line": 41,
+    "assertions": [
+      "assert assess(policy, None, now=NOW)['status'] is not RunStatus.SUCCEEDED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_health.py",
+    "name": "test_missing_invalid_and_stale_heartbeat_fail_closed",
+    "line": 47,
+    "assertions": [
+      "assert assess(policy, None, now=NOW)['status'] is RunStatus.FAILED",
+      "assert load_heartbeat(policy.heartbeat_path) is None",
+      "assert assess(policy, None, now=NOW)['reason'] == 'heartbeat stale'",
+      "assert assess(policy, None, now=NOW)['reason'] == 'heartbeat time invalid'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_health.py",
+    "name": "test_health_policy_rejects_unknown_fields",
+    "line": 58,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError)"
+    ]
+  },
+  {
+    "path": "tests_v2/test_models_config.py",
+    "name": "test_taxonomy_is_complete",
+    "line": 11,
+    "assertions": [
+      "assert {state.value for state in RunStatus} == {'SUCCEEDED', 'PARTIAL', 'DEGRADED', 'SOURCE_UNAVAILABLE', 'CONFIGURATION_ERROR', 'FAILED', 'SKIPPED', 'WAITING'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_models_config.py",
+    "name": "test_scientific_state_is_opaque_and_separate",
+    "line": 24,
+    "assertions": [
+      "assert job.scientific_state == 'COLLECTION_ONLY'"
+    ],
+    "raises": [
+      "pytest.raises(ValidationError)"
+    ]
+  },
+  {
+    "path": "tests_v2/test_models_config.py",
+    "name": "test_config_is_strict_and_unique",
+    "line": 31,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError)",
+      "pytest.raises(ValidationError)"
+    ]
+  },
+  {
+    "path": "tests_v2/test_models_config.py",
+    "name": "test_runtime_rejects_nonlocal_backend_and_external_requires_https",
+    "line": 40,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError)",
+      "pytest.raises(ValueError, match='HTTPS')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_models_config.py",
+    "name": "test_load_job_missing",
+    "line": 47,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(KeyError, match='job not found')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_operational_safety.py",
+    "name": "test_schema_v2_requires_typed_economic_jobs_and_unique_keys",
+    "line": 61,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError, match='requires job_type and economic_key')",
+      "pytest.raises(ValidationError, match='economic job keys')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_operational_safety.py",
+    "name": "test_only_execution_jobs_can_receive_capital_permission",
+    "line": 70,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ValidationError, match='allowed only')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_operational_safety.py",
+    "name": "test_execution_is_economically_idempotent",
+    "line": 75,
+    "assertions": [
+      "assert first.run_status is RunStatus.SUCCEEDED",
+      "assert second.run_status is RunStatus.SKIPPED",
+      "assert second.record['reason'] == 'economic_operation_already_claimed'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_operational_safety.py",
+    "name": "test_ambiguous_execution_failure_requires_reconciliation",
+    "line": 83,
+    "assertions": [
+      "assert first.run_status is RunStatus.FAILED",
+      "assert second.run_status is RunStatus.SKIPPED",
+      "assert second.record['previous_attempt']['requires_reconciliation'] is True"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_operational_safety.py",
+    "name": "test_retry_policy_never_resubmits_unknown_orders",
+    "line": 91,
+    "assertions": [
+      "assert retry_action(OrderState.PRE_SUBMISSION_FAILURE) is RetryAction.RETRY_SAFE",
+      "assert retry_action(OrderState.API_TIMEOUT) is RetryAction.QUERY_EXTERNAL_STATE",
+      "assert retry_action(OrderState.SUBMISSION_UNKNOWN) is RetryAction.QUERY_EXTERNAL_STATE",
+      "assert retry_action(OrderState.PARTIALLY_FILLED) is RetryAction.CONTINUE_RECONCILIATION",
+      "assert retry_action(OrderState.ACCEPTED) is RetryAction.DO_NOT_RETRY"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_operational_safety.py",
+    "name": "test_kill_switch_fails_closed_and_reports_all_reasons",
+    "line": 99,
+    "assertions": [
+      "assert result.run_status is RunStatus.SKIPPED",
+      "assert result.record['reason'] == 'kill_switch_open'",
+      "assert set(result.record['kill_switch_reasons']) >= {'daily_loss_limit', 'settlement_unhealthy', 'odds_source_degraded', 'drift_detected'}"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_process_cleanup.py",
+    "name": "test_all_normal_exit_paths_close_popen_streams",
+    "line": 46,
+    "assertions": [
+      "assert result.run_status is expected",
+      "assert direct.poll() is not None",
+      "assert direct.stdin is None or direct.stdin.closed",
+      "assert direct.stdout is None or direct.stdout.closed",
+      "assert direct.stderr is None or direct.stderr.closed",
+      "assert not [warning for warning in caught if issubclass(warning.category, ResourceWarning)]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_process_cleanup.py",
+    "name": "test_timeout_and_cancellation_close_reader_and_pipe",
+    "line": 69,
+    "assertions": [
+      "assert timeout.exit_code == 124 and cancelled.exit_code == 130",
+      "assert not [thread for thread in threading.enumerate() if thread.name.startswith('predictor-ops-output-')]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_process_cleanup.py",
+    "name": "test_exception_after_popen_terminates_child_and_closes_pipe",
+    "line": 78,
+    "assertions": [
+      "assert result.run_status is RunStatus.CONFIGURATION_ERROR",
+      "assert direct.poll() is not None and direct.stdout.closed"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_process_cleanup.py",
+    "name": "test_reader_failure_is_observable_and_resources_close",
+    "line": 103,
+    "assertions": [
+      "assert result.run_status is RunStatus.FAILED and result.exit_code == 74",
+      "assert 'simulated read failure' in result.record['error']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_process_cleanup.py",
+    "name": "test_repeated_runs_do_not_accumulate_handles_or_readers",
+    "line": 114,
+    "assertions": [
+      "assert after <= before + 2, (before, after)",
+      "assert not [thread for thread in threading.enumerate() if thread.name.startswith('predictor-ops-output-')]",
+      "assert result.run_status is RunStatus.SUCCEEDED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_process_cleanup.py",
+    "name": "test_large_stdout_and_stderr_are_drained_without_deadlock",
+    "line": 129,
+    "assertions": [
+      "assert result.run_status is RunStatus.SUCCEEDED",
+      "assert result.record['output']['bytes'] == 4 * 1024 * 1024",
+      "assert not result.record['output']['truncated']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_process_tree.py",
+    "name": "test_timeout_kills_real_parent_child_grandchild_with_spaced_paths",
+    "line": 68,
+    "assertions": [
+      "assert result.run_status is RunStatus.FAILED",
+      "assert result.record['termination']['reason'] == 'timeout'",
+      "assert len(pids) == 3, json.dumps(result.record)",
+      "assert not any((_alive(pid) for pid in pids)), pids"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_provenance.py",
+    "name": "test_source_clean_dirty_detached_and_missing_commit",
+    "line": 19,
+    "assertions": [
+      "assert clean['identity_status'] == 'VALIDATED' and clean['commit']",
+      "assert collect_provenance(strict=True, source_root=tmp_path)['identity_status'] == 'VALIDATED'",
+      "assert _source_identity(tmp_path)['identity_status'] == 'VALIDATED'",
+      "assert _source_identity(tmp_path)['identity_status'] == 'DIRTY'",
+      "assert collect_provenance(strict=False, source_root=tmp_path)['identity_status'] == 'DIRTY'"
+    ],
+    "raises": [
+      "pytest.raises(ProvenanceError, match='not validated')",
+      "pytest.raises(ProvenanceError, match='commit')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_provenance.py",
+    "name": "test_strict_editable_fails_closed_and_permissive_is_safe",
+    "line": 40,
+    "assertions": [
+      "assert value['identity_status'] == 'UNVERIFIED'",
+      "assert 'editable' in safe_serialize(value)"
+    ],
+    "raises": [
+      "pytest.raises(ProvenanceError, match='editable')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_provenance.py",
+    "name": "test_safe_serialization_rejects_unserializable",
+    "line": 48,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ProvenanceError, match='serializable')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_provenance.py",
+    "name": "test_wheel_record_unit_validation_and_adversarial_failures",
+    "line": 76,
+    "assertions": [
+      "assert provenance._verify_wheel()['verified_files'] == 1"
+    ],
+    "raises": [
+      "pytest.raises(ProvenanceError, match='failed verification')",
+      "pytest.raises(ProvenanceError, match='unsupported')",
+      "pytest.raises(ProvenanceError, match='no verifiable')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_provenance.py",
+    "name": "test_wheel_missing_record_and_editable_metadata_fail_closed",
+    "line": 92,
+    "assertions": [],
+    "raises": [
+      "pytest.raises(ProvenanceError, match='RECORD')",
+      "pytest.raises(ProvenanceError, match='editable')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_provenance.py",
+    "name": "test_wheel_record_tampering_fails_in_isolated_environment",
+    "line": 108,
+    "assertions": [
+      "assert subprocess.run([python, '-I', '-c', probe], cwd=tmp_path, capture_output=True, text=True).stdout.strip() == 'VALIDATED'",
+      "assert failed.returncode != 0 and 'failed verification' in failed.stderr"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_redaction_adversarial.py",
+    "name": "test_flags_urls_headers_json_unicode_overlap_and_short_values",
+    "line": 16,
+    "assertions": [
+      "assert not any((secret in rendered for secret in secrets))",
+      "assert redact_text('Authorization: Bearer long-secret-value', secrets).count(REDACTED) >= 1",
+      "assert 'segredo-🔐' not in redact_text('token=segredo-🔐', ('segredo-🔐',))",
+      "assert redact({'outer': [{'Proxy-Authorization': 'value'}]})['outer'][0]['Proxy-Authorization'] == REDACTED",
+      "assert 'xy' not in json.dumps(redact({'xy': 'safe'}, secrets))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_redaction_adversarial.py",
+    "name": "test_invalid_bytes_idempotence_and_adversarial_runtime",
+    "line": 27,
+    "assertions": [
+      "assert 'token=' in first and REDACTED in first",
+      "assert redact_text(redact_text('token=value')) == redact_text('token=value')",
+      "assert time.monotonic() - started < 1.5 and result.endswith(REDACTED)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_redaction_adversarial.py",
+    "name": "test_internal_redactor_failure_is_fail_closed",
+    "line": 36,
+    "assertions": [
+      "assert redact_text('fixture-secret', ('fixture-secret',)) == '[REDACTION_FAILED]'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_redaction_adversarial.py",
+    "name": "test_short_sensitive_named_env_value_does_not_corrupt_unrelated_generated_data",
+    "line": 45,
+    "assertions": [
+      "assert len(short_value) < MIN_SENSITIVE_VALUE_LENGTH",
+      "assert secrets == (), 'short values must not be auto-harvested from the environment'",
+      "assert redact_text(record_text, secrets) == record_text, 'unrelated field must survive untouched'",
+      "assert len(long_value) >= MIN_SENSITIVE_VALUE_LENGTH",
+      "assert sensitive_values({'API_TOKEN': long_value}) == (long_value,)",
+      "assert short_value not in redact_text(f'password={short_value}', (short_value,))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner.py",
+    "name": "test_success_provenance_and_artifacts",
+    "line": 22,
+    "assertions": [
+      "assert result.run_status is RunStatus.SUCCEEDED",
+      "assert result.record['provenance'] == {'commit': 'abc'}",
+      "assert result.record['config_version'] == 'jobs-v4'",
+      "assert result.record['input_reference'] == 'dataset:sha256:abc'",
+      "assert result.record['output_reference'] == 'artifact:forecast-42'",
+      "assert result.record['retry_count'] == 2",
+      "assert result.record['host_or_environment'] == 'ci-linux'",
+      "assert json.loads((tmp_path / 'test' / 'heartbeat.json').read_text())['run_status'] == 'SUCCEEDED'",
+      "assert len((tmp_path / 'test' / 'events.jsonl').read_text().splitlines()) == 1"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner.py",
+    "name": "test_concurrent_run_is_skipped",
+    "line": 46,
+    "assertions": [
+      "assert result.run_status is RunStatus.SKIPPED"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner.py",
+    "name": "test_timeout_and_truncation",
+    "line": 54,
+    "assertions": [
+      "assert result.exit_code == 124 and result.run_status is RunStatus.FAILED",
+      "assert result.record['termination']['reason'] == 'timeout'",
+      "assert result.record['output']['truncated'] and result.record['output']['bytes'] == 20"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner.py",
+    "name": "test_crash_and_missing_expected_artifact",
+    "line": 68,
+    "assertions": [
+      "assert run_job(job(tmp_path, 'raise SystemExit(9)', id='crash')).exit_code == 9",
+      "assert result.run_status is RunStatus.PARTIAL"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner.py",
+    "name": "test_shutdown",
+    "line": 74,
+    "assertions": [
+      "assert result.exit_code == 130 and result.record['termination']['reason'] == 'shutdown'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner.py",
+    "name": "test_redacts_environment_arguments_stdout_and_stderr",
+    "line": 81,
+    "assertions": [
+      "assert secret not in serialized",
+      "assert REDACTED in serialized",
+      "assert redact({'token': secret}, (secret,))['token'] == REDACTED",
+      "assert sensitive_values({'API_TOKEN': secret}) == (secret,)",
+      "assert secret not in redact_text(f'Bearer {secret}', (secret,))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner.py",
+    "name": "test_json_logger_and_disabled_otel",
+    "line": 95,
+    "assertions": [
+      "assert formatter is not None",
+      "assert '\"event\": \"test_event\"' in formatter.format(record)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner_extended.py",
+    "name": "test_partial_exit_and_scientific_state_transport",
+    "line": 22,
+    "assertions": [
+      "assert partial.exit_code == 2 and partial.run_status is RunStatus.PARTIAL",
+      "assert source.run_status is RunStatus.SUCCEEDED",
+      "assert source.record['scientific_state'] == 'PENDING_SAMPLE'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner_extended.py",
+    "name": "test_strict_setup_failure_is_terminal_and_child_never_runs",
+    "line": 30,
+    "assertions": [
+      "assert result.run_status is RunStatus.CONFIGURATION_ERROR and result.exit_code == 3",
+      "assert not marker.exists()",
+      "assert heartbeat['run_status'] == 'CONFIGURATION_ERROR' and 'editable' in heartbeat['error']"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner_extended.py",
+    "name": "test_lock_loss_terminates_and_cleans_up",
+    "line": 60,
+    "assertions": [
+      "assert result.exit_code == 75 and result.record['termination']['reason'] == 'lock_lost'",
+      "assert backend.lock.released"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner_extended.py",
+    "name": "test_atomic_failure_leaves_no_temporary_and_preserves_previous",
+    "line": 67,
+    "assertions": [
+      "assert json.loads(path.read_text()) == {'old': True}",
+      "assert not list(tmp_path.glob('*.tmp'))"
+    ],
+    "raises": [
+      "pytest.raises(OSError)"
+    ]
+  },
+  {
+    "path": "tests_v2/test_runner_extended.py",
+    "name": "test_jsonl_concurrent_writers_are_parseable",
+    "line": 77,
+    "assertions": [
+      "assert sorted((record['index'] for record in records)) == list(range(100))"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runner_extended.py",
+    "name": "test_terminal_persistence_failure_still_releases_lock",
+    "line": 85,
+    "assertions": [
+      "assert backend.acquire('persist', 'successor', 60).acquired"
+    ],
+    "raises": [
+      "pytest.raises(OSError, match='persistence')"
+    ]
+  },
+  {
+    "path": "tests_v2/test_runtime.py",
+    "name": "test_local_lock_exclusion_release_and_stale",
+    "line": 19,
+    "assertions": [
+      "assert first.acquired and first.refresh()",
+      "assert not local.acquire('job', 'two', 60).acquired",
+      "assert stale.acquired",
+      "assert replacement.acquired",
+      "assert replacement.refresh()"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runtime.py",
+    "name": "test_local_lock_has_one_winner_across_processes",
+    "line": 35,
+    "assertions": [
+      "assert sum((queue.get(timeout=5) for _ in processes)) == 1",
+      "assert process.exitcode == 0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runtime.py",
+    "name": "test_factory_is_local_only",
+    "line": 47,
+    "assertions": [
+      "assert isinstance(backend(RuntimeConfig(root=tmp_path)), LocalBackend)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runtime.py",
+    "name": "test_stale_takeover_has_one_winner_across_processes",
+    "line": 51,
+    "assertions": [
+      "assert sum((queue.get(timeout=10) for _ in processes)) == 1",
+      "assert not old.refresh()",
+      "assert process.exitcode == 0"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_runtime.py",
+    "name": "test_atomic_json_and_durable_jsonl",
+    "line": 67,
+    "assertions": [
+      "assert json.loads(heartbeat.read_text()) == {'ok': True}",
+      "assert [json.loads(line)['n'] for line in events.read_text().splitlines()] == [1, 2]"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_stabilization.py",
+    "name": "test_early_persistence_failure_releases_lock",
+    "line": 18,
+    "assertions": [
+      "assert lock.acquired"
+    ],
+    "raises": [
+      "pytest.raises(OSError)"
+    ]
+  },
+  {
+    "path": "tests_v2/test_stabilization.py",
+    "name": "test_skipped_metadata_is_redacted_before_persistence",
+    "line": 40,
+    "assertions": [
+      "assert secret not in json.dumps(result.record)",
+      "assert secret not in path.read_text()"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_stabilization.py",
+    "name": "test_capture_memory_is_bounded_before_newline",
+    "line": 58,
+    "assertions": [
+      "assert not errors",
+      "assert len(sink) == 1024 and truncated.is_set()",
+      "assert peak < 1024 * 1024, peak"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_stabilization.py",
+    "name": "test_capture_redacts_secret_across_capture_boundary",
+    "line": 73,
+    "assertions": [
+      "assert not errors",
+      "assert b'fixture-super' not in sink"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_stabilization.py",
+    "name": "test_exited_parent_with_inherited_stdout_is_bounded_and_isolated",
+    "line": 81,
+    "assertions": [
+      "assert result.exit_code == 0",
+      "assert marker.exists()",
+      "assert elapsed < 8, elapsed",
+      "assert foreign.poll() is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_stabilization.py",
+    "name": "test_risk_blocks_have_no_subprocess_effect",
+    "line": 112,
+    "assertions": [
+      "assert result.record['reason'] == 'kill_switch_open'",
+      "assert not marker.exists()",
+      "assert job.risk_snapshot is not None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_stabilization.py",
+    "name": "test_unknown_submission_is_preserved_without_reexecution",
+    "line": 134,
+    "assertions": [
+      "assert first.exit_code == 9",
+      "assert second.record['previous_attempt']['requires_reconciliation'] is True",
+      "assert attempt.read_bytes() == preserved",
+      "assert marker.read_text() == 'attempt'"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_version_contract.py",
+    "name": "test_changelog_latest_release_matches_package_version",
+    "line": 6,
+    "assertions": [
+      "assert latest is not None, 'CHANGELOG has no release heading'",
+      "assert latest.group(1) == package_version"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_windows_adapter.py",
+    "name": "test_non_windows_fails_closed",
+    "line": 16,
+    "assertions": [
+      "assert result.status is RunStatus.CONFIGURATION_ERROR and result.task is None"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_windows_adapter.py",
+    "name": "test_present_disabled_failed_never_run_and_success",
+    "line": 22,
+    "assertions": [
+      "assert windows.inspect_scheduled_task('task').status is expected"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_windows_adapter.py",
+    "name": "test_quoting_spaced_paths_no_console_and_compat_view",
+    "line": 35,
+    "assertions": [
+      "assert windows.query_scheduled_task(\"owner's task\") == payload",
+      "assert \"'owner''s task'\" in script",
+      "assert captured['kwargs']['creationflags'] == getattr(subprocess, 'CREATE_NO_WINDOW', 0)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_windows_adapter.py",
+    "name": "test_permission_missing_powershell_invalid_json_and_schema_fail_closed",
+    "line": 56,
+    "assertions": [
+      "assert windows.inspect_scheduled_task('x').status is RunStatus.CONFIGURATION_ERROR",
+      "assert windows.inspect_scheduled_task('x').status is RunStatus.CONFIGURATION_ERROR",
+      "assert windows.inspect_scheduled_task('x').status is RunStatus.CONFIGURATION_ERROR",
+      "assert windows.inspect_scheduled_task('x').status is RunStatus.CONFIGURATION_ERROR"
+    ],
+    "raises": []
+  },
+  {
+    "path": "tests_v2/test_windows_adapter.py",
+    "name": "test_overdue_is_fail_closed",
+    "line": 68,
+    "assertions": [
+      "assert windows.is_overdue({}, now=now)",
+      "assert windows.is_overdue({'next_run': 'invalid'}, now=now)",
+      "assert windows.is_overdue({'next_run': (now - timedelta(seconds=1)).isoformat()}, now=now)",
+      "assert not windows.is_overdue({'next_run': (now + timedelta(seconds=1)).isoformat()}, now=now)"
+    ],
+    "raises": []
+  },
+  {
+    "path": "windows_integration/test_windows_real.py",
+    "name": "test_real_powershell_and_missing_task_fail_closed",
+    "line": 35,
+    "assertions": [
+      "assert os.name == 'nt'",
+      "assert version.returncode == 0 and version.stdout.strip()",
+      "assert result.status is RunStatus.CONFIGURATION_ERROR"
+    ],
+    "raises": []
+  },
+  {
+    "path": "windows_integration/test_windows_real.py",
+    "name": "test_real_present_never_run_disabled_and_failed_task",
+    "line": 47,
+    "assertions": [
+      "assert never.status is RunStatus.WAITING and never.task is not None",
+      "assert never.task['actions'][0]['execute'] == 'cmd.exe'",
+      "assert disabled.returncode == 0",
+      "assert inspect_scheduled_task(task_name).status is RunStatus.SKIPPED",
+      "assert started.returncode == 0",
+      "assert result.status is RunStatus.FAILED and result.task is not None",
+      "assert result.task['last_result'] == 7"
+    ],
+    "raises": []
+  }
+]

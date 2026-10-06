@@ -1,0 +1,57 @@
+cain-doctor exit=1 (.venv/bin/cain doctor)
+stocks-doctor-check exit=0 (.venv/bin/python main.py doctor --check)
+core-check-installed-wheel exit=2 (.venv/bin/python tools/check_installed_wheel.py)
+ops-provenance exit=3 (.venv/bin/predictor-ops provenance)
+eco-drift-offline exit=0 (.venv/bin/python scripts/check_ecosystem_drift.py --offline-check)
+eco-v2-registry-check exit=1 (.venv/bin/python packages/research-protocol/tools/build_v2_domain_registry.py --qualification <EXEC_ROOT>/predictor-qualification --commit 3ed750c --check)
+eco-v2-mapping-check exit=0 (.venv/bin/python packages/research-protocol/tools/render_v2_mapping.py)
+eco-v2-verify-installed-crypto exit=1 (.venv/bin/python <EXEC_ROOT>/ecosystem-predictor/packages/research-protocol/tools/build_v2_domain_registry.py --qualification <EXEC_ROOT>/predictor-qualification --commit 3ed750c --check --verify-installed)
+attest-check-brasileirao exit=1 (/usr/bin/python3.13 attest.py check ../../brasileirao/QUALIFICATION_ATTESTATION.json)
+attest-check-crypto exit=1 (/usr/bin/python3.13 attest.py check ../../crypto/QUALIFICATION_ATTESTATION.json)
+attest-check-integration-brasileirao exit=1 (/usr/bin/python3.13 attest.py check ../../integration-brasileirao/QUALIFICATION_ATTESTATION.json)
+attest-check-integration-crypto exit=1 (/usr/bin/python3.13 attest.py check ../../integration-crypto/QUALIFICATION_ATTESTATION.json)
+attest-check-integration-stocks exit=1 (/usr/bin/python3.13 attest.py check ../../integration-stocks/QUALIFICATION_ATTESTATION.json)
+attest-check-stocks exit=1 (/usr/bin/python3.13 attest.py check ../../stocks/QUALIFICATION_ATTESTATION.json)
+cripto-uv-build exit=0 (uv build --wheel --offline --out-dir <STUDY_ROOT>/epoca/dist-cripto)
+cripto-release-identity exit=1 (.venv/bin/python scripts/check_release_identity.py --dist <STUDY_ROOT>/epoca/dist-cripto --strict)
+attest-check-brasileirao exit=1 (<STUDY_ROOT>/tools/bin/python attest.py check ../../brasileirao/QUALIFICATION_ATTESTATION.json)
+attest-check-crypto exit=1 (<STUDY_ROOT>/tools/bin/python attest.py check ../../crypto/QUALIFICATION_ATTESTATION.json)
+attest-check-integration-brasileirao exit=1 (<STUDY_ROOT>/tools/bin/python attest.py check ../../integration-brasileirao/QUALIFICATION_ATTESTATION.json)
+attest-check-integration-crypto exit=1 (<STUDY_ROOT>/tools/bin/python attest.py check ../../integration-crypto/QUALIFICATION_ATTESTATION.json)
+attest-check-integration-stocks exit=1 (<STUDY_ROOT>/tools/bin/python attest.py check ../../integration-stocks/QUALIFICATION_ATTESTATION.json)
+attest-check-stocks exit=1 (<STUDY_ROOT>/tools/bin/python attest.py check ../../stocks/QUALIFICATION_ATTESTATION.json)
+core-check-installed-wheel exit=1 (.venv/bin/python tools/check_installed_wheel.py --wheel <STUDY_ROOT>/epoca/wheels/predictor_core-3.2.1-py3-none-any.whl)
+ops-provenance-cripto-venv exit=0 (.venv/bin/predictor-ops provenance)
+eco-v2-registry-check-own-commit exit=0 (.venv/bin/python packages/research-protocol/tools/build_v2_domain_registry.py --qualification <EXEC_ROOT>/predictor-qualification --commit ec02315a75e614e6d631dd4d852699340a91794c --check)
+core-check-installed-wheel-I exit=1 (.venv/bin/python -I tools/check_installed_wheel.py --wheel <STUDY_ROOT>/epoca/wheels/predictor_core-3.2.1-py3-none-any.whl)
+brasileirao issuance=5430a6f11b28f06859a11178706898254b5a7227 exit=1 : Traceback (most recent call last):   File "<STUDY_ROOT>/epoca/attest/brasileirao/qualification/crypto/scripts/attest.py", line 174, in <modu
+crypto issuance=96da7d083330db663fd43d6cf437f5473afd4d8c exit=0 : OK 
+integration-brasileirao issuance=4a14f6cbe68eaa89a94ffaee3ca57377af4147c5 exit=1 : Traceback (most recent call last):   File "<STUDY_ROOT>/epoca/attest/integration-brasileirao/qualification/crypto/scripts/attest.py", line 1
+integration-crypto issuance=c9e7330e30e5fbab8a6f76fbce9a3de88d5f6f7b exit=1 : Traceback (most recent call last):   File "<STUDY_ROOT>/epoca/attest/integration-crypto/qualification/crypto/scripts/attest.py", line 187, i
+integration-stocks issuance=59deb091d9f7d8c15604bed067b510da21beaf03 exit=1 : Traceback (most recent call last):   File "<STUDY_ROOT>/epoca/attest/integration-stocks/qualification/crypto/scripts/attest.py", line 187, i
+stocks issuance=6206b7b2307acdc6e8d958260a6cc06b7734d9c2 exit=1 : Traceback (most recent call last):   File "<STUDY_ROOT>/epoca/attest/stocks/qualification/crypto/scripts/attest.py", line 187, in <module>  
+brasileirao issuance=5430a6f11b28f06859a11178706898254b5a7227 exit=1 : C7.1(2): counts não bate com FINDINGS.json 
+integration-brasileirao issuance=4a14f6cbe68eaa89a94ffaee3ca57377af4147c5 exit=1 : C7.1(2): counts não bate com FINDINGS.json 
+integration-crypto issuance=c9e7330e30e5fbab8a6f76fbce9a3de88d5f6f7b exit=1 : C7.1(2): counts não bate com FINDINGS.json 
+integration-stocks issuance=59deb091d9f7d8c15604bed067b510da21beaf03 exit=1 : C7.1(2): counts não bate com FINDINGS.json 
+stocks issuance=6206b7b2307acdc6e8d958260a6cc06b7734d9c2 exit=1 : C7.1(2): counts não bate com FINDINGS.json 
+brasileirao own-script issuance=5430a6f11b28f06859a11178706898254b5a7227 exit=0 : OK 
+integration-brasileirao own-script issuance=4a14f6cbe68eaa89a94ffaee3ca57377af4147c5 exit=0 : OK 
+integration-crypto own-script issuance=c9e7330e30e5fbab8a6f76fbce9a3de88d5f6f7b exit=0 : OK 
+integration-stocks own-script issuance=59deb091d9f7d8c15604bed067b510da21beaf03 exit=0 : OK 
+stocks own-script issuance=6206b7b2307acdc6e8d958260a6cc06b7734d9c2 exit=0 : OK 
+brasileirao current-tree exit=0 : 0 problemas
+crypto current-tree exit=1 : 9 problemas
+integration-brasileirao current-tree exit=0 : 0 problemas
+integration-crypto current-tree exit=1 : 11 problemas
+integration-stocks current-tree exit=1 : 18 problemas
+stocks current-tree exit=0 : 0 problemas
+core-check-installed-wheel-cripto-venv exit=0
+uv-build-cain exit=0 cain_research-0.4.13rc16-py3-none-any.whl 
+uv-build-brasileirao-predictor exit=0 brasileirao_predictor-0.3.0rc6-py3-none-any.whl 
+uv-build-core-predictor exit=0 predictor_core-3.2.2-py3-none-any.whl 
+uv-build-predictor-ops exit=0 predictor_ops-4.2.2rc2-py3-none-any.whl 
+uv-build-stocks-predictor exit=0 stocks_predictor-0.3.0rc4-py3-none-any.whl 
+cain-doctor-fake exit=0
+stocks-verify-operational-evidence exit=1
+stocks-check-project-files exit=0

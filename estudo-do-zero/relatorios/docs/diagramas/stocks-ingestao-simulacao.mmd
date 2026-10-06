@@ -1,0 +1,21 @@
+sequenceDiagram
+ participant U as Operador
+ participant O as operations
+ participant C as source_catalog
+ participant D as operational_store SQLite
+ participant S as DatasetSelection
+ participant E as simulation
+ U->>O: ingest arquivo ZIP, hash e versao explicita
+ O->>D: BEGIN IMMEDIATE
+ O->>C: copiar bytes temporarios e conferir SHA
+ C->>C: parser estrito COTAHIST e filtro spot
+ C->>D: source_versions e prices_raw atomicos
+ D-->>O: receipt sem capital
+ U->>S: source_ids cutoff e periodo
+ S->>D: snapshot mode=ro
+ D-->>S: fontes e precos escolhidos
+ S->>S: normalizar FATCOT; recusar conflito
+ U->>E: targets eventos corporativos e custos
+ S->>E: barras e selection_sha
+ E->>E: D+1, posicoes, custos e marcas
+ E-->>U: medicao e hash de inputs; sem verdict economico

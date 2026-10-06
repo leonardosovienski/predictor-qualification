@@ -1,0 +1,478 @@
+### brasileirao_predictor/collector_a1.py
+3: from __future__ import annotations
+5: import hashlib
+6: import json
+7: import os
+8: import re
+9: import sqlite3
+10: from datetime import UTC, datetime
+11: from pathlib import Path
+12: from typing import Any, Literal, cast
+14: import requests
+15: from jsonschema import Draft202012Validator, FormatChecker
+17: from .identity import TeamAliases
+19: SOURCE_ID = "oddspapi_v4"
+20: BASE_URL = "https://api.oddspapi.io/v4"
+21: TOURNAMENT_ID = 325
+22: TARGET_BOOKMAKERS = (
+23:     "pinnacle",
+24:     "betano.bet.br",
+25:     "estrelabet",
+26:     "sportingbet.bet.br",
+27:     "superbet.bet.br",
+28:     "kto",
+29:     "pixbet",
+30: )
+31: CadenceMode = Literal["economic", "full"]
+34: def parse_utc(value: str) -> datetime:
+35:     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+36:     if parsed.tzinfo is None or parsed.utcoffset() is None:
+37:         raise ValueError("timestamp must be timezone-aware")
+38:     return parsed.astimezone(UTC)
+41: def utc_text(value: datetime) -> str:
+42:     if value.tzinfo is None or value.utcoffset() is None:
+43:         raise ValueError("timestamp must be timezone-aware")
+44:     return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+47: def canonical_json(value: dict[str, Any]) -> bytes:
+48:     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+51: class OddsPapiClient:
+54:     def __init__(self, api_key: str | None = None, timeout: int = 30) -> None:
+55:         self._api_key = (api_key or os.getenv("ODDSPAPI_KEY", "")).strip()
+56:         if not self._api_key:
+57:             raise RuntimeError("ODDSPAPI_KEY ausente")
+58:         self.timeout = timeout
+60:     def _get(self, endpoint: str, **params: object) -> Any:
+61:         response = requests.get(
+62:             f"{BASE_URL}/{endpoint}",
+63:             params=cast(Any, {**params, "apiKey": self._api_key}),
+64:             timeout=self.timeout,
+65:         )
+66:         if response.status_code != 200:
+67:             detail = response.text[:240].replace(self._api_key, "[REDACTED]")
+68:             raise RuntimeError(f"OddsPapi HTTP {response.status_code}: {detail}")
+69:         return response.json()
+71:     def fixtures(self, start: str, end: str) -> list[dict[str, Any]]:
+72:         payload = self._get("fixtures", sportId=10, tournamentId=TOURNAMENT_ID, **{"from": start, "to": end})
+73:         if not isinstance(payload, list):
+74:             raise RuntimeError("payload de fixtures inválido")
+75:         return [item for item in payload if isinstance(item, dict)]
+77:     def odds(self, fixture_id: str) -> dict[str, Any]:
+78:         payload = self._get("odds", fixtureId=fixture_id, oddsFormat="decimal", verbosity=3)
+79:         if not isinstance(payload, dict):
+80:             raise RuntimeError("payload de odds inválido")
+81:         return payload
+83:     def account(self) -> dict[str, Any]:
+85:         payload = self._get("account")
+86:         if not isinstance(payload, dict):
+87:             raise RuntimeError("payload de account inválido")
+88:         return payload
+91: def _numeric_field(value: Any, field: str) -> int | None:
+92:     if isinstance(value, dict):
+93:         if field in value and isinstance(value[field], int | float):
+94:             return int(value[field])
+95:         for nested in value.values():
+96:             found = _numeric_field(nested, field)
+97:             if found is not None:
+98:                 return found
+99:     elif isinstance(value, list):
+100:         for nested in value:
+101:             found = _numeric_field(nested, field)
+102:             if found is not None:
+103:                 return found
+104:     return None
+107: def quota_status(payload: dict[str, Any]) -> tuple[int, int]:
+109:     count = _numeric_field(payload, "request_count")
+110:     limit = _numeric_field(payload, "request_limit")
+111:     if count is None or limit is None or count < 0 or limit < 1 or count > limit:
+112:         raise RuntimeError("account sem request_count/request_limit válidos")
+113:     return count, limit
+116: class QuotaGuard:
+117:     def __init__(self, path: Path, *, reserve: int = 20, max_attempts: int = 2, backoff_minutes: int = 30) -> None:
+118:         self.path = path
+119:         self.reserve = reserve
+120:         self.max_attempts = max_attempts
+121:         self.backoff_minutes = backoff_minutes
+122:         self.state: dict[str, Any] = (
+123:             json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"period": None, "attempts": {}}
+124:         )
+126:     def _rollover(self, now: datetime) -> None:
+127:         period = now.astimezone(UTC).strftime("%Y-%m")
+128:         if self.state.get("period") != period:
+129:             self.state = {"period": period, "attempts": {}}
+131:     def allow(
+132:         self, fixture_id: str, label: str, now: datetime, request_count: int, request_limit: int
+133:     ) -> tuple[bool, str]:
+134:         self._rollover(now)
+135:         if request_limit - request_count <= self.reserve:
+136:             return False, "monthly_reserve"
+137:         item = self.state["attempts"].get(f"{fixture_id}|{label}", {})
+138:         if int(item.get("count", 0)) >= self.max_attempts:
+139:             return False, "attempt_limit"
+140:         last = item.get("last_attempt_at")
+141:         if last and (now - parse_utc(str(last))).total_seconds() < self.backoff_minutes * 60:
+142:             return False, "backoff"
+143:         return True, "allowed"
+145:     def record(self, fixture_id: str, label: str, now: datetime) -> None:
+146:         self._rollover(now)
+147:         key = f"{fixture_id}|{label}"
+148:         item = self.state["attempts"].setdefault(key, {"count": 0})
+149:         item["count"] = int(item["count"]) + 1
+150:         item["last_attempt_at"] = utc_text(now)
+151:         self.path.parent.mkdir(parents=True, exist_ok=True)
+152:         self.path.write_text(json.dumps(self.state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+155: class SnapshotStore:
+156:     def __init__(
+157:         self, root: Path, schema_path: Path, quarantine_root: Path | None = None, operational_db: Path | None = None
+158:     ) -> None:
+159:         self.root = root
+160:         self.quarantine_root = quarantine_root or root.parent / "odds_quarantine"
+161:         schema = json.loads(schema_path.read_text(encoding="utf-8"))
+162:         self.validator = Draft202012Validator(schema, format_checker=FormatChecker())
+163:         self.operational_db = operational_db
+164:         if operational_db is not None:
+165:             self._init_operational_db()
+167:     def _connect_operational(self) -> sqlite3.Connection:
+168:         if self.operational_db is None:
+169:             raise RuntimeError("operational snapshot database is not configured")
+170:         self.operational_db.parent.mkdir(parents=True, exist_ok=True)
+171:         connection = sqlite3.connect(self.operational_db)
+172:         connection.execute("PRAGMA journal_mode=WAL")
+173:         connection.execute("PRAGMA busy_timeout=30000")
+174:         return connection
+176:     def _init_operational_db(self) -> None:
+177:         with self._connect_operational() as connection:
+178:             connection.executescript(
+179:                 """
+180:                 CREATE TABLE IF NOT EXISTS odds_event_versions (
+181:                     source_id TEXT NOT NULL, source_event_id TEXT NOT NULL,
+182:                     event_id TEXT NOT NULL, kickoff_at TEXT NOT NULL,
+183:                     version INTEGER NOT NULL, lifecycle_status TEXT NOT NULL,
+184:                     superseded_by TEXT, recorded_at TEXT NOT NULL,
+185:                     PRIMARY KEY (source_id, source_event_id, version)
+186:                 );
+187:                 CREATE UNIQUE INDEX IF NOT EXISTS uq_odds_event_current
+188:                   ON odds_event_versions(source_id, source_event_id, kickoff_at);
+189:                 CREATE TABLE IF NOT EXISTS odds_snapshot_facts (
+190:                     snapshot_id TEXT PRIMARY KEY, source_id TEXT NOT NULL,
+191:                     source_event_id TEXT NOT NULL, event_version INTEGER NOT NULL,
+192:                     event_id TEXT NOT NULL, bookmaker TEXT NOT NULL, market TEXT NOT NULL,
+193:                     selection TEXT NOT NULL, line REAL, odds REAL NOT NULL,
+194:                     captured_at TEXT NOT NULL, kickoff_at TEXT NOT NULL,
+195:                     valid_from TEXT NOT NULL, valid_to TEXT,
+196:                     hash_self TEXT NOT NULL UNIQUE
+197:                 );
+198:                 CREATE INDEX IF NOT EXISTS ix_odds_facts_pit
+199:                   ON odds_snapshot_facts(event_id, bookmaker, market, selection, valid_from, valid_to);
+200:                 """
+201:             )
+203:     def _mirror_operational(self, snapshot: dict[str, Any]) -> None:
+204:         if self.operational_db is None:
+205:             return
+206:         with self._connect_operational() as connection:
+207:             if connection.execute(
+208:                 "SELECT 1 FROM odds_snapshot_facts WHERE hash_self=?", (snapshot["hash_self"],)
+209:             ).fetchone():
+210:                 return
+211:             latest = connection.execute(
+212:                 "SELECT version,kickoff_at FROM odds_event_versions "
+213:                 "WHERE source_id=? AND source_event_id=? ORDER BY version DESC LIMIT 1",
+214:                 (snapshot["source_id"], snapshot["source_event_id"]),
+215:             ).fetchone()
+216:             if latest is None:
+217:                 version = 1
+218:                 connection.execute(
+219:                     "INSERT INTO odds_event_versions VALUES (?,?,?,?,?,'SCHEDULED',NULL,?)",
+220:                     (
+221:                         snapshot["source_id"],
+222:                         snapshot["source_event_id"],
+223:                         snapshot["event_id"],
+224:                         snapshot["kickoff_at"],
+225:                         version,
+226:                         snapshot["captured_at"],
+227:                     ),
+228:                 )
+229:             elif latest[1] != snapshot["kickoff_at"]:
+230:                 version = int(latest[0]) + 1
+231:                 successor = f"{snapshot['source_event_id']}|v{version}"
+232:                 connection.execute(
+233:                     "UPDATE odds_event_versions SET lifecycle_status='RESCHEDULED',superseded_by=? "
+234:                     "WHERE source_id=? AND source_event_id=? AND version=?",
+235:                     (successor, snapshot["source_id"], snapshot["source_event_id"], latest[0]),
+236:                 )
+237:                 connection.execute(
+238:                     "INSERT INTO odds_event_versions VALUES (?,?,?,?,?,'SCHEDULED',NULL,?)",
+239:                     (
+240:                         snapshot["source_id"],
+241:                         snapshot["source_event_id"],
+242:                         snapshot["event_id"],
+243:                         snapshot["kickoff_at"],
+244:                         version,
+245:                         snapshot["captured_at"],
+246:                     ),
+247:                 )
+248:             else:
+249:                 version = int(latest[0])
+250:             logical = (
+251:                 snapshot["event_id"],
+252:                 snapshot["bookmaker"],
+253:                 snapshot["market"],
+254:                 snapshot["selection"],
+255:                 snapshot["line"],
+256:             )
+257:             connection.execute(
+258:                 "UPDATE odds_snapshot_facts SET valid_to=? WHERE event_id=? AND bookmaker=? AND market=? "
+259:                 "AND selection=? AND line IS ? AND valid_to IS NULL",
+260:                 (snapshot["captured_at"], *logical),
+261:             )
+262:             connection.execute(
+263:                 "INSERT INTO odds_snapshot_facts VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+264:                 (
+265:                     snapshot["snapshot_id"],
+266:                     snapshot["source_id"],
+267:                     snapshot["source_event_id"],
+268:                     version,
+269:                     snapshot["event_id"],
+270:                     snapshot["bookmaker"],
+271:                     snapshot["market"],
+272:                     snapshot["selection"],
+273:                     snapshot["line"],
+274:                     snapshot["odds"],
+275:                     snapshot["captured_at"],
+276:                     snapshot["kickoff_at"],
+277:                     snapshot["captured_at"],
+278:                     None,
+279:                     snapshot["hash_self"],
+280:                 ),
+281:             )
+283:     def _enrich_lifecycle(self, snapshot: dict[str, Any]) -> dict[str, Any]:
+284:         candidate = dict(snapshot)
+285:         if self.operational_db is not None:
+286:             with self._connect_operational() as connection:
+287:                 latest = connection.execute(
+288:                     "SELECT version,kickoff_at FROM odds_event_versions "
+289:                     "WHERE source_id=? AND source_event_id=? ORDER BY version DESC LIMIT 1",
+290:                     (candidate["source_id"], candidate["source_event_id"]),
+291:                 ).fetchone()
+292:             if latest is not None and latest[1] != candidate["kickoff_at"]:
+293:                 candidate["event_version"] = int(latest[0]) + 1
+294:                 candidate["lifecycle_status"] = "SCHEDULED"
+295:                 candidate["supersedes_event_version"] = int(latest[0])
+296:             elif latest is not None:
+297:                 candidate["event_version"] = int(latest[0])
+298:         candidate.pop("hash_self", None)
+299:         candidate["snapshot_id"] = "pending"
+300:         candidate["snapshot_id"] = hashlib.sha256(canonical_json(candidate)).hexdigest()[:24]
+301:         candidate["hash_self"] = hashlib.sha256(canonical_json(candidate)).hexdigest()
+302:         return candidate
+304:     def _path(self, captured_at: str) -> Path:
+305:         return self.root / f"{parse_utc(captured_at).date().isoformat()}.jsonl"
+307:     @staticmethod
+308:     def _identity(snapshot: dict[str, Any]) -> tuple[Any, ...]:
+309:         return tuple(
+310:             snapshot[key] for key in ("source_event_id", "bookmaker", "market", "selection", "line", "captured_at")
+311:         )
+313:     def quarantine(self, reason: str, payload: dict[str, Any]) -> None:
+314:         self.quarantine_root.mkdir(parents=True, exist_ok=True)
+315:         record = {"recorded_at": utc_text(datetime.now(UTC)), "reason": reason, "payload": payload}
+316:         with (self.quarantine_root / "quarantine.jsonl").open("a", encoding="utf-8", newline="\n") as handle:
+317:             handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+319:     def append(self, snapshot: dict[str, Any]) -> Literal["written", "duplicate", "conflict"]:
+320:         snapshot = self._enrich_lifecycle(snapshot)
+321:         errors = sorted(self.validator.iter_errors(snapshot), key=lambda error: list(error.path))
+322:         if errors:
+323:             self.quarantine("schema_invalid: " + errors[0].message, snapshot)
+324:             return "conflict"
+325:         captured = parse_utc(snapshot["captured_at"])
+326:         kickoff = parse_utc(snapshot["kickoff_at"])
+327:         if captured >= kickoff:
+328:             self.quarantine("pit_violation", snapshot)
+329:             return "conflict"
+330:         path = self._path(snapshot["captured_at"])
+331:         path.parent.mkdir(parents=True, exist_ok=True)
+332:         existing = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()] if path.exists() else []
+333:         same = [item for item in existing if self._identity(item) == self._identity(snapshot)]
+334:         if same:
+335:             if any(item["hash_self"] == snapshot["hash_self"] for item in same):
+336:                 self._mirror_operational(snapshot)
+337:                 return "duplicate"
+338:             self.quarantine("identity_conflict", snapshot)
+339:             return "conflict"
+340:         expected_prev = existing[-1]["hash_self"] if existing else None
+341:         if snapshot["hash_prev"] != expected_prev:
+342:             self.quarantine("hash_prev_mismatch", snapshot)
+343:             return "conflict"
+344:         material = dict(snapshot)
+345:         claimed = material.pop("hash_self")
+346:         if hashlib.sha256(canonical_json(material)).hexdigest() != claimed:
+347:             self.quarantine("hash_self_mismatch", snapshot)
+348:             return "conflict"
+349:         with path.open("a", encoding="utf-8", newline="\n") as handle:
+350:             handle.write(json.dumps(snapshot, ensure_ascii=False, sort_keys=True) + "\n")
+351:         self._mirror_operational(snapshot)
+352:         return "written"
+354:     def append_batch(self, snapshots: list[dict[str, Any]]) -> list[Literal["written", "duplicate", "conflict"]]:
+361:         results: list[Literal["written", "duplicate", "conflict"]] = []
+362:         for original in snapshots:
+363:             candidate = self._enrich_lifecycle(original)
+364:             path = self._path(candidate["captured_at"])
+365:             existing = (
+366:                 [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()] if path.exists() else []
+367:             )
+368:             same = [item for item in existing if self._identity(item) == self._identity(candidate)]
+369:             ignored = {"snapshot_id", "hash_prev", "hash_self"}
+370:             semantic = {key: value for key, value in candidate.items() if key not in ignored}
+371:             if any({key: value for key, value in item.items() if key not in ignored} == semantic for item in same):
+372:                 for item in same:
+373:                     if {key: value for key, value in item.items() if key not in ignored} == semantic:
+374:                         self._mirror_operational(item)
+375:                         break
+376:                 results.append("duplicate")
+377:                 continue
+378:             candidate["hash_prev"] = existing[-1]["hash_self"] if existing else None
+379:             candidate.pop("hash_self", None)
+380:             candidate["snapshot_id"] = "pending"
+381:             candidate["snapshot_id"] = hashlib.sha256(canonical_json(candidate)).hexdigest()[:24]
+382:             candidate["hash_self"] = hashlib.sha256(canonical_json(candidate)).hexdigest()
+383:             results.append(self.append(candidate))
+384:         return results
+386:     def verify(self, path: Path) -> bool:
+387:         previous: str | None = None
+388:         for line in path.read_text(encoding="utf-8").splitlines():
+389:             item = json.loads(line)
+390:             if item["hash_prev"] != previous:
+391:                 return False
+392:             claimed = item.pop("hash_self")
+393:             if hashlib.sha256(canonical_json(item)).hexdigest() != claimed:
+394:                 return False
+395:             previous = claimed
+396:         return True
+398:     def seal(self, path: Path) -> dict[str, Any]:
+399:         if not self.verify(path):
+400:             raise RuntimeError("hash-chain inválida")
+401:         seal = {
+402:             "file": path.name,
+403:             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+404:             "sealed_at": utc_text(datetime.now(UTC)),
+405:         }
+406:         path.with_suffix(".seal.json").write_text(json.dumps(seal, indent=2) + "\n", encoding="utf-8")
+407:         return seal
+410: def event_id(home: str, away: str, kickoff_at: str) -> str:
+411:     return f"br-serie-a|2026|{home}|{away}|{parse_utc(kickoff_at).date().isoformat()}"
+414: def _market_rows(book: dict[str, Any]) -> list[tuple[str, str, float | None, float, str]]:
+415:     rows: list[tuple[str, str, float | None, float, str]] = []
+416:     for market_id, market in book.get("markets", {}).items():
+417:         outcomes = market.get("outcomes", {})
+418:         if market_id == "101":
+419:             names = {"101": "home", "102": "draw", "103": "away"}
+420:             for outcome_id, outcome in outcomes.items():
+421:                 for player in outcome.get("players", {}).values():
+422:                     if outcome_id in names and isinstance(player.get("price"), int | float):
+423:                         rows.append(("1x2", names[outcome_id], None, float(player["price"]), "normal"))
+424:             continue
+425:         flattened = [player for outcome in outcomes.values() for player in outcome.get("players", {}).values()]
+426:         labels = [str(player.get("bookmakerOutcomeId", "")).casefold() for player in flattened]
+427:         total_rows = [
+428:             (player, label)
+429:             for player, label in zip(flattened, labels, strict=True)
+430:             if ("over" in label or "under" in label) and re.search(r"(?<!\d)2[.,]5(?!\d)", label)
+431:         ]
+432:         if total_rows:
+433:             for player, label in total_rows:
+434:                 side = "over" if "over" in label else "under"
+435:                 if isinstance(player.get("price"), int | float):
+436:                     rows.append(("ou2.5", side, 2.5, float(player["price"]), "unverified"))
+437:         elif set(labels) == {"yes", "no"}:
+438:             for player, label in zip(flattened, labels, strict=True):
+439:                 if isinstance(player.get("price"), int | float):
+440:                     rows.append(("btts", label, None, float(player["price"]), "unverified"))
+441:     return rows
+444: def build_snapshots(
+445:     payload: dict[str, Any], aliases: TeamAliases, captured_at: datetime, hash_prev: str | None = None
+446: ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+447:     home_result = aliases.resolve(str(payload.get("participant1Name", "")))
+448:     away_result = aliases.resolve(str(payload.get("participant2Name", "")))
+449:     if not home_result.canonical or not away_result.canonical:
+450:         return [], [
+451:             {
+452:                 "reason": "unknown_team_alias",
+453:                 "home": payload.get("participant1Name"),
+454:                 "away": payload.get("participant2Name"),
+455:                 "home_suggestion": home_result.suggestion,
+456:                 "away_suggestion": away_result.suggestion,
+457:             }
+458:         ]
+459:     kickoff = str(payload["startTime"])
+460:     if captured_at >= parse_utc(kickoff):
+461:         raise ValueError("captured_at must be strictly before kickoff_at")
+462:     canonical_event = event_id(home_result.canonical, away_result.canonical, kickoff)
+463:     snapshots: list[dict[str, Any]] = []
+464:     previous = hash_prev
+465:     bookmaker_odds = payload.get("bookmakerOdds", {})
+466:     for bookmaker in TARGET_BOOKMAKERS:
+467:         book = bookmaker_odds.get(bookmaker)
+468:         if not isinstance(book, dict):
+469:             continue
+470:         status = "suspended" if book.get("suspended") else "active" if book.get("bookmakerIsActive", True) else "closed"
+471:         for market, selection, line, odd, identity_status in _market_rows(book):
+472:             material: dict[str, Any] = {
+473:                 "schema_version": "odds_snapshot/1",
+474:                 "snapshot_id": "pending",
+475:                 "source_id": SOURCE_ID,
+476:                 "source_event_id": str(payload["fixtureId"]),
+477:                 "event_id": canonical_event,
+478:                 "bookmaker": bookmaker,
+479:                 "market": market,
+480:                 "selection": selection,
+481:                 "line": line,
+482:                 "odds": odd,
+483:                 "status": status,
+484:                 "identity_status": identity_status,
+485:                 "captured_at": utc_text(captured_at),
+486:                 "kickoff_at": utc_text(parse_utc(kickoff)),
+487:                 "mapping_version": aliases.mapping_version,
+488:                 "homologated": False,
+489:                 "hash_prev": previous,
+490:                 "supersedes": None,
+491:                 "event_version": 1,
+492:                 "lifecycle_status": "SCHEDULED",
+493:                 "supersedes_event_version": None,
+494:             }
+495:             material["snapshot_id"] = hashlib.sha256(canonical_json(material)).hexdigest()[:24]
+496:             material["hash_self"] = hashlib.sha256(canonical_json(material)).hexdigest()
+497:             previous = material["hash_self"]
+498:             snapshots.append(material)
+499:     return snapshots, []
+502: def compute_daily_metrics(
+503:     snapshots: list[dict[str, Any]], expected_event_ids: set[str], *, mode: CadenceMode = "economic"
+504: ) -> dict[str, Any]:
+505:     events = {item["event_id"] for item in snapshots}
+506:     event_coverage = len(events & expected_event_ids) / len(expected_event_ids) if expected_event_ids else 0.0
+507:     expected_markets = len(events) * len(TARGET_BOOKMAKERS) * 3
+508:     present_markets = {(item["event_id"], item["bookmaker"], item["market"]) for item in snapshots}
+509:     books = {item["bookmaker"] for item in snapshots}
+510:     conflicts = sum(item.get("collector_state") == "conflict" for item in snapshots)
+511:     capture_times = sorted({parse_utc(item["captured_at"]) for item in snapshots})
+512:     gaps = [(right - left).total_seconds() for left, right in zip(capture_times, capture_times[1:], strict=False)]
+513:     continuity = None if mode == "economic" else (sum(gap <= 3600 for gap in gaps) / len(gaps) if gaps else 0.0)
+514:     return {
+515:         "schema_version": "collector_metrics/1",
+516:         "mode": mode,
+517:         "calculated_at": utc_text(datetime.now(UTC)),
+518:         "event_coverage": event_coverage,
+519:         "market_coverage": len(present_markets) / expected_markets if expected_markets else 0.0,
+520:         "continuity": continuity,
+521:         "freshness": None
+522:         if not snapshots
+523:         else max(
+524:             (parse_utc(item["kickoff_at"]) - parse_utc(item["captured_at"])).total_seconds() for item in snapshots
+525:         ),
+526:         "identity_resolution_rate": 1.0 if snapshots else 0.0,
+527:         "conflict_rate": conflicts / len(snapshots) if snapshots else 0.0,
+528:         "reference_present": "pinnacle" in books,
+529:         "soft_books_count": len(books - {"pinnacle"}),
+530:         "max_gap_seconds": None if mode == "economic" else (max(gaps) if gaps else None),
+531:         "snapshots": len(snapshots),
+532:         "homologated": False,
+533:     }
+536: def safe_slug(value: str) -> str:
+537:     return re.sub(r"[^a-z0-9-]", "-", value.casefold()).strip("-")

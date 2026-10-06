@@ -1,0 +1,182 @@
+[
+  {
+    "index": 10,
+    "path": "tests/test_api_guard.py",
+    "sha256_utf8": "1c794a33b1200459b5d1e290b42880307bab4fdd5878cdbb52e7effc8daa84df",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_reset_notice_never_erases_durable_usage",
+      "test_guarda_desligada_nao_muda_comportamento",
+      "test_guarda_desligada_emite_um_evento_de_aviso_por_processo",
+      "test_guarda_bloqueia_antes_da_unidade_seguinte",
+      "test_orcamento_persiste_entre_reaberturas",
+      "test_news_cache_evita_nova_chamada",
+      "test_fear_greed_cache_nao_toca_rede_uma_segunda_vez"
+    ],
+    "notes": "Fixture autouse desvia budget SQLite e events para tmp. Guarda habilitada consome quota durável, reset_for_test não apaga uso, bloqueio antes próxima unidade; desabilitada permite repetição e emite um aviso por processo. Teste chamado persistência entre reaberturas apenas chama allow duas vezes, sem reiniciar processo. News fake provider/cache garante uma chamada; feargreed cache pré-preenchido evita rede. Não atesta orçamento real do fornecedor nem concorrência."
+  },
+  {
+    "index": 11,
+    "path": "tests/test_architecture_boundaries.py",
+    "sha256_utf8": "f966d2b59998cb14e7e1f1e247bbd87245bf22ff7f7dbe8696ec5e3f4183f1cc",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_read_only_store_does_not_create_or_migrate",
+      "test_source_failure_is_not_no_opportunity"
+    ],
+    "notes": "SQLite temporário missing read_only não cria banco; banco marcador abre sem migrar e escrita falha, bytes preservados. Outcomes SOURCE_UNAVAILABLE=>FAILED, FILTERED=>SUCCEEDED, combinação failed/succeeded=>PARTIAL distingue fonte de ausência de oportunidade."
+  },
+  {
+    "index": 12,
+    "path": "tests/test_architecture_contracts.py",
+    "sha256_utf8": "62ab62a8bc49a6f3de6cfeef28c0cd12463b9444fb176da3594f1a74013c04fd",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_request_rejects_naive_datetimes",
+      "test_fallback_is_excluded_from_science",
+      "test_resilience_policy_is_fail_fast"
+    ],
+    "notes": "PredictionRequest rejeita datetime naive; fallback excluído da elegibilidade científica, caso não degraded elegível. ResiliencePolicy timeout0 falha. Testes de contrato, sem avaliação de previsão ou provedores."
+  },
+  {
+    "index": 13,
+    "path": "tests/test_audit_economic_accounting.py",
+    "sha256_utf8": "8d82a017012e46242e14fec259e3e4393dda231769f254158da9a7db4e63ff27",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_stop_uses_observed_gap_price_and_actual_duration",
+      "test_partial_history_is_not_a_mature_horizon_return",
+      "test_unobserved_barrier_path_is_not_filled_from_future_prices",
+      "test_realized_funding_uses_each_settlement_rate_and_mark",
+      "test_friction_charges_the_actual_exit_notional",
+      "test_edge_estimator_does_not_drop_invalid_observations",
+      "test_frozen_paper_family_stops_before_market_or_pipeline_calls"
+    ],
+    "notes": "Preços sintéticos verificam stop no gap observado -10% e duração1h, horizonte incompleto e caminho intermediário não observado sem fill. Funding usa rates e mark em cada settlement, missing settlement None e janela sem settlement0. Fricção usa notional de saída; edge rejeita NaN. Família paper congelada levanta antes run_symbol mock forbidden, sem demonstrar mercado."
+  },
+  {
+    "index": 14,
+    "path": "tests/test_audit_expansion_regressions.py",
+    "sha256_utf8": "16e99850d9ffffc598cf7a52d1cbb09e11e0ce5d60eb586fda63e9fc327c2566",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_replayed_fill_is_idempotent_even_after_completion",
+      "test_conflicting_fill_id_is_rejected",
+      "test_reconcile_detects_economic_or_identity_difference",
+      "test_adapter_deduplicates_same_receipt",
+      "test_ledger_rejects_order_id_collision",
+      "test_ledger_rejects_client_id_with_changed_economics",
+      "test_order_rejects_receipt_predating_creation",
+      "test_fill_rejects_nonfinite_numbers",
+      "test_book_rejects_nonfinite_levels",
+      "test_book_rejects_duplicate_price_liquidity",
+      "test_failed_depth_update_does_not_partially_mutate_book",
+      "test_crossed_depth_update_is_rejected_atomically",
+      "test_tiny_positive_quantity_is_not_a_phantom_fill",
+      "test_portfolio_sums_lots_for_the_same_instrument",
+      "test_csv_deduplicates_within_single_batch",
+      "test_csv_conflicting_observation_preserves_original",
+      "test_factor_lag_preserves_timeline_length",
+      "test_malformed_factor_fails_during_construction",
+      "test_harness_spearman_does_not_invent_rank_for_ties",
+      "test_harness_duplicate_does_not_hide_a_missing_prediction",
+      "test_pbo_rejects_nonfinite_observations",
+      "test_equivalence_cannot_pass_without_comparisons",
+      "test_append_scientific_trace_refuses_corrupt_history",
+      "test_proposal_evaluation_refuses_misaligned_target",
+      "test_dense_store_refuses_unsupported_venue",
+      "test_dense_store_preserves_short_session_identifier",
+      "test_stream_parser_refuses_nonfinite_prices"
+    ],
+    "notes": "Regressões em objetos artificiais: replay de fill inclusive completo idempotente, fillid conflitante rejeitado, reconcile percebe preço/fee/time/id alterados, ledger impede colisão order/clientid e receipt anterior. Nonfinite fill/book e preço duplicado rejeitados, depthupdate inválido/cruzado não muda snapshot/sequence, tinyqty não vira phantom. Soma lotes no portfolio. CSV tmp dedup por lote e conflito conserva bytes; lag mantém comprimento, DSL malformado falha, Spearman empate None, duplicate não oculta previsão faltante, PBO NaN e equivalence sem comparação falham. Traces JSON corruptos preservados, alvos desalinhados rejeitados, TradingStore venue inválida/short session, parserNaN. Sem exchange real."
+  },
+  {
+    "index": 15,
+    "path": "tests/test_audit_final_boundaries.py",
+    "sha256_utf8": "ef631caa1709d5f947a54ce106c7dce8df919d7096bd593bcc29b2f6d693b60f",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_zero_momentum_and_flat_rsi_are_neutral",
+      "test_nonfinite_score_cannot_propagate",
+      "test_corrupt_cache_is_not_overwritten",
+      "test_old_revision_cannot_replace_latest_observation",
+      "test_phase1_watchdog_bad_time_is_failed",
+      "test_observation_watchdog_bad_json_is_failure_report",
+      "test_watchdog_reads_operational_log_directory",
+      "test_one_perfect_day_cannot_pass_weekly_coverage",
+      "test_ccxt_duplicate_timestamp_rejected",
+      "test_discovery_nonfinite_row_is_not_candidate"
+    ],
+    "notes": "Dados sintéticos validam neutralidade de momentum0/RSIflat50, scoreNaN rejeitado e cache corrupto conservado. Revisão de observação antiga não substitui latest. Heartbeat malformed/naive/futuro falha e JSON inválido unhealthy. Watchdog consulta diretório log operacional; um dia perfeito não cobre semana. CCXT client fake com timestamps duplicados rejeitado e discoveryvolumeInf não candidato. Nenhum polling real."
+  },
+  {
+    "index": 16,
+    "path": "tests/test_audit_model_integrity.py",
+    "sha256_utf8": "259c4836f39e22dcef739ffbf2c51cdd0b4bf252b71459bed02b01b307baf303",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_h8_missing_period_is_not_a_shorter_horizon",
+      "test_volume_of_open_candle_never_enters_crowding",
+      "test_volatility_requires_all_hourly_intervals",
+      "test_time_index_is_independent_of_later_mapping_mutation",
+      "test_failed_refit_preserves_the_previous_model_and_scaler",
+      "test_forward_computes_covariance_inverses_once_per_state"
+    ],
+    "notes": "H8 alvo usa horizonte real24h e lacuna não encurta; volume candle aberto excluído de crowding, volatilidade exige todas horas e SortedTimeIndex copia mapping. Testes HMM podem skip via importorskip hmmlearn/numpy: refit fake falhado preserva modelo/scaler/state; forward causal simétrico faz uma inversa por estado e probabilidades1/3. Não prova regime no mundo real."
+  },
+  {
+    "index": 17,
+    "path": "tests/test_audit_persistence_safety.py",
+    "sha256_utf8": "fca57e28fc1d42a421c60972767951cd884e5c74b14fc83a48e7d094486b8443",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_signal_batch_conflict_is_atomic",
+      "test_signal_without_content_hash_cannot_overwrite_same_vintage",
+      "test_old_history_can_be_recorded_as_receipt_without_backdating",
+      "test_feature_store_health_future_time_is_not_ready",
+      "test_microsecond_roundtrip_does_not_use_float_epoch",
+      "test_store_compaction_conflicting_metadata_keeps_source",
+      "test_latest_store_does_not_decode_entire_history",
+      "test_export_untrusted_text_cannot_become_formula"
+    ],
+    "notes": "SQLite temp comprova batch sinais conflitante atômico, mesma vintage sem hash não sobrescreve e histórico recebido agora conserva published_at atual. Storehealth futuro CORRUPT; micros ano2250 preserva precisão. Compaction conflitante conserva fonte, latest decodifica só última linha. Exportação pode skip openpyxl; workbook/csv escapa texto fórmula =1+1. Não aborda corrupção não coberta nem throughput real."
+  },
+  {
+    "index": 18,
+    "path": "tests/test_audit_public_anchor.py",
+    "sha256_utf8": "89f4a1c1bd716abdd4a09fbc25f0f1faf71bbdf622d6fdd486da49f2032a0da4",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_bad_public_anchor_is_preserved_and_blocks_status",
+      "test_retroactive_unsealed_row_is_rejected_without_extending_chain"
+    ],
+    "notes": "Snapshot build/render/history mockados: manifesto público corrupto/null/estrutura inválida gera exit3, bytes conservados, statusH6 não criado. SQLite archive sela id2 e inserção retroativa id1 invalida chain e impede extensão. Não demonstra âncora externa imutável; manifesto permanece local."
+  },
+  {
+    "index": 19,
+    "path": "tests/test_audit_release_guards.py",
+    "sha256_utf8": "ce4b02b80a0ad32e455405cdae838747d46a265e942c194a83175365b6ba0477",
+    "state": "semanticamente_revisado_integral",
+    "execution": "nao_executado",
+    "symbols": [
+      "test_self_correlation_is_not_evidence_without_variation",
+      "test_invalid_scientific_json_is_preserved",
+      "test_sweeps_stop_before_data_or_registry_when_family_frozen",
+      "test_kelly_attempts_all_exist_before_first_result",
+      "test_macro_current_year_is_not_zero_feature_for_missing_historical_year",
+      "test_paper_idempotency_checks_corruption_after_matching_row",
+      "test_retrospective_paper_is_counted_without_spot",
+      "test_sortino_sample_repetition_does_not_improve_risk_adjusted_return"
+    ],
+    "notes": "Autocorrelação vazia/curta/constante/NaN não evidência; JSON NaN/keys duplicados rejeitado e conservado. Frozen sweep para antes dados/registro mocks; tentativasKelly ambas registradas antes primeira resposta sintética e duas identidades. Macro2026 não representa missing2024; paper idempotency lê corrupção mesmo após match, registro retrospectivo semspot contado e PnLNone; repetir amostra não aumenta Sortino. Não valida estratégia econômica."
+  }
+]

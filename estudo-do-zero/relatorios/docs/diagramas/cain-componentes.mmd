@@ -1,0 +1,18 @@
+flowchart TD
+ CLI[cain.cli e MCP] --> R[cain.runtime]
+ WEB[Web e cain.api] --> R
+ R --> C[Cain.run]
+ C --> I[IdentityService]
+ I --> S[SQLiteIdentityStore]
+ I --> M[LexicalMemoryIndex derivado]
+ C --> A[AgentRegistry: busca codigo resumo conversa]
+ C --> L[SQLiteDecisionLog]
+ A --> P[OllamaLLM ou FakeLLM]
+ A --> Q[SearchProvider]
+ WEB --> W[WorkspaceStore]
+ WEB --> RS[ResearchService Snapshot]
+ RS --> B[BundleService e Objects CAS]
+ RS --> H[Historian e analysis]
+ H --> P
+ RS --> F[Workflows]
+ F --> H

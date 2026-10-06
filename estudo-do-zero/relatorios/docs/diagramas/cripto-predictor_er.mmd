@@ -1,0 +1,58 @@
+erDiagram
+ RAW_MARKET_DATA {
+  text source
+  text symbol
+  text interval
+  text ts
+  real open_high_low_close
+  real volume
+  text published_at
+ }
+ RAW_SIGNALS {
+  text source
+  text name
+  text ts
+  text vintage
+  real value
+  text published_at
+  text content_hash
+  text scientific_state
+ }
+ FEATURES_ALIGNED {
+  text symbol
+  text interval
+  text ts
+  text feature_version
+ }
+ INGESTION_PROVENANCE {
+  text run_id
+  text provider
+  text receipt
+ }
+ MARKET_SNAPSHOTS {
+  text snapshot_id
+  text symbol
+  text interval
+  text feature_version
+  text collected_at
+ }
+ PREDICTION_INPUTS {
+  text ativo
+  text ts
+  text input_hash
+ }
+ PREDICTIONS {
+  text ativo
+  text ts
+  real score
+  int llm_fallback
+ }
+ PREDICTIONS_ARCHIVE_CHAIN {
+  int archive_id
+  text chain_hash
+ }
+ RAW_MARKET_DATA ||--o{ FEATURES_ALIGNED : alinha
+ RAW_SIGNALS ||--o{ FEATURES_ALIGNED : enriquece
+ MARKET_SNAPSHOTS ||--o{ PREDICTION_INPUTS : congela_entrada
+ PREDICTION_INPUTS ||--|| PREDICTIONS : identidade_ativo_ts
+ PREDICTIONS ||--o{ PREDICTIONS_ARCHIVE_CHAIN : sela

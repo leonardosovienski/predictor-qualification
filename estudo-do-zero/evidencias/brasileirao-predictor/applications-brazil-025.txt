@@ -1,0 +1,263 @@
+### brasileirao_predictor/research/price_strength/closing_scenario.py
+7: from __future__ import annotations
+9: from collections import defaultdict
+10: from datetime import date
+11: from decimal import Decimal, InvalidOperation
+12: from typing import Any
+14: SIDES = ("away", "draw", "home")
+15: COST = Decimal("0.02")
+16: ONE = Decimal(1)
+19: def odd(value: Any) -> Decimal | None:
+20:     if not isinstance(value, str | int | float | Decimal) or isinstance(value, bool):
+21:         return None
+22:     try:
+23:         result = Decimal(str(value))
+24:     except InvalidOperation:
+25:         return None
+26:     return result if result.is_finite() and result > 1 else None
+29: def freeze_choices(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+31:     ids: set[str] = set()
+32:     frozen = []
+33:     for row in rows:
+34:         if set(row) != {"event_id", "date", "offer", "reference"}:
+35:             raise ValueError("price_stage_must_not_receive_labels_or_extra_fields")
+36:         if row["event_id"] in ids:
+37:             raise ValueError("duplicate_event_identity")
+38:         ids.add(row["event_id"])
+39:         if date.fromisoformat(row["date"]).year != 2025:
+40:             raise ValueError("outside_frozen_2025_universe")
+41:         item = {
+42:             "event_id": row["event_id"],
+43:             "date": row["date"],
+44:             "selection": None,
+45:             "status": "ABSTAIN",
+46:             "execution_admitted": False,
+47:         }
+48:         vectors = {}
+49:         for name in ("offer", "reference"):
+50:             vector = row[name]
+51:             vectors[name] = {side: odd(vector.get(side)) for side in SIDES} if isinstance(vector, dict) else {}
+52:         if any(set(v) != set(SIDES) or any(p is None for p in v.values()) for v in vectors.values()):
+53:             item["reason"] = "missing_or_invalid_individual_closing_prices"
+54:             frozen.append(item)
+55:             continue
+56:         offer, reference = vectors["offer"], vectors["reference"]
+57:         total = sum((ONE / reference[s] for s in SIDES), Decimal(0))
+58:         if total <= 1:
+59:             item["reason"] = "reference_sum_not_above_one"
+60:             frozen.append(item)
+61:             continue
+62:         q = {s: ONE / reference[s] / total for s in SIDES}
+63:         net = {s: q[s] * offer[s] - ONE - COST for s in SIDES}
+64:         candidates = sorted((-ev, s) for s, ev in net.items() if 0 < ev <= Decimal("0.15"))
+65:         item.update(
+66:             reference_probabilities={s: str(q[s]) for s in SIDES},
+67:             reference_sum=str(total),
+68:             net_ev_by_side={s: str(net[s]) for s in SIDES},
+69:         )
+70:         if not candidates:
+71:             item["reason"] = "no_price_difference_inside_frozen_threshold"
+72:         else:
+73:             neg_ev, side = candidates[0]
+74:             item.update(
+75:                 status="CONDITIONAL_PICK",
+76:                 selection=side,
+77:                 decimal_odds=str(offer[side]),
+78:                 probability=str(q[side]),
+79:                 net_ev=str(-neg_ev),
+80:                 reason="conditional_close_price_difference",
+81:             )
+82:         frozen.append(item)
+83:     return sorted(frozen, key=lambda r: (r["date"], r["event_id"]))
+86: def label_winner(label: Any) -> str | None:
+87:     if not isinstance(label, dict) or set(label) != {"home_goals", "away_goals", "result"}:
+88:         return None
+89:     goals = []
+90:     for field in ("home_goals", "away_goals"):
+91:         value = label[field]
+92:         if not isinstance(value, str) or not value.isdecimal():
+93:             return None
+94:         goals.append(int(value))
+95:     winner = "home" if goals[0] > goals[1] else "away" if goals[0] < goals[1] else "draw"
+96:     return winner if label["result"] == {"home": "H", "away": "A", "draw": "D"}[winner] else None
+99: def settle_frozen(frozen: list[dict[str, Any]], labels: dict[str, Any], bankroll: str = "100") -> dict[str, Any]:
+101:     initial = Decimal(bankroll)
+102:     if not initial.is_finite() or initial <= 0:
+103:         raise ValueError("invalid_initial_bankroll")
+104:     ids = [r["event_id"] for r in frozen]
+105:     if len(set(ids)) != len(ids):
+106:         raise ValueError("duplicate_frozen_identity")
+107:     cash, locked, stakes, prizes, costs = initial, Decimal(0), Decimal(0), Decimal(0), Decimal(0)
+108:     maximum_exposure = Decimal(0)
+109:     days: dict[str, list[dict[str, Any]]] = defaultdict(list)
+110:     for row in frozen:
+111:         days[row["date"]].append(row)
+112:     events = []
+113:     for day in sorted(days):
+114:         accepted = []
+115:         for row in sorted(days[day], key=lambda r: r["event_id"]):
+116:             base = {"event_id": row["event_id"], "date": day, "conditional": True, "stake": "0"}
+117:             if row["status"] != "CONDITIONAL_PICK":
+118:                 events.append({**base, "status": "ABSTAIN", "reason": row["reason"]})
+119:                 continue
+120:             if row["selection"] not in SIDES or odd(row["decimal_odds"]) is None:
+121:                 raise ValueError("invalid_frozen_pick")
+122:             if cash < ONE + COST:
+123:                 events.append({**base, "status": "ABSTAIN", "reason": "insufficient_scenario_bankroll"})
+124:                 continue
+125:             cash -= ONE + COST
+126:             locked += ONE
+127:             stakes += ONE
+128:             costs += COST
+129:             accepted.append(row)
+130:         maximum_exposure = max(maximum_exposure, locked)
+132:         for row in accepted:
+133:             winner = label_winner(labels.get(row["event_id"]))
+134:             base = {
+135:                 "event_id": row["event_id"],
+136:                 "date": day,
+137:                 "conditional": True,
+138:                 "selection": row["selection"],
+139:                 "probability": row["probability"],
+140:                 "decimal_odds": row["decimal_odds"],
+141:                 "stake": "1",
+142:                 "cost": str(COST),
+143:             }
+144:             if winner is None:
+145:                 events.append(
+146:                     {**base, "status": "UNSETTLED", "reason": "missing_or_conflicting_result", "net_pnl": None}
+147:                 )
+148:                 continue
+149:             won = winner == row["selection"]
+150:             returned = Decimal(row["decimal_odds"]) if won else Decimal(0)
+151:             cash += returned
+152:             locked -= ONE
+153:             prizes += returned
+154:             events.append(
+155:                 {
+156:                     **base,
+157:                     "status": "SETTLED",
+158:                     "won": won,
+159:                     "prize_including_principal": str(returned),
+160:                     "net_pnl": str(returned - ONE - COST),
+161:                 }
+162:             )
+163:     settled = [r for r in events if r["status"] == "SETTLED"]
+164:     pending = [r for r in events if r["status"] == "UNSETTLED"]
+165:     net_realized = sum((Decimal(r["net_pnl"]) for r in settled), Decimal(0)) - COST * len(pending)
+166:     equity = cash + locked
+167:     if cash != initial - stakes - costs + prizes or equity != initial + net_realized:
+168:         raise AssertionError("financial_reconciliation_failed")
+169:     return {
+170:         "status": "CONDITIONAL_NON_EXECUTABLE",
+171:         "universe_n": len(frozen),
+172:         "conditional_price_candidates": sum(r["status"] == "CONDITIONAL_PICK" for r in frozen),
+173:         "conditional_bets": len(settled) + len(pending),
+174:         "settled": len(settled),
+175:         "unsettled": len(pending),
+176:         "abstentions": sum(r["status"] == "ABSTAIN" for r in events),
+177:         "initial_bankroll": str(initial),
+178:         "contributions": "0",
+179:         "total_stakes": str(stakes),
+180:         "prizes_including_principal": str(prizes),
+181:         "scenario_costs": str(costs),
+182:         "final_cash": str(cash),
+183:         "locked_principal": str(locked),
+184:         "final_equity_at_cost": str(equity),
+185:         "net_realized_pnl": str(net_realized),
+186:         "roi_on_stakes": str(net_realized / stakes) if stakes and not pending else None,
+187:         "return_on_bankroll": str(net_realized / initial) if not pending else None,
+188:         "maximum_simultaneous_exposure_daily_scenario": str(maximum_exposure),
+189:         "execution_proven": False,
+190:         "actual_costs_known": False,
+191:         "events": events,
+192:     }
+### brasileirao_predictor/research/price_strength/demo.py
+3: import hashlib
+4: import json
+5: from dataclasses import asdict
+6: from datetime import UTC, datetime, timedelta
+8: from .dynamic_xg import DynamicXGConfig
+11: def demo_inputs() -> dict:
+12:     start = datetime(2030, 1, 1, 18, tzinfo=UTC)
+13:     history, fixtures, quotes = [], [], []
+14:     for i in range(24):
+15:         kickoff = start + timedelta(days=i * 7)
+16:         home, away = ("Synthetic A", "Synthetic B") if i % 2 == 0 else ("Synthetic B", "Synthetic A")
+17:         match_id = f"synthetic-{i:02d}"
+18:         history.append(
+19:             {
+20:                 "match_id": match_id,
+21:                 "home_team": home,
+22:                 "away_team": away,
+23:                 "kickoff": kickoff.isoformat(),
+24:                 "completed_at": (kickoff + timedelta(hours=2)).isoformat(),
+25:                 "available_at": (kickoff + timedelta(hours=3)).isoformat(),
+26:                 "home_xg": 1.3 + (i % 3) * 0.2,
+27:                 "away_xg": 0.8 + (i % 4) * 0.2,
+28:                 "home_goals": 1 + (i % 2),
+29:                 "away_goals": i % 3,
+30:             }
+31:         )
+32:         if i < 20:
+33:             continue
+34:         decision = kickoff - timedelta(hours=1)
+35:         fixtures.append(
+36:             {
+37:                 "match_id": match_id,
+38:                 "home_team": home,
+39:                 "away_team": away,
+40:                 "kickoff": kickoff.isoformat(),
+41:                 "decision_at": decision.isoformat(),
+42:             }
+43:         )
+44:         for book in ("synthetic_reference", "synthetic_offer"):
+45:             for market, odds in {
+46:                 "1x2": {"home": 2.2, "draw": 3.3, "away": 3.4},
+47:                 "ou25": {"over": 2.0 if book == "synthetic_reference" else 2.15, "under": 1.9},
+48:                 "btts": {"yes": 1.9, "no": 2.0},
+49:             }.items():
+50:                 snapshot = {
+51:                     "snapshot_id": f"{match_id}-{book}-{market}",
+52:                     "source": "SYNTHETIC_FIXTURE",
+53:                     "source_event_id": match_id,
+54:                     "event_id": match_id,
+55:                     "bookmaker": book,
+56:                     "market": market,
+57:                     "period": "FT",
+58:                     "line": 2.5 if market == "ou25" else None,
+59:                     "kickoff_at": kickoff.isoformat(),
+60:                     "observed_at": (decision - timedelta(seconds=20)).isoformat(),
+61:                     "available_at": (decision - timedelta(seconds=15)).isoformat(),
+62:                     "received_at": (decision - timedelta(seconds=10)).isoformat(),
+63:                     "status": "active",
+64:                     "snapshot_scope": "complete_market",
+65:                     "odds": odds,
+66:                 }
+67:                 snapshot["raw_payload_hash"] = hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
+68:                 quotes.append(snapshot)
+69:     config = DynamicXGConfig(window_matches=4, min_team_matches=2, min_calibration_matches=6)
+70:     protocol = {
+71:         "schema_version": "price-strength-study/1",
+72:         "study_id": "synthetic-demonstration-v1",
+73:         "data_kind": "SYNTHETIC_DEMONSTRATION",
+74:         "hypothesis": "Exercise chronological xG and independent cross-book price comparison on manufactured inputs.",
+75:         "stopping_rule": "Exactly the four supplied synthetic evaluation fixtures; no parameter search.",
+76:         "training_end": (start + timedelta(days=11 * 7 + 1)).isoformat(),
+77:         "calibration_end": (start + timedelta(days=19 * 7 + 1)).isoformat(),
+78:         "evaluation_start": fixtures[0]["decision_at"],
+79:         "evaluation_end": fixtures[-1]["decision_at"],
+80:         "report_as_of": (start + timedelta(days=24 * 7)).isoformat(),
+81:         "xg_config": asdict(config),
+82:         "price_policy": {
+83:             "reference_books": ["synthetic_reference"],
+84:             "max_age_seconds": 120,
+85:             "max_skew_seconds": 30,
+86:             "cost_per_unit": 0.02,
+87:             "commission_on_profit": 0.0,
+88:             "min_reference_books": 1,
+89:             "min_ev": 0.0,
+90:             "max_ev": 0.15,
+91:         },
+92:     }
+93:     return {"protocol.json": protocol, "history.jsonl": history, "fixtures.jsonl": fixtures, "quotes.jsonl": quotes}

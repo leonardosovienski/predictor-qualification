@@ -1,0 +1,255 @@
+# Suplemento .NET / LineupWorker
+
+34 C# (inclui19 testes) e8manifestos/config/schemas lidos integralmente. Nenhuma compilação/teste/Redis/WSS executada. Fonte checkoutlocalprimário, não remoto ou alternativa. SHA físico leituraUTF8 preservada e REGISTRO.log.
+
+## dotnet/LineupWorker.Tests/CompletionContractTests.cs
+
+Kelly negative edge clamps0 invalidNaN/inf/prob/fraction rejects; futuremarket notfresh; fairodd<1/overflow fail.
+
+SHA256: 6be165d5034fe495953147920b81254253d3c138c7cc93bfe08696524fc9a43c
+
+## dotnet/LineupWorker.Tests/FairOddsCorrelationTests.cs
+
+DispatchProxy Redis mock reflection MSE: match/job/run/channel exact correlation, malformed/expired no signals; changedwithdrawnquote afterstateawait invalidates; finalfence mocknegative returnsnone; eligible synthetic sig CapitalEnabledfalse. Doesnot executeLua.
+
+SHA256: 5a5da34332ad1d86907bfc68a1d24676ac222f1b344808ebebb174373b020de8
+
+## dotnet/LineupWorker.Tests/FairOddsRecoveryTests.cs
+
+Conditional RedisRuntime real-disposable tests lostnotification startup/loop recovery readyindex/outbox; TTLpreserved/dedup, expired/superseded rejected; wrongoutboxtype no dedupconsume; auditfailure stillretains; MAXLENexact10000; malformedhints cannotstarvevalid. Fixturesprices synthetic.
+
+SHA256: 50f0e958297437edd86e60f1098e9ee5b3a4665ef69715e660e841a4493b1407
+
+## dotnet/LineupWorker.Tests/KellyMathTests.cs
+
+Kelly knownnumeric oraclep0.5odd2.5fraction0.1=1/60; formulaengineering notprofit.
+
+SHA256: e09148ea030913ce3d7616e866a300e2aff8ad98dd6aa3c9df2d7c640a1e70c2
+
+## dotnet/LineupWorker.Tests/KernelCrossProcessTests.cs
+
+Crossprocess conditional LINEUP_E2E_PYTHON, explicitloopback26380DB13 serverrunid; childsyntheticPython filebarrier intentionallyloseswake; requestretained then1sig, duplicatewake dedup; actual Worker+hotpathsmoke syntheticVORP resources;120sstartup/40swait limits. Notexecuted.
+
+SHA256: 2386c3a055a88a2b13cbe0d200f2b0be495bcf30d8f447b7bfbdf0a35d99fbea
+
+## dotnet/LineupWorker.Tests/KernelInvocationIdentityTests.cs
+
+Mock invocation registration verifies sameevent+inputs same idempotencyhash/differentguid; partial/completed/newcorrection identities differ; restart deterministic. Lua replies simulatedversion1.
+
+SHA256: 360b87e4d45b80301325c7ecec5843f6eb1fa2a17e193ee21b32a7c8e70fcd82
+
+## dotnet/LineupWorker.Tests/LatencyAuditIntegrityTests.cs
+
+RedisRuntime latencyretention max2percentile, windowexpires no newwrites, T4beforeT3 rejected and staleCAS cannotreplace; sameT3invalidrevision removespercentile. Config testsbudget0/-1/NaN noRedis.
+
+SHA256: f40647973cb4803d9c759b543b994c8c2ba15e7ef2718dadaa0a12455a99a0b8
+
+## dotnet/LineupWorker.Tests/LatencyOrderingTests.cs
+
+RedisRuntime audit olderT3cannotreplacecurrent/renewTTL; historicalsamplecounts2; duplicateT3 preservesT4. Counters/window universes separate.
+
+SHA256: 9dd0fb866ad4026c0efeb246ac5481d900b3f408abfe135de72c78722525dad2
+
+## dotnet/LineupWorker.Tests/LineupStreamTests.cs
+
+RedisRuntime stream own fixtures11players: pending input beforestartup,4failures kept, registrationthencrashbeforeACK replay no newversion; poisonnostarve/cancelnoACK; malformed/expired/future quotas rejected digestonly nosecret; transientRedisrecovery. Validation16invalidlineups beforeVORP.
+
+SHA256: bd4affa75ea36d5981deee21e3a6413e3a0105a75ed0f3a7d3acf123eeb43b6b
+
+## dotnet/LineupWorker.Tests/MarketFeedContractTests.cs
+
+MarketFeed parser reflection synthetic normalizedcontract: legacydefaultdisabled; statusrevisionnotresurrect, observationage notreceipt, duplicatekeys/conflictingrevision invalidates; identity/clock/types/totalline2.5 invalidwithdraw previous; duplicatekeepsreceipt/newrevisionresolves; oversizemissing no market. No WSS livebridge.
+
+SHA256: 169dfc94bf35c858bff071322cc33b1a6b540b4cd67c5f3d72fe0e6b92a72b1b
+
+## dotnet/LineupWorker.Tests/ModelBranchTests.cs
+
+Model branches missingoptionalallprices allowed,blankids refused; overround/clockdeltas; URI ACL/defaultdb parse no network.
+
+SHA256: aa0ee825aaf1b3f5c749a55fce5975d4df276869e934b943e3e5c5b98df0cf7b
+
+## dotnet/LineupWorker.Tests/OperationalSettingsTests.cs
+
+OperationalSettings envscope restores5vars, assemblyparallel disabled; absolute isolatedpaths/missingredis/schemevalid; no artifactexists validation.
+
+SHA256: af4192a191cad7605fd61764c1b6dccde09187d3ebcaf5ce2ffe9758cf3e8b76
+
+## dotnet/LineupWorker.Tests/RedisEndpointTests.cs
+
+RedisEndpoint URI usernamepassword escaped/databaseTLS preserved; malformeddatabase/queryfragment rejects without echo URIcredentials.
+
+SHA256: df4ecaf7cad502886a15ec00104b73b81a6eff6236cfbf4b509e7ce148f9a4be
+
+## dotnet/LineupWorker.Tests/RedisProtocolTests.cs
+
+RedisProtocol serializer fieldnamesV2, null/missing unavailableprices; nonnumeric no coerce; unknownV1/version/id reject; statecanonicalInt64 string nofloat; excludes0/01/-1/exponent/overflow. Schema divergence missingprices runtime explicitly allowed.
+
+SHA256: fcb19e0be074925711129964677d37da63d6ae5f7792c256796fff38355bb7d3
+
+## dotnet/LineupWorker.Tests/WatchdogRecoveryTests.cs
+
+RedisRuntime watchdog acknowledgment survivesrestart; correctionkeepdeadline duplicate repairsdeletedindexbeforeACK; badindex preventsanyregistration/ACK; stalecleanupCAScannotremove newerindex.
+
+SHA256: 2b5c4b4b47b9c05429a829be860a92161e9bf11c53d54f487954c8b27f3a8f93
+
+## dotnet/LineupWorker.Tests/WorkerHealthTests.cs
+
+RedisRuntime health dotnetchild tests Redisalive alonefails, requiresMSE+inboxsameinstance/sessionTTL; leaseowner cannotoverwrite/cleanupnewowner; malformedpermanentexpiredfails; poll heartbeatrenew/stopcleanup;5s expiry whenloopsstop. Noeconomicreadiness.
+
+SHA256: 07baadae23b814392f2cb36cce72fee0ee84c8e9ddd143df6c180e9221595849
+
+## dotnet/LineupWorker.Tests/WorkerInputContractTests.cs
+
+RedisRuntime model declaredinputs mandatory unlesssynthetic; acceptedElo1630/1480 andcoveredpositions; changedcontext cannotmix sides; future/hash/team/position/naiveclock rejectsbeforestate. Resources syntheticfixture.
+
+SHA256: f0d1b3ef5ee8de05e79ee3bc5cee882d9d5665275222f3691db23f7f803f5cf9
+
+## dotnet/LineupWorker.Tests/WorkerRuntimeFencingTests.cs
+
+RedisRuntime fencing exactstateCAS/dedup/newrun sequence, precisiondoubles preservedLua; finalread-race rejectsstalerun andmissingTTL/pending/snapshot/deltas; watchdog no stale restore; concurrent sides merge/order duplicatesignored; DropOldestnamesactualevicted; transient3retry anduncertaincommittedreply dedup, permanent1attempt.
+
+SHA256: b99ac6dcc42661d0b4e43b24ae91b29c6a81f0b6db220717be65e3b6dbbc76aa
+
+## dotnet/LineupWorker.Tests/WorkerRuntimeTests.cs
+
+Runtime fixture gate vars LINEUP_TEST_REDIS_URL/RUN_ID or skip; loopbacknondefaultDB15/40hexrunid andemptyDB mandatory, cleanupchecksidentity/ownedkeys/tempdir. TestsVORPwarmup synthetic/fallback, market/cache, latency percentiles emptyzeros, versionedinvocation/signalCapitalfalse, eligibleedgesKellycap5%, cancellation/watchdog/immediatepublish. Some negative no-market test onlyabsenceexception not signal assertion. No execution here.
+
+SHA256: ea6b4fbe6d7e6db34130bf1c5d10283149b0e3964b7ffc3325d8cfc48012e2d2
+
+## dotnet/LineupWorker/Models/KernelContracts.cs
+
+KernelContracts records V2required identitystrings/statecanonicalInt64; optionalmissingodds becomeNull, finite>=1; MarketOdds freshnessstatusACTIVE/observation30s/pre-kickoff; declaration source/bookmaker not authenticated. Signalclassification SimulationOnly.
+
+SHA256: 7a382e7c80cad5ceb5592a6ceffbc80a19ad826f290c38fe1c5d35e20c6774a1
+
+## dotnet/LineupWorker/Models/LatencyRecord.cs
+
+LatencyRecord derivesdeltas declaredcaptureT0 SourcePublishedAtnull; budgetspositivefinite/nonnegativeE2E; T3fixedwidthticks Lua stringorder; BetSignal capitalfalse economicUNVERIFIED allmarket/modelprovenance metadata.
+
+SHA256: 25b8874e1639d678719052578efd067eda5800e5a703f6dd607b8425d19d7804
+
+## dotnet/LineupWorker/Models/LineupEvent.cs
+
+LineupEvent arrays+capture+optionalModelInputs; state records bothsidecapture/hash/modelidentity/team/deadline original; no infermissinglegacyclock. VarianceWideningSignal notification not actualmodelvarianceapplication.
+
+SHA256: 988b01df8c0c07f823379ac6a52269ede78c3c4479dfed5616a0828b65520a99
+
+## dotnet/LineupWorker/Models/LineupModelInputs.cs
+
+LineupModelInputs.Validate explicitawareclocks learned<=fitted<=available<=decision<kickoff/capture<kickoff; identity/Elo/hashcoveredpositionsGKDFMFFW; sortedpositionscontextSHA. Version onlynonblank; hash/clocks no producer authentication.
+
+SHA256: 488e3a7127f3a0976f358a1e3f529b34cd20499f537b5abad7aa773af529f761
+
+## dotnet/LineupWorker/OperationalSettings.cs
+
+OperationalSettings requires5envvars absoluteartifacts/DBpaths and sports!=market; Redis/rediss URI TLS ACL decoded/dbnonnegative andtimeouts/reconnect. DBnamesonly notopenedbysettings, symlinkalias notchecked.
+
+SHA256: 0c2bd37d8b42608f730f5b7e0ced4bdfbb3c531dfa239c3f348055bc2a02c409
+
+## dotnet/LineupWorker/Program.cs
+
+Program operationalsettings firstevenhealthcheck; healthRedis+loops timeout3s, hostmandatoryappsettings+LINEUP_env; hostedwarmupVORP→marketcache→MSE→Worker→latencyreport5min. Doesnot test artifacteconomicquality.
+
+SHA256: 1c2dc98d5ceba65d5bbc3fc344c46839209d2714c1dcfd1eb4d76223f5afde02
+
+## dotnet/LineupWorker/Services/KernelRedisProtocolV2.cs
+
+KernelRedisProtocolV2 Lua standalone boundaries type+ACLpreflight beforemutations; register CASlineups/current, deterministicidentitymarkerduplicate/superseded, INCRstateasstring replacesplaceholder avoidingcjsonrounding; pending60s/currentstate6h. PublishSignals finalsamecurrent/fair/requestcompleted/result/snapshot+TTL checks, exactbatchidentity, MAXLEN10000outbox+dedup+ZREM thenpcallnotifications. ReadReady RedisTIME ZSCANcursor32hint; watchdogdeadlineimmutable guards fallback invalidatesoldfair/current/lease/index. RequiresRedisACLcommands/XACKDEL elsewhere; noClusterhashslots protocol.
+
+SHA256: eac4905426abb90312be52f7e24acf7a67fe7f03fc47e705177686edd374af58
+
+## dotnet/LineupWorker/Services/LatencyAuditService.cs
+
+LatencyAuditService Lua receivedtime-window2days/max10000, pruneatomicpercentilesfloor(n*q); stringT3order preventsoldlatestoverwrite, identicalretryTTL/T4preserved butreceivedwindow readded onrecord; invalidclocks removesmember. Processcounters allsuccesscalls versusuniquevalidwindow differ; MarketRead exactCAS KEEPTTL. No authenticatedpublicationlatency.
+
+SHA256: c66b8e30716b623b6ef2fc8b5a3f0a19b5a5a9105e2d14f010241e31c4ac567d
+
+## dotnet/LineupWorker/Services/LineupStreamConsumer.cs
+
+LineupStreamConsumer group0-0 XAUTOCLAIM1s cursor16 thenfresh16; JSON64KiB/events11players/max30subs; captureage/future5min; rejection streamMAXLEN1000SHA/reason ACKDELatomic afterpreflight, handleexception remains pending. SuccessACKDEL afterhandle/cancelguard; Redisfailure/NOGROUP recreation boundedloop. DoesnotvalidateJsonduplicatekeys universally.
+
+SHA256: 4ca0652fdcb6df5deded4ebb8e73203277ad237af39564811cf7d3bb834f0097
+
+## dotnet/LineupWorker/Services/MarketOddsCache.cs
+
+MarketOddsCache normalized-market/v1 explicitconfiguredWSS/source/bookmaker bridge; not nativebookmakerprotocol. Defaultabsent feeddisabled; bounded256KiB/depth16topduplicatefields; awareclocks/revision/source/FT/line2.5/activeprices;30s freshness, revisionconflict/invalid/suspend withdraw, disconnectUNAVAILABLE preservedfence. Synthetic legacy explicitallow only, no samequoterevisioncaps there. Quote sourceclocksdeclarations not commercialexecutability.
+
+SHA256: c31ac81738eb325495d096ad382f711e23eb2874e65128676f4a6e4859dc9cd0
+
+## dotnet/LineupWorker/Services/MarketStateEngine.cs
+
+MarketStateEngine listensnotify+100msreadycursorpoll; exactfair/currentidentity/snapshot checks and finalLua refences afterawaits; localquote stillsamefresh afteraudit thenpublish. Five selections edge=pmodel-1/odd; FractionalKellyclamp[0,5%]; min2/max15percent bydefault; LatencyBudget300ms onlyloggingLATE noabortgate. T4 capturedBEFOREedgeactualarithmetic (commentheaderdifferent). Invocationguid+event/inputSHA deterministicclaim; Redisregister ownsstateversion. No brokerorder.
+
+SHA256: f3f89e6fc84049cf68a2e4b13d4d5be39e2e7155ee5362c76ad0498bf2ca9059
+
+## dotnet/LineupWorker/Services/VorpStateService.cs
+
+VorpStateService warmsJSON beta_players/replacement/titularidade once/hash; finitecoefficients/probs[0,1]; declaredsum requiresplayerorpositioncoverage, legacyunknownfallback0; arraysreturned mutable reference, classready no lockingneededstartup. ArtifactSHA notscientificprovenance.
+
+SHA256: 1adf1a21cafcc07fb2d1c8f4e18192a21c5f34312a8eca53d372e28550efc395
+
+## dotnet/LineupWorker/Services/WatchdogStateStore.cs
+
+WatchdogStateStore Lua RedisTIMEdueZSCAN32; synchronizeexactstate/currentCAS beforeindexrepair, missing/completeremoves; preservesdeadlineandnoinventclock, ACLwritepreflight.
+
+SHA256: 7893fa59b7aab978c7eacf17d01827af6713a87478425e2ef2c5e8d484cf9ad7
+
+## dotnet/LineupWorker/Services/WorkerHealth.cs
+
+WorkerHealth owns instanceMachineName+sessionGUID rolesMSE/inbox, renewal5s cannotoverwriteotherowner; cleanupCAS; checkerbothvalidTTLsameinstance/sessionandprotocol. Livenessonly notdataprogress/economicreadiness.
+
+SHA256: 05999a2a9d6a4225384222d1f3babb13bd135891228d031590e7a2a0b497626e
+
+## dotnet/LineupWorker/Worker.cs
+
+Worker legacyPubSubDropOldestbounded512 mayloseinputs after3transientretries; durableStream parallel consumer recommendedACKafterregistration. VORPwarmup; inputsmandatorydefault; eventhashsamecaptureduplicate/conflictearlierignored; context/teamidentityimmutable, CASmergebothside/preservedfirsttimeout55min; auditfireforget. Watchdogdurableindex60s capturesdeclarations andfallbackinvalidateskernel; wideningONLYpublished, not observedvarianceapplication here. Immediatequeueoverflowfallback publishes/audits withoutsameatomicstateinvalidation, deliveryofnotificationnotdurable.
+
+SHA256: c9502c54eaf4e69d2146fbb9d273e59fdf15b8f3e092472e1d19ddcda036bdc1
+
+## dotnet/LineupWorker.Tests/LineupWorker.Tests.csproj
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: c7c569d30906e52eba747d4574a75f0bb0b3b29e6aa758913fc317d624465c5f
+
+## dotnet/LineupWorker/LineupWorker.csproj
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: 273793fad707f4bf21dc3c0e21f3c55732b12b00e62150863a60d27db9a75d04
+
+## dotnet/LineupWorker/appsettings.json
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: db5788b121fefd9813ceeb2e3c56937f6f1c31e4276a2d510a1ba5e25a4cb79a
+
+## dotnet/LineupWorker/packages.lock.json
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: 987220617e098936ef7c4f5273cb440e1a064777ac0b531bc48b8654ca780fcb
+
+## contracts/redis-fair-odds-v2.schema.json
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: 52e8db828a455a707b32fed96d93d9f598926e6b082ff8c443ccd139263d6654
+
+## contracts/redis-protocol-v1.schema.json
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: f05250a4f21733630f6524731978c0ce4e9a8a4585dd790bc1f77b0e0b982afe
+
+## contracts/redis-protocol-v2.schema.json
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: fc5d99aee7d2db44880505a0e0558e2fd0668f68d67d1f4d9ac19bd93a61dbe9
+
+## schemas/odds_snapshot_v1.json
+
+net10.0 Worker Hosting10.0.10 StackExchange.Redis3.0.17; tests xunit2.9.3 sdk18.0.1 runner3.1.4 coverlet6.0.4; worker lock 31 packages resolvedhashes, testproject no trackedlock identified; configedge .02-.15 Kelly.25 300ms/queue512/55min/6h. BetSignalChannel configdeclaredbutactualservicehardcodes bet_signals. SchemasV1archived/V2statepositive19digit pattern runtimeaddsInt64upperbound; fair schema requires5pricekeys+noextra whileC#allowsmissing/extra. Odds_snapshot Pythonseparate contractoddspapi_v4/homologatedfalse/hash/lifecycle, notnormalizedmarketWSS.
+
+SHA256: 2f6788b6269b8ee16f99e8c179046250526d94a2c82d81c52eefaafe0befe44a
