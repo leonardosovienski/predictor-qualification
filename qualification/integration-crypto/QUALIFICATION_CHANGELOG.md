@@ -198,3 +198,30 @@ do runtime por um caminho MSYS embutido em string Python (`runtime_env.sh`, fun�
 O secundário registrado da missão continua o Windows do PC 2 (D-23): `WINDOWS_SMOKE` segue `NOT_RUN` neste ledger até uma
 decisão do dono em `DECISIONS.json` dizer que este job vale como secundário (proposta D-31 na sessão de 2026-09-30, junto da
 D-29 para o pin do conjunto protegido e da D-30 para o Windows do crypto); o estado do ciclo rc15 continua **BLOCKED**.
+
+## 2026-10-07 — C14 na cain 0.4.13rc16 (D-34; lock por registro, D-32): attestation reemitida **QUALIFIED** (rc16 / rc7 / rc4)
+
+Por quê: o programa de remediação (R01) trocou o `uv.lock` do cain de URLs de release para o registro `STACK_WHEELS.json` + índice local
+(D-32); pela C14, a wheel nova exige refazer as fases que a exercitam. A cain v0.4.13rc16 (`de5db06b`, wheel `d8fca502…`, build duplo
+byte-idêntico e igual ao build local) tem o código do pacote idêntico ao da rc15 (`src/cain/__init__.py` só muda a versão);
+`policy.py` e `crypto.json` iguais. Transporte rc7 e cripto rc4 sem mudança; o repositório produtor do ecosystem chama-se
+`ecosystem-predictor-cain` desde 2026-10-05 (mesmos assets e sha256). As decisões D-29/D-30/D-31, delegadas pelo dono em 2026-09-30 e
+escritas hoje, fecham o que bloqueava o ciclo rc15: pin do crypto V1.2 aceito no conjunto protegido, `windows-latest` como secundário
+do crypto (V1.2 **QUALIFIED**) e desta missão. Ambiente da sessão: Linux na nuvem; primário no GitHub Actions; saída devolvida por branch
+`integration-crypto/raw-<run>-<job>` (SHA256SUMS) e copiada sem edição.
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json` (`cycle = rc16`), `hosted_ci_final_targets_rc16.json` | alvos rc16 / rc7 / rc4; transporte e protocolo no repositório renomeado |
+| `scripts/runtime_env.sh`, `scripts/cleanroom_final.sh`, `scripts/transport_dev_requirements.py` | lado do CAIN instalado pelo registro: `stack_wheels.py fetch` + `check`, `requirements` (hash das wheels do stack), pip `--require-hashes --find-links .stack-wheels`; `env/stack_wheels_cain.sha256` grava o sha256 de cada wheel baixada; os requisitos de teste do transporte saem do lock rc7 por tomllib (o lock fixa o protocolo pela URL aposentada, que o `uv export` tenta resolver) |
+| `scripts/core_identity.py`, `scripts/final_wheels_check.py`, `scripts/secrets_scan.py`, `scripts/rc16_gates.py`, `scripts/render_reports.py` | cadeia de identidade do registro (D-32: pyproject ↔ STACK_WHEELS.json ↔ uv.lock ↔ fetch ↔ instalado); identidade das wheels do índice pelo sha256 do fetch; download anônimo dos assets; ledger do ciclo (runs separados para as fases, o Windows e o cleanroom-final refeito); Windows pelo job `windows-latest` |
+| `.github/workflows/integration-crypto-runtime.yml` | clone de `ecosystem-predictor-cain`; conferências estáticas rotuladas pelo ciclo (`RAW_LOGS/static/run<id>/`); token do job para o fetch |
+| `RAW_LOGS/runtime/run37696817503/` | run [37696817503](https://github.com/leonardosovienski/predictor-qualification/actions/runs/37696817503) (push em `integration-crypto/runtime-…-rc16`, `36ac982`): C24.3 (d) 10/0; e2e 56/0; N+1 21/0; isolamento 22/0; F01–F15 50 conferências, 0 falhas; soak 48/0 (24 ciclos, 18 duplicatas, 6 restarts do domínio, 10 do CAIN, 6 intercalados, 6 propostas do LLM `qwen2.5:0.5b`); identidade das wheels 13/0 (`static/core_identity.json`). O cleanroom-final deste run falhou no passo 2 (transporte): `uv export` do lock rc7 tentou a URL aposentada do protocolo (404) — conformidade 48/0 e cain 65/0 já tinham passado; o log fica como está |
+| `RAW_LOGS/runtime/run37698397521/` | run [37698397521](https://github.com/leonardosovienski/predictor-qualification/actions/runs/37698397521) (`integration-crypto/runtime-cleanroom-rc16b`, `2367e3c`): cleanroom-final refeito com `transport_dev_requirements.py`: conformidade 48/0, transporte 20/0, cain 65/0; venvs limpos só com as wheels publicadas; identidade 13/0 (`RAW_LOGS/core-identity-rc16/`) |
+| `RAW_LOGS/runtime/run37696817503-windows/` | job `windows` do run 37696817503 (`windows-latest` × 3.13, D-31): E2E + restart 56/0 |
+| `RAW_LOGS/static/run37696817503/` e cópias em `hosted-ci/final-rc16/`, `contract-revalidation-rc16/`, `protected-rc16/`, `secrets-rc16/` | CI de push verde nos SHAs exatos (cain `de5db06b` run 37695085002, ecosystem-predictor-cain `b0da4fd8`, cripto `21f8b182`); C24.3 estático 6/0; conjunto protegido: domínios intactos, FROZEN_PARAMETERS encadeado (IC-F011), itens do crypto V1.2 re-congelados pela D-29; segredos 0 achados (diff cain rc15→rc16 e arquivos da missão) |
+| `RAW_LOGS/final-wheels-rc16/` | final_wheels 17/0: 8 assets baixados e conferidos; instalado no run == declarado (snapshot e bundle pelo registro do cain) |
+| `PROTECTED_SET.json` (D-29), `GATES.json`, `EVIDENCE_NUMBERS.json`, relatórios | ledger rc16 com todos os gates PASS; números gerados de `RAW_LOGS` por script (C20) |
+| `QUALIFICATION_ATTESTATION_superseded_69fa0393a24c.json` (rc13, preservada), `ATTESTATION_PARTIAL_rc16-attestation.json`, `QUALIFICATION_ATTESTATION.json` | attestation **QUALIFIED** para cain `de5db06b` / rc16, ecosystem-predictor-cain `b0da4fd8` / transporte rc7, cripto `21f8b182` / rc4, core 3.2.1, ops 4.2.2rc1; `supersedes_sha256` = rc13 (`69fa0393…`); `domain_attestations` = crypto V1.2 (`0c8589b1…`), revalidação C24.3 PASS; `attest.py check` OK; P0 = P1 = 0, P2 = 4 |
+
+Limites (C22): vale para os `final_commits`/`final_wheels` declarados e para os vetores e perfis congelados; não garante edge nem lucro.

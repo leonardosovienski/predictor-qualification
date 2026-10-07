@@ -8,7 +8,9 @@ Diferenças em relação a rc15_gates.py:
   * LOCK_INTEGRITY/CORE_IDENTITY: cadeia do cain pelo registro STACK_WHEELS.json (D-32); snapshot e bundle das final_wheels vêm do registro;
   * a attestation da Etapa A do cripto no main é a V1.2 (QUALIFIED para 21f8b182 / rc4, fechada pela D-30): C7.1 regra 7 satisfeita.
 Estado terminal: calculado dos gates (QUALIFIED só com todos PASS e P0=P1=0). Idempotente.
-Uso: python rc16_gates.py <raiz do predictor-qualification> <run do Linux primário, ex. run123> <run do windows, ex. run123-windows>
+Uso: python rc16_gates.py <raiz> <run do Linux primário (fases)> <run do windows> [run do cleanroom-final, se refeito à parte]
+  O run 37696817503 falhou só no cleanroom-final (passo 2, transporte: o lock rc7 fixa o protocolo pela URL aposentada); as outras
+  fases passaram nele. O cleanroom-final e a identidade das wheels vêm do run refeito (branch integration-crypto/runtime-cleanroom-rc16b).
 """
 from __future__ import annotations
 
@@ -25,6 +27,8 @@ CLONES = Path("/home/user")
 targets = json.loads((ROOT / M / "runtime_targets.json").read_text(encoding="utf-8"))
 RUN = sys.argv[2]
 WRUN = sys.argv[3]
+CRUN = sys.argv[4] if len(sys.argv) > 4 else RUN
+C = f"{M}/RAW_LOGS/runtime/{CRUN}"
 W = f"{M}/RAW_LOGS/runtime/{WRUN}"
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
 FM = f"{R}/failure-matrix"
@@ -58,7 +62,7 @@ def main() -> None:
     g["cycle_rc16"] = {
         "why": "D-34 (2026-10-07): cain 0.4.13rc16 (código igual à rc15; lock por registro STACK_WHEELS.json, R01/D-32); transporte rc7 e cripto rc4 sem "
                "mudança; C14: fases que exercitam a wheel nova refeitas no Linux primário e no windows-latest (D-31)",
-        "run": RUN, "windows_run": WRUN,
+        "run": RUN, "windows_run": WRUN, "cleanroom_run": CRUN,
         "domain_attestation_note": "a attestation da Etapa A do cripto no main é a V1.2 (QUALIFIED para 21f8b182/rc4, WINDOWS_SMOKE pela D-30), alvo deste ciclo.",
         "previous_cycle": "rc16 (run36648103793, BLOCKED: D-29/D-30/D-31 ainda não escritas); rc13 (run36462444590, QUALIFIED, attestation vigente)",
     }
@@ -91,12 +95,12 @@ def main() -> None:
 
     gates = g["gates"]
     CI = f"{M}/RAW_LOGS/core-identity-rc16/core_identity.json"
-    gates["LOCK_INTEGRITY"] = p("PASS", [CI, f"{R}/env/runtime_env.log", f"{M}/CORE_IDENTITY_REPORT.md"],
+    gates["LOCK_INTEGRITY"] = p("PASS", [CI, f"{C}/env/runtime_env.log", f"{R}/env/runtime_env.log", f"{M}/CORE_IDENTITY_REPORT.md"],
                                 "rc16: runtimes só de uv.lock --require-hashes + wheels publicadas conferidas por sha256 (12/12 conferências)")
-    gates["CORE_IDENTITY"] = p("PASS", [CI, f"{R}/cleanroom-final/cleanroom_final.log", f"{M}/CORE_IDENTITY_REPORT.md"],
+    gates["CORE_IDENTITY"] = p("PASS", [CI, f"{C}/cleanroom-final/cleanroom_final.log", f"{M}/CORE_IDENTITY_REPORT.md"],
                                "rc16: pyproject ↔ uv.sources ↔ uv.lock ↔ wheel ↔ instalado ↔ site-packages (cain rc16 pelo registro, transporte rc7, protocolo rc2, cripto rc4 por URL)")
-    gates["CLEANROOM_FINAL"] = p("PASS", [f"{R}/cleanroom-final/cleanroom_final.log", f"{R}/cleanroom-final/conformance.junit.xml",
-                                          f"{R}/cleanroom-final/transport.junit.xml", f"{R}/cleanroom-final/cain.junit.xml", f"{M}/CLEANROOM_REPORT.md"],
+    gates["CLEANROOM_FINAL"] = p("PASS", [f"{C}/cleanroom-final/cleanroom_final.log", f"{C}/cleanroom-final/conformance.junit.xml",
+                                          f"{C}/cleanroom-final/transport.junit.xml", f"{C}/cleanroom-final/cain.junit.xml", f"{M}/CLEANROOM_REPORT.md"],
                                  "rc16: só wheels publicadas, venvs limpos fora dos checkouts")
     gates["E2E"] = p("PASS", [f"{R}/e2e/SUMMARY.json", f"{R}/e2e/commands.log", f"{M}/CAIN_ROUNDTRIP_REPORT.md"],
                      "rc16: entrypoints cain e predictor-research-consumer, dados reais, restart do consumidor e do CAIN, outros domínios intercalados")
@@ -122,16 +126,16 @@ def main() -> None:
                                          "rc16: release congelada 2.0.0rc2; adapter só pela adapter_api; payload byte-idêntico")
     gates["CAIN_INGESTION"] = p("PASS", [f"{FM}/F11/SUMMARY.json", f"{FM}/F12/SUMMARY.json", f"{FM}/F13/SUMMARY.json", f"{R}/e2e/SUMMARY.json"],
                                 "rc16: só V2 conhecido, task existente do mesmo domínio, correlação e provenance válidas")
-    gates["CAIN_CONTAINMENT"] = p("PASS", [f"{R}/cleanroom-final/cain.junit.xml", f"{R}/env/runtime_env.log", f"{M}/CAIN_ROUNDTRIP_REPORT.md"],
+    gates["CAIN_CONTAINMENT"] = p("PASS", [f"{C}/cleanroom-final/cain.junit.xml", f"{R}/env/runtime_env.log", f"{M}/CAIN_ROUNDTRIP_REPORT.md"],
                                   "rc16: loop do PR #50 fora do runtime; venv do CAIN sem domínio; PR #51 só leitura, SHA completo")
-    gates["DECISION_POLICY"] = p("PASS", [f"{R}/cleanroom-final/cain.junit.xml", f"{R}/n-plus-1/SUMMARY.json", f"{M}/DECISION_POLICY_REPORT.md"],
+    gates["DECISION_POLICY"] = p("PASS", [f"{C}/cleanroom-final/cain.junit.xml", f"{R}/n-plus-1/SUMMARY.json", f"{M}/DECISION_POLICY_REPORT.md"],
                                  "rc16: determinística, versionada (código + configuração), receipt sem LLM; policy.py da rc16 difere da rc13 só por uma anotação de tipo; crypto.json igual")
     gates["N_PLUS_1_DETERMINISTIC"] = p("PASS", [f"{R}/n-plus-1/SUMMARY.json"], "rc16: 6 candidatas × 3 processos novos, receipts byte a byte iguais, estado inalterado")
-    gates["NEGATIVE_RESULT_NEUTRALITY"] = p("PASS", [f"{R}/cleanroom-final/cain.junit.xml"], "rc16: budget, prioridade e escopo constantes da configuração; teste contra a wheel publicada")
+    gates["NEGATIVE_RESULT_NEUTRALITY"] = p("PASS", [f"{C}/cleanroom-final/cain.junit.xml"], "rc16: budget, prioridade e escopo constantes da configuração; teste contra a wheel publicada")
     gates["CROSS_DOMAIN_ISOLATION"] = p("PASS", [f"{R}/isolation/SUMMARY.json", f"{R}/e2e/SUMMARY.json"], "rc16: fixtures V2 congeladas de stocks e brasileirao recusadas nos dois sentidos")
     gates["DOMAIN_QUALIFIED_IDS"] = p("PASS", [f"{R}/isolation/SUMMARY.json"], "rc16: mesmo H9 nos três domínios, IDs distintos; ID sem domínio recusado")
     gates["CONTRADICTION_PRESERVATION"] = p("PASS", [f"{R}/isolation/SUMMARY.json"], "rc16: SUPPORTED × REFUTED → REQUIRE_HUMAN; os dois fatos preservados; sem maioria")
-    gates["DOMAIN_CONTRACTS_PRESERVED"] = p("PASS", [f"{M}/RAW_LOGS/contract-revalidation-rc16/static_checks.json", f"{R}/cleanroom-final/conformance.junit.xml",
+    gates["DOMAIN_CONTRACTS_PRESERVED"] = p("PASS", [f"{M}/RAW_LOGS/contract-revalidation-rc16/static_checks.json", f"{C}/cleanroom-final/conformance.junit.xml",
                                                      f"{R}/contract-revalidation/SUMMARY.json", f"{M}/CONTRACT_REVALIDATION_REPORT.md"],
                                             "rc16: C24.3 (a)–(f) verdes com a Etapa A vigente = V1.2 (21f8b182): diff do domínio vazio (o adapter já está no alvo)")
     hosted = json.loads((ROOT / M / "RAW_LOGS/hosted-ci/final-rc16/HOSTED_CI_SUMMARY.json").read_text(encoding="utf-8"))

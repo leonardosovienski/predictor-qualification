@@ -12,6 +12,7 @@ import hashlib
 import json
 import re
 import subprocess
+import urllib.request
 import sys
 import tempfile
 from pathlib import Path
@@ -50,8 +51,9 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         for name, w in sorted(wheels.items()):
             repo, tag, asset = URL.match(w["url"]).groups()
-            subprocess.run(["gh", "release", "download", tag, "-R", repo, "-p", asset, "-D", tmp], check=True,
-                           capture_output=True)
+            # rc16/c6: os produtores são públicos; download anônimo pela URL do asset (o `gh release download` usa GraphQL,
+            # indisponível neste ambiente). O sha256 é conferido abaixo contra o declarado.
+            urllib.request.urlretrieve(w["url"], str(Path(tmp) / asset))
             got = hashlib.sha256((Path(tmp) / asset).read_bytes()).hexdigest()
             checks.append({"check": f"{name}: sha256 do asset == final_wheels", "ok": got == w["sha256"],
                            "url": w["url"], "asset_sha256": got, "declared_sha256": w["sha256"]})
