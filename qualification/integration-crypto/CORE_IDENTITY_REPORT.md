@@ -2,7 +2,7 @@
 
 Gates `LOCK_INTEGRITY` e `CORE_IDENTITY` (C4). Gerado por `scripts/render_reports.py`.
 
-Fonte: `qualification/integration-crypto/RAW_LOGS/core-identity-rc16/core_identity.json` (sha256 `1627c03709808564…`), produzido por `scripts/core_identity.py` a partir dos `uv.lock` dos commits finais (git show, SHA completo) e dos logs do run `run37696817503`.
+Fonte: `qualification/integration-crypto/RAW_LOGS/core-identity-rc16e/core_identity.json` (sha256 `1627c03709808564…`), produzido por `scripts/core_identity.py` a partir dos `uv.lock` dos commits finais (git show, SHA completo) e dos logs do run `run37703318858`.
 
 Resultado: **13 conferências OK, 0 falhas**.
 

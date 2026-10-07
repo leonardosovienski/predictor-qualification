@@ -17,7 +17,7 @@ Conclusão do diagnóstico: o domínio instalado da release é compatível com a
 
 ## cleanroom-final (gate CLEANROOM_FINAL; C24.3 c)
 
-GitHub Actions ubuntu-latest × Python 3.13, run `run37698397521`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-crypto/RAW_LOGS/runtime/run37698397521/cleanroom-final/cleanroom_final.log` (sha256 `3bd23caaea0a5d3d…`).
+GitHub Actions ubuntu-latest × Python 3.13, run `run37703318858`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-crypto/RAW_LOGS/runtime/run37703318858/cleanroom-final/cleanroom_final.log` (sha256 `f70c09e2ef75d08a…`).
 
 | Suíte (instalada da wheel) | testes | falhas | erros | pulados |
 |---|--:|--:|--:|--:|

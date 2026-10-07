@@ -1,6 +1,6 @@
 # integration-crypto — PROTECTED_ARTIFACT_REPORT
 
-Gate `PROTECTED_ARTIFACTS_UNCHANGED` (C15.1). O conjunto veio do PROTECTED_SET.json de `truth-map` e foi reconferido por `scripts/protected_check.py` (`qualification/integration-crypto/RAW_LOGS/protected-rc16/protected_check.json` (sha256 `a89273d74394f447…`)).
+Gate `PROTECTED_ARTIFACTS_UNCHANGED` (C15.1). O conjunto veio do PROTECTED_SET.json de `truth-map` e foi reconferido por `scripts/protected_check.py` (`qualification/integration-crypto/RAW_LOGS/protected-rc16e/protected_check.json` (sha256 `a89273d74394f447…`)).
 
 | Domínio | Repo | Commit conferido | Itens | Alterados |
 |---|---|---|--:|--:|

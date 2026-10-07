@@ -225,3 +225,18 @@ do crypto (V1.2 **QUALIFIED**) e desta missão. Ambiente da sessão: Linux na nu
 | `QUALIFICATION_ATTESTATION_superseded_69fa0393a24c.json` (rc13, preservada), `ATTESTATION_PARTIAL_rc16-attestation.json`, `QUALIFICATION_ATTESTATION.json` | attestation **QUALIFIED** para cain `de5db06b` / rc16, ecosystem-predictor-cain `b0da4fd8` / transporte rc7, cripto `21f8b182` / rc4, core 3.2.1, ops 4.2.2rc1; `supersedes_sha256` = rc13 (`69fa0393…`); `domain_attestations` = crypto V1.2 (`0c8589b1…`), revalidação C24.3 PASS; `attest.py check` OK; P0 = P1 = 0, P2 = 4 |
 
 Limites (C22): vale para os `final_commits`/`final_wheels` declarados e para os vetores e perfis congelados; não garante edge nem lucro.
+
+## 2026-10-07 (noite) — C14 refeito depois da adoção da rc16 na lock conjunta do ecosystem (rc16e): attestation reemitida **QUALIFIED**
+
+Por quê: o `ecosystem-predictor-cain` adotou a cain 0.4.13rc16 na lock conjunta `compat/` e publicou ecosystem `v0.2.2` (`main` `6aeec475`,
+PR #56; wheel `63cb1c16…`). Pela C14 ("cain, ecosystem-predictor ou envelope V2 → fases das integrações que os exercitam + reemissão"),
+todas as fases foram refeitas num só run, com as mesmas wheels do ciclo rc16 (cain rc16, transporte rc7, protocolo rc2, cripto rc4, core,
+ops): a mudança no ecosystem é só a lock conjunta, que o runtime desta missão não instala; `final_commits`/`final_wheels` não mudam
+(o commit do ecosystem nos `final_commits` continua sendo o da tag do transporte, `b0da4fd8`); o `main` do ecosystem entra em
+`hosted_ci_final_targets_rc16e.json` (CI de push verde em `6aeec475`) e em `GATES.json → cycle_rc16e.ecosystem_main_commit`.
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json` (`cycle = rc16e`), `hosted_ci_final_targets_rc16e.json`, `scripts/rc16_gates.py` (rótulo do ciclo por argumento) | alvos iguais ao rc16; conferências estáticas rotuladas rc16e |
+| `RAW_LOGS/runtime/run37703318858/` e `-windows/`, `RAW_LOGS/static/run37703318858/` (cópias em `*-rc16e/`) | run [37703318858](https://github.com/leonardosovienski/predictor-qualification/actions/runs/37703318858) (push em `integration-crypto/runtime-…-rc16e`, `231e6b2`), todas as fases exit 0: cleanroom-final (conformidade 48/0, transporte 20/0, cain 65/0); C24.3 (d) 10/0; e2e 56/0; N+1 21/0; isolamento 22/0; F01–F15 50/0; soak 48/0 (24 ciclos, 18 duplicatas, 6 restarts do domínio, 10 do CAIN, 6 intercalados, 6 propostas do LLM); Windows E2E + restart 56/0; identidade 13/0; final_wheels 17/0; CI de push verde nos SHAs exatos (cain `de5db06b`, ecosystem-predictor-cain `b0da4fd8` e `6aeec475`, cripto `21f8b182`); C24.3 estático 6/0; protegidos (domínios intactos, FROZEN_PARAMETERS encadeado); segredos 0 |
+| `QUALIFICATION_ATTESTATION_superseded_cc44bdf984c9.json` (rc16, preservada), `ATTESTATION_PARTIAL_rc16e-attestation.json`, `QUALIFICATION_ATTESTATION.json` | attestation **QUALIFIED** com os mesmos `final_commits`/`final_wheels` do rc16; `supersedes_sha256` = rc16 (`cc44bdf9…`); `attest.py check` OK; P0 = P1 = 0, P2 = 4 |
