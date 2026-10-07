@@ -34,8 +34,12 @@ wheels = [{"name": "stocks-predictor", "version": targets["stocks"]["version"], 
            "sha256": targets["cain"]["sha256"]},
           {"name": "predictor-research-transport", "version": targets["transport"]["version"],
            "url": targets["transport"]["url"], "sha256": targets["transport"]["sha256"]}]
+# ciclo 6: a integration-crypto rc16 está na cripto 1.2.0rc4, mas o consumidor do cripto que ESTA missão integra (isolamento) é o de
+# runtime_targets.json (1.2.0rc3, ee3d3d1, sem mudança desde o ciclo 4): final_wheels diz o que o runtime instala.
+wheels.append({"name": "cripto-predictor", "version": targets["cripto"]["version"], "url": targets["cripto"]["url"],
+               "sha256": targets["cripto"]["sha256"]})
 for name in ("predictor-research-protocol", "predictor-research-snapshot", "predictor-research-bundle",
-             "cripto-predictor", "predictor-core", "predictor-ops"):
+             "predictor-core", "predictor-ops"):
     w = ic_wheels[name]
     wheels.append({"name": name, "version": w["version"], "url": w["url"], "sha256": w["sha256"]})
 g["final_wheels"] = wheels
