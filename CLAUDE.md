@@ -2,7 +2,8 @@
 
 Evidência da qualificação pré-treinamento do stack CAIN × Ecosystem × Core ×
 Ops × {Cripto, Brasileirão, Stocks}. Foco: **funcionar e dar resultado
-confiável para ganhar dinheiro**. Projeto de um dono só; repos públicos.
+confiável para ganhar dinheiro**. Projeto de um dono só; repositórios de produto **privados** desde 2026-10 (só o showcase
+`ecosystem-predictor` é público); as regras de segredo valem como se todos fossem públicos.
 
 Núcleo obrigatório em toda sessão:
 
@@ -34,8 +35,10 @@ Núcleo obrigatório em toda sessão:
 - Linux = GitHub Actions ou VM na nuvem (D-9); para dado real privado sem direito
   de redistribuição (D-11), também o Linux do dono (`owner_linux`, PC 2, D-19).
   Fora disso, nada de "equivalente local".
-- **Repos públicos:** nunca escrever segredo (`.env`, `pipeline.env`, chaves de
+- **Segredos (os repos foram públicos e podem voltar a ser):** nunca escrever segredo (`.env`, `pipeline.env`, chaves de
   API, de exchange, de odds, tokens) em arquivo, log, commit, relatório ou CI.
+- Wheels do stack: cada consumidor as fixa por `STACK_WHEELS.json` + `stack_wheels.py fetch` (D-32, proposta
+  2026-10-07); nenhuma URL `releases/download/` em `pyproject`/`uv.lock`.
 - Todo número em relatório vem de log bruto em `RAW_LOGS/` (C20).
 - Conflito com regra local de repo, ou algo congelado precisando mudar: parar
   e perguntar ao dono.
