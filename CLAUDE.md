@@ -2,8 +2,9 @@
 
 Evidência da qualificação pré-treinamento do stack CAIN × Ecosystem × Core ×
 Ops × {Cripto, Brasileirão, Stocks}. Foco: **funcionar e dar resultado
-confiável para ganhar dinheiro**. Projeto de um dono só; repositórios de produto **privados** desde 2026-10 (só o showcase
-`ecosystem-predictor` é público); as regras de segredo valem como se todos fossem públicos.
+confiável para ganhar dinheiro**. Projeto de um dono só. Visibilidade dos repositórios mudou duas vezes em 2026-10 (privados no início do mês; a
+maioria voltou a público em 2026-10-07; `core-predictor` e `predictor-ops` ainda privados na última verificação): as regras
+de segredo valem sempre, como se todos fossem públicos.
 
 Núcleo obrigatório em toda sessão:
 
