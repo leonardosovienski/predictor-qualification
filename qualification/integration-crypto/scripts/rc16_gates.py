@@ -8,7 +8,9 @@ Diferenças em relação a rc15_gates.py:
   * LOCK_INTEGRITY/CORE_IDENTITY: cadeia do cain pelo registro STACK_WHEELS.json (D-32); snapshot e bundle das final_wheels vêm do registro;
   * a attestation da Etapa A do cripto no main é a V1.2 (QUALIFIED para 21f8b182 / rc4, fechada pela D-30): C7.1 regra 7 satisfeita.
 Estado terminal: calculado dos gates (QUALIFIED só com todos PASS e P0=P1=0). Idempotente.
-Uso: python rc16_gates.py <raiz> <run do Linux primário (fases)> <run do windows> [run do cleanroom-final, se refeito à parte]
+Uso: python rc16_gates.py <raiz> <run do Linux primário (fases)> <run do windows> [run do cleanroom-final ou -] [rótulo do ciclo: rc16 | rc16e]
+  rc16e (2026-10-07, noite): C14 refeito depois da adoção da rc16 na lock conjunta do ecosystem (compat/, ecosystem 0.2.2); mesmas
+  wheels; o commit do main do ecosystem fica em cycle_<rótulo>.ecosystem_main_commit e em hosted_ci_final_targets_<rótulo>.json.
   O run 37696817503 falhou só no cleanroom-final (passo 2, transporte: o lock rc7 fixa o protocolo pela URL aposentada); as outras
   fases passaram nele. O cleanroom-final e a identidade das wheels vêm do run refeito (branch integration-crypto/runtime-cleanroom-rc16b).
 """
@@ -27,7 +29,8 @@ CLONES = Path("/home/user")
 targets = json.loads((ROOT / M / "runtime_targets.json").read_text(encoding="utf-8"))
 RUN = sys.argv[2]
 WRUN = sys.argv[3]
-CRUN = sys.argv[4] if len(sys.argv) > 4 else RUN
+CRUN = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] != "-" else RUN
+SFX = sys.argv[5] if len(sys.argv) > 5 else "rc16"
 C = f"{M}/RAW_LOGS/runtime/{CRUN}"
 W = f"{M}/RAW_LOGS/runtime/{WRUN}"
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
@@ -59,7 +62,7 @@ def main() -> None:
         (w,) = kl[name]["wheels"]
         wheels.append({"name": name, "version": kl[name]["version"], "url": w["url"], "sha256": w["hash"].split(":", 1)[1]})
     g = json.loads((ROOT / M / "GATES.json").read_text(encoding="utf-8"))
-    g["cycle_rc16"] = {
+    g[f"cycle_{SFX}"] = {
         "why": "D-34 (2026-10-07): cain 0.4.13rc16 (código igual à rc15; lock por registro STACK_WHEELS.json, R01/D-32); transporte rc7 e cripto rc4 sem "
                "mudança; C14: fases que exercitam a wheel nova refeitas no Linux primário e no windows-latest (D-31)",
         "run": RUN, "windows_run": WRUN, "cleanroom_run": CRUN,
@@ -82,8 +85,8 @@ def main() -> None:
     win_ok = win["failed"] == 0 and win["passed"] > 0
     g["environments"].append({"os": "windows", "python": "3.13", "role": "secondary", "where": "github_actions", "result": "PASS" if win_ok else "FAIL",
                               "evidence": [f"{W}/ci_runtime.log", f"{W}/env/runtime_env.log", f"{W}/e2e/SUMMARY.json"]})
-    for phase in ("publish-candidates-rc16", "cleanroom-final-rc16", "contract-revalidation-rc16", "e2e-rc16", "n-plus-1-rc16",
-                  "isolation-ids-contradiction-rc16", "idempotency-failure-rc16", "hosted-ci-rc16", "soak-rc16", "windows-smoke-rc16"):
+    for phase in [f"{p}-{SFX}" for p in ("publish-candidates", "cleanroom-final", "contract-revalidation", "e2e", "n-plus-1",
+                                          "isolation-ids-contradiction", "idempotency-failure", "hosted-ci", "soak", "windows-smoke")]:
         if phase not in g["phases_completed"]:
             g["phases_completed"].append(phase)
 
@@ -94,7 +97,7 @@ def main() -> None:
         return {"status": status, "evidence": ev, "note": note}
 
     gates = g["gates"]
-    CI = f"{M}/RAW_LOGS/core-identity-rc16/core_identity.json"
+    CI = f"{M}/RAW_LOGS/core-identity-{SFX}/core_identity.json"
     gates["LOCK_INTEGRITY"] = p("PASS", [CI, f"{C}/env/runtime_env.log", f"{R}/env/runtime_env.log", f"{M}/CORE_IDENTITY_REPORT.md"],
                                 "rc16: runtimes só de uv.lock --require-hashes + wheels publicadas conferidas por sha256 (12/12 conferências)")
     gates["CORE_IDENTITY"] = p("PASS", [CI, f"{C}/cleanroom-final/cleanroom_final.log", f"{M}/CORE_IDENTITY_REPORT.md"],
@@ -117,7 +120,7 @@ def main() -> None:
                                f"{win['passed']} conferências OK, {win['failed']} falhas")
     gates["SHARED_DEPENDENCY_CLEAR"] = p("PASS", [f"{M}/RAW_LOGS/c0/c0_preflight.log", "qualification/shared/SHARED_ISSUES.json"],
                                          "nenhum issue bloqueante para as wheels usadas (Ops 4.2.2rc1, Core 3.2.1; inalteradas na rc16)")
-    gates["SECRETS_CLEAN"] = p("PASS", [f"{M}/RAW_LOGS/secrets-rc16/secrets_scan.json"],
+    gates["SECRETS_CLEAN"] = p("PASS", [f"{M}/RAW_LOGS/secrets-{SFX}/secrets_scan.json"],
                                "rc16: 0 achados nos diffs rc13→rc16 (cain), rc6→rc7 (ecosystem), rc3→rc4 (cripto) e nos arquivos da missão")
     gates["CAPITAL_FORBIDDEN"] = p("PASS", [f"{R}/e2e/SUMMARY.json", f"{R}/n-plus-1/SUMMARY.json", f"{M}/DECISION_POLICY_REPORT.md"],
                                    "rc16: nenhum caminho concede capital; receipts e resultados com capital_permission=false")
@@ -135,26 +138,26 @@ def main() -> None:
     gates["CROSS_DOMAIN_ISOLATION"] = p("PASS", [f"{R}/isolation/SUMMARY.json", f"{R}/e2e/SUMMARY.json"], "rc16: fixtures V2 congeladas de stocks e brasileirao recusadas nos dois sentidos")
     gates["DOMAIN_QUALIFIED_IDS"] = p("PASS", [f"{R}/isolation/SUMMARY.json"], "rc16: mesmo H9 nos três domínios, IDs distintos; ID sem domínio recusado")
     gates["CONTRADICTION_PRESERVATION"] = p("PASS", [f"{R}/isolation/SUMMARY.json"], "rc16: SUPPORTED × REFUTED → REQUIRE_HUMAN; os dois fatos preservados; sem maioria")
-    gates["DOMAIN_CONTRACTS_PRESERVED"] = p("PASS", [f"{M}/RAW_LOGS/contract-revalidation-rc16/static_checks.json", f"{C}/cleanroom-final/conformance.junit.xml",
+    gates["DOMAIN_CONTRACTS_PRESERVED"] = p("PASS", [f"{M}/RAW_LOGS/contract-revalidation-{SFX}/static_checks.json", f"{C}/cleanroom-final/conformance.junit.xml",
                                                      f"{R}/contract-revalidation/SUMMARY.json", f"{M}/CONTRACT_REVALIDATION_REPORT.md"],
                                             "rc16: C24.3 (a)–(f) verdes com a Etapa A vigente = V1.2 (21f8b182): diff do domínio vazio (o adapter já está no alvo)")
-    hosted = json.loads((ROOT / M / "RAW_LOGS/hosted-ci/final-rc16/HOSTED_CI_SUMMARY.json").read_text(encoding="utf-8"))
+    hosted = json.loads((ROOT / M / f"RAW_LOGS/hosted-ci/final-{SFX}/HOSTED_CI_SUMMARY.json").read_text(encoding="utf-8"))
     hosted_ok = all(item["ok"] for item in hosted)
     gates["HOSTED_CI"] = p("PASS" if hosted_ok else "FAIL",
-                           [f"{M}/RAW_LOGS/hosted-ci/baseline/HOSTED_CI_SUMMARY.json", f"{M}/RAW_LOGS/hosted-ci/final-rc16/HOSTED_CI_SUMMARY.json", f"{M}/HOSTED_CI_REPORT.md"],
+                           [f"{M}/RAW_LOGS/hosted-ci/baseline/HOSTED_CI_SUMMARY.json", f"{M}/RAW_LOGS/hosted-ci/final-{SFX}/HOSTED_CI_SUMMARY.json", f"{M}/HOSTED_CI_REPORT.md"],
                            "rc16: runs de push verdes nos SHAs exatos (cain ae00017, ecosystem b0da4fd, cripto 21f8b18)" if hosted_ok else "job não verde: ver resumo")
     gates["SOAK"] = p("PASS", [f"{R}/soak/SUMMARY.json", f"{R}/soak/commands.log", f"{M}/QUALIFICATION_PROFILE_INTEGRATION_CRYPTO_V1.json", f"{M}/SOAK_REPORT.md"],
                       "rc16: perfil V1 sem mudança, todos os pisos atingidos (24 ciclos, 18 duplicatas, 6 restarts do domínio, 10 do CAIN, 6 intercalados, 6 propostas de LLM), tolerância zero")
-    protected = json.loads((ROOT / M / "RAW_LOGS/protected-rc16/protected_check.json").read_text(encoding="utf-8"))
+    protected = json.loads((ROOT / M / f"RAW_LOGS/protected-{SFX}/protected_check.json").read_text(encoding="utf-8"))
     changed_shared = [s["path"] for s in protected["shared"] if not s["ok"] and not s.get("chain", {}).get("ok")]
     domains_changed = {d: v["changed"] for d, v in protected["domains"].items() if v["changed"]}
     prot_ok = protected["all_unchanged_or_chained"] and not domains_changed
     gates["PROTECTED_ARTIFACTS_UNCHANGED"] = p(
-        "PASS" if prot_ok else "FAIL", [f"{M}/RAW_LOGS/protected-rc16/protected_check.json", f"{M}/PROTECTED_SET.json", f"{M}/PROTECTED_ARTIFACT_REPORT.md"],
+        "PASS" if prot_ok else "FAIL", [f"{M}/RAW_LOGS/protected-{SFX}/protected_check.json", f"{M}/PROTECTED_SET.json", f"{M}/PROTECTED_ARTIFACT_REPORT.md"],
         ("rc16: domínios intactos (blobs iguais em crypto, stocks e brasileirao); FROZEN_PARAMETERS encadeado (IC-F011); itens compartilhados do crypto V1.2 "
          "(runtime_target.json e QUALIFICATION_ATTESTATION.json) re-congelados em PROTECTED_SET.json pela D-29 (previous_sha256 guardado)")
         if prot_ok else f"alterados: domínios {domains_changed}, compartilhados {changed_shared}")
-    fw = f"{M}/RAW_LOGS/final-wheels-rc16/final_wheels_check_{RUN}.json"
+    fw = f"{M}/RAW_LOGS/final-wheels-{SFX}/final_wheels_check_{RUN}.json"
     gates["EVIDENCE_CONSISTENCY"] = p("PASS" if (ROOT / fw).is_file() else "NOT_RUN",
                                       [f"{M}/EVIDENCE_NUMBERS.json", f"{M}/scripts/evidence_numbers.py", f"{M}/scripts/render_reports.py"] + ([fw] if (ROOT / fw).is_file() else []),
                                       "rc16: números dos relatórios gerados de RAW_LOGS por script versionado; saída dos jobs devolvida por branch (SHA256SUMS); final_wheels conferidas (C7.1 regra 4)")
@@ -163,15 +166,15 @@ def main() -> None:
     gates["BLOCKERS_ZERO"] = p("FAIL" if blocking else "PASS", [f"{M}/FINDINGS.json"], ("P0/P1 abertos: " + ", ".join(blocking)) if blocking else "nenhum P0/P1 aberto")
     not_run = sorted(k for k, v in gates.items() if v["status"] == "NOT_RUN")
     failed = sorted(k for k, v in gates.items() if v["status"] == "FAIL")
-    g["cycle_rc16"]["terminal"] = "NOT_QUALIFIED" if failed or blocking else ("BLOCKED" if not_run else "QUALIFIED")
-    g["cycle_rc16"]["terminal_note"] = f"FAIL em {failed}" if failed else (f"BLOCKED: NOT_RUN em {not_run}" if not_run else "todos PASS")
+    g[f"cycle_{SFX}"]["terminal"] = "NOT_QUALIFIED" if failed or blocking else ("BLOCKED" if not_run else "QUALIFIED")
+    g[f"cycle_{SFX}"]["terminal_note"] = f"FAIL em {failed}" if failed else (f"BLOCKED: NOT_RUN em {not_run}" if not_run else "todos PASS")
     g["final_result"] = "NOT_QUALIFIED" if failed or blocking else ("QUALIFIED" if not not_run else g.get("final_result"))
     # a attestation vigente (rc13, QUALIFIED) é a que a final deste ciclo substitui (preservada como superseded)
     g["supersedes_sha256"] = hashlib.sha256((ROOT / M / "QUALIFICATION_ATTESTATION.json").read_bytes()).hexdigest()
     g["domain_revalidation"] = {"status": "PASS" if gates["DOMAIN_CONTRACTS_PRESERVED"]["status"] == "PASS" else "FAIL",
                                 "evidence": gates["DOMAIN_CONTRACTS_PRESERVED"]["evidence"]}
     (ROOT / M / "GATES.json").write_text(json.dumps(g, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print("rc16:", g["cycle_rc16"]["terminal"], "|", g["cycle_rc16"]["terminal_note"])
+    print(SFX + ":", g[f"cycle_{SFX}"]["terminal"], "|", g[f"cycle_{SFX}"]["terminal_note"])
     print({k: v["status"] for k, v in gates.items() if v["status"] != "PASS"})
 
 
