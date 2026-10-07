@@ -31,7 +31,9 @@ rc=$?; echo "[conformance exit $rc]"; status=$((status | rc))
 T_COMMIT=$(field "['transport']['commit']")
 git clone -q "https://github.com/$(field "['transport']['repo']").git" "$WORK/eco-src" && git -C "$WORK/eco-src" checkout -q "$T_COMMIT"
 mkdir -p "$WORK/transport-tests" && cp -r "$WORK/eco-src/packages/research-transport/tests/." "$WORK/transport-tests/"
-( cd "$WORK/eco-src/packages/research-transport" && uv export --locked --only-group dev --no-emit-project --format requirements-txt -o "$WORK/transport-dev.txt" -q )
+# rc16: o lock do transporte rc7 fixa o protocolo pela URL do repositório antigo (404); os requisitos de teste saem do lock por
+# transport_dev_requirements.py (grupo dev com hashes), sem resolver essa URL; o protocolo entra depois da wheel publicada.
+"$PY" "$(dirname "$0")/transport_dev_requirements.py" "$WORK/eco-src/packages/research-transport/uv.lock" predictor-research-transport "$WORK/transport-dev.txt" predictor-research-protocol
 "$PY" -m venv "$WORK/transport-venv"
 "$WORK/transport-venv/bin/python" -m pip install -q --require-hashes -r "$WORK/transport-dev.txt"
 for key in transport protocol; do
