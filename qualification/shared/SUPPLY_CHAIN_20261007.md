@@ -41,3 +41,37 @@ build, sem rede). Leitura de C4/C5: decisão D-32 (proposta). Os locks históric
 * Não demonstrado nesta sessão: CI verde em `main` (depende do merge e do segredo), imagens Docker (sem daemon aqui).
 
 DATE: 2026-10-07 · REASON: R01 do programa de remediação · ORIGINAL_STATE preservado acima e nos logs de CI citados.
+
+## LAYER 2026-10-07 (noite) — merges, repositórios públicos, CI verde, passagem de segurança
+
+ORIGINAL_STATE: o bloco acima (branch não mesclada, produtores privados, `STACK_READ_TOKEN` obrigatório, CI em `main`
+não demonstrado).
+
+NEW_INTERPRETATION:
+
+* Merges sob a D-33: cain #93, ecosystem-predictor-cain #52, cripto-predictor #148, stocks-predictor #116,
+  brasileirao-predictor #91 (mecanismo R01); depois #149 (cripto: ccxt 4.5.85 → urllib3 2.8.0, Trivy), #92/#89/#93
+  (brasileirão: urllib3 2.8.0, actions, virtualenv), #53/#54 (ecosystem-predictor-cain: pytest/virtualenv, teste de
+  renovação sem data fixa, fallback de token), #117 (stocks), #145/#146/#150 (cripto: actions, pytest/virtualenv,
+  fallback de token), core-predictor #38/#39, predictor-ops #32/#33.
+* O dono tornou os nove repositórios públicos em 2026-10-07: o `fetch` resolve anônimo; `STACK_READ_TOKEN` vira
+  opcional e cada workflow cai para o token do job (`secrets.STACK_READ_TOKEN || github.token`) porque execuções
+  disparadas pelo Dependabot não recebem segredos e o acesso anônimo bateu no limite de taxa da API
+  (cripto-predictor PR #147, run 37663391913).
+* CI verde em `main` com o registro: cain (Linux) run 37651563333; ecosystem-predictor-cain 37651560309; cripto-predictor
+  37663192063 (inclui o job `container` com Trivy); brasileirao-predictor 37662106707. stocks-predictor 37651574443
+  vermelho só em "Current R8 operational evidence identities" (evidência que depende do dado privado do dono; anterior
+  ao programa). A renovação agendada do harness do cripto voltou a passar (run 37664153832, PR #55 aberto pelo
+  workflow; o merge é do dono, conforme o próprio workflow).
+* Passagem de segurança (`pip-audit` sobre `uv export --all-extras --all-groups` de cada `uv.lock` em `main`):
+  urllib3 2.7.0 (cripto, brasileirão; ops já em 2.8.0) corrigido; pytest 8.4.2 e virtualenv 21.7.x (extras de dev de
+  cripto, ecosystem-predictor-cain, brasileirão) corrigidos; cain, core-predictor, predictor-ops, stocks-predictor sem
+  achado. Residual: multidict 6.7.1 (CVE-2026-104874) fixado exatamente pelo ccxt 4.5.85, a release mais nova. As
+  abas de segurança do GitHub (Dependabot alerts, code scanning) não estavam acessíveis a esta sessão.
+* Nenhum lock histórico em `qualification/*/tools/` mudou; nenhuma attestation mudou.
+
+IMPACT: `CLEANROOM_FINAL`, `HOSTED_CI`, `CORE_IDENTITY` e `LOCK_INTEGRITY` voltam a ser reproduzíveis a partir dos locks
+de `main` sem segredo. O que falta continua sendo o ciclo C14 numa rc nova (decisão do dono).
+
+DATE: 2026-10-07 · REASON: fechamento do R01 na parte de disponibilidade + passagem de segurança/qualidade pedida pelo
+dono · ORIGINAL_STATE preservado acima.
