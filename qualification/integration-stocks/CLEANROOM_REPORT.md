@@ -10,7 +10,7 @@ WSL do PC 2 (diagnóstico). Script `scripts/cleanroom_baseline.sh`; log `qualifi
 
 ## cleanroom-final (gate CLEANROOM_FINAL; C24.3 b/c)
 
-GitHub Actions ubuntu-latest × Python 3.13, run `run36649880023`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-stocks/RAW_LOGS/runtime/run36649880023/cleanroom-final/cleanroom_final.log` (sha256 `b5646281e199fac7…`).
+GitHub Actions ubuntu-latest × Python 3.13, run `run37698400981`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/cleanroom-final/cleanroom_final.log` (sha256 `44f54e5566b10d51…`).
 
 | Suíte (instalada da wheel) | testes | falhas | erros | pulados |
 |---|--:|--:|--:|--:|
@@ -22,4 +22,4 @@ GitHub Actions ubuntu-latest × Python 3.13, run `run36649880023`, só as wheels
 - `conformance`: suíte de conformidade congelada da Etapa A (`tests/conformance` do commit final) contra o `stocks-predictor` 0.3.0rc3 instalado com o protocolo e o transporte no mesmo venv (C24.3 c), inclusive `test_import_closure.py` (regras de adapter_paths, C24.3 b);
 - `adapters`: testes novos do adapter (D-24 (4a)) contra a mesma wheel;
 - `transport`: testes do `predictor-research-transport` 0.1.0rc7 contra a wheel instalada;
-- `cain`: política, configuração do Stocks, orquestração, cerco do loop e SHA completo, contra o `cain-research` 0.4.13rc15 instalado.
+- `cain`: política, configuração do Stocks, orquestração, cerco do loop e SHA completo, contra o `cain-research` 0.4.13rc16 instalado.

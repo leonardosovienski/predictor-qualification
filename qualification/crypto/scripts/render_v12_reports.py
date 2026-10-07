@@ -39,7 +39,7 @@ def main() -> None:
     # CLEANROOM_REPORT
     win = ""
     if W:
-        win = (f"- windows-latest (informação adicional; o secundário do crypto é o Windows local, D-3): conformidade "
+        win = (f"- windows-latest (secundário do crypto pela D-30, 2026-10-07; antes informação adicional, D-3): conformidade "
                f"{W['conformance']['passed']}/{W['conformance']['tests']}; suíte {W['full_suite']['passed']} passed, {W['full_suite']['failures']} falhas "
                f"(as mesmas do Linux: {sorted(W['full_suite']['failed']) == sorted(L['full_suite']['failed'])}); E2E {W['e2e']['checks']} checagens, all_ok={W['e2e']['all_ok']}.\n")
     replace_section(QC / "CLEANROOM_REPORT.md", f"""

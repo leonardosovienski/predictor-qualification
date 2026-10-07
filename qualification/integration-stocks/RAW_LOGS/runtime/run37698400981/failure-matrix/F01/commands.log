@@ -1,0 +1,26 @@
+{"effective_proposal": "/home/runner/work/_temp/work/failures/F01/proposals/1.json", "template": "fixtures/proposals/e2e/01-allow.json", "sha256": "fc9804d9406e666372a8c68d0f5dc549ebb0a1c62eaeb3ae054eaebdce68d2e6"}
+{"n": 1, "label": "propose 1", "at": "2026-10-07T23:05:43Z", "seconds": 0.126, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F01/proposals/1.json", "--as-of", "2026-10-07T23:05:43Z"], "fault_env": {"CAIN_ORCHESTRATION_FAULT": "after_outbox_commit"}, "exit": 86}
+--- stdout
+--- stderr
+--- end
+{"n": 2, "label": "dispatch after restart", "at": "2026-10-07T23:05:44Z", "seconds": 0.133, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F01/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "stocks/tasks/TASK-9e4ac7e9c533d87d4df89795d6752092.json", "spool": "WRITTEN", "task_id": "stocks:TASK-9e4ac7e9c533d87d4df89795d6752092"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer", "at": "2026-10-07T23:05:52Z", "seconds": 8.322, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "stocks", "--spool", "/home/runner/work/_temp/work/failures/F01/spool", "--ledger", "/home/runner/work/_temp/work/failures/F01/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F01/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "stocks:episode-1", "result_file": "stocks/results/TASK-9e4ac7e9c533d87d4df89795d6752092.365613a0782d9ca2.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "stocks:TASK-9e4ac7e9c533d87d4df89795d6752092"}
+--- stderr
+{"duration_ms": 8028, "event": "job_finished", "job_id": "stocks-research-e832af0311f749ab99a26bc4", "level": "INFO", "run_id": "8a33ff08582e451bbafa6f7c580b103f", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-10-07T23:05:52.283521Z"}
+--- end
+{"n": 4, "label": "ingest", "at": "2026-10-07T23:05:52Z", "seconds": 0.135, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F01/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:19fbae3a8e194368a09d83e2fa22cbd5", "file": "TASK-9e4ac7e9c533d87d4df89795d6752092.365613a0782d9ca2.json", "status": "RESULT", "task_id": "stocks:TASK-9e4ac7e9c533d87d4df89795d6752092"}
+--- stderr
+--- end
+{"n": 5, "label": "recovered exactly once", "at": "2026-10-07T23:05:52Z", "seconds": 0.122, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F01/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-10-07T23:05:43Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-9e4ac7e9c533d87d4df89795d6752092"}, "proposal_id": "cain:FM-F01-1", "reason_code": "ALLOWED", "receipt_sha256": "0f6cfb2b8acb093593040d58bb76bd03cf1d0b3e0a22b5ccfbc5bd71048fb0c7", "source": "operator", "task_id": "stocks:TASK-9e4ac7e9c533d87d4df89795d6752092"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:19fbae3a8e194368a09d83e2fa22cbd5", "payload_sha256": "cb391770f7b65cecd0c54fe4bc30d8c38ffd827acf4014e468124eef0a1c834e", "status": "RESULT", "task_id": "stocks:TASK-9e4ac7e9c533d87d4df89795d6752092"}], "memory": {"broken_at": null, "cube": "stocks", "facts": 1, "log": "shared across domains", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end

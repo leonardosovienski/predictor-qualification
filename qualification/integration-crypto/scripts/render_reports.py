@@ -24,6 +24,7 @@ def sha(path: Path) -> str:
 def main() -> int:
     m, run, soak = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
     sfx = sys.argv[4] if len(sys.argv) > 4 else ""
+    crun = sys.argv[5] if len(sys.argv) > 5 else run  # rc16: cleanroom-final refeito num run só dele
     root = m.parent.parent
     raw = m / "RAW_LOGS"
     nums = json.loads((m / "EVIDENCE_NUMBERS.json").read_text(encoding="utf-8"))["numbers"]
@@ -35,6 +36,7 @@ def main() -> int:
         return f"`{path.relative_to(root).as_posix()}` (sha256 `{sha(path)[:16]}…`)"
 
     rt = raw / "runtime" / run
+    ct = raw / "runtime" / crun
     sk = raw / "runtime" / soak
     # ---------------------------------------------------------------- CORE_IDENTITY
     ci = json.loads((raw / f"core-identity{sfx}" / "core_identity.json").read_text(encoding="utf-8"))
@@ -54,13 +56,13 @@ def main() -> int:
     report = (m / "CLEANROOM_REPORT.md").read_text(encoding="utf-8")
     head = report.split("## cleanroom-final")[0]
     targets = json.loads((m / "runtime_targets.json").read_text(encoding="utf-8"))
-    junit = {name: n(f"runtime/{run}/cleanroom-final/{name}.junit.xml:junit") for name in ("conformance", "transport", "cain")}
+    junit = {name: n(f"runtime/{crun}/cleanroom-final/{name}.junit.xml:junit") for name in ("conformance", "transport", "cain")}
     lines = "\n".join(f"| {name} | {v['tests']} | {v['failures']} | {v['errors']} | {v['skipped']} |" for name, v in junit.items())
     (m / "CLEANROOM_REPORT.md").write_text(
         head + "## cleanroom-final (gate CLEANROOM_FINAL; C24.3 c)\n\n"
-        f"GitHub Actions ubuntu-latest × Python 3.13, run `{run}`, só as wheels publicadas de `runtime_targets.json` em "
+        f"GitHub Actions ubuntu-latest × Python 3.13, run `{crun}`, só as wheels publicadas de `runtime_targets.json` em "
         "venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: "
-        f"{cite(rt / 'cleanroom-final' / 'cleanroom_final.log')}.\n\n"
+        f"{cite(ct / 'cleanroom-final' / 'cleanroom_final.log')}.\n\n"
         "| Suíte (instalada da wheel) | testes | falhas | erros | pulados |\n|---|--:|--:|--:|--:|\n" + lines + "\n\n"
         "- `conformance`: a suíte de conformidade congelada da Etapa A do cripto (`tests/conformance` do commit final), "
         f"contra o `cripto-predictor` {targets['cripto']['version']} instalado com o protocolo e o transporte no mesmo venv (C24.3 c).\n"
@@ -73,6 +75,8 @@ def main() -> int:
 
     e2e, n1, iso, contract = summary("e2e"), summary("n-plus-1"), summary("isolation"), summary("contract-revalidation")
     win_path = raw / f"windows-smoke{sfx}" / "e2e" / "SUMMARY.json"
+    if not win_path.exists():  # rc16 (D-31): o secundário é o job windows-latest do mesmo workflow (runtime/<run>-windows)
+        win_path = raw / "runtime" / f"{run}-windows" / "e2e" / "SUMMARY.json"
     # rc15: o Windows do PC 2 ainda não rodou neste ciclo (NOT_RUN/BLOCKED); a linha do relatório diz isso em vez de inventar número
     win = json.loads(win_path.read_text(encoding="utf-8")) if win_path.exists() else {"passed": "NOT_RUN", "failed": "BLOCKED (PC 2 do dono)"}
     fm = json.loads((rt / "failure-matrix" / "FAILURE_MATRIX_RESULTS.json").read_text(encoding="utf-8"))["points"]
@@ -90,7 +94,7 @@ def main() -> int:
         "domínio instalado; `runtime_env.sh` confere).\n\n"
         "| Cenário | Ambiente | Conferências OK | Falhas | Fonte |\n|---|---|--:|--:|---|\n"
         f"| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `{run}` | {e2e['passed']} | {e2e['failed']} | {cite(rt / 'e2e' / 'SUMMARY.json')} |\n"
-        f"| E2E + restart (WINDOWS_SMOKE) | Windows local do **PC 2** | {win['passed']} | {win['failed']} | {cite(win_path) if win_path.exists() else 'sem evidência neste ciclo'} |\n"
+        f"| E2E + restart (WINDOWS_SMOKE) | {'windows-latest × 3.13 (D-31), run `' + run + '-windows`' if win_path.exists() and 'runtime' in win_path.parts else 'Windows local do **PC 2**'} | {win['passed']} | {win['failed']} | {cite(win_path) if win_path.exists() else 'sem evidência neste ciclo'} |\n"
         f"| N+1 (3 processos, receipt byte a byte) | Linux primário | {n1['passed']} | {n1['failed']} | {cite(rt / 'n-plus-1' / 'SUMMARY.json')} |\n"
         f"| Isolamento, IDs com domínio, contradição | Linux primário | {iso['passed']} | {iso['failed']} | {cite(rt / 'isolation' / 'SUMMARY.json')} |\n"
         f"| Contrato C24.3 (d) | Linux primário | {contract['passed']} | {contract['failed']} | {cite(rt / 'contract-revalidation' / 'SUMMARY.json')} |\n\n"
@@ -120,7 +124,7 @@ def main() -> int:
         f"Parte estática ({cite(raw / f'contract-revalidation{sfx}' / 'static_checks.json')}):\n\n"
         "| Conferência | Resultado |\n|---|---|\n" + srows + "\n\n"
         f"(c) suíte de conformidade verde com as wheels da integração: {junit['conformance']['tests']} testes, "
-        f"{junit['conformance']['failures']} falhas ({cite(rt / 'cleanroom-final' / 'conformance.junit.xml')}).\n\n"
+        f"{junit['conformance']['failures']} falhas ({cite(ct / 'cleanroom-final' / 'conformance.junit.xml')}).\n\n"
         f"(d) vetor real da Etapa A pelo adapter: {contract['passed']} conferências OK, {contract['failed']} falhas "
         f"({cite(rt / 'contract-revalidation' / 'SUMMARY.json')}): hash canônico sem `client_ref` igual ao do vetor, "
         "`client_ref` devolvido igual, payload byte-idêntico ao `show` (adapter_api).\n",

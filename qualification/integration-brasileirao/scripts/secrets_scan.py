@@ -27,7 +27,9 @@ PATTERNS = {
     "llm_api_key": re.compile(r"\b(sk-ant-[A-Za-z0-9_\-]{20,}|sk-[A-Za-z0-9]{40,})"),
     "secret_assignment": re.compile(r"(?i)\b(api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"][A-Za-z0-9/+_\-]{16,}['\"]"),
 }
-CHANGED = {"cain": "cain", "ecosystem-predictor": "transport", "brasileirao-predictor": "brasileirao"}
+# clone dir -> (repo name in STACK_BASELINE.json, key in runtime_targets.json); the ecosystem clone carries the renamed repository (R01)
+CHANGED = {"cain": ("cain", "cain"), "ecosystem-predictor-cain": ("ecosystem-predictor", "transport"),
+           "brasileirao-predictor": ("brasileirao-predictor", "brasileirao")}
 
 
 def scan(label: str, text: str, hits: list) -> int:
@@ -47,8 +49,8 @@ def main() -> int:
     targets = json.loads((mission / "runtime_targets.json").read_text(encoding="utf-8"))
     hits: list = []
     scanned = {}
-    for repo, key in CHANGED.items():
-        base, final = baseline[repo], targets[key]["commit"]
+    for repo, (baseline_repo, key) in CHANGED.items():
+        base, final = baseline[baseline_repo], targets[key]["commit"]
         diff = subprocess.run(["git", "-C", str(repos / repo), "diff", base, final], capture_output=True, text=True,
                               check=True).stdout
         added = "\n".join(line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++"))

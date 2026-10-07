@@ -178,9 +178,9 @@
     },
     {
       "decision_id": "D-32",
-      "origin": "proposta pelo agente na remediação R01 (programa de auditoria do CAIN), 2026-10-07; aprovada quando o dono fizer merge",
+      "origin": "proposta pelo agente na remediação R01 (programa de auditoria do CAIN), 2026-10-07; aprovada quando o dono fizer merge; mesclada em main sob a D-33 (PR #101) em 2026-10-07 e aplicada pelo ciclo rc16 (D-34)",
       "question": "Os repositórios de produto ficaram privados (início de 2026-10) e `ecosystem-predictor` foi renomeado `ecosystem-predictor-cain` (o nome antigo é o showcase público, sem releases): toda URL `releases/download/` fixada em `pyproject`/`uv.lock` responde 404 e nenhum consumidor instala pelo lock. Como C4/C5 (cadeia `tool.uv.sources (URL da release) ↔ uv.lock ↔ hash`) continuam valendo?",
-      "status": "PROPOSED",
+      "status": "APPROVED",
       "text": "**Registro canônico por consumidor.** Cada consumidor versiona `STACK_WHEELS.json` (repositório produtor, tag da release, asset, sha256) e `stack_wheels.py` (cópia idêntica, stdlib): `fetch` baixa os assets pela API do GitHub (único caminho para release privada), confere o sha256 e os põe no índice local `.stack-wheels/` (nunca versionado); `uv.lock` fixa os pacotes nesse índice por nome + versão, sem URL nem nome de repositório; `check` falha se registro, índice, lock e `pyproject` discordarem ou se uma URL de release reaparecer; nomes de repositório aposentados são recusados. Leitura de C4 a partir desta decisão: a cadeia passa a ser `pyproject range ↔ STACK_WHEELS.json (repo, tag, asset, sha256) ↔ uv.lock (registry .stack-wheels, nome, versão) ↔ sha256 da wheel baixada ↔ metadata instalado ↔ módulo em runtime`; `wheel publicada` (C5) continua sendo asset de release do repositório dono, agora privado. Autenticação: `STACK_READ_TOKEN` (fine-grained, *Contents: read* nos repositórios produtores) em cada repositório consumidor; `GITHUB_TOKEN` só lê o próprio repositório. Os locks históricos em `qualification/*/tools/` não mudam (evidência). Qualquer mudança de lock implica C14 (publish-candidates, cleanroom-final e fases dependentes) numa rc nova; as attestations vigentes continuam válidas para os `final_commits` delas. O texto do núcleo que cita `tool.uv.sources (URL da release)` fica reinterpretado por esta decisão até uma revisão do núcleo (v2.4), que exigiria recalcular os hashes dos prompts. Evidência: `qualification/shared/SUPPLY_CHAIN_20261007.md`."
     },
     {
@@ -189,6 +189,34 @@
       "question": "A regra fixa deste repositório (\"nunca merge\"; aprovar = o dono fazer merge) vale durante o programa de remediação R01–R12/H01–H07?",
       "status": "APPROVED",
       "text": "Durante o programa de remediação de 2026-10-07 o dono autoriza o agente a corrigir, testar e **fazer merge** dos PRs do programa nos repositórios do stack e neste repositório, após validação local e com o CI do GitHub registrado em cada PR. Continuam proibidos: push direto em `main`, rebase, force-push, treinar, mover capital, alterar artefato congelado ou attestation. Decisões que só o dono pode executar (criar o segredo `STACK_READ_TOKEN`, mudar visibilidade de repositório, revisor humano externo) ficam registradas como pendências, não são contornadas. Esta decisão não altera gates nem estados de qualificação; vale para a branch `claude/cain-audit-remediation-fiwdei` e suas continuações no mesmo programa."
+    },
+    {
+      "decision_id": "D-29",
+      "question": "Pin do conjunto protegido das integrações: `qualification/crypto/runtime_target.json` (e a attestation da Etapa A do crypto) mudaram pela reabertura V1.2 (D-27). Aceitar o pin novo e re-congelar os itens compartilhados dos `PROTECTED_SET.json` das três integrações?",
+      "text": "Aceito. Os itens compartilhados `qualification/crypto/runtime_target.json` e `qualification/crypto/QUALIFICATION_ATTESTATION.json` dos `PROTECTED_SET.json` de `integration-crypto`, `integration-stocks` e `integration-brasileirao` passam a registrar o sha256 dos arquivos da V1.2 (alvo `21f8b182` / 1.2.0rc4 e a attestation V1.2 que o substitui), com o sha256 anterior guardado ao lado (`previous_sha256`, `accepted_by: D-29`), no mesmo precedente da IC-F011/IS-F008 (reemissão encadeada aceita pelo dono). Os domínios (blobs de crypto, stocks e brasileirão) continuam tendo de estar intactos; nenhum outro item compartilhado muda. `PROTECTED_ARTIFACTS_UNCHANGED` fecha por `all_unchanged_or_chained` com esses dois itens aceitos.",
+      "origin": "decisão delegada pelo dono ao agente em 2026-09-30 (qualification/shared/CICLO_D27_20260930.md §5, item 2: \"o dono delegou as decisões 1–3 ao agente\"; a escrita em DECISIONS.json foi bloqueada naquela sessão); escrita em 2026-10-07 na sessão do ciclo rc16, ordenado pelo dono (\"faz o ciclo C14 numa rc nova\")",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-30",
+      "question": "`WINDOWS_SMOKE` da missão `crypto` (Etapa A, reabertura V1.2): o secundário registrado é o Windows local do dono (D-3). Aceitar o job `windows-latest` × 3.13 do GitHub Actions como ambiente secundário do crypto, como a D-1 faz para o Stocks?",
+      "text": "Aceito para a V1.2 e os ciclos seguintes do crypto: o job `windows-latest` × Python 3.13 (Git Bash, `runtime_cleanroom.sh` + `e2e_runtime.py`, venv limpo só com as wheels publicadas) vale como ambiente secundário `where = github_actions`, com `WINDOWS_SMOKE` em PASS/FAIL pelo critério do núcleo para o secundário (C11: E2E + restart): E2E pelo entrypoint instalado com restart e releitura byte a byte por processo novo (as 20 checagens do `E2E_SUMMARY.json`, `all_ok`), conformidade 48/48 e identidade das wheels; o E2E com dado real e o soak continuam sendo do primário Linux (D-16). O run 36646241688 (job `runtime-windows-latest`) é a evidência da V1.2. O Windows local do dono (D-3) continua admitido como evidência adicional e deixa de ser o único secundário admitido.",
+      "origin": "decisão delegada pelo dono ao agente em 2026-09-30 (CICLO_D27_20260930.md §5, item 1); escrita em 2026-10-07 na sessão do ciclo rc16",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-31",
+      "question": "`WINDOWS_SMOKE` da missão `integration-crypto`: o secundário registrado é o Windows do PC 2 (D-23). Aceitar o job `windows-latest` × 3.13 do workflow `integration-crypto-runtime.yml` (fase `e2e`, mesmo `e2e.py` do Linux) como secundário, como a integration-stocks já faz?",
+      "text": "Aceito para o ciclo rc15 e os seguintes: o job `windows` do `integration-crypto-runtime.yml` (`windows-latest` × 3.13, E2E + restart pelo `e2e.py`, venvs limpos só com as wheels publicadas) vale como ambiente secundário `where = github_actions`; `WINDOWS_SMOKE` é PASS/FAIL pelo resultado desse job (sem isenção). O run 36665679329 é a evidência do rc15; cada ciclo novo roda o seu job. O PC 2 continua admitido como evidência adicional.",
+      "origin": "decisão delegada pelo dono ao agente em 2026-09-30 (CICLO_D27_20260930.md §5, item 1, e proposta D-31 na sessão de 2026-09-30); escrita em 2026-10-07 na sessão do ciclo rc16",
+      "status": "APPROVED"
+    },
+    {
+      "decision_id": "D-34",
+      "question": "Ciclo C14 numa rc nova depois da mudança de lock do R01 (D-32): qual alvo, em que ambientes, e o que fecha?",
+      "text": "Alvo: cain `0.4.13rc16` publicada pelo workflow Release a partir do `main` (código do pacote `cain` byte-idêntico ao da rc15; o `uv.lock` passa a fixar as wheels do stack por `STACK_WHEELS.json` + índice local, sem URL de release); transporte 0.1.0rc7, protocolo 2.0.0rc2, cripto 1.2.0rc4, stocks 0.3.0rc3, brasileirão 0.3.0rc4, core 3.2.1 e ops 4.2.2rc1 sem mudança (os assets do ecosystem passam a ser lidos no repositório renomeado `ecosystem-predictor-cain`, mesmos sha256). Leitura de C4 pela D-32: a cadeia do cain é pyproject (pin) ↔ STACK_WHEELS.json ↔ uv.lock (índice local, nome + versão) ↔ sha256 da wheel baixada ↔ instalado ↔ site-packages; os consumidores de domínio nos commits finais anteriores à R01 mantêm a cadeia por URL. Ambientes: Linux primário no GitHub Actions (D-9/D-16) e `windows-latest` como secundário (D-1, D-30, D-31); `integration-brasileirao` continua com o runtime no `owner_linux`/PC 2 (D-19/D-25): só as conferências estáticas rodam nesta sessão e a missão fica BLOCKED nelas. Fecha: as fases que exercitam as wheels (C14) de `integration-crypto` e `integration-stocks`, e a Etapa A do crypto V1.2 pela D-30; attestations reemitidas só com todos os gates PASS (C7.1), apontando `supersedes_sha256` para a vigente, que é preservada. Merges sob a D-33.",
+      "origin": "dono, no chat da sessão de 2026-10-07: \"termina de executar o primeiro prompt que mandei e depois faz o ciclo C14 numa rc nova\"; executada pelo agente",
+      "status": "APPROVED"
     }
   ]
 }

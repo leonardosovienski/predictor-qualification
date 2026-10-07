@@ -4,7 +4,7 @@ Gate `ENVELOPE_V2_CONFORMANCE`. Protocolo V2 consumido da release congelada `pre
 
 | Propriedade | Evidência |
 |---|---|
-| adapter só pela `adapter_api` (`Circuit.submit_request/show`), sem console script, só stdlib | cleanroom-final `adapters` (11 testes) e `conformance` (87), `qualification/integration-stocks/RAW_LOGS/runtime/run36649880023/cleanroom-final/cleanroom_final.log` (sha256 `b5646281e199fac7…`) |
+| adapter só pela `adapter_api` (`Circuit.submit_request/show`), sem console script, só stdlib | cleanroom-final `adapters` (11 testes) e `conformance` (87), `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/cleanroom-final/cleanroom_final.log` (sha256 `44f54e5566b10d51…`) |
 | pedido V2 → `stocks-research-request/1` com `client_ref`; hash canônico sem `client_ref` = vetor da Etapa A | C24.3 (d): 11/11 |
 | payload de domínio byte-idêntico ao `show` em todo RESULT/DUPLICATE | E2E 55/55, Windows 55/55 |
 | versão errada, mesmo ID com outro payload, envelope válido da task errada | F11 3 OK, F12 3 OK, F13 2 OK |

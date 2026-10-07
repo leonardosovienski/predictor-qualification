@@ -195,3 +195,24 @@ depende do runtime privado; o resto fica para o dono no PC 2 (owner_linux + Wind
 **Estado terminal desta sessão: `BLOCKED`** (C7.3; só parcial). Falta o dono, no PC 2: `runtime_env.sh` + cenários (cleanroom-final, C24.3 c/d, e2e,
 N+1, isolamento, F01–F16, soak) e `windows_smoke.ps1` com os alvos rc15; depois `attest.py final` (supersede da rc13). Também pendente a decisão sobre
 o pin do crypto no conjunto protegido (mesma decisão pedida na integration-crypto).
+
+## 2026-10-07 — C14 na cain v0.4.13rc16 (D-34; lock por registro, D-32): só conferências estáticas; runtime BLOCKED (PC 2)
+
+A cain v0.4.13rc16 (`de5db06b`, wheel `d8fca502…`) foi publicada depois da mudança de lock do R01: o código do pacote é o da rc15
+(`src/cain/__init__.py` só muda a versão) e o `uv.lock` passa a fixar as wheels do stack por `STACK_WHEELS.json` + índice local. O
+transporte (rc7) e o protocolo (rc2) não mudam; os assets passam a ser lidos no repositório renomeado `ecosystem-predictor-cain`.
+Esta sessão (Linux na nuvem, sem o PC 2) fez o que não depende do runtime privado; o resto continua com o dono (D-19/D-25).
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json` | cain rc16 `de5db06b` (wheel conferida por download anônimo e igual ao build local reprodutível); transporte/protocolo no repositório renomeado, mesmos sha256 |
+| `RAW_LOGS/release-rc16/` | `adopt_release.py check` 7/7: `brasileirao.json` da rc16 é byte a byte o da rc15/rc13 (`f51ac735…`) e o que `tools/build_domain_config.py` de `de5db06b` regenera do pin `0920d903`; `src/cain` rc15→rc16 só a versão (`release_rc16.log`) |
+| `RAW_LOGS/hosted-ci/final-rc16/`, `hosted_ci_final_targets_rc16.json` | push verde nos SHAs exatos (cain `de5db06b` run 37695085002; ecosystem-predictor-cain `b0da4fd8`; brasileirao `1fc2e884` pelo caminho da IB-F005) |
+| `RAW_LOGS/contract-revalidation-rc16/` | C24.3 estático 9/10 ((f) pelo aceite IB-F005, como na rc13/rc15); (c)/(d) exigem runtime |
+| `RAW_LOGS/protected-rc16/` | 3397 itens, `all_unchanged = true`: domínios intactos; os itens compartilhados do crypto V1.2 (`runtime_target.json`, attestation) re-congelados pela D-29 |
+| `RAW_LOGS/secrets-rc16/` | 0 achados (diffs do cain até `de5db06b`, ecosystem e brasileirão; arquivos da missão) |
+| `scripts/rc16_static.py`, `scripts/secrets_scan.py` (clone renomeado), `PROTECTED_SET.json` (D-29), `GATES.json`, `ATTESTATION_PARTIAL_rc16-static.json` | ledger do ciclo: HOSTED_CI, SECRETS_CLEAN, SHARED_DEPENDENCY_CLEAR, STACK_BASELINE_FROZEN e BLOCKERS_ZERO PASS; os demais NOT_RUN com `BLOCKED: …`; `supersedes_sha256` = attestation rc13 vigente, que **continua vigente** |
+
+**Estado terminal desta sessão: `BLOCKED`** (C7.3; só parcial). Falta o dono, no PC 2 (`owner_linux` + Windows): `runtime_env.sh` (o lado do
+CAIN agora instala pelo registro, como em `integration-crypto/scripts/runtime_env.sh`) + cenários com os alvos rc16, `windows_smoke.ps1`,
+depois `attest.py final` (supersede da rc13).

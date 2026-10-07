@@ -30,9 +30,11 @@ PATTERNS = {
     "secret_assignment": re.compile(r"(?i)\b(api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"][A-Za-z0-9/+_\-]{16,}['\"]"),
 }
 TARGETS = json.loads((Path(__file__).resolve().parents[1] / "runtime_targets.json").read_text(encoding="utf-8"))
+# c6 (2026-10-07): o cain é varrido do final do ciclo 5 (rc15) ao final novo; transporte e stocks não mudam (intervalos já varridos em
+# secrets-c5); o clone do ecosystem usa o nome atual do repositório (runtime_targets.json).
 DIFFS = {
-    "cain": ("10744a9f149610d7741431c28c1e78c681c41165", TARGETS["cain"]["commit"]),
-    "ecosystem-predictor": ("61f3ac42160489ffbd872b05881a9b58b5bc0fcf", TARGETS["transport"]["commit"]),
+    "cain": ("ae00017ab4a2ce602998e8fbdb8b20be95aad99d", TARGETS["cain"]["commit"]),
+    TARGETS["transport"]["repo"].split("/")[1]: ("b0da4fd8d0c472b3ab7d33acf0946e5d10a02754", TARGETS["transport"]["commit"]),
     "stocks-predictor": ("61fc017256ffea815ae96bbe02b847dccdb395cc", TARGETS["stocks"]["commit"]),
 }
 

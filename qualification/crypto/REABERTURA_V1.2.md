@@ -53,3 +53,13 @@ crypto (como a D-1 faz para o Stocks). O run 36646241688 já tem essa evidência
 a V1.1 (`QUALIFIED` para `341d270` / 1.2.0rc2), válida só para aqueles `final_commits` (C22). Consequência para a
 Etapa B: `integration-crypto` só pode citar uma attestation `QUALIFIED` do crypto (C7.1 regra 7); enquanto a V1.2 não
 fechar, a integração com a cripto 1.2.0rc4 fica com os mesmos parciais (ver `qualification/integration-crypto/`).
+
+## Fechamento (2026-10-07, D-30)
+
+A decisão D-30 (delegada pelo dono em 2026-09-30, `qualification/shared/CICLO_D27_20260930.md` §5, escrita em 2026-10-07) aceita o
+job `windows-latest` × 3.13 do run 36646241688 como ambiente secundário do crypto. `scripts/v12_gates.py windows-smoke-d30` fecha
+`WINDOWS_SMOKE` com a evidência já coletada em `RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/` (E2E pelo entrypoint instalado
+com restart e releitura, conformidade, identidade das wheels; números em `EVIDENCE_NUMBERS_V1.2.json`), e `attest.py final` emite a
+attestation V1.2 **QUALIFIED** para `21f8b182` / 1.2.0rc4. A V1.1 (`QUALIFIED` para `341d270` / rc2) fica preservada como
+`QUALIFICATION_ATTESTATION_superseded_2b1491a03a6b.json`; a nova aponta para ela em `supersedes_sha256`. O Windows local do dono
+continua admitido como evidência adicional (D-3), não é mais o único secundário. Estado terminal: `QUALIFIED`.

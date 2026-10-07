@@ -6,7 +6,7 @@
 #      instalados ao lado): C24.3 (c) e as regras de adapter_paths (b);
 #   2. transporte: os testes do pacote (árvore do commit da tag) contra a wheel publicada instalada;
 #   3. CAIN: os testes da orquestração, do cerco do loop e do SHA completo (árvore do commit final) contra a wheel
-#      publicada instalada; pytest do uv.lock do cain (extra dev, --require-hashes) num venv à parte.
+#      publicada instalada; pytest do uv.lock do cain (extra dev, --require-hashes; wheels do stack do registro STACK_WHEELS.json, D-32) num venv à parte.
 # Em todos: pip check, e o módulo carregado vem de site-packages (nunca do checkout).
 #
 # Uso (com o env.sh do runtime_env.sh): cleanroom_final.sh <runtime_targets.json> <work> <out>
@@ -29,9 +29,11 @@ assert all('site-packages' in f for f in (GarimpoInvestimentos.__file__, researc
 rc=$?; echo "[conformance exit $rc]"; status=$((status | rc))
 # ---------------------------------------------------------------- 2. transporte
 T_COMMIT=$(field "['transport']['commit']")
-git clone -q https://github.com/leonardosovienski/ecosystem-predictor.git "$WORK/eco-src" && git -C "$WORK/eco-src" checkout -q "$T_COMMIT"
+git clone -q "https://github.com/$(field "['transport']['repo']").git" "$WORK/eco-src" && git -C "$WORK/eco-src" checkout -q "$T_COMMIT"
 mkdir -p "$WORK/transport-tests" && cp -r "$WORK/eco-src/packages/research-transport/tests/." "$WORK/transport-tests/"
-( cd "$WORK/eco-src/packages/research-transport" && uv export --locked --only-group dev --no-emit-project --format requirements-txt -o "$WORK/transport-dev.txt" -q )
+# rc16: o lock do transporte rc7 fixa o protocolo pela URL do repositório antigo (404); os requisitos de teste saem do lock por
+# transport_dev_requirements.py (grupo dev com hashes), sem resolver essa URL; o protocolo entra depois da wheel publicada.
+"$PY" "$(dirname "$0")/transport_dev_requirements.py" "$WORK/eco-src/packages/research-transport/uv.lock" predictor-research-transport "$WORK/transport-dev.txt" predictor-research-protocol
 "$PY" -m venv "$WORK/transport-venv"
 "$WORK/transport-venv/bin/python" -m pip install -q --require-hashes -r "$WORK/transport-dev.txt"
 for key in transport protocol; do
@@ -45,9 +47,10 @@ mkdir -p "$WORK/cain-tests/tests/unit" "$WORK/cain-tests/tests/integration"
 for t in unit/test_orchestration_policy.py unit/test_loop_fenced.py unit/test_findings_pinned_sha.py integration/test_orchestration.py; do
   cp "$WORK/cain-src/tests/$t" "$WORK/cain-tests/tests/$t"
 done
-( cd "$WORK/cain-src" && uv export --locked --extra dev --no-emit-project --format requirements-txt -o "$WORK/cain-dev-req.txt" -q )
+( cd "$WORK/cain-src" && uv export --locked --extra dev --no-emit-project --format requirements-txt -o "$WORK/cain-dev-nostack.txt" -q \
+  && "$PY" tools/stack_wheels.py requirements --project . --input "$WORK/cain-dev-nostack.txt" --output "$WORK/cain-dev-req.txt" )
 "$PY" -m venv "$WORK/cain-test-venv"
-"$WORK/cain-test-venv/bin/python" -m pip install -q --require-hashes -r "$WORK/cain-dev-req.txt"
+"$WORK/cain-test-venv/bin/python" -m pip install -q --require-hashes --find-links "$WORK/cain-src/.stack-wheels" -r "$WORK/cain-dev-req.txt"
 "$WORK/cain-test-venv/bin/python" -m pip install -q --no-deps "$WORK/$(basename "$(field "['cain']['url']")")"
 "$WORK/cain-test-venv/bin/python" -m pip check
 ( cd "$WORK/cain-tests" && "$WORK/cain-test-venv/bin/python" -I -c "import cain, research_transport; print('cain', cain.__version__, cain.__file__); assert 'site-packages' in cain.__file__" \

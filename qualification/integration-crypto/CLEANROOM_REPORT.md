@@ -17,7 +17,7 @@ Conclusão do diagnóstico: o domínio instalado da release é compatível com a
 
 ## cleanroom-final (gate CLEANROOM_FINAL; C24.3 c)
 
-GitHub Actions ubuntu-latest × Python 3.13, run `run36648103793`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-crypto/RAW_LOGS/runtime/run36648103793/cleanroom-final/cleanroom_final.log` (sha256 `40a28c8463acfa63…`).
+GitHub Actions ubuntu-latest × Python 3.13, run `run37698397521`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-crypto/RAW_LOGS/runtime/run37698397521/cleanroom-final/cleanroom_final.log` (sha256 `3bd23caaea0a5d3d…`).
 
 | Suíte (instalada da wheel) | testes | falhas | erros | pulados |
 |---|--:|--:|--:|--:|
@@ -27,4 +27,4 @@ GitHub Actions ubuntu-latest × Python 3.13, run `run36648103793`, só as wheels
 
 - `conformance`: a suíte de conformidade congelada da Etapa A do cripto (`tests/conformance` do commit final), contra o `cripto-predictor` 1.2.0rc4 instalado com o protocolo e o transporte no mesmo venv (C24.3 c).
 - `transport`: testes do `predictor-research-transport` 0.1.0rc7 contra a wheel instalada.
-- `cain`: política, orquestração, cerco do loop e SHA completo, contra o `cain-research` 0.4.13rc15 instalado.
+- `cain`: política, orquestração, cerco do loop e SHA completo, contra o `cain-research` 0.4.13rc16 instalado.
