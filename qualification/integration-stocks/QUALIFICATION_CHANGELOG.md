@@ -394,3 +394,25 @@ só o parcial `ATTESTATION_PARTIAL_ciclo5-attestation-blocked.json` (`IN_PROGRES
 **Falta (só o dono):** decidir o pin de `qualification/crypto/runtime_target.json` no conjunto protegido compartilhado das três integrações
 (aceitar a V1.2 do crypto como alvo, ou reabrir o conjunto num novo ciclo); com a decisão registrada em `DECISIONS.json`, o ciclo 5 fecha
 com `PROTECTED_ARTIFACTS_UNCHANGED` `PASS` e a attestation é reemitida (`supersedes_sha256` → ciclo 4).
+
+## 2026-10-07 — ciclo 6 (D-34, C14): cain 0.4.13rc16 com o lock por registro (D-32); attestation reemitida **QUALIFIED**
+
+Ciclo 6 da `freeze-parameters` (C14: wheel nova do cain; stocks 0.3.0rc3 `6f857b2`, cripto 1.2.0rc3 `ee3d3d1`, transporte rc7 `b0da4fd8` e
+protocolo rc2 sem mudança; perfil V1 do soak e vetores congelados sem mudança). A cain v0.4.13rc16 (`de5db06b`, wheel `d8fca502…`, build
+duplo byte-idêntico) tem o código do pacote idêntico ao da rc15; o `uv.lock` passa a fixar as wheels do stack por `STACK_WHEELS.json` +
+índice local, sem URL de release (R01/D-32). Os assets do ecosystem passam a ser lidos no repositório renomeado `ecosystem-predictor-cain`.
+A D-29 (escrita hoje, delegada pelo dono em 2026-09-30) fecha o que bloqueava o ciclo 5. Resultado: **30/30 gates `PASS`**, P0 = P1 = P2 = 0.
+
+| Onde | O quê |
+|---|---|
+| `runtime_targets.json` (`cycle = c6`), `hosted_ci_targets_c6.json`, `data/SOURCES.json` (+ `SOURCES-c5.json`), `RAW_LOGS/pin/pin_6.log`, `RAW_LOGS/pin/run37696821981/` | alvos na cain rc16; pin novo dos dados públicos antes do run (workflow `integration-stocks pin`, run 37696821981) |
+| `scripts/runtime_env.sh`, `scripts/cleanroom_final.sh`, `scripts/transport_dev_requirements.py`, `scripts/core_identity.py`, `scripts/final_wheels_check.py`, `scripts/secrets_scan.py`, `.github/workflows/integration-stocks-runtime.yml` | lado do CAIN instalado pelo registro (`fetch` + `check` + `requirements` com hash + `--find-links`); requisitos de teste do transporte lidos do lock rc7 por tomllib (o lock fixa o protocolo pela URL aposentada); cadeia de identidade do registro (D-32); download anônimo dos assets; clone do `ecosystem-predictor-cain`; conferências estáticas rotuladas pelo ciclo; token do job para o fetch |
+| `RAW_LOGS/runtime/run37698400981/` e `-windows/` | run [37698400981](https://github.com/leonardosovienski/predictor-qualification/actions/runs/37698400981) (push em `integration-stocks/runtime-…-c6`, `2367e3c`), todas as fases exit 0: cleanroom-final (conformidade 87/0, adapters 11/0, transporte 20/0, cain 84/0); C24.3 (d) 11/0; e2e 55/0; N+1 congelado 63/0, integrado 64/0, crypto-cycle 1/0; isolamento 28/0, contradição 9/0; F01–F15 50/0; **soak 43/0** (`llm_proposals` 5, tolerância zero). Windows (`windows-latest`, D-1): E2E + restart 55/0 |
+| `RAW_LOGS/core-identity-c6/`, `RAW_LOGS/final-wheels/final_wheels_check_run37698400981.json` | identidade 14/0 (stocks por URL; cain rc16 pelo registro); final_wheels 19/0 (assets × instalado no run; o cripto integrado é o rc3 de `runtime_targets.json`) |
+| `RAW_LOGS/static/run37698400981/`, `RAW_LOGS/hosted-ci/final-c6/`, `RAW_LOGS/contract-revalidation-c6/` | CI de push verde no SHA exato: cain `de5db06b`, ecosystem-predictor-cain `b0da4fd8`; stocks-predictor `6f857b2` sem mudança (aceite do dono IS-F004/IS-F005 b, `final-rc13/`); C24.3 estático 12/0 com o arquivo de aceite (a rodada do job, sem ele, em `static_checks_sem_aceite.json`, 11/1) |
+| `RAW_LOGS/protected-c6/` | conjunto protegido (3387 itens) na branch e no snapshot `713b89d`: domínios intactos; os 4 itens encadeados do IS-F008 (agora incluindo a attestation rc16 da integration-crypto, encadeada por `supersedes_sha256`); os itens do crypto V1.2 re-congelados pela D-29 (`PROTECTED_SET.json`) |
+| `RAW_LOGS/secrets-c6/` | 0 achados nos diffs (cain rc15→rc16; stocks base→final) e nos arquivos da missão |
+| `scripts/cycle6_gates.py`, `scripts/cycle6_publish.py`, `scripts/update_gates_c6.py`, `GATES.json`, `EVIDENCE_NUMBERS.json`, relatórios | ledger no ciclo 6 (`freeze-parameters-c6` … `soak-c6`); `cycle5_evidence` preservado; números de `RAW_LOGS` por script (C20) |
+| `QUALIFICATION_ATTESTATION_superseded_60b75594a229.json` (ciclo 4, preservada), `ATTESTATION_PARTIAL_ciclo6-attestation.json`, `QUALIFICATION_ATTESTATION.json` | attestation **QUALIFIED** para stocks `6f857b2` / rc3, cain `de5db06b` / rc16, ecosystem-predictor-cain `b0da4fd8` / transporte rc7, cripto `ee3d3d1` / rc3, core 3.2.1, ops 4.2.2rc1; `supersedes_sha256` = ciclo 4 (`60b75594…`); `attest.py check` OK |
+
+Limites (C22): vale para os `final_commits`/`final_wheels` declarados e para os vetores e perfis congelados; não garante edge nem lucro.

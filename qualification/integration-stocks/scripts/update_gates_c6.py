@@ -34,10 +34,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 M = "qualification/integration-stocks"
-RUN = "RUN_C6"  # ciclo 6: run do runtime na cain 0.4.13rc16 (ciclo 5: run36649880023)
+RUN = "run37698400981"  # ciclo 6: run do runtime na cain 0.4.13rc16, todas as fases num só run (ciclo 5: run36649880023 + soak run36652132817)
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
 W = f"{M}/RAW_LOGS/runtime/{RUN}-windows"
-RUN_SOAK = "RUN_C6"  # ciclo 6: soak no mesmo run (ciclo 5: run36652132817, só a fase soak, mesmo perfil V1 e mesmas wheels, depois do piso llm_proposals
+RUN_SOAK = "run37698400981"  # ciclo 6: soak no mesmo run
 # ficar em 4/5 no run36649880023 (IS-F010: qwen2.5:0.5b no ollama 0.35.0 estourou num_predict em 2 de 6 tentativas)
 RS = f"{M}/RAW_LOGS/runtime/{RUN_SOAK}"
 FM = f"{R}/failure-matrix"
@@ -50,7 +50,7 @@ SECRETS = f"{M}/RAW_LOGS/secrets-c6/secrets_scan.json"
 PROTECTED = f"{M}/RAW_LOGS/protected-c6/protected_check.json"  # ciclo 5: protected-c5
 # a mesma conferência roda também num snapshot do main (git archive), para valer no estado depois do merge mesmo que o
 # main receba mudanças de outras missões depois da base da branch
-MAIN_SNAPSHOT = "MAIN_C6"  # snapshot do main (git archive) depois do merge deste ciclo
+MAIN_SNAPSHOT = "713b89d"  # snapshot (git archive) da branch do ciclo 6 no estado que entra no main pelo merge (ciclo 5: 7cae574)
 PROTECTED_MAIN = f"{M}/RAW_LOGS/protected-c6/protected_check_main_{MAIN_SNAPSHOT}.json"
 CORE = f"{M}/RAW_LOGS/core-identity-c6/core_identity.json"  # ciclo 5: core-identity-c5
 SUPERSEDED = "SUPERSEDED_C6"  # a attestation do ciclo 4, preservada na reemissão
