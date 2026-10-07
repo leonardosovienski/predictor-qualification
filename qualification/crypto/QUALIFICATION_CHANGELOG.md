@@ -139,3 +139,20 @@ real 77 chamadas, 43 resultados, 0 perdidos, 0 violações, 6 classes de falha �
 Limitação registrada: `attest.py check` da attestation V1.1 vigente agora acusa `counts` e o sha256 de `FINDINGS.json`/`CORE_IDENTITY_REPORT.md`
 (arquivos que evoluíram nesta reabertura). É o mesmo efeito já descrito na observação do C14 v2.3 acima: a attestation vale no commit em
 que foi emitida; o `check` só é exato para a attestation mais recente e para os parciais do ciclo corrente.
+
+## 2026-10-07 — V1.2 fechada pela D-30: `WINDOWS_SMOKE` pelo `windows-latest`; attestation V1.2 **QUALIFIED** (21f8b182 / 1.2.0rc4)
+
+Decisão D-30 (delegada pelo dono em 2026-09-30, escrita em 2026-10-07 na sessão do ciclo rc16, D-34): o job `windows-latest` × 3.13
+vale como secundário do crypto (C11: E2E + restart), como a D-1 faz para o Stocks. Nenhuma fase foi reexecutada: a evidência é a do
+run 36646241688 já em `RAW_LOGS/v1.2/`.
+
+| Onde | O quê | Por quê |
+|---|---|---|
+| `scripts/v12_gates.py` (fase `windows-smoke-d30`), `GATES.json`, `ATTESTATION_PARTIAL_v1-2-windows-smoke-d30.json` | `WINDOWS_SMOKE` PASS com `runtime-windows-latest/{env.log,e2e/E2E_SUMMARY.json,conformance.junit.xml,core_identity.json,pip_freeze.txt}`; ambiente secundário `where = github_actions`; `final_result = QUALIFIED` | D-30, C7 |
+| `scripts/render_v12_reports.py`, `CLEANROOM_REPORT.md` | a linha do windows-latest deixa de dizer "informação adicional" | C20 |
+| `QUALIFICATION_ATTESTATION_superseded_2b1491a03a6b.json` (a V1.1, preservada), `QUALIFICATION_ATTESTATION.json` (V1.2, `supersedes_sha256` = `2b1491a0…`) | `attest.py final` + `attest.py check` OK; P0 = P1 = 0, P2 = 8 | C7.1 regra 8 |
+| `REABERTURA_V1.2.md` | seção de fechamento | — |
+
+Consequência para a Etapa B: `integration-crypto` passa a poder citar a attestation V1.2 (C7.1 regra 7). Os itens compartilhados
+`qualification/crypto/runtime_target.json` e `qualification/crypto/QUALIFICATION_ATTESTATION.json` dos `PROTECTED_SET.json` das três
+integrações são re-congelados pela D-29 (sha256 anterior guardado em `previous_sha256`).

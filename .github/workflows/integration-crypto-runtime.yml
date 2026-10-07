@@ -62,6 +62,7 @@ jobs:
         shell: bash
         env:
           PHASES: ${{ needs.plan.outputs.linux }}
+          GITHUB_TOKEN: ${{ github.token }}   # stack_wheels.py fetch (registro do cain, D-32): só leitura de releases públicas
         run: |
           echo "fases: $PHASES"
           bash qualification/integration-crypto/scripts/ci_runtime.sh "$PHASES" "$RUNNER_TEMP/work" "$RUNNER_TEMP/out"
@@ -119,6 +120,8 @@ jobs:
       - run: uv python install 3.13
       - name: E2E + restart (WINDOWS_SMOKE)
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /c/q && export TMPDIR=/c/q   # raiz curta (MAX_PATH), como na integration-stocks
           bash qualification/integration-crypto/scripts/ci_runtime.sh "e2e" /c/q/w "$RUNNER_TEMP/out"
@@ -172,10 +175,11 @@ jobs:
         run: |
           set -uo pipefail
           PY="$(uv python find 3.13)"; OUT="$RUNNER_TEMP/static"; mkdir -p "$OUT" "$RUNNER_TEMP/clones"
-          for r in cain ecosystem-predictor cripto-predictor stocks-predictor brasileirao-predictor; do git clone -q "https://github.com/leonardosovienski/$r.git" "$RUNNER_TEMP/clones/$r"; done
+          for r in cain ecosystem-predictor-cain cripto-predictor stocks-predictor brasileirao-predictor; do git clone -q "https://github.com/leonardosovienski/$r.git" "$RUNNER_TEMP/clones/$r"; done
           M=qualification/integration-crypto; CR=$(jq -r .cripto.commit $M/runtime_targets.json)
           echo "static run_at=$(date -u +%FT%TZ) cripto_final=$CR" | tee "$OUT/static.log"
-          "$PY" $M/scripts/hosted_ci.py $M/hosted_ci_final_targets_rc15.json "$OUT/hosted-ci" 2>&1 | tee -a "$OUT/static.log"; echo "hosted_ci exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
+          CYCLE=$(jq -r .cycle $M/runtime_targets.json); echo "cycle=$CYCLE" | tee -a "$OUT/static.log"
+          "$PY" $M/scripts/hosted_ci.py "$M/hosted_ci_final_targets_${CYCLE}.json" "$OUT/hosted-ci" 2>&1 | tee -a "$OUT/static.log"; echo "hosted_ci exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
           "$PY" $M/scripts/contract_revalidation.py "$RUNNER_TEMP/clones/cripto-predictor" "$CR" $M "$OUT/contract-revalidation/static_checks.json" 2>&1 | tee -a "$OUT/static.log"; echo "contract_revalidation exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
           "$PY" $M/scripts/protected_check.py "$PWD" "$RUNNER_TEMP/clones" "$CR" "$OUT/protected/protected_check.json" 2>&1 | tee -a "$OUT/static.log"; echo "protected_check exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
           "$PY" $M/scripts/secrets_scan.py "$RUNNER_TEMP/clones" "$PWD" "$OUT/secrets/secrets_scan.json" 2>&1 | tee -a "$OUT/static.log"; echo "secrets_scan exit ${PIPESTATUS[0]}" | tee -a "$OUT/static.log"
@@ -190,7 +194,7 @@ jobs:
         shell: bash
         env:
           TOKEN: ${{ github.token }}
-          DEST: qualification/integration-crypto/RAW_LOGS/static-rc15/run${{ github.run_id }}
+          DEST: qualification/integration-crypto/RAW_LOGS/static/run${{ github.run_id }}
           BRANCH: integration-crypto/raw-${{ github.run_id }}-static
         run: |
           set -euo pipefail

@@ -65,7 +65,7 @@ Run [36646241688](https://github.com/leonardosovienski/predictor-qualification/a
   o checkout: 16 das 17 da CR-F016 e 16 dos testes novos dos PRs #128–#134, que leem `docs/evidence`, `docs/research_ledger` ou
   `GarimpoInvestimentos/h6_status.json` pelo caminho do repo); nenhuma exercita código instalado de forma diferente. Detalhe em `FINDINGS.json` (CR-F016).
 - E2E sintético pelo entrypoint instalado: 20 checagens, all_ok=True. Soak sintético (diagnóstico): zero_tolerance_ok=True.
-- windows-latest (informação adicional; o secundário do crypto é o Windows local, D-3): conformidade 48/48; suíte 1748 passed, 32 falhas (as mesmas do Linux: True); E2E 20 checagens, all_ok=True.
+- windows-latest (secundário do crypto pela D-30, 2026-10-07; antes informação adicional, D-3): conformidade 48/48; suíte 1748 passed, 32 falhas (as mesmas do Linux: True); E2E 20 checagens, all_ok=True.
 - Job `d16` (mesmo run, runtime idêntico): conformidade 48/48.
 
 `CLEANROOM_FINAL` V1.2: **PASS** (Linux primário). Fonte: `EVIDENCE_NUMBERS_V1.2.json`.

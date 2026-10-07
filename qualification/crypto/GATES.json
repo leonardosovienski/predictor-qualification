@@ -76,7 +76,8 @@
     "v1-2-science",
     "v1-2-soak",
     "v1-2-hosted-ci",
-    "v1-2-windows-smoke"
+    "v1-2-windows-smoke",
+    "v1-2-windows-smoke-d30"
   ],
   "environments": [
     {
@@ -97,10 +98,12 @@
       "os": "windows",
       "python": "3.13",
       "role": "secondary",
-      "where": "local_windows",
-      "result": "NOT_RUN",
+      "where": "github_actions",
+      "result": "PASS",
       "evidence": [
-        "qualification/crypto/REABERTURA_V1.2.md"
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/env.log",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/conformance.junit.xml"
       ]
     }
   ],
@@ -277,9 +280,15 @@
       "note": "V1.2, perfil V1 com dados reais no Linux primário (run run36646241688): 77 chamadas, 43 resultados, perdidos 0, violações 0, zero_tolerance_ok=True; execuções por classe de falha (mínimo 3): {'ops_worker_crash': 3, 'ops_worker_hang': 3, 'host_killed_during_ops_job': 3, 'before_admission_commit': 4, 'during_result_write': 3, 'result_file_corruption': 3}. Soak sintético do mesmo run: zero_tolerance_ok=True (diagnóstico)."
     },
     "WINDOWS_SMOKE": {
-      "status": "NOT_RUN",
-      "evidence": [],
-      "note": "BLOCKED: o secundário do crypto é o Windows local do dono (D-3, C:\\Cripto\\qualificacao\\runtime\\); esta sessão não tem acesso a ele. O job windows-latest do run é só informação adicional. Falta o dono rodar qualification/crypto/scripts/windows_runtime.sh com o runtime_target.json da V1.2 (ver REABERTURA_V1.2.md) ou decidir, por DECISIONS.json, aceitar windows-latest como secundário do crypto (como a D-1 faz para o Stocks)."
+      "status": "PASS",
+      "evidence": [
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/env.log",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/e2e/E2E_SUMMARY.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/conformance.junit.xml",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/core_identity.json",
+        "qualification/crypto/RAW_LOGS/v1.2/run36646241688/runtime-windows-latest/pip_freeze.txt"
+      ],
+      "note": "V1.2, D-30: windows-latest × 3.13 (run run36646241688, venv limpo só com as wheels publicadas): E2E pelo entrypoint instalado com restart e releitura por processo novo 20 checagens, all_ok=True; conformidade 48/48; suíte pela wheel 1748 passed / 32 falhas, as mesmas da classe T do Linux (CR-F016). Secundário aceito pela D-30; o Windows local do dono (D-3) continua admitido como evidência adicional."
     },
     "SHARED_DEPENDENCY_CLEAR": {
       "status": "PASS",
@@ -432,6 +441,6 @@
     "sdist_sha256": "f648d45bd80c0878fd7f8cb7272fd2ff36f219ffdd5a939a536d599d5e72344d",
     "built_by": "workflow Release do cripto-predictor (run 36643518795; build duplo, wheel byte-idêntica; tag na 21f8b182)"
   },
-  "terminal_state_v1_2": "BLOCKED",
-  "terminal_note_v1_2": "BLOCKED: NOT_RUN em ['WINDOWS_SMOKE'] (C7.3: só parcial IN_PROGRESS; sem attestation final)"
+  "terminal_state_v1_2": "QUALIFIED",
+  "terminal_note_v1_2": "todos PASS (D-30 fecha WINDOWS_SMOKE)"
 }

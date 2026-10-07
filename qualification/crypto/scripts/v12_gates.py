@@ -221,6 +221,33 @@ def main() -> None:
         ]
         g["phases_completed"].append("v1-2-windows-smoke")
 
+    elif phase == "windows-smoke-d30":
+        # D-30 (2026-10-07; decisão delegada pelo dono em 2026-09-30, CICLO_D27 §5): o job windows-latest do run vale como secundário.
+        W = f"{V}/{a.run}/runtime-windows-latest"
+        numbers = load("EVIDENCE_NUMBERS_V1.2.json")["runtime-windows-latest"]
+        ok = (numbers["e2e"]["all_ok"] and numbers["conformance"]["failures"] == 0 and numbers["conformance"]["errors"] == 0
+              and numbers["conformance"]["passed"] == numbers["conformance"]["tests"])
+        gate(g, "WINDOWS_SMOKE", "PASS" if ok else "FAIL",
+             [f"{W}/env.log", f"{W}/e2e/E2E_SUMMARY.json", f"{W}/conformance.junit.xml", f"{W}/core_identity.json", f"{W}/pip_freeze.txt"],
+             (f"V1.2, D-30: windows-latest × 3.13 (run {a.run}, venv limpo só com as wheels publicadas): E2E pelo entrypoint instalado com restart e "
+              f"releitura por processo novo {numbers['e2e']['checks']} checagens, all_ok={numbers['e2e']['all_ok']}; conformidade "
+              f"{numbers['conformance']['passed']}/{numbers['conformance']['tests']}; suíte pela wheel {numbers['full_suite']['passed']} passed / "
+              f"{numbers['full_suite']['failures']} falhas, as mesmas da classe T do Linux (CR-F016). Secundário aceito pela D-30; o Windows local "
+              "do dono (D-3) continua admitido como evidência adicional."))
+        g["environments"] = [env for env in g["environments"] if env["role"] != "secondary"] + [
+            {"os": "windows", "python": "3.13", "role": "secondary", "where": "github_actions", "result": "PASS" if ok else "FAIL",
+             "evidence": [f"{W}/env.log", f"{W}/e2e/E2E_SUMMARY.json", f"{W}/conformance.junit.xml"]}]
+        g["phases_completed"].append("v1-2-windows-smoke-d30")
+        findings = load("FINDINGS.json")["findings"]
+        blocking = [f["id"] for f in findings if f["status"] in ("OPEN", "OPEN_BLOCKED") and f["severity"] in ("P0", "P1")]
+        states = {k: v["status"] for k, v in g["gates"].items()}
+        not_run = sorted(k for k, s in states.items() if s == "NOT_RUN")
+        failed = sorted(k for k, s in states.items() if s == "FAIL")
+        g["terminal_state_v1_2"] = ("NOT_QUALIFIED" if failed or blocking else ("BLOCKED" if not_run else "QUALIFIED"))
+        g["terminal_note_v1_2"] = (f"FAIL em {failed}" if failed else (f"BLOCKED: NOT_RUN em {not_run}" if not_run else "todos PASS (D-30 fecha WINDOWS_SMOKE)"))
+        g["final_result"] = "NOT_QUALIFIED" if failed or blocking else ("QUALIFIED" if not not_run else g.get("final_result"))
+        print("estado terminal V1.2:", g["terminal_state_v1_2"], "|", g["terminal_note_v1_2"])
+
     elif phase == "attestation-blocked":
         findings = load("FINDINGS.json")["findings"]
         blocking = [f["id"] for f in findings if f["status"] in ("OPEN", "OPEN_BLOCKED") and f["severity"] in ("P0", "P1")]
