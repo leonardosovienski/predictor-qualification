@@ -26,11 +26,26 @@ def main() -> int:
     wheels = {w["name"]: w for w in ledger["final_wheels"]}
     env = m / "RAW_LOGS" / "runtime" / run / "env"
     installed: dict[str, set[str]] = {}
+    # c6 (D-32): no venv do CAIN as wheels do stack vêm do índice local .stack-wheels (pip freeze mostra name==version,
+    # sem URL); a identidade é o sha256 que o fetch conferiu (env/stack_wheels_cain.sha256) e que o pip exigiu
+    # (--require-hashes) para o mesmo nome+versão.
+    fetched: dict[str, str] = {}
+    for sums in sorted(env.glob("stack_wheels_*.sha256")):
+        for line in sums.read_text(encoding="utf-8").splitlines():
+            digest, _, asset = line.partition("  ")
+            fetched[asset.strip()] = digest.strip()
+    PINNED = re.compile(r"^(cain-research|cripto-predictor|stocks-predictor|predictor-[a-z-]+)==(\S+)$")
     for freeze in sorted(env.glob("pip_freeze_*.txt")):
         for line in freeze.read_text(encoding="utf-8").splitlines():
             hit = STACK.match(line.strip())
             if hit:
                 installed.setdefault(hit.group(1), set()).add(hit.group(2))
+                continue
+            pin = PINNED.match(line.strip())
+            if pin:
+                asset = f"{pin.group(1).replace('-', '_')}-{pin.group(2)}-py3-none-any.whl"
+                if asset in fetched:
+                    installed.setdefault(pin.group(1), set()).add(fetched[asset])
     checks = []
     with tempfile.TemporaryDirectory() as tmp:
         for name, w in sorted(wheels.items()):

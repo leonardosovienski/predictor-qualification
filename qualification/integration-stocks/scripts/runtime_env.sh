@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # integration-stocks: runtime suportado (C3.1) — venvs limpos, só com as wheels publicadas dos final_commits.
 #
-#   CAIN        : dependências exportadas do uv.lock do cain no commit final (--require-hashes; inclui o protocolo e o
-#                 transporte pelas URLs das releases com sha256) + a wheel publicada do cain (--no-deps, sha256).
+#   CAIN        : dependências exportadas do uv.lock do cain no commit final (--require-hashes); o protocolo, o transporte,
+#                 o snapshot e o bundle vêm do registro STACK_WHEELS.json do cain (fetch pela API + sha256, D-32) + a wheel
+#                 publicada do cain (--no-deps, sha256).
 #   consumidor  : dependências exportadas do uv.lock do stocks-predictor no commit final (--all-extras, como na Etapa A;
 #                 Core e Ops pelas URLs das releases) + as wheels publicadas do Stocks, do transporte e do protocolo
 #                 (--no-deps, sha256 conferido antes de instalar).
@@ -50,8 +51,15 @@ clone() {  # repo dest commit
 }
 # ---------------------------------------------------------------- CAIN
 clone cain "$WORK/cain-src" "$(field "['cain']['commit']")"
-( cd "$WORK/cain-src" && uv export --locked --no-dev --no-emit-project --format requirements-txt -o "$WORK/cain-req.txt" -q )
-venv "$WORK/cain-venv" "$WORK/cain-req.txt"
+# c6 (D-32): o lock do cain fixa as wheels do stack no índice local .stack-wheels/ (STACK_WHEELS.json: repositório, tag,
+# asset, sha256); `fetch` baixa pela API e confere o sha256; `requirements` acrescenta --hash às linhas do stack, e o pip
+# instala tudo com --require-hashes, achando as wheels do stack só no índice local (--find-links).
+( cd "$WORK/cain-src" && uv run --no-project python tools/stack_wheels.py fetch && uv run --no-project python tools/stack_wheels.py check )
+( cd "$WORK/cain-src" && uv export --locked --no-dev --no-emit-project --format requirements-txt -o "$WORK/cain-req-nostack.txt" -q \
+  && "$PY" tools/stack_wheels.py requirements --project . --input "$WORK/cain-req-nostack.txt" --output "$WORK/cain-req.txt" )
+( cd "$WORK/cain-src/.stack-wheels" && sha256sum *.whl | tee "$OUT/stack_wheels_cain.sha256" )
+"$PY" -m venv "$WORK/cain-venv"
+"$WORK/cain-venv/$BIN/python$EXE" -m pip install -q --require-hashes --find-links "$(np "$WORK/cain-src/.stack-wheels")" -r "$WORK/cain-req.txt"
 wheel "$WORK/cain-venv" cain
 "$WORK/cain-venv/$BIN/python$EXE" -m pip check
 "$WORK/cain-venv/$BIN/python$EXE" -m pip freeze > "$OUT/pip_freeze_cain.txt"

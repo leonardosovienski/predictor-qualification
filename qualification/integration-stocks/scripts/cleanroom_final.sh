@@ -35,7 +35,7 @@ rc=$?; echo "[conformance exit $rc]"; status=$((status | rc))
 rc=$?; echo "[adapters exit $rc]"; status=$((status | rc))
 # ---------------------------------------------------------------- 2. transporte
 T_COMMIT=$(field "['transport']['commit']")
-git clone -q https://github.com/leonardosovienski/ecosystem-predictor.git "$WORK/eco-src" && git -C "$WORK/eco-src" checkout -q "$T_COMMIT"
+git clone -q "https://github.com/$(field "['transport']['repo']").git" "$WORK/eco-src" && git -C "$WORK/eco-src" checkout -q "$T_COMMIT"
 mkdir -p "$WORK/transport-tests" && cp -r "$WORK/eco-src/packages/research-transport/tests/." "$WORK/transport-tests/"
 ( cd "$WORK/eco-src/packages/research-transport" && uv export --locked --only-group dev --no-emit-project --format requirements-txt -o "$WORK/transport-dev.txt" -q )
 "$PY" -m venv "$WORK/transport-venv"
@@ -52,9 +52,10 @@ for t in unit/test_orchestration_policy.py unit/test_orchestration_stocks_config
          unit/test_findings_pinned_sha.py integration/test_orchestration.py; do
   cp "$WORK/cain-src/tests/$t" "$WORK/cain-tests/tests/$t"
 done
-( cd "$WORK/cain-src" && uv export --locked --extra dev --no-emit-project --format requirements-txt -o "$WORK/cain-dev-req.txt" -q )
+( cd "$WORK/cain-src" && uv export --locked --extra dev --no-emit-project --format requirements-txt -o "$WORK/cain-dev-nostack.txt" -q \
+  && "$PY" tools/stack_wheels.py requirements --project . --input "$WORK/cain-dev-nostack.txt" --output "$WORK/cain-dev-req.txt" )
 "$PY" -m venv "$WORK/cain-test-venv"
-"$WORK/cain-test-venv/bin/python" -m pip install -q --require-hashes -r "$WORK/cain-dev-req.txt"
+"$WORK/cain-test-venv/bin/python" -m pip install -q --require-hashes --find-links "$WORK/cain-src/.stack-wheels" -r "$WORK/cain-dev-req.txt"
 "$WORK/cain-test-venv/bin/python" -m pip install -q --no-deps "$WORK/$(basename "$(field "['cain']['url']")")"
 "$WORK/cain-test-venv/bin/python" -m pip check
 ( cd "$WORK/cain-tests" && "$WORK/cain-test-venv/bin/python" -I -c "import cain, research_transport.adapters as t; print('cain', cain.__version__, cain.__file__, sorted(t.ADAPTERS)); assert 'site-packages' in cain.__file__" \
