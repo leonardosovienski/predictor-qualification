@@ -1,0 +1,120 @@
+{
+ "schema": "integration-brasileirao/CONTRACT_REVALIDATION_STATIC/1",
+ "stage_a_final_commit": "25cdf4d9bb309d33f066fbc6a379f5d98c69f08a",
+ "final_commit": "1fc2e8842977d6ec680546a3af288dda7a5d91a6",
+ "authorized_outside_adapter_paths": {
+  "C24.3(a)": "versão pré-release (pyproject version, linha do projeto no uv.lock)"
+ },
+ "checks": [
+  {
+   "check": "(a) outside adapter_paths only the version files",
+   "ok": true,
+   "changed": {
+    "brasileirao_predictor/adapters/research_v2.py": "A",
+    "pyproject.toml": "M",
+    "uv.lock": "M"
+   }
+  },
+  {
+   "check": "(a) tests/, docs/, .github/, README.md, config.yaml and data/trials.harness_attestation.json untouched",
+   "ok": true,
+   "touched": []
+  },
+  {
+   "check": "(a) pyproject.toml: only the pre-release version line changed",
+   "ok": true,
+   "lines": [
+    "-version = \"0.3.0rc3\"",
+    "+version = \"0.3.0rc4\""
+   ]
+  },
+  {
+   "check": "(a) uv.lock: only the pre-release version line changed",
+   "ok": true,
+   "lines": [
+    "-version = \"0.3.0rc3\"",
+    "+version = \"0.3.0rc4\""
+   ]
+  },
+  {
+   "check": "(a) uv.lock identical apart from the project version (no dependency change)",
+   "ok": true
+  },
+  {
+   "check": "(b) nothing outside adapter_paths imports from it",
+   "ok": true,
+   "offenders": []
+  },
+  {
+   "check": "(b) no console script or plugin entry point added (adapter_entrypoints is empty)",
+   "ok": true,
+   "scripts": {
+    "brasileirao-predict": "brasileirao_predictor.predict:main",
+    "brasileirao-kernel": "brasileirao_predictor.kernel_cli:main",
+    "brasileirao-shadow": "brasileirao_scripts.sombra_diaria:main",
+    "brasileirao-research": "brasileirao_predictor.research_runtime.runner:main"
+   }
+  },
+  {
+   "check": "(b) the adapter imports only the standard library and the adapter_api (brasileirao_predictor.research_runtime.runner)",
+   "ok": true,
+   "adapter_files": [
+    "brasileirao_predictor/adapters/__init__.py",
+    "brasileirao_predictor/adapters/research_v2.py"
+   ],
+   "foreign": {}
+  },
+  {
+   "check": "(e) every protected item of the brasileirao domain has the same blob at the final commit",
+   "ok": true,
+   "items": 1884,
+   "changed": []
+  },
+  {
+   "check": "(f) CI of the domain on the exact final commit: green push runs of CI Pipeline and publication validation (prompt 10.3), or the path accepted by the owner (IB-F005)",
+   "ok": false,
+   "runs": [
+    {
+     "conclusion": "success",
+     "databaseId": 36375025850,
+     "event": "push",
+     "headBranch": "publication-validation-integration-brasileirao",
+     "headSha": "1fc2e8842977d6ec680546a3af288dda7a5d91a6",
+     "name": "Scoped synthetic publication validation",
+     "status": "completed",
+     "url": "https://github.com/leonardosovienski/brasileirao-predictor/actions/runs/36375025850",
+     "jobs": {
+      "Synthetic .NET 10 build and test": "success",
+      "Synthetic Python 3.14": "success",
+      "Synthetic Python 3.13": "success",
+      "Synthetic Compose build and health": "success"
+     }
+    },
+    {
+     "conclusion": "success",
+     "databaseId": 36373479101,
+     "event": "pull_request",
+     "headBranch": "integration-brasileirao/adapter-20260928",
+     "headSha": "1fc2e8842977d6ec680546a3af288dda7a5d91a6",
+     "name": "CI Pipeline",
+     "status": "completed",
+     "url": "https://github.com/leonardosovienski/brasileirao-predictor/actions/runs/36373479101",
+     "jobs": {
+      "Python 3.13": "success",
+      "Python 3.14": "success",
+      "Cross-OS fit (ubuntu-latest)": "success",
+      "Cross-OS fit (windows-latest)": "success",
+      ".NET 10 build and test": "success",
+      "Cross-OS fit comparison (ubuntu-latest x windows-latest)": "success",
+      "Compose build and health": "success"
+     }
+    }
+   ],
+   "ci_pipeline_push": false,
+   "publication_validation_push": true,
+   "acceptance": null
+  }
+ ],
+ "passed": 9,
+ "failed": 1
+}
