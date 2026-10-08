@@ -34,10 +34,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 M = "qualification/integration-stocks"
-RUN = "RUN_C7"  # ciclo 7 (ciclo 6: run37698400981)
+RUN = "run37704456789"  # ciclo 7: run do runtime (C14 refeito), todas as fases num só run (ciclo 6: run37698400981)
 R = f"{M}/RAW_LOGS/runtime/{RUN}"
 W = f"{M}/RAW_LOGS/runtime/{RUN}-windows"
-RUN_SOAK = "RUN_C7"  # ciclo 7: soak no mesmo run
+RUN_SOAK = "run37704456789"  # ciclo 7: soak no mesmo run
 # ficar em 4/5 no run36649880023 (IS-F010: qwen2.5:0.5b no ollama 0.35.0 estourou num_predict em 2 de 6 tentativas)
 RS = f"{M}/RAW_LOGS/runtime/{RUN_SOAK}"
 FM = f"{R}/failure-matrix"
@@ -50,7 +50,7 @@ SECRETS = f"{M}/RAW_LOGS/secrets-c7/secrets_scan.json"
 PROTECTED = f"{M}/RAW_LOGS/protected-c7/protected_check.json"  # ciclo 5: protected-c5
 # a mesma conferência roda também num snapshot do main (git archive), para valer no estado depois do merge mesmo que o
 # main receba mudanças de outras missões depois da base da branch
-MAIN_SNAPSHOT = "MAIN_C7"  # snapshot (git archive) da branch do ciclo 7 (ciclo 6: 713b89d)
+MAIN_SNAPSHOT = "8b6df43"  # snapshot (git archive) da branch do ciclo 7 (ciclo 6: 713b89d)
 PROTECTED_MAIN = f"{M}/RAW_LOGS/protected-c7/protected_check_main_{MAIN_SNAPSHOT}.json"
 CORE = f"{M}/RAW_LOGS/core-identity-c7/core_identity.json"  # ciclo 5: core-identity-c5
 SUPERSEDED = "SUPERSEDED_C7"  # a attestation do ciclo 4, preservada na reemissão

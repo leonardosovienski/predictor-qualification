@@ -4,17 +4,17 @@ Gates `E2E`, `PROVENANCE`, `IDEMPOTENCY`, `RESTART_RECOVERY`, `FAILURE_INJECTION
 
 Circuito: `cain research propose` → DecisionPolicy → TaskOutbox → spool → `predictor-research-consumer` → adapter do Stocks → `Circuit.submit_request` (admission → Ops → Core) → resultado → ResultInbox → memória do domínio `stocks` → próxima decisão. Tudo pelos entrypoints instalados das wheels publicadas; os venvs do CAIN e do consumidor são separados (o CAIN não tem domínio instalado; `runtime_env.sh` confere).
 
-Dados reais: painel B3/CVM do pin do run (`data/SOURCES.json`), data_cutoff `2026-10-07T03:00:00Z`, painel `cbf8aba399484f6b…`, dataset `b3-cvm-real-2021-01-04_2026-10-06-cotahistc65e64f468de-k100`.
+Dados reais: painel B3/CVM do pin do run (`data/SOURCES.json`), data_cutoff `2026-10-08T03:00:00Z`, painel `3ba4924a5573c8a7…`, dataset `b3-cvm-real-2021-01-04_2026-10-07-cotahist522444a57761-k100`.
 
 | Cenário | Ambiente | Conferências OK | Falhas | Fonte |
 |---|---|--:|--:|---|
-| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run37698400981` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/e2e/SUMMARY.json` (sha256 `777ec3927e18a3ef…`) |
-| E2E + restart (WINDOWS_SMOKE) | GitHub Actions windows-latest, run `run37698400981-windows` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981-windows/e2e/SUMMARY.json` (sha256 `cd2ca85ebe5020c8…`) |
-| N+1 congelado (3 processos, receipt byte a byte) | Linux primário | 63 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/n-plus-1/frozen/SUMMARY.json` (sha256 `463d049e5c9e9a74…`) |
-| N+1 integrado (resultado real do cripto no spool) | Linux primário | 64 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/n-plus-1/integrated/SUMMARY.json` (sha256 `9c1753bdb4de1204…`) |
-| Isolamento e IDs (cripto integrado; brasileirao por fixture) | Linux primário | 28 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/isolation/SUMMARY.json` (sha256 `aea6b6785056c477…`) |
-| Contradição | Linux primário | 9 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/isolation/contradiction/SUMMARY.json` (sha256 `2e723a18aac38c45…`) |
-| Contrato C24.3 (d) | Linux primário | 11 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/contract-revalidation/SUMMARY.json` (sha256 `9990e6f9eff62391…`) |
+| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run37704456789` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/e2e/SUMMARY.json` (sha256 `d5a72bb2ba5e1c17…`) |
+| E2E + restart (WINDOWS_SMOKE) | GitHub Actions windows-latest, run `run37704456789-windows` | 55 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789-windows/e2e/SUMMARY.json` (sha256 `2847ac2a2e869546…`) |
+| N+1 congelado (3 processos, receipt byte a byte) | Linux primário | 63 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/n-plus-1/frozen/SUMMARY.json` (sha256 `47e25f116bc2c2ef…`) |
+| N+1 integrado (resultado real do cripto no spool) | Linux primário | 64 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/n-plus-1/integrated/SUMMARY.json` (sha256 `9eb7ea9ab8b40a6f…`) |
+| Isolamento e IDs (cripto integrado; brasileirao por fixture) | Linux primário | 28 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/isolation/SUMMARY.json` (sha256 `bb435a0eb13a3cc4…`) |
+| Contradição | Linux primário | 9 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/isolation/contradiction/SUMMARY.json` (sha256 `5aea1d916b98b517…`) |
+| Contrato C24.3 (d) | Linux primário | 11 | 0 | `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/contract-revalidation/SUMMARY.json` (sha256 `871107ffcdf3865b…`) |
 
 Decisões do E2E (em ordem): ALLOW, ALLOW, ALLOW, DUPLICATE, BLOCK, BLOCK, BLOCK, ALLOW.
 
@@ -75,7 +75,7 @@ Receipts da variante integrada iguais aos da congelada: **sim**.
 | F14 | 3 | 0 |
 | F15 | 4 | 0 |
 
-Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
+Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
 
 ## Parecer de contenção (CAIN_CONTAINMENT)
 

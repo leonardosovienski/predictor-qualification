@@ -1,0 +1,31 @@
+{"effective_proposal": "/home/runner/work/_temp/work/failures/F02/proposals/1.json", "template": "fixtures/proposals/e2e/01-allow.json", "sha256": "7a7b90a5b57ac540ec4baa35dfffac4b5e468187fad0d7f5ed54ee85829be9b6"}
+{"n": 1, "label": "propose 1", "at": "2026-10-08T00:10:06Z", "seconds": 0.212, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F02/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F02/proposals/1.json", "--as-of", "2026-10-08T00:10:05Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "stocks:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "aee6a31e1c4c5ccb6f45b058b91e27afe661b919dfa375714aba86cf4db848b2", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "af40a5a176f29b4a99011445b54b424cfa9a88e043f6cdeb8210f9caa55810ee", "previous_task_id": null, "task_id": "stocks:TASK-315cf13c02f93aff565652dc7560b42c"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch (fault)", "at": "2026-10-08T00:10:06Z", "seconds": 0.085, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F02/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F02/spool"], "fault_env": {"CAIN_ORCHESTRATION_FAULT": "after_spool_write_before_ack"}, "exit": 86}
+--- stdout
+--- stderr
+--- end
+{"n": 3, "label": "dispatch after restart", "at": "2026-10-08T00:10:06Z", "seconds": 0.107, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F02/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F02/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "stocks/tasks/TASK-315cf13c02f93aff565652dc7560b42c.json", "spool": "EXISTS", "task_id": "stocks:TASK-315cf13c02f93aff565652dc7560b42c"}
+--- stderr
+--- end
+{"n": 4, "label": "consumer", "at": "2026-10-08T00:10:13Z", "seconds": 7.085, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "stocks", "--spool", "/home/runner/work/_temp/work/failures/F02/spool", "--ledger", "/home/runner/work/_temp/work/failures/F02/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F02/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "stocks:episode-1", "result_file": "stocks/results/TASK-315cf13c02f93aff565652dc7560b42c.526d1484f70c4cfe.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "stocks:TASK-315cf13c02f93aff565652dc7560b42c"}
+--- stderr
+{"duration_ms": 6838, "event": "job_finished", "job_id": "stocks-research-41e50815e9dbbb985f3e8a20", "level": "INFO", "run_id": "000a6a3e81934161819c388379ee3b9b", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-10-08T00:10:13.325894Z"}
+--- end
+{"n": 5, "label": "ingest", "at": "2026-10-08T00:10:13Z", "seconds": 0.138, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F02/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F02/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:5e2e56a3c37a4c72bd900c7a820eee52", "file": "TASK-315cf13c02f93aff565652dc7560b42c.526d1484f70c4cfe.json", "status": "RESULT", "task_id": "stocks:TASK-315cf13c02f93aff565652dc7560b42c"}
+--- stderr
+--- end
+{"n": 6, "label": "domain saw one request", "at": "2026-10-08T00:10:13Z", "seconds": 0.095, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F02/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-10-08T00:10:05Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-315cf13c02f93aff565652dc7560b42c"}, "proposal_id": "cain:FM-F02-1", "reason_code": "ALLOWED", "receipt_sha256": "aee6a31e1c4c5ccb6f45b058b91e27afe661b919dfa375714aba86cf4db848b2", "source": "operator", "task_id": "stocks:TASK-315cf13c02f93aff565652dc7560b42c"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:5e2e56a3c37a4c72bd900c7a820eee52", "payload_sha256": "003e6bb57d6293bccc7cc79a72ddc78b40396ffc30ec1c265c4a84e968f0ac22", "status": "RESULT", "task_id": "stocks:TASK-315cf13c02f93aff565652dc7560b42c"}], "memory": {"broken_at": null, "cube": "stocks", "facts": 1, "log": "shared across domains", "projection": "consistent", "status": "intact"}, "rejections": []}
+--- stderr
+--- end
