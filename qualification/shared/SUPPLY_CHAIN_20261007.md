@@ -1,5 +1,7 @@
 # Supply chain do stack — quebra e remediação (2026-10-07)
 
+> MODE: SNAPSHOT_IMMUTABLE · AS_OF_DATE: 2026-10-07 · AS_OF_SHA: aea5e0b7 (camada de fechamento) · SUPERSEDED_BY: README.md (Estado atual) e cain/docs/funding/FUNDING_READINESS_SOURCE_OF_TRUTH.md §0; o texto datado não é corrigido no lugar.
+
 Registro de evidência do item R01 do programa de auditoria/remediação do CAIN. Nada aqui altera attestation, lock
 histórico ou artefato congelado; é uma camada posterior (ORIGINAL_STATE → NEW_INTERPRETATION) com data e motivo.
 
