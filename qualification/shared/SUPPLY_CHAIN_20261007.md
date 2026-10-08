@@ -75,3 +75,13 @@ de `main` sem segredo. O que falta continua sendo o ciclo C14 numa rc nova (deci
 
 DATE: 2026-10-07 · REASON: fechamento do R01 na parte de disponibilidade + passagem de segurança/qualidade pedida pelo
 dono · ORIGINAL_STATE preservado acima.
+
+## LAYER 2026-10-08 — ciclo C14 na rc nova fechado (D-34)
+
+* cain `v0.4.13rc16` publicada (`de5db06b`, wheel `d8fca502…`, build reprodutível; código do pacote igual ao da rc15, lock pelo registro).
+* Attestations reemitidas **QUALIFIED**: crypto V1.2 (D-30), integration-crypto rc16 → rc16e, integration-stocks ciclo 6 → ciclo 7
+  (PRs #104, #105). O ecosystem adotou a rc16 na lock conjunta `compat/` (ecosystem 0.2.2, `6aeec475`) e as fases das integrações
+  foram refeitas depois disso (C14). integration-brasileirao: só conferências estáticas na rc16; runtime no PC 2 do dono.
+* O que ficava "faltando" na camada anterior (ciclo C14 numa rc nova) está feito. Pendente só o dono: runtime do brasileirão.
+
+DATE: 2026-10-08 · ORIGINAL_STATE preservado acima.
