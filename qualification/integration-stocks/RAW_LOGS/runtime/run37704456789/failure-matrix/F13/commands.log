@@ -1,0 +1,40 @@
+{"effective_proposal": "/home/runner/work/_temp/work/failures/F13/proposals/1.json", "template": "fixtures/proposals/e2e/01-allow.json", "sha256": "c61408ed06c075c4626e50201397a9152ecf01cd3af1c7520b56d2448e821011"}
+{"n": 1, "label": "propose 1", "at": "2026-10-08T00:11:41Z", "seconds": 0.113, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "propose", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--proposal", "/home/runner/work/_temp/work/failures/F13/proposals/1.json", "--as-of", "2026-10-08T00:11:40Z"], "fault_env": {}, "exit": 0}
+--- stdout
+{"decision": "ALLOW", "episode_id": "stocks:episode-1", "reason_code": "ALLOWED", "receipt_sha256": "a61c74c602e7fe06b6d66d5de048d564f5450c43f97cb863f0138a90bacab56d", "rule": "R14", "status": "RECORDED", "task": {"payload_sha256": "8b4a0bfb6a729dd0558dc67879379e42798ddede9b1fb9a549818a43b3496472", "previous_task_id": null, "task_id": "stocks:TASK-0f20154154ff83f6507ce67d181a808d"}}
+--- stderr
+--- end
+{"n": 2, "label": "dispatch 1", "at": "2026-10-08T00:11:41Z", "seconds": 0.097, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "dispatch", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F13/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "dispatched", "file": "stocks/tasks/TASK-0f20154154ff83f6507ce67d181a808d.json", "spool": "WRITTEN", "task_id": "stocks:TASK-0f20154154ff83f6507ce67d181a808d"}
+--- stderr
+--- end
+{"n": 3, "label": "consumer 1", "at": "2026-10-08T00:11:48Z", "seconds": 7.22, "argv": ["/home/runner/work/_temp/work/rt/consumer-venv/bin/predictor-research-consumer", "--domain", "stocks", "--spool", "/home/runner/work/_temp/work/failures/F13/spool", "--ledger", "/home/runner/work/_temp/work/failures/F13/consumer/ledger.sqlite", "--state", "/home/runner/work/_temp/work/failures/F13/domain-state", "--policy", "/home/runner/work/_temp/work/rt/op/policy.json", "--objects", "/home/runner/work/_temp/work/rt/op/objects"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "delivered", "attempt": 1, "class": "TERMINAL_RESULT", "episode_id": "stocks:episode-1", "result_file": "stocks/results/TASK-0f20154154ff83f6507ce67d181a808d.4c5c5b44bb87bb08.json", "result_write": "WRITTEN", "status": "RESULT", "task_id": "stocks:TASK-0f20154154ff83f6507ce67d181a808d"}
+--- stderr
+{"duration_ms": 6722, "event": "job_finished", "job_id": "stocks-research-ea1257cbdc2a5abb6e19c523", "level": "INFO", "run_id": "d5f8305f656f4feebfd0432e0284ac3f", "run_status": "SUCCEEDED", "service": "predictor_ops", "timestamp": "2026-10-08T00:11:48.286348Z"}
+--- end
+{"n": 4, "label": "ingest 1", "at": "2026-10-08T00:11:48Z", "seconds": 0.104, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F13/spool"], "fault_env": {}, "exit": 0}
+--- stdout
+{"action": "ingested", "class": "TERMINAL_RESULT", "fact": "fact:0eba733b465349faa617c863e541fb44", "file": "TASK-0f20154154ff83f6507ce67d181a808d.4c5c5b44bb87bb08.json", "status": "RESULT", "task_id": "stocks:TASK-0f20154154ff83f6507ce67d181a808d"}
+--- stderr
+--- end
+{"n": 5, "label": "tamper other-episode", "at": "2026-10-08T00:11:48Z", "seconds": 0.045, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/python", "-I", "/home/runner/work/_temp/work/failures/F13/tamper.py", "other-episode", "/home/runner/work/_temp/work/failures/F13/spool/stocks/tasks/TASK-0f20154154ff83f6507ce67d181a808d.json", "/home/runner/work/_temp/work/failures/F13/spool/stocks/results/TASK-0f20154154ff83f6507ce67d181a808d.4c5c5b44bb87bb08.json", "/home/runner/work/_temp/work/failures/F13/spool/stocks/results/other-episode.json"], "fault_env": {}, "exit": 0}
+--- stdout
+{"mode": "other-episode", "bytes": 96403}
+--- stderr
+--- end
+{"n": 6, "label": "ingest wrong tasks", "at": "2026-10-08T00:11:48Z", "seconds": 0.121, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "ingest", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state", "--spool", "/home/runner/work/_temp/work/failures/F13/spool"], "fault_env": {}, "exit": 2}
+--- stdout
+{"action": "duplicate", "file": "TASK-0f20154154ff83f6507ce67d181a808d.4c5c5b44bb87bb08.json"}
+{"action": "rejected", "code": "DOMAIN_MISMATCH", "file": "crypto.json", "reason": "result of domain crypto"}
+{"action": "rejected", "code": "CORRELATION_MISMATCH", "file": "other-episode.json", "reason": "CORRELATION_MISMATCH: episode_id differs from the task"}
+{"action": "rejected", "code": "TASK_NOT_FOUND", "file": "stocks-h9.json", "reason": "stocks:TASK-09f813296679d4ab76c537177cd98368 was not emitted by this CAIN"}
+--- stderr
+--- end
+{"n": 7, "label": "nothing ingested", "at": "2026-10-08T00:11:48Z", "seconds": 0.095, "argv": ["/home/runner/work/_temp/work/rt/cain-venv/bin/cain", "research", "episodes", "--domain", "stocks", "--state", "/home/runner/work/_temp/work/failures/F13/cain-state"], "fault_env": {}, "exit": 0}
+--- stdout
+{"domain": "stocks", "episodes": [{"as_of": "2026-10-08T00:11:40Z", "decision": "ALLOW", "number": 1, "outbox": {"dispatches": 1, "retries_requested": 0, "status": "PUBLISHED", "task_id": "stocks:TASK-0f20154154ff83f6507ce67d181a808d"}, "proposal_id": "cain:FM-F13-1", "reason_code": "ALLOWED", "receipt_sha256": "a61c74c602e7fe06b6d66d5de048d564f5450c43f97cb863f0138a90bacab56d", "source": "operator", "task_id": "stocks:TASK-0f20154154ff83f6507ce67d181a808d"}], "inbox": [{"class": "TERMINAL_RESULT", "fact_id": "fact:0eba733b465349faa617c863e541fb44", "payload_sha256": "9d58c25feed6f4370b46eff61e92d81cb2bf41de9e159b3565b997f92ccd6781", "status": "RESULT", "task_id": "stocks:TASK-0f20154154ff83f6507ce67d181a808d"}], "memory": {"broken_at": null, "cube": "stocks", "facts": 1, "log": "shared across domains", "projection": "consistent", "status": "intact"}, "rejections": [{"code": "DOMAIN_MISMATCH", "file": "crypto.json"}, {"code": "CORRELATION_MISMATCH", "file": "other-episode.json"}, {"code": "TASK_NOT_FOUND", "file": "stocks-h9.json"}]}
+--- stderr
+--- end

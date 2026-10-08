@@ -6,11 +6,11 @@ Circuito: `cain research propose` → DecisionPolicy → TaskOutbox → spool �
 
 | Cenário | Ambiente | Conferências OK | Falhas | Fonte |
 |---|---|--:|--:|---|
-| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run37696817503` | 56 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37696817503/e2e/SUMMARY.json` (sha256 `d367e6debc50835c…`) |
-| E2E + restart (WINDOWS_SMOKE) | windows-latest × 3.13 (D-31), run `run37696817503-windows` | 56 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37696817503-windows/e2e/SUMMARY.json` (sha256 `4f46188c03d729a4…`) |
-| N+1 (3 processos, receipt byte a byte) | Linux primário | 21 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37696817503/n-plus-1/SUMMARY.json` (sha256 `63b62d0d6dea3a74…`) |
-| Isolamento, IDs com domínio, contradição | Linux primário | 22 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37696817503/isolation/SUMMARY.json` (sha256 `8a4728dfa7263e99…`) |
-| Contrato C24.3 (d) | Linux primário | 10 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37696817503/contract-revalidation/SUMMARY.json` (sha256 `54d9a66c90156425…`) |
+| E2E (dados reais, restart do consumidor e do CAIN, outros domínios intercalados, canário, N+1) | Linux primário, run `run37703318858` | 56 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37703318858/e2e/SUMMARY.json` (sha256 `fcd8b78b81b6892a…`) |
+| E2E + restart (WINDOWS_SMOKE) | windows-latest × 3.13 (D-31), run `run37703318858-windows` | 56 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37703318858-windows/e2e/SUMMARY.json` (sha256 `9ead74163ff6c596…`) |
+| N+1 (3 processos, receipt byte a byte) | Linux primário | 21 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37703318858/n-plus-1/SUMMARY.json` (sha256 `e11fbfef5e974c9d…`) |
+| Isolamento, IDs com domínio, contradição | Linux primário | 22 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37703318858/isolation/SUMMARY.json` (sha256 `c20ef2c63e810d5b…`) |
+| Contrato C24.3 (d) | Linux primário | 10 | 0 | `qualification/integration-crypto/RAW_LOGS/runtime/run37703318858/contract-revalidation/SUMMARY.json` (sha256 `a9f354c125fb37a6…`) |
 
 Decisões do E2E (em ordem): ALLOW, ALLOW, ALLOW, DUPLICATE, BLOCK, BLOCK, ALLOW.
 
@@ -45,7 +45,7 @@ Decisões do E2E (em ordem): ALLOW, ALLOW, ALLOW, DUPLICATE, BLOCK, BLOCK, ALLOW
 | F14 | 3 | 0 |
 | F15 | 4 | 0 |
 
-Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run37696817503/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
+Fonte: `qualification/integration-crypto/RAW_LOGS/runtime/run37703318858/failure-matrix/FAILURE_MATRIX_RESULTS.json` (sha256 `62f9f41cd8595210…`).
 
 ## Parecer de contenção (CAIN_CONTAINMENT)
 

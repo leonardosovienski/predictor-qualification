@@ -10,7 +10,7 @@ WSL do PC 2 (diagnóstico). Script `scripts/cleanroom_baseline.sh`; log `qualifi
 
 ## cleanroom-final (gate CLEANROOM_FINAL; C24.3 b/c)
 
-GitHub Actions ubuntu-latest × Python 3.13, run `run37698400981`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/cleanroom-final/cleanroom_final.log` (sha256 `44f54e5566b10d51…`).
+GitHub Actions ubuntu-latest × Python 3.13, run `run37704456789`, só as wheels publicadas de `runtime_targets.json` em venvs limpos fora dos checkouts (`scripts/cleanroom_final.sh`). Log: `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/cleanroom-final/cleanroom_final.log` (sha256 `a99239b894333fc9…`).
 
 | Suíte (instalada da wheel) | testes | falhas | erros | pulados |
 |---|--:|--:|--:|--:|

@@ -1,6 +1,6 @@
 # integration-stocks — HOSTED_CI_REPORT
 
-Gate `HOSTED_CI` (C21; prompt da sessão 9.3: só o run de **push** cujo SHA é exatamente o commit vale). Coletado por `scripts/hosted_ci.py` (`qualification/integration-stocks/RAW_LOGS/hosted-ci/final-c6/HOSTED_CI_SUMMARY.json` (sha256 `0fa8bbccdf27f947…`)). Core e Ops não mudaram (CI da Etapa A, HERDADO).
+Gate `HOSTED_CI` (C21; prompt da sessão 9.3: só o run de **push** cujo SHA é exatamente o commit vale). Coletado por `scripts/hosted_ci.py` (`qualification/integration-stocks/RAW_LOGS/hosted-ci/final-c7/HOSTED_CI_SUMMARY.json` (sha256 `9e1a68df351a7733…`)). Core e Ops não mudaram (CI da Etapa A, HERDADO).
 
 | Repo | Papel | Commit | Estado | Runs de push | Jobs não verdes |
 |---|---|---|---|---|---|
@@ -10,6 +10,7 @@ Gate `HOSTED_CI` (C21; prompt da sessão 9.3: só o run de **push** cujo SHA é 
 | cain | final | `de5db06b4731` | verde | [CI 37695085002](https://github.com/leonardosovienski/cain/actions/runs/37695085002) success |  |
 | ecosystem-predictor-cain | final | `b0da4fd8d0c4` | verde | [CI 36635412652](https://github.com/leonardosovienski/ecosystem-predictor-cain/actions/runs/36635412652) success; [Full-history security regression 36635412484](https://github.com/leonardosovienski/ecosystem-predictor-cain/actions/runs/36635412484) success |  |
 | stocks-predictor | final | `6f857b232eaa` | SEM PUSH VERDE | nenhum run de push |  |
+| ecosystem-predictor-cain | final | `6aeec47591e1` | verde | [CI 37703276457](https://github.com/leonardosovienski/ecosystem-predictor-cain/actions/runs/37703276457) success; [Full-history security regression 37703276436](https://github.com/leonardosovienski/ecosystem-predictor-cain/actions/runs/37703276436) success |  |
 
 ## stocks-predictor
 

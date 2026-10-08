@@ -416,3 +416,18 @@ A D-29 (escrita hoje, delegada pelo dono em 2026-09-30) fecha o que bloqueava o 
 | `QUALIFICATION_ATTESTATION_superseded_60b75594a229.json` (ciclo 4, preservada), `ATTESTATION_PARTIAL_ciclo6-attestation.json`, `QUALIFICATION_ATTESTATION.json` | attestation **QUALIFIED** para stocks `6f857b2` / rc3, cain `de5db06b` / rc16, ecosystem-predictor-cain `b0da4fd8` / transporte rc7, cripto `ee3d3d1` / rc3, core 3.2.1, ops 4.2.2rc1; `supersedes_sha256` = ciclo 4 (`60b75594…`); `attest.py check` OK |
 
 Limites (C22): vale para os `final_commits`/`final_wheels` declarados e para os vetores e perfis congelados; não garante edge nem lucro.
+
+## 2026-10-08 — ciclo 7 (C14 refeito): adoção da cain rc16 na lock conjunta do ecosystem; attestation reemitida **QUALIFIED**
+
+Por quê: o `ecosystem-predictor-cain` adotou a cain 0.4.13rc16 na lock conjunta `compat/` e publicou ecosystem `v0.2.2` (`main` `6aeec475`,
+PR #56). Pela C14 (mudança no ecosystem-predictor), as fases que o exercitam foram refeitas com as mesmas wheels do ciclo 6 (cain rc16,
+transporte rc7, protocolo rc2, stocks rc3, cripto rc3, core, ops); `final_commits`/`final_wheels` não mudam (o commit do ecosystem continua
+sendo o da tag do transporte); o `main` do ecosystem entra em `hosted_ci_targets_c7.json` (CI de push verde em `6aeec475`) e em
+`GATES.json → cycle.ecosystem_main_commit`. Pin novo dos dados públicos antes do run (run 37703320854, `data/SOURCES.json`; o do ciclo 6 em
+`SOURCES-c6.json`). Resultado: **30/30 gates `PASS`**, P0 = P1 = P2 = 0.
+
+| Onde | O quê |
+|---|---|
+| `RAW_LOGS/runtime/run37704456789/` e `-windows/`, `RAW_LOGS/static/run37704456789/` (cópias em `*-c7/`) | run [37704456789](https://github.com/leonardosovienski/predictor-qualification/actions/runs/37704456789) (push em `integration-stocks/runtime-…-c7`, `c608144`), todas as fases exit 0: cleanroom-final (conformidade 87/0, adapters 11/0, transporte 20/0, cain 84/0); C24.3 (d) 11/0; e2e 55/0; N+1 63/0, integrado 64/0, crypto-cycle 1/0; isolamento 28/0, contradição 9/0; F01–F15 50/0; soak 43/0 (`llm_proposals` 5); Windows E2E + restart 55/0; identidade 14/0; final_wheels 19/0; CI de push verde nos SHAs exatos (cain `de5db06b`, ecosystem-predictor-cain `b0da4fd8` e `6aeec475`; stocks `6f857b2` pelo aceite IS-F004/IS-F005); C24.3 estático 12/0 com o aceite (11/1 sem ele, `static_checks_sem_aceite.json`); protegidos encadeados (agora incluindo as attestations rc16e/c6 por `supersedes_sha256`) na branch e no snapshot; segredos 0 |
+| `scripts/cycle7_gates.py`, `scripts/cycle7_publish.py`, `scripts/update_gates_c7.py`, `GATES.json`, `EVIDENCE_NUMBERS.json`, relatórios | ledger no ciclo 7 (`freeze-parameters-c7` … `soak-c7`); `cycle6_evidence` preservado |
+| `QUALIFICATION_ATTESTATION_superseded_f70b54cc7cdc.json` (ciclo 6, preservada), `ATTESTATION_PARTIAL_ciclo7-attestation.json`, `QUALIFICATION_ATTESTATION.json` | attestation **QUALIFIED**, mesmos `final_commits`/`final_wheels` do ciclo 6; `supersedes_sha256` = ciclo 6 (`f70b54cc…`); `attest.py check` OK |

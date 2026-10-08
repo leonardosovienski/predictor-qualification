@@ -41,7 +41,7 @@ Fonte: `qualification/integration-stocks/FROZEN_PARAMETERS.json` (sha256 `40d740
 
 ## Decisões do N+1 (receipt em 3 processos novos, byte a byte)
 
-Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run37698400981/n-plus-1/frozen/SUMMARY.json` (sha256 `463d049e5c9e9a74…`).
+Fonte: `qualification/integration-stocks/RAW_LOGS/runtime/run37704456789/n-plus-1/frozen/SUMMARY.json` (sha256 `47e25f116bc2c2ef…`).
 
 | Candidata | Decisão | Motivo | Regra |
 |---|---|---|---|
